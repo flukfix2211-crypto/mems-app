@@ -524,6 +524,12 @@
   </div>
 </div>
 
+<!-- CREDIT FOOTER -->
+<div style="text-align:center;padding:18px 16px 28px;font-size:12px;color:#6A8A96;line-height:1.7">
+  MEMs — Medical Equipment Management Systems v1.0<br>
+  งานวิศวกรรมการแพทย์ โรงพยาบาลพหลพลพยุหเสนา จ.กาญจนบุรี
+</div>
+
 <script>
 /* ============================================================
    AUTH
@@ -918,8 +924,8 @@ function renderTable() {
       const isBorrow = String(r['ประเภท (ยืม/คืน)']).includes('ยืม');
       return `<tr>
         <td>${start+i+1}</td>
-        <td>${r['วันที่']||''}</td>
-        <td>${r['เวลา']||''}</td>
+        <td>${fmtDate(r['วันที่'])}</td>
+        <td>${fmtTime(r['เวลา'])}</td>
         <td>${r['เวร']||''}</td>
         <td><span class="badge ${isBorrow ? 'badge-borrow':'badge-return'}">${isBorrow?'ยืม':'คืน'}</span></td>
         <td><strong>${r['ชื่อเครื่อง']||''}</strong></td>
@@ -963,13 +969,11 @@ function getRoundRecords() {
   return allRecords.filter(r => String(r['ประเภท (ยืม/คืน)']).includes('Round'));
 }
 
-// แปลง ISO timestamp หรือ Date ให้เป็น dd/MM/yyyy
+// แปลง ISO timestamp → dd/MM/yyyy
 function fmtDate(val) {
   if (!val) return '';
   const s = String(val);
-  // already dd/MM/yyyy
   if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s;
-  // ISO string → convert
   try {
     const d = new Date(s);
     if (isNaN(d)) return s;
@@ -977,6 +981,20 @@ function fmtDate(val) {
     const mm = String(d.getMonth()+1).padStart(2,'0');
     const yyyy = d.getFullYear();
     return `${dd}/${mm}/${yyyy}`;
+  } catch { return s; }
+}
+
+// แปลงเวลา → HH:mm (รองรับ HH:mm:ss string และ 1899-12-30T... serial จาก Sheets)
+function fmtTime(val) {
+  if (!val) return '';
+  const s = String(val);
+  if (/^\d{2}:\d{2}/.test(s)) return s.substring(0, 5);
+  try {
+    const d = new Date(s);
+    if (isNaN(d)) return s;
+    const hh = String(d.getUTCHours()).padStart(2,'0');
+    const mi = String(d.getUTCMinutes()).padStart(2,'0');
+    return `${hh}:${mi}`;
   } catch { return s; }
 }
 
@@ -1080,10 +1098,10 @@ function printRoundReport() {
   const summary = `ใช้งานอยู่ ${cnt.use}  |  ไม่ได้ใช้งาน ${cnt.idle}  |  ชำรุด ${cnt.broken}  |  สูญหาย ${cnt.lost}`;
 
   const tableRows = rows.map(r => `<tr>
-    <td>${r['วันที่']||''}</td><td>${r['เวร']||''}</td>
+    <td>${fmtDate(r['วันที่'])}</td><td>${r['เวร']||''}</td>
     <td>${r['ตึก/Ward']||''}</td><td>${r['หมายเลขเครื่อง']||'-'}</td>
-    <td>${r['สถานะ Round']||'-'}</td><td>${r['ชื่อผู้ยืม']||''}</td>
-    <td>${r['หมายเหตุ']||''}</td>
+    <td>${getRoundStatus(r)||'-'}</td><td>${r['ชื่อผู้ยืม']||''}</td>
+    <td>${r['หมายเหตุ']||r['']||''}</td>
   </tr>`).join('');
 
   let area = document.getElementById('printArea');
