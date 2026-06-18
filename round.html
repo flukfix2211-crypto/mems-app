@@ -38,159 +38,75 @@
     .field:focus { border-color: var(--a); background: #fff; }
     select.field { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%236A8A96' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 13px center; padding-right: 40px; cursor: pointer; }
 
-    /* SESSION INFO */
+    /* INFO ROW */
     .info-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
     .info-chip { background: var(--al); border-radius: var(--rs); padding: 10px 14px; font-size: 14px; font-weight: 600; color: var(--a); display: flex; flex-direction: column; gap: 2px; }
     .info-chip-label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.65; }
 
+    /* STEP INDICATOR */
+    .steps { display: flex; align-items: center; gap: 0; margin-bottom: 16px; }
+    .step { flex: 1; text-align: center; padding: 10px 6px; font-size: 13px; font-weight: 700; color: var(--muted); border-bottom: 3px solid var(--border); transition: all 0.2s; }
+    .step.active { color: var(--a); border-bottom-color: var(--a); }
+    .step.done { color: #1A7B4A; border-bottom-color: #1A7B4A; }
+    .step-num { display: inline-block; width: 22px; height: 22px; border-radius: 50%; background: var(--border); color: var(--muted); font-size: 12px; font-weight: 800; line-height: 22px; text-align: center; margin-right: 6px; transition: all 0.2s; }
+    .step.active .step-num { background: var(--a); color: #fff; }
+    .step.done .step-num { background: #1A7B4A; color: #fff; }
+
+    /* WARD PICK CARD */
+    #wardPickCard { transition: all 0.3s; }
+    .ward-confirm-btn { width: 100%; padding: 14px; background: linear-gradient(135deg, var(--a), var(--a2)); color: #fff; border: none; border-radius: var(--rs); font-family: 'Sarabun', sans-serif; font-size: 17px; font-weight: 700; cursor: pointer; margin-top: 10px; box-shadow: 0 4px 18px rgba(10,100,120,0.25); transition: all var(--tr); -webkit-tap-highlight-color: transparent; }
+    .ward-confirm-btn:active { transform: scale(0.98); }
+    .ward-confirm-btn:disabled { opacity: 0.4; cursor: default; box-shadow: none; }
+
+    /* LOADING */
+    .loading-box { text-align: center; padding: 30px; color: var(--muted); }
+    .spinner { display: inline-block; width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--a); border-radius: 50%; animation: spin 0.7s linear infinite; margin-bottom: 12px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* PREV STATUS BADGE */
+    .prev-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; border-radius: 6px; padding: 2px 8px; margin-left: 6px; }
+    .prev-badge.use    { background: #DCF2E5; color: #14612D; }
+    .prev-badge.idle   { background: #DAF0F5; color: #0A6478; }
+    .prev-badge.broken { background: #FFF3CD; color: #8B5000; }
+    .prev-badge.lost   { background: #FDEAEA; color: #B82E2E; }
+    .prev-badge.new    { background: #F0F0F0; color: #888; }
+    .prev-date { font-size: 10px; color: var(--muted); font-weight: 400; }
+
     /* PUMP ROWS */
     .pump-list { display: flex; flex-direction: column; gap: 12px; }
-
-    .pump-row {
-      border: 2px solid var(--border);
-      border-radius: var(--rs);
-      padding: 14px;
-      background: #FAFCFD;
-      transition: border-color 0.2s;
-    }
+    .pump-row { border: 2px solid var(--border); border-radius: var(--rs); padding: 14px; background: #FAFCFD; transition: border-color 0.2s; }
     .pump-row.has-status { border-color: var(--a); background: #fff; }
-
-    .pump-row-top {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 12px;
-    }
-    .pump-seq {
-      flex-shrink: 0;
-      width: 28px; height: 28px;
-      background: var(--a);
-      color: #fff;
-      border-radius: 8px;
-      font-size: 13px;
-      font-weight: 800;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .pump-fields {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 8px;
-      flex: 1;
-      align-items: center;
-    }
-    .pump-no-input {
-      padding: 10px 14px;
-      border: 2px solid var(--border);
-      border-radius: var(--rs);
-      font-family: 'Sarabun', sans-serif;
-      font-size: 15px;
-      font-weight: 700;
-      color: var(--txt);
-      background: #fff;
-      outline: none;
-      transition: border-color 0.2s;
-      width: 100%;
-    }
+    .pump-row-top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .pump-seq { flex-shrink: 0; width: 28px; height: 28px; background: var(--a); color: #fff; border-radius: 8px; font-size: 13px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+    .pump-no-wrap { flex: 1; }
+    .pump-no-label { font-size: 14px; font-weight: 700; color: var(--txt); display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+    .pump-no-input { padding: 10px 14px; border: 2px solid var(--border); border-radius: var(--rs); font-family: 'Sarabun', sans-serif; font-size: 15px; font-weight: 700; color: var(--txt); background: #fff; outline: none; transition: border-color 0.2s; width: 100%; }
     .pump-no-input:focus { border-color: var(--a); }
     .pump-no-input::placeholder { font-weight: 400; color: var(--muted); }
-
-    .rm-btn {
-      flex-shrink: 0;
-      width: 38px; height: 38px;
-      border: 1.5px solid #E0B0B0;
-      border-radius: 10px;
-      background: #FDF5F5;
-      color: #C0392B;
-      font-size: 18px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    /* WARD SELECT in row */
-    .ward-select {
-      padding: 10px 36px 10px 14px;
-      border: 2px solid var(--border);
-      border-radius: var(--rs);
-      font-family: 'Sarabun', sans-serif;
-      font-size: 14px;
-      color: var(--txt);
-      background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236A8A96' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 10px center;
-      -webkit-appearance: none;
-      appearance: none;
-      outline: none;
-      width: 100%;
-      cursor: pointer;
-      transition: border-color 0.2s;
-    }
-    .ward-select:focus { border-color: var(--a); }
+    .rm-btn { flex-shrink: 0; width: 38px; height: 38px; border: 1.5px solid #E0B0B0; border-radius: 10px; background: #FDF5F5; color: #C0392B; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; -webkit-tap-highlight-color: transparent; }
 
     /* STATUS BUTTONS */
-    .status-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 8px;
-    }
-    @media (min-width: 420px) {
-      .status-grid { grid-template-columns: repeat(4, 1fr); }
-    }
-
-    .st-btn {
-      border: 2.5px solid var(--border);
-      border-radius: var(--rs);
-      padding: 10px 6px 8px;
-      background: none;
-      font-family: 'Sarabun', sans-serif;
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--muted);
-      cursor: pointer;
-      text-align: center;
-      transition: all 0.18s;
-      -webkit-tap-highlight-color: transparent;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-      line-height: 1.3;
-    }
+    .status-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; }
+    @media (min-width: 420px) { .status-grid { grid-template-columns: repeat(4,1fr); } }
+    .st-btn { border: 2.5px solid var(--border); border-radius: var(--rs); padding: 10px 6px 8px; background: none; font-family: 'Sarabun', sans-serif; font-size: 12px; font-weight: 700; color: var(--muted); cursor: pointer; text-align: center; transition: all 0.18s; -webkit-tap-highlight-color: transparent; display: flex; flex-direction: column; align-items: center; gap: 4px; line-height: 1.3; }
     .st-btn .st-icon { font-size: 22px; }
-
     .st-btn.active-use    { background: #DCF2E5; border-color: #1A7B4A; color: #14612D; }
     .st-btn.active-idle   { background: #DAF0F5; border-color: #0A6478; color: #0A6478; }
     .st-btn.active-broken { background: #FFF3CD; border-color: #C77700; color: #8B5000; }
     .st-btn.active-lost   { background: #FDEAEA; border-color: #B82E2E; color: #8B1F1F; }
 
     /* ADD ROW */
-    .add-row-btn {
-      display: flex; align-items: center; gap: 6px;
-      margin-top: 12px; padding: 12px 16px;
-      background: none; border: 2px dashed var(--border);
-      border-radius: var(--rs); font-family: 'Sarabun', sans-serif;
-      font-size: 15px; font-weight: 600; color: var(--a);
-      cursor: pointer; width: 100%; justify-content: center;
-      transition: all 0.2s; -webkit-tap-highlight-color: transparent;
-    }
+    .add-row-btn { display: flex; align-items: center; gap: 6px; margin-top: 12px; padding: 12px 16px; background: none; border: 2px dashed var(--border); border-radius: var(--rs); font-family: 'Sarabun', sans-serif; font-size: 15px; font-weight: 600; color: var(--a); cursor: pointer; width: 100%; justify-content: center; transition: all 0.2s; -webkit-tap-highlight-color: transparent; }
     .add-row-btn:active { opacity: 0.7; }
 
     /* SUMMARY BAR */
-    .summary-bar {
-      display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px;
-    }
-    .sum-chip {
-      flex: 1; min-width: 80px;
-      border-radius: var(--rs); padding: 10px 8px;
-      text-align: center; font-size: 13px; font-weight: 700;
-    }
+    .summary-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+    .sum-chip { flex: 1; min-width: 72px; border-radius: var(--rs); padding: 10px 8px; text-align: center; font-size: 13px; font-weight: 700; }
     .sum-chip .sc-num { font-size: 22px; font-weight: 800; display: block; line-height: 1.1; }
-    .sc-use    { background: #DCF2E5; color: #14612D; }
-    .sc-idle   { background: #DAF0F5; color: #0A6478; }
+    .sc-use { background: #DCF2E5; color: #14612D; }
+    .sc-idle { background: #DAF0F5; color: #0A6478; }
     .sc-broken { background: #FFF3CD; color: #8B5000; }
-    .sc-lost   { background: #FDEAEA; color: #8B1F1F; }
+    .sc-lost { background: #FDEAEA; color: #8B1F1F; }
 
     /* SUBMIT */
     .submit-bar { position: fixed; bottom: 0; left: 0; right: 0; padding: 12px 14px calc(14px + env(safe-area-inset-bottom)); background: linear-gradient(to top, var(--bg) 70%, transparent); z-index: 50; }
@@ -210,6 +126,7 @@
     .reset-btn { margin-top: 20px; padding: 14px 44px; background: var(--a); color: #fff; border: none; border-radius: var(--rs); font-family: 'Sarabun', sans-serif; font-size: 17px; font-weight: 700; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 
     #bgCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+    .hidden { display: none !important; }
   </style>
 </head>
 <body>
@@ -236,48 +153,86 @@
   </div>
   <h1>MEMs</h1>
   <div class="sub">Medical Equipment Management Systems</div>
-  <div class="page-title">
-    <span style="font-size:22px">💉</span>
-    Round เครื่อง Infusion Pump
-  </div>
+  <div class="page-title"><span style="font-size:22px">💉</span> Round เครื่อง Infusion Pump</div>
 </header>
 
 <div class="content">
 
-  <!-- Session Info -->
-  <div class="card">
-    <div class="sec-label"><span class="req-dot"></span>ข้อมูลการ Round</div>
-    <div class="info-row">
+  <!-- STEPS -->
+  <div class="steps" style="margin-top:8px">
+    <div class="step active" id="step1"><span class="step-num">1</span>เลือก Ward</div>
+    <div class="step" id="step2"><span class="step-num">2</span>ตรวจสอบเครื่อง</div>
+  </div>
+
+  <!-- STEP 1: เลือก Ward -->
+  <div id="wardPickCard" class="card">
+    <div class="sec-label"><span class="req-dot"></span>เลือกหน่วยงานที่ต้องการ Round</div>
+    <div class="info-row" style="margin-bottom:12px">
       <div class="info-chip"><span class="info-chip-label">วันที่</span><span id="dateChip">—</span></div>
       <div class="info-chip"><span class="info-chip-label">เวร</span><span id="shiftChip">—</span></div>
     </div>
-    <input class="field" id="nameField" type="text" placeholder="ชื่อผู้บันทึก" autocomplete="name">
+    <select class="field" id="wardSel" onchange="onWardChange()">
+      <option value="">— เลือกตึก/หน่วยงาน —</option>
+    </select>
+    <input class="field" id="nameField" type="text" placeholder="ชื่อผู้บันทึก" autocomplete="name" style="margin-top:10px">
+    <button class="ward-confirm-btn" id="confirmWardBtn" onclick="confirmWard()" disabled>
+      ดึงข้อมูลเครื่อง →
+    </button>
   </div>
 
-  <!-- Summary -->
-  <div class="summary-bar" id="summaryBar" style="display:none">
-    <div class="sum-chip sc-use"><span class="sc-num" id="sumUse">0</span>ใช้งานอยู่</div>
-    <div class="sum-chip sc-idle"><span class="sc-num" id="sumIdle">0</span>ไม่ได้ใช้งาน</div>
-    <div class="sum-chip sc-broken"><span class="sc-num" id="sumBroken">0</span>ชำรุด</div>
-    <div class="sum-chip sc-lost"><span class="sc-num" id="sumLost">0</span>สูญหาย</div>
-  </div>
+  <!-- STEP 2: รายการเครื่อง (hidden initially) -->
+  <div id="step2Section" class="hidden">
 
-  <!-- Pump list -->
-  <div class="card">
-    <div class="sec-label"><span class="req-dot"></span>รายการเครื่อง Infusion Pump</div>
-    <div class="pump-list" id="pumpList"></div>
-    <button class="add-row-btn" onclick="addRow()">＋ เพิ่มเครื่อง</button>
-  </div>
+    <!-- Ward + ผู้บันทึก badge -->
+    <div class="card" style="padding:14px 16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:0.06em">Ward</div>
+          <div style="font-size:16px;font-weight:800;color:var(--a)" id="wardLabel">—</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:0.06em">ผู้บันทึก</div>
+          <div style="font-size:15px;font-weight:700" id="nameLabel">—</div>
+        </div>
+        <button onclick="backToStep1()" style="font-size:12px;color:var(--a);background:var(--al);border:none;border-radius:8px;padding:6px 12px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer">← เปลี่ยน Ward</button>
+      </div>
+    </div>
 
-  <!-- Note -->
-  <div class="card">
-    <div class="sec-label">หมายเหตุ</div>
-    <textarea class="field" id="noteField" rows="3" placeholder="ปัญหาหรือข้อสังเกตเพิ่มเติม (ถ้ามี)" style="resize:none"></textarea>
-  </div>
+    <!-- Loading -->
+    <div id="loadingBox" class="card loading-box hidden">
+      <div class="spinner"></div>
+      <div>กำลังดึงข้อมูลเครื่อง...</div>
+    </div>
 
+    <!-- Summary bar -->
+    <div class="summary-bar hidden" id="summaryBar">
+      <div class="sum-chip sc-use"><span class="sc-num" id="sumUse">0</span>ใช้งานอยู่</div>
+      <div class="sum-chip sc-idle"><span class="sc-num" id="sumIdle">0</span>ไม่ได้ใช้งาน</div>
+      <div class="sum-chip sc-broken"><span class="sc-num" id="sumBroken">0</span>ชำรุด</div>
+      <div class="sum-chip sc-lost"><span class="sc-num" id="sumLost">0</span>สูญหาย</div>
+    </div>
+
+    <!-- Pump list -->
+    <div class="card" id="pumpCard">
+      <div class="sec-label"><span class="req-dot"></span>รายการเครื่อง Infusion Pump</div>
+      <div id="prevInfo" style="font-size:12px;color:var(--muted);margin-bottom:12px;padding:8px 10px;background:#F8FBFC;border-radius:8px;line-height:1.6">
+        🔍 ดึงข้อมูลจากการ Round ครั้งล่าสุด — กดสถานะปัจจุบันของแต่ละเครื่อง
+      </div>
+      <div class="pump-list" id="pumpList"></div>
+      <button class="add-row-btn" onclick="addRow()">＋ เพิ่มเครื่อง</button>
+    </div>
+
+    <!-- Note -->
+    <div class="card">
+      <div class="sec-label">หมายเหตุ</div>
+      <textarea class="field" id="noteField" rows="3" placeholder="ปัญหาหรือข้อสังเกตเพิ่มเติม" style="resize:none"></textarea>
+    </div>
+
+  </div>
 </div>
 
-<div class="submit-bar">
+<!-- SUBMIT (hidden initially) -->
+<div class="submit-bar hidden" id="submitBar">
   <button id="submitBtn" onclick="submitForm()">💉 บันทึก Round Infusion Pump</button>
 </div>
 
@@ -296,20 +251,27 @@
     { key:'use',    label:'ใช้งานอยู่',    icon:'🟢', cls:'active-use'    },
     { key:'idle',   label:'ไม่ได้ใช้งาน', icon:'🔵', cls:'active-idle'   },
     { key:'broken', label:'ชำรุด',         icon:'🟡', cls:'active-broken' },
-    { key:'lost',   label:'สูญหาย',     icon:'🔴', cls:'active-lost'   },
+    { key:'lost',   label:'สูญหาย',        icon:'🔴', cls:'active-lost'   },
   ];
 
+  // map Thai label → key
+  const LABEL_TO_KEY = {};
+  STATUS_DEF.forEach(s => { LABEL_TO_KEY[s.label] = s.key; });
+
   let rowCount = 0;
-  const wardOptHTML = WARDS.map(w => `<option value="${w}">${w}</option>`).join('');
 
   window.onload = () => {
+    WARDS.forEach(w => {
+      const o = document.createElement('option');
+      o.value = o.textContent = w;
+      document.getElementById('wardSel').appendChild(o);
+    });
     const now = new Date();
     document.getElementById('dateChip').textContent =
       now.toLocaleDateString('th-TH', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
     const h = now.getHours();
     document.getElementById('shiftChip').textContent =
       h >= 7 && h < 15 ? '🌤 เวรเช้า' : h >= 15 && h < 23 ? '🌆 เวรบ่าย' : '🌙 เวรดึก';
-    addRow();
   };
 
   (function tick() {
@@ -319,15 +281,81 @@
     setTimeout(tick, 1000);
   })();
 
-  function addRow() {
+  function onWardChange() {
+    const ward = document.getElementById('wardSel').value;
+    const name = document.getElementById('nameField').value.trim();
+    document.getElementById('confirmWardBtn').disabled = !ward;
+  }
+
+  document.getElementById('nameField').addEventListener('input', onWardChange);
+
+  async function confirmWard() {
+    const ward = document.getElementById('wardSel').value;
+    const name = document.getElementById('nameField').value.trim();
+    if (!ward) return;
+    if (!name) { alert('กรุณาระบุชื่อผู้บันทึก'); return; }
+
+    // Update step indicators
+    document.getElementById('step1').className = 'step done';
+    document.getElementById('step2').className = 'step active';
+
+    // Show step 2
+    document.getElementById('wardPickCard').classList.add('hidden');
+    document.getElementById('step2Section').classList.remove('hidden');
+    document.getElementById('submitBar').classList.remove('hidden');
+    document.getElementById('wardLabel').textContent = ward;
+    document.getElementById('nameLabel').textContent = name;
+
+    // Show loading
+    document.getElementById('loadingBox').classList.remove('hidden');
+    document.getElementById('pumpCard').classList.add('hidden');
+    document.getElementById('summaryBar').classList.add('hidden');
+
+    // Fetch history
+    try {
+      const url = `${SCRIPT_URL}?action=roundHistory&ward=${encodeURIComponent(ward)}&equipment=Infusion%20Pump`;
+      const res = await fetch(url, { mode: 'cors' });
+      const data = await res.json();
+      renderMachines(data.machines || []);
+    } catch(e) {
+      renderMachines([]);
+    }
+
+    document.getElementById('loadingBox').classList.add('hidden');
+    document.getElementById('pumpCard').classList.remove('hidden');
+    document.getElementById('summaryBar').classList.remove('hidden');
+  }
+
+  function renderMachines(machines) {
+    document.getElementById('pumpList').innerHTML = '';
+    rowCount = 0;
+
+    if (machines.length > 0) {
+      document.getElementById('prevInfo').innerHTML =
+        `🔍 พบ <b>${machines.length} เครื่อง</b> จากการ Round ครั้งก่อน — กดสถานะปัจจุบันของแต่ละเครื่อง`;
+      machines.forEach(m => addRow(m.number, m.lastStatus, m.lastDate));
+    } else {
+      document.getElementById('prevInfo').innerHTML =
+        `📭 ยังไม่มีประวัติการ Round ใน Ward นี้ — เพิ่มเครื่องด้านล่างได้เลย`;
+      addRow();
+    }
+    updateSummary();
+  }
+
+  function addRow(no = '', prevStatusLabel = '', prevDate = '') {
     rowCount++;
     const id = rowCount;
+    const prevKey = LABEL_TO_KEY[prevStatusLabel] || '';
+    const prevBadgeClass = prevKey || 'new';
+    const prevText = prevStatusLabel || 'ยังไม่มีข้อมูล';
+    const dateText = prevDate ? `Round ล่าสุด: ${prevDate}` : '';
+
     const div = document.createElement('div');
     div.className = 'pump-row';
     div.id = 'prow_' + id;
 
     const stBtns = STATUS_DEF.map(s =>
-      `<button class="st-btn" data-id="${id}" data-key="${s.key}" onclick="setStatus(${id},'${s.key}',this)">
+      `<button class="st-btn" onclick="setStatus(${id},'${s.key}',this)">
         <span class="st-icon">${s.icon}</span>${s.label}
       </button>`
     ).join('');
@@ -335,22 +363,22 @@
     div.innerHTML = `
       <div class="pump-row-top">
         <span class="pump-seq">${id}</span>
-        <div class="pump-fields">
-          <input class="pump-no-input" id="pno_${id}" type="text" placeholder="เครื่อง No. / หมายเลข" inputmode="text">
+        <div class="pump-no-wrap">
+          <input class="pump-no-input" id="pno_${id}" type="text"
+            placeholder="เครื่อง No. / หมายเลข" value="${no}">
+          ${prevStatusLabel ? `
+          <div style="margin-top:5px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <span class="prev-badge ${prevBadgeClass}">ครั้งก่อน: ${prevText}</span>
+            <span class="prev-date">${dateText}</span>
+          </div>` : ''}
         </div>
-        ${id > 1 ? `<button class="rm-btn" onclick="removeRow(${id})">✕</button>` : ''}
+        ${rowCount > 1 && !no ? `<button class="rm-btn" onclick="removeRow(${id})">✕</button>` : ''}
       </div>
-      <select class="ward-select" id="pward_${id}" style="margin-bottom:10px">
-        <option value="">— เลือกหน่วยงาน —</option>
-        ${wardOptHTML}
-      </select>
       <div class="status-grid">${stBtns}</div>
       <input type="hidden" id="pstatus_${id}" value="">
     `;
     document.getElementById('pumpList').appendChild(div);
-    // watch ward/no changes to update summary after any edit
-    div.querySelector('.ward-select').addEventListener('change', updateSummary);
-    div.querySelector('.pump-no-input').addEventListener('input', updateSummary);
+    div.querySelectorAll('.pump-no-input').forEach(el => el.addEventListener('input', updateSummary));
   }
 
   function removeRow(id) {
@@ -360,9 +388,7 @@
 
   function setStatus(id, key, btn) {
     const row = document.getElementById('prow_' + id);
-    row.querySelectorAll('.st-btn').forEach(b => {
-      STATUS_DEF.forEach(s => b.classList.remove(s.cls));
-    });
+    row.querySelectorAll('.st-btn').forEach(b => STATUS_DEF.forEach(s => b.classList.remove(s.cls)));
     btn.classList.add('active-' + key);
     document.getElementById('pstatus_' + id).value = key;
     row.classList.add('has-status');
@@ -370,9 +396,8 @@
   }
 
   function updateSummary() {
-    const rows = document.querySelectorAll('.pump-row');
     let use=0, idle=0, broken=0, lost=0, total=0;
-    rows.forEach(row => {
+    document.querySelectorAll('.pump-row').forEach(row => {
       const rid = row.id.replace('prow_','');
       const st = document.getElementById('pstatus_'+rid)?.value;
       if (!st) return;
@@ -386,63 +411,62 @@
     document.getElementById('sumIdle').textContent   = idle;
     document.getElementById('sumBroken').textContent = broken;
     document.getElementById('sumLost').textContent   = lost;
-    document.getElementById('summaryBar').style.display = total > 0 ? 'flex' : 'none';
+    document.getElementById('summaryBar').classList.toggle('hidden', total === 0);
+  }
+
+  function backToStep1() {
+    document.getElementById('step1').className = 'step active';
+    document.getElementById('step2').className = 'step';
+    document.getElementById('wardPickCard').classList.remove('hidden');
+    document.getElementById('step2Section').classList.add('hidden');
+    document.getElementById('submitBar').classList.add('hidden');
   }
 
   async function submitForm() {
+    const ward = document.getElementById('wardSel').value;
     const name = document.getElementById('nameField').value.trim();
-    if (!name) { alert('กรุณาระบุชื่อผู้บันทึก'); return; }
-
     const rows = document.querySelectorAll('.pump-row');
     const items = [];
     let missingStatus = false;
     rows.forEach(row => {
-      const rid    = row.id.replace('prow_','');
-      const no     = document.getElementById('pno_'+rid).value.trim();
-      const ward   = document.getElementById('pward_'+rid).value;
-      const stKey  = document.getElementById('pstatus_'+rid).value;
+      const rid   = row.id.replace('prow_','');
+      const no    = document.getElementById('pno_'+rid).value.trim();
+      const stKey = document.getElementById('pstatus_'+rid).value;
       if (!stKey) { missingStatus = true; return; }
-      const stDef  = STATUS_DEF.find(s => s.key === stKey);
-      items.push({ no, ward, stKey, stLabel: stDef?.label || stKey });
+      const stDef = STATUS_DEF.find(s => s.key === stKey);
+      items.push({ no, stKey, stLabel: stDef?.label || stKey });
     });
 
     if (missingStatus) { alert('กรุณาเลือกสถานะให้ครบทุกเครื่อง'); return; }
     if (items.length === 0) { alert('กรุณาเพิ่มเครื่องอย่างน้อย 1 รายการ'); return; }
 
     const btn = document.getElementById('submitBtn');
-    btn.disabled = true;
-    btn.textContent = '⏳ กำลังบันทึก...';
+    btn.disabled = true; btn.textContent = '⏳ กำลังบันทึก...';
 
     const now = new Date();
     const h = now.getHours();
     const shift = h >= 7 && h < 15 ? 'เวรเช้า' : h >= 15 && h < 23 ? 'เวรบ่าย' : 'เวรดึก';
     const note = document.getElementById('noteField').value.trim();
 
-    const promises = items.map(item =>
+    await Promise.all(items.map(item =>
       fetch(SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
+        method: 'POST', mode: 'no-cors',
         headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify({
-          action: '🔵 Round',
-          shift,
-          ward: item.ward,
+          action: '🔵 Round', shift, ward,
           equipment: 'Infusion Pump',
           equipmentNumber: item.no,
           roundStatus: item.stLabel,
-          note,
-          name,
+          note, name,
           timestamp: now.toISOString()
         })
       }).catch(() => {})
-    );
-    await Promise.all(promises);
+    ));
 
     const cnt = { use:0, idle:0, broken:0, lost:0 };
     items.forEach(i => cnt[i.stKey]++);
-
     document.getElementById('sucMeta').textContent =
-      `ผู้บันทึก: ${name} | ${shift} | ทั้งหมด ${items.length} เครื่อง`;
+      `${ward} | ผู้บันทึก: ${name} | ${shift} | ${items.length} เครื่อง`;
     document.getElementById('sucGrid').innerHTML = `
       <div class="suc-chip sc-use"><span class="sc-n">${cnt.use}</span>ใช้งานอยู่</div>
       <div class="suc-chip sc-idle"><span class="sc-n">${cnt.idle}</span>ไม่ได้ใช้งาน</div>
@@ -450,17 +474,15 @@
       <div class="suc-chip sc-lost"><span class="sc-n">${cnt.lost}</span>สูญหาย</div>
     `;
     document.getElementById('successScreen').classList.add('show');
-    btn.disabled = false;
-    btn.textContent = '💉 บันทึก Round Infusion Pump';
+    btn.disabled = false; btn.textContent = '💉 บันทึก Round Infusion Pump';
   }
 
   function resetForm() {
     document.getElementById('successScreen').classList.remove('show');
-    document.getElementById('nameField').value = '';
     document.getElementById('noteField').value = '';
     document.getElementById('pumpList').innerHTML = '';
     rowCount = 0;
-    addRow();
+    backToStep1();
     updateSummary();
   }
 
