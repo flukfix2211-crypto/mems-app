@@ -67,6 +67,10 @@ function doGet(e) {
       return jsonResponse(getRoundHistory(ward, equipment));
     }
 
+    if (action === 'c2status') {
+      return jsonResponse(getC2Status());
+    }
+
     return jsonResponse({ ok: false, error: 'unknown action' }, 400);
   } catch (err) {
     return jsonResponse({ ok: false, error: err.message }, 500);
@@ -293,4 +297,45 @@ function jsonResponse(obj) {
   // GAS เพิ่ม Access-Control-Allow-Origin: * อัตโนมัติเมื่อ deploy แบบ "Anyone"
   return ContentService.createTextOutput(JSON.stringify(obj))
                        .setMimeType(ContentService.MimeType.JSON);
+}
+
+function getC2Status() {
+  const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(SHEET_BORROW);
+  if (!sheet || sheet.getLastRow() <= 1) return { ok: true, units: buildC2Units({}) };
+
+  const rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, 12).getValues();
+  const statusMap = {};
+
+  rows.forEach(r => {
+    const equip  = String(r[5]);
+    const num    = String(r[6]);
+    const action = String(r[4]);
+    const ward   = String(r[7]);
+    const name   = String(r[8]);
+    let   ts     = r[9];
+    if (!equip.includes('C2')) return;
+    const n = parseInt(num, 10);
+    if (isNaN(n) || n < 1 || n > 60) return;
+    statusMap[num] = {
+      number:     num,
+      isBorrowed: action.includes('ยืม'),
+      ward:       action.includes('ยืม') ? ward : '',
+      borrowedBy: action.includes('ยืม') ? name : '',
+      lastUpdate: ts instanceof Date
+        ? Utilities.formatDate(ts, 'Asia/Bangkok', 'dd/MM/yyyy HH:mm')
+        : String(ts)
+    };
+  });
+
+  return { ok: true, units: buildC2Units(statusMap) };
+}
+
+function buildC2Units(statusMap) {
+  const units = [];
+  for (let i = 1; i <= 60; i++) {
+    const key = String(i);
+    units.push(statusMap[key] || { number: key, isBorrowed: false, ward: '', borrowedBy: '', lastUpdate: '' });
+  }
+  return units;
 }

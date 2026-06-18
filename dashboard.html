@@ -137,6 +137,10 @@
     .spinner { width: 20px; height: 20px; border: 3px solid var(--border); border-top-color: var(--a); border-radius: 50%; animation: spin .7s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
+    .c2d-btn { padding:8px 4px; border-radius:8px; border:2px solid; font-size:11px; font-weight:700; text-align:center; line-height:1.3; }
+    .c2d-avail    { background:#DCF2E5; border-color:#86EFAC; color:#1A7B4A; }
+    .c2d-borrowed { background:#FDEAEA; border-color:#FCA5A5; color:#B82E2E; }
+
     /* PRINT */
     .print-title { font-size: 18px; font-weight: 800; margin-bottom: 8px; }
     .print-meta  { font-size: 12px; color: #666; margin-bottom: 16px; }
@@ -237,6 +241,15 @@
       <span class="nav-arrow">›</span>
     </div>
 
+    <div class="nav-card" onclick="showView('c2')">
+      <div class="nav-icon" style="background:#FEF3C7;font-size:26px;width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;z-index:1;">💊</div>
+      <div class="nav-text">
+        <div class="nav-title">สถานะ C2 (No.1–60)</div>
+        <div class="nav-desc" id="navC2Desc">ตรวจสอบสถานะและสถิติการใช้งาน C2</div>
+      </div>
+      <span class="nav-arrow">›</span>
+    </div>
+
     <div class="nav-card" onclick="showView('records')">
       <div class="nav-icon purple">📝</div>
       <div class="nav-text">
@@ -305,6 +318,34 @@
         <div id="roundPrintWrap" style="display:none">
           <button class="btn-print" onclick="printRoundReport()">🖨️ พิมพ์รายงาน</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- C2 VIEW -->
+  <div id="viewC2" class="view">
+    <div class="view-header">
+      <button class="btn-view-back" onclick="showView('home')">← กลับ</button>
+      <div class="view-title">💊 สถานะ C2 (No.1–60)</div>
+    </div>
+    <!-- Summary -->
+    <div id="c2DashSummary" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px"></div>
+    <!-- Grid -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-head">สถานะปัจจุบัน</div>
+      <div class="card-body">
+        <div id="c2DashMsg" style="font-size:13px;color:var(--muted)"></div>
+        <div id="c2DashGrid" style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:8px"></div>
+      </div>
+    </div>
+    <!-- Monthly stats -->
+    <div class="card">
+      <div class="card-head">สถิติรายเดือน (C2)</div>
+      <div class="card-body">
+        <select id="c2MonthSel" onchange="renderC2Stats()" style="width:100%;padding:9px 12px;border:2px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;background:#fff;outline:none;margin-bottom:12px">
+          <option value="">— เลือกเดือน —</option>
+        </select>
+        <div id="c2StatsWrap"><div class="empty">เลือกเดือนเพื่อดูสถิติ</div></div>
       </div>
     </div>
   </div>
@@ -401,6 +442,7 @@ function showView(name) {
   if (name === 'status')  renderEquipStatus();
   if (name === 'round')   populateRoundFilters();
   if (name === 'records') renderTable();
+  if (name === 'c2') renderC2Dashboard();
 }
 
 /* ============================================================ INIT ============================================================ */
