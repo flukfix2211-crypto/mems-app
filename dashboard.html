@@ -7,325 +7,143 @@
   <title>MEMs Dashboard — แดชบอร์ดการใช้งาน</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Orbitron:wght@700&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-
     :root {
-      --a:      #0A6478;
-      --a2:     #0E7D94;
-      --al:     #DAF0F5;
-      --bg:     #EBF5F8;
-      --card:   #FFFFFF;
-      --txt:    #192D35;
-      --muted:  #6A8A96;
-      --border: #C5E3ED;
-      --green:  #1A7B4A;
-      --red:    #B82E2E;
-      --r:      16px;
-      --sh:     0 2px 12px rgba(10,100,120,0.10);
+      --a: #0A6478; --a2: #0E7D94; --al: #DAF0F5;
+      --bg: #EBF5F8; --card: #FFFFFF; --txt: #192D35;
+      --muted: #6A8A96; --border: #C5E3ED;
+      --green: #1A7B4A; --red: #B82E2E;
+      --r: 16px; --sh: 0 2px 12px rgba(10,100,120,0.10);
     }
+    body { font-family: 'Sarabun', sans-serif; background: var(--bg); color: var(--txt); min-height: 100vh; font-size: 15px; }
 
-    body {
-      font-family: 'Sarabun', sans-serif;
-      background: var(--bg);
-      color: var(--txt);
-      min-height: 100vh;
-      font-size: 15px;
-    }
-
-    /* ── HEADER ── */
-    .header {
-      background: linear-gradient(135deg, var(--a) 0%, var(--a2) 100%);
-      color: #fff;
-      padding: 18px 20px 20px;
-    }
-    .header-inner {
-      max-width: 1100px;
-      margin: 0 auto;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-    .header h1 { font-size: 20px; font-weight: 800; letter-spacing: -.01em; }
+    /* HEADER */
+    .header { background: linear-gradient(135deg, var(--a) 0%, var(--a2) 100%); color: #fff; padding: 18px 20px 20px; }
+    .header-inner { max-width: 700px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+    .header h1 { font-size: 20px; font-weight: 800; }
     .header .sub { font-size: 12px; opacity: .7; margin-top: 2px; }
-    .header-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-    .btn-back {
-      background: rgba(255,255,255,0.18);
-      color: #fff;
-      border: 1px solid rgba(255,255,255,0.3);
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-size: 13px;
-      font-family: inherit;
-      cursor: pointer;
-      text-decoration: none;
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-    }
-    .btn-back:hover { background: rgba(255,255,255,0.28); }
-    #lastUpdated { font-size: 12px; opacity: .7; }
+    .header-right { display: flex; align-items: center; gap: 12px; }
+    #lastUpdated { font-size: 12px; opacity: .75; }
+    .btn-back { font-size: 13px; font-weight: 700; color: #fff; text-decoration: none; background: rgba(255,255,255,.18); padding: 7px 14px; border-radius: 20px; white-space: nowrap; }
 
-    /* ── MAIN ── */
-    .main {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 20px 16px 60px;
-    }
+    /* MAIN */
+    .main { max-width: 700px; margin: 0 auto; padding: 20px 16px 60px; }
 
-    /* ── FILTER BAR ── */
-    .filter-bar {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      align-items: center;
-      margin-bottom: 20px;
-    }
-    .filter-bar label { font-size: 13px; color: var(--muted); font-weight: 600; }
-    .filter-bar select, .filter-bar input {
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 7px 12px;
-      font-size: 13px;
-      font-family: inherit;
-      background: var(--card);
-      color: var(--txt);
-      outline: none;
-    }
-    .filter-bar select:focus, .filter-bar input:focus { border-color: var(--a); }
-    .btn-refresh {
-      background: var(--a);
-      color: #fff;
-      border: none;
-      padding: 7px 16px;
-      border-radius: 10px;
-      font-size: 13px;
-      font-family: inherit;
-      cursor: pointer;
-      font-weight: 600;
-      margin-left: auto;
-    }
-    .btn-refresh:hover { background: var(--a2); }
-    .btn-refresh:disabled { opacity: .5; cursor: default; }
+    /* FILTER BAR */
+    .filter-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; background: var(--card); border-radius: var(--r); box-shadow: var(--sh); padding: 14px 16px; margin-bottom: 18px; }
+    .filter-bar label { font-size: 12px; font-weight: 700; color: var(--muted); white-space: nowrap; }
+    .filter-bar select { padding: 7px 10px; border: 2px solid var(--border); border-radius: 10px; font-family: inherit; font-size: 13px; background: #fff; color: var(--txt); outline: none; cursor: pointer; }
+    .btn-refresh { margin-left: auto; padding: 8px 16px; background: var(--a); color: #fff; border: none; border-radius: 10px; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .btn-refresh:disabled { opacity: .6; cursor: default; }
 
-    /* ── KPI CARDS ── */
-    .kpi-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 12px;
-      margin-bottom: 20px;
-    }
-    .kpi {
-      background: var(--card);
-      border-radius: var(--r);
-      padding: 16px 18px;
-      box-shadow: var(--sh);
-      border-top: 4px solid var(--a);
-    }
-    .kpi.green  { border-color: var(--green); }
-    .kpi.red    { border-color: var(--red);   }
-    .kpi.orange { border-color: #D97706;      }
-    .kpi.purple { border-color: #7C3AED;      }
-    .kpi-label  { font-size: 12px; color: var(--muted); font-weight: 600; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .04em; }
-    .kpi-value  { font-size: 32px; font-weight: 800; line-height: 1; }
-    .kpi.green  .kpi-value { color: var(--green); }
-    .kpi.red    .kpi-value { color: var(--red);   }
-    .kpi.orange .kpi-value { color: #D97706;      }
-    .kpi.purple .kpi-value { color: #7C3AED;      }
-    .kpi-sub    { font-size: 11px; color: var(--muted); margin-top: 4px; }
+    /* KPI */
+    .kpi-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; }
+    .kpi { background: var(--card); border-radius: var(--r); box-shadow: var(--sh); padding: 18px 16px; border-left: 4px solid; }
+    .kpi.green { border-color: var(--green); }
+    .kpi.red   { border-color: var(--red); }
+    .kpi.orange{ border-color: #D97706; }
+    .kpi.purple{ border-color: #7C3AED; }
+    .kpi-label { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+    .kpi-value { font-size: 32px; font-weight: 800; line-height: 1.1; margin: 4px 0 2px; }
+    .kpi.green .kpi-value { color: var(--green); }
+    .kpi.red   .kpi-value { color: var(--red); }
+    .kpi.orange .kpi-value { color: #D97706; }
+    .kpi.purple .kpi-value { color: #7C3AED; }
+    .kpi-sub { font-size: 12px; color: var(--muted); }
 
-    /* ── GRID 2 COLS ── */
-    .grid-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      margin-bottom: 16px;
-    }
-    @media (max-width: 680px) { .grid-2 { grid-template-columns: 1fr; } }
+    /* NAV CARDS */
+    .section-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 4px 0 12px; }
+    .nav-card { background: var(--card); border-radius: var(--r); box-shadow: var(--sh); padding: 20px 18px; margin-bottom: 12px; display: flex; align-items: center; gap: 16px; cursor: pointer; border: 2px solid transparent; transition: all .2s ease; -webkit-tap-highlight-color: transparent; position: relative; overflow: hidden; }
+    .nav-card::before { content: ''; position: absolute; inset: 0; background: var(--al); opacity: 0; transition: opacity .15s; }
+    .nav-card:active::before { opacity: 1; }
+    .nav-card:hover { border-color: var(--a); transform: translateY(-2px); box-shadow: 0 6px 24px rgba(10,100,120,0.14); }
+    .nav-icon { width: 56px; height: 56px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 26px; flex-shrink: 0; position: relative; z-index: 1; }
+    .nav-icon.teal   { background: #DAF0F5; }
+    .nav-icon.green  { background: #DCF2E5; }
+    .nav-icon.blue   { background: #DBEAFE; }
+    .nav-icon.purple { background: #EDE9F8; }
+    .nav-text { flex: 1; position: relative; z-index: 1; }
+    .nav-title { font-size: 16px; font-weight: 800; margin-bottom: 3px; }
+    .nav-desc  { font-size: 13px; color: var(--muted); }
+    .nav-arrow { font-size: 22px; color: var(--a); opacity: .4; position: relative; z-index: 1; transition: opacity .2s, transform .2s; }
+    .nav-card:hover .nav-arrow { opacity: 1; transform: translateX(4px); }
 
-    /* ── CARD ── */
-    .card {
-      background: var(--card);
-      border-radius: var(--r);
-      box-shadow: var(--sh);
-      overflow: hidden;
-    }
-    .card-head {
-      padding: 14px 18px 12px;
-      border-bottom: 1px solid var(--border);
-      font-weight: 700;
-      font-size: 14px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-    }
+    /* SECTION VIEWS */
+    .view { display: none; }
+    .view.active { display: block; }
+    .view-header { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+    .btn-view-back { padding: 8px 16px; background: var(--a); color: #fff; border: none; border-radius: 10px; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer; flex-shrink: 0; }
+    .view-title { font-size: 18px; font-weight: 800; }
+
+    /* CARD */
+    .card { background: var(--card); border-radius: var(--r); box-shadow: var(--sh); margin-bottom: 16px; overflow: hidden; }
+    .card-head { padding: 16px 18px; font-size: 15px; font-weight: 700; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
     .card-body { padding: 16px 18px; }
-    .chart-wrap { position: relative; height: 220px; }
 
-    /* ── EQUIPMENT STATUS ── */
-    .equip-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-      gap: 10px;
-    }
-    .equip-card {
-      border: 1.5px solid var(--border);
-      border-radius: 12px;
-      padding: 12px 14px;
-      font-size: 13px;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-    .equip-card.borrowed { border-color: #F87171; background: #FEF2F2; }
-    .equip-card.returned { border-color: #34D399; background: #F0FDF4; }
-    .equip-name { font-weight: 700; font-size: 14px; }
-    .equip-num  { color: var(--muted); font-size: 12px; }
-    .equip-badge {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 700;
-      margin-top: 2px;
-      width: fit-content;
-    }
-    .equip-badge.borrow { background: #FEE2E2; color: #B91C1C; }
-    .equip-badge.return { background: #DCFCE7; color: #166534; }
-    .equip-ward { color: var(--muted); font-size: 12px; }
-    .equip-who  { color: var(--txt); font-size: 12px; font-weight: 600; }
-
-    /* ── TABLE ── */
-    .table-wrap { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    th {
-      background: var(--al);
-      color: var(--a);
-      font-weight: 700;
-      padding: 9px 12px;
-      text-align: left;
-      white-space: nowrap;
-    }
-    td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
-    tr:last-child td { border-bottom: none; }
-    tr:hover td { background: #F0F9FC; }
-    .badge {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 700;
-    }
-    .badge-borrow { background: #DCFCE7; color: #166534; }
-    .badge-return { background: #FEE2E2; color: #B91C1C; }
-    .empty { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 14px; }
-
-    /* ── SEARCH ── */
-    .search-row {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      margin-bottom: 12px;
-      flex-wrap: wrap;
-    }
-    .search-row input {
-      flex: 1;
-      min-width: 180px;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 7px 12px;
-      font-size: 13px;
-      font-family: inherit;
-      outline: none;
-    }
-    .search-row input:focus { border-color: var(--a); }
-    .pagination {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      margin-top: 12px;
-      font-size: 13px;
-      color: var(--muted);
-    }
-    .pagination button {
-      border: 1px solid var(--border);
-      background: var(--card);
-      padding: 4px 10px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 12px;
-      font-family: inherit;
-    }
-    .pagination button:disabled { opacity: .4; cursor: default; }
-    .pagination button:hover:not(:disabled) { background: var(--al); }
-
-    /* ── WARD BAR LIST ── */
+    /* WARD BARS */
     .ward-list { display: flex; flex-direction: column; gap: 8px; }
-    .ward-row { display: flex; align-items: center; gap: 10px; font-size: 13px; }
-    .ward-name { min-width: 110px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .ward-bar-wrap { flex: 1; background: var(--al); border-radius: 6px; height: 14px; overflow: hidden; }
-    .ward-bar { height: 100%; border-radius: 6px; background: var(--a); transition: width .5s ease; }
-    .ward-count { min-width: 30px; text-align: right; color: var(--muted); }
+    .ward-row { display: flex; align-items: center; gap: 10px; }
+    .ward-name { width: 130px; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
+    .ward-bar-wrap { flex: 1; background: var(--al); border-radius: 20px; height: 10px; overflow: hidden; }
+    .ward-bar { height: 100%; background: linear-gradient(90deg, var(--a), var(--a2)); border-radius: 20px; transition: width .4s ease; }
+    .ward-count { width: 32px; text-align: right; font-size: 13px; font-weight: 700; color: var(--a); flex-shrink: 0; }
 
-    /* ── LOADING / ERROR ── */
-    .state-loading, .state-error {
-      text-align: center;
-      padding: 60px 20px;
-      color: var(--muted);
-    }
-    .state-error { color: #B82E2E; }
-    .spinner {
-      width: 36px; height: 36px;
-      border: 3px solid var(--border);
-      border-top-color: var(--a);
-      border-radius: 50%;
-      animation: spin .8s linear infinite;
-      margin: 0 auto 12px;
-    }
+    /* EQUIP GRID */
+    .equip-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+    .equip-card { border-radius: 12px; padding: 14px 12px; border: 2px solid; }
+    .equip-card.borrowed { background: #FFF5F5; border-color: #FCA5A5; }
+    .equip-card.returned { background: #F0FFF4; border-color: #86EFAC; }
+    .equip-name { font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
+    .equip-num  { font-size: 18px; font-weight: 800; color: var(--txt); margin-bottom: 6px; }
+    .equip-badge { font-size: 12px; font-weight: 700; margin-bottom: 6px; }
+    .equip-ward, .equip-who { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    /* TABLE */
+    .search-row { margin-bottom: 12px; }
+    .search-row input { width: 100%; padding: 10px 14px; border: 2px solid var(--border); border-radius: 10px; font-family: inherit; font-size: 14px; outline: none; }
+    .search-row input:focus { border-color: var(--a); }
+    .table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid var(--border); }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead tr { background: var(--a); color: #fff; }
+    th { padding: 10px 12px; text-align: left; font-weight: 700; white-space: nowrap; }
+    td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--al); }
+    .badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 20px; white-space: nowrap; }
+    .badge-borrow { background: #DCF2E5; color: #1A7B4A; }
+    .badge-return { background: #FDEAEA; color: #B82E2E; }
+    .pagination { display: flex; align-items: center; gap: 10px; justify-content: center; padding: 14px 0 0; flex-wrap: wrap; font-size: 13px; }
+    .pagination button { padding: 7px 14px; background: var(--a); color: #fff; border: none; border-radius: 8px; font-family: inherit; font-size: 13px; cursor: pointer; }
+    .pagination button:disabled { opacity: .4; cursor: default; }
+
+    /* ROUND BADGES */
+    .rs-badge { display: inline-block; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 20px; }
+    .rs-use    { background: #DCF2E5; color: #1A7B4A; }
+    .rs-idle   { background: #DBEAFE; color: #1D4ED8; }
+    .rs-broken { background: #FEF9C3; color: #92400E; }
+    .rs-lost   { background: #FDEAEA; color: #B82E2E; }
+
+    /* ROUND FILTERS */
+    .round-filter-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+    .round-filter-row label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; display: block; margin-bottom: 5px; }
+    .round-filter-row select { width: 100%; padding: 9px 12px; border: 2px solid var(--border); border-radius: 10px; font-family: inherit; font-size: 14px; background: #fff; color: var(--txt); outline: none; }
+    .round-summary { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    .btn-print { padding: 10px 20px; background: var(--a); color: #fff; border: none; border-radius: 10px; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; }
+
+    /* STATES */
+    .empty { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 14px; }
+    .state-loading { text-align: center; padding: 30px; color: var(--muted); display: flex; align-items: center; justify-content: center; gap: 10px; }
+    .spinner { width: 20px; height: 20px; border: 3px solid var(--border); border-top-color: var(--a); border-radius: 50%; animation: spin .7s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ── TABS ── */
-    .tabs { display: flex; gap: 4px; border-bottom: 2px solid var(--border); margin-bottom: 16px; }
-    .tab {
-      padding: 8px 16px;
-      font-size: 13px;
-      font-weight: 600;
-      font-family: inherit;
-      cursor: pointer;
-      border: none;
-      background: none;
-      color: var(--muted);
-      border-bottom: 2px solid transparent;
-      margin-bottom: -2px;
-    }
-    .tab.active { color: var(--a); border-bottom-color: var(--a); }
-    .tab-panel { display: none; }
-    .tab-panel.active { display: block; }
-    /* ROUND STATUS BADGES */
-    .rs-use    { background:#DCF2E5; color:#14612D; }
-    .rs-idle   { background:#DAF0F5; color:#0A6478; }
-    .rs-broken { background:#FFF3CD; color:#8B5000; }
-    .rs-lost   { background:#FDEAEA; color:#B82E2E; }
-    .rs-badge  { display:inline-block; font-size:12px; font-weight:700; border-radius:6px; padding:2px 9px; }
-
-    /* PRINT STYLES */
+    /* PRINT */
+    .print-title { font-size: 18px; font-weight: 800; margin-bottom: 8px; }
+    .print-meta  { font-size: 12px; color: #666; margin-bottom: 16px; }
     @media print {
       body * { visibility: hidden; }
       #printArea, #printArea * { visibility: visible; }
-      #printArea {
-        position: fixed; inset: 0; background: #fff;
-        padding: 20px 28px; font-family: 'Sarabun', sans-serif;
-        font-size: 13px; color: #000;
-      }
-      #printArea table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-      #printArea th, #printArea td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; font-size: 12px; }
-      #printArea th { background: #0A6478; color: #fff; }
-      #printArea .print-title { font-size: 18px; font-weight: 800; margin-bottom: 4px; }
-      #printArea .print-meta  { font-size: 12px; color: #555; margin-bottom: 10px; }
+      #printArea { position: fixed; top: 0; left: 0; width: 100%; background: #fff; padding: 20px; }
     }
   </style>
 </head>
@@ -340,7 +158,7 @@
     </div>
     <div class="header-right">
       <span id="lastUpdated"></span>
-      <a href="index.html" class="btn-back">← กลับหน้าแบบฟอร์ม</a>
+      <a href="index.html" class="btn-back">← หน้าหลัก</a>
     </div>
   </div>
 </div>
@@ -388,139 +206,142 @@
     </div>
   </div>
 
-  <!-- CHARTS ROW -->
-  <div class="grid-2">
-    <!-- Ward usage -->
+  <!-- HOME VIEW: NAV CARDS -->
+  <div id="viewHome" class="view active">
+    <div class="section-label">รายงาน &amp; ข้อมูล</div>
+
+    <div class="nav-card" onclick="showView('ward')">
+      <div class="nav-icon teal">🏥</div>
+      <div class="nav-text">
+        <div class="nav-title">การใช้งานแต่ละหน่วยงาน</div>
+        <div class="nav-desc">สถิติการยืม-คืนแยกตาม Ward/ตึก</div>
+      </div>
+      <span class="nav-arrow">›</span>
+    </div>
+
+    <div class="nav-card" onclick="showView('status')">
+      <div class="nav-icon green">📋</div>
+      <div class="nav-text">
+        <div class="nav-title">สถานะเครื่องปัจจุบัน</div>
+        <div class="nav-desc" id="navStatusDesc">เครื่องที่ยืมอยู่และว่าง</div>
+      </div>
+      <span class="nav-arrow">›</span>
+    </div>
+
+    <div class="nav-card" onclick="showView('round')">
+      <div class="nav-icon blue">💉</div>
+      <div class="nav-text">
+        <div class="nav-title">บันทึกการ Round เครื่อง</div>
+        <div class="nav-desc">รายงาน Infusion Pump แยกหน่วยงาน พร้อมพิมพ์</div>
+      </div>
+      <span class="nav-arrow">›</span>
+    </div>
+
+    <div class="nav-card" onclick="showView('records')">
+      <div class="nav-icon purple">📝</div>
+      <div class="nav-text">
+        <div class="nav-title">รายการทั้งหมด</div>
+        <div class="nav-desc">ค้นหาและดูรายการยืม-คืนทั้งหมด</div>
+      </div>
+      <span class="nav-arrow">›</span>
+    </div>
+  </div>
+
+  <!-- WARD VIEW -->
+  <div id="viewWard" class="view">
+    <div class="view-header">
+      <button class="btn-view-back" onclick="showView('home')">← กลับ</button>
+      <div class="view-title">🏥 การใช้งานแต่ละหน่วยงาน</div>
+    </div>
     <div class="card">
-      <div class="card-head">🏥 การใช้งานแต่ละหน่วยงาน</div>
       <div class="card-body" id="wardChartBody">
         <div class="state-loading"><div class="spinner"></div>กำลังโหลด…</div>
       </div>
     </div>
-    <!-- Equipment usage -->
+  </div>
+
+  <!-- STATUS VIEW -->
+  <div id="viewStatus" class="view">
+    <div class="view-header">
+      <button class="btn-view-back" onclick="showView('home')">← กลับ</button>
+      <div class="view-title">📋 สถานะเครื่องปัจจุบัน</div>
+    </div>
     <div class="card">
-      <div class="card-head">🔬 ครุภัณฑ์ที่ใช้งานมากที่สุด</div>
-      <div class="card-body">
-        <div class="chart-wrap"><canvas id="equipChart"></canvas></div>
+      <div class="card-head">
+        <span id="equipStatusCount" style="font-size:13px;font-weight:600;color:var(--muted)"></span>
+      </div>
+      <div class="card-body" id="equipStatusBody">
+        <div class="state-loading"><div class="spinner"></div>กำลังโหลด…</div>
       </div>
     </div>
   </div>
 
-  <!-- SHIFT + TREND -->
-  <div class="grid-2" style="margin-bottom:16px">
-    <div class="card">
-      <div class="card-head">🌙 การใช้งานแต่ละเวร</div>
-      <div class="card-body">
-        <div class="chart-wrap"><canvas id="shiftChart"></canvas></div>
-      </div>
+  <!-- ROUND VIEW -->
+  <div id="viewRound" class="view">
+    <div class="view-header">
+      <button class="btn-view-back" onclick="showView('home')">← กลับ</button>
+      <div class="view-title">💉 บันทึกการ Round Infusion Pump</div>
     </div>
     <div class="card">
-      <div class="card-head">📈 แนวโน้ม 7 วันล่าสุด</div>
       <div class="card-body">
-        <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- EQUIPMENT STATUS -->
-  <div class="card" style="margin-bottom:16px">
-    <div class="card-head">
-      📋 สถานะเครื่องปัจจุบัน
-      <span id="equipStatusCount" style="font-size:12px;font-weight:400;color:var(--muted)"></span>
-    </div>
-    <div class="card-body" id="equipStatusBody">
-      <div class="state-loading"><div class="spinner"></div>กำลังโหลด…</div>
-    </div>
-  </div>
-
-  <!-- ROUND RECORDS SECTION -->
-  <div class="card" style="margin-bottom:16px">
-    <div class="card-head" style="cursor:pointer;user-select:none" onclick="toggleRoundSection()">
-      💉 บันทึกการ Round เครื่อง Infusion Pump
-      <span id="roundToggleBtn" style="font-size:12px;background:rgba(255,255,255,0.18);padding:4px 10px;border-radius:20px;margin-left:auto">▼ ดูรายงาน</span>
-    </div>
-    <div id="roundBody" style="display:none">
-      <div class="card-body" style="border-top:1px solid var(--border)">
-
-        <!-- Filters -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+        <div class="round-filter-row">
           <div>
-            <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:5px">หน่วยงาน</label>
-            <select id="roundWardSel" onchange="renderRoundTable()" style="width:100%;padding:9px 12px;border:2px solid var(--border);border-radius:10px;font-family:'Sarabun',sans-serif;font-size:14px;background:#fff;color:var(--txt);outline:none;cursor:pointer">
+            <label>หน่วยงาน</label>
+            <select id="roundWardSel" onchange="renderRoundTable()">
               <option value="">— ทั้งหมด —</option>
             </select>
           </div>
           <div>
-            <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:5px">วันที่</label>
-            <select id="roundDateSel" onchange="renderRoundTable()" style="width:100%;padding:9px 12px;border:2px solid var(--border);border-radius:10px;font-family:'Sarabun',sans-serif;font-size:14px;background:#fff;color:var(--txt);outline:none;cursor:pointer">
+            <label>วันที่</label>
+            <select id="roundDateSel" onchange="renderRoundTable()">
               <option value="">— ทั้งหมด —</option>
             </select>
           </div>
         </div>
-
-        <!-- Summary chips -->
-        <div id="roundSummary" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"></div>
-
-        <!-- Table -->
+        <div class="round-summary" id="roundSummary"></div>
         <div class="table-wrap" id="roundTableWrap">
           <div class="empty">เลือกหน่วยงานหรือวันที่เพื่อดูรายการ</div>
         </div>
-
-        <!-- Print button -->
-        <div style="margin-top:12px;text-align:right" id="roundPrintWrap" style="display:none">
-          <button onclick="printRoundReport()" style="padding:10px 20px;background:var(--a);color:#fff;border:none;border-radius:10px;font-family:'Sarabun',sans-serif;font-size:14px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px">
-            🖨️ พิมพ์รายงาน
-          </button>
+        <div id="roundPrintWrap" style="display:none">
+          <button class="btn-print" onclick="printRoundReport()">🖨️ พิมพ์รายงาน</button>
         </div>
-
       </div>
     </div>
   </div>
 
-  <!-- RECORDS TABLE -->
-  <div class="card">
-    <div class="card-head">📝 รายการทั้งหมด</div>
-    <div class="card-body">
-      <div class="search-row">
-        <input type="text" id="searchInput" placeholder="ค้นหา เครื่อง / หมายเลข / ตึก / ชื่อ…" oninput="onSearch()">
+  <!-- RECORDS VIEW -->
+  <div id="viewRecords" class="view">
+    <div class="view-header">
+      <button class="btn-view-back" onclick="showView('home')">← กลับ</button>
+      <div class="view-title">📝 รายการทั้งหมด</div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <div class="search-row">
+          <input type="text" id="searchInput" placeholder="ค้นหา เครื่อง / หมายเลข / ตึก / ชื่อ…" oninput="onSearch()">
+        </div>
+        <div class="table-wrap" id="tableWrap">
+          <div class="state-loading"><div class="spinner"></div>กำลังโหลด…</div>
+        </div>
+        <div class="pagination" id="pagination"></div>
       </div>
-      <div class="table-wrap" id="tableWrap">
-        <div class="state-loading"><div class="spinner"></div>กำลังโหลด…</div>
-      </div>
-      <div class="pagination" id="pagination"></div>
     </div>
   </div>
 
 </div>
 
 <!-- LOGIN OVERLAY -->
-<div id="loginOverlay" style="
-  position:fixed;inset:0;z-index:9999;
-  background:linear-gradient(135deg,#0A6478 0%,#0E7D94 100%);
-  display:flex;align-items:center;justify-content:center;
-">
-  <div style="
-    background:#fff;border-radius:20px;padding:36px 32px;width:90%;max-width:360px;
-    box-shadow:0 20px 60px rgba(0,0,0,0.25);text-align:center;
-  ">
+<div id="loginOverlay" style="position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#0A6478 0%,#0E7D94 100%);display:flex;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:20px;padding:36px 32px;width:90%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,0.25);text-align:center;">
     <div style="font-size:40px;margin-bottom:12px">🔒</div>
     <div style="font-size:18px;font-weight:800;color:#192D35;margin-bottom:4px">MEMs Dashboard</div>
     <div style="font-size:13px;color:#6A8A96;margin-bottom:24px">กรุณาใส่รหัสผ่านเพื่อเข้าใช้งาน</div>
     <input id="pwInput" type="password" placeholder="รหัสผ่าน" autofocus
-      style="
-        width:100%;border:2px solid #C5E3ED;border-radius:12px;
-        padding:12px 16px;font-size:16px;font-family:inherit;
-        outline:none;text-align:center;letter-spacing:.1em;margin-bottom:8px;
-      "
+      style="width:100%;border:2px solid #C5E3ED;border-radius:12px;padding:12px 16px;font-size:16px;font-family:inherit;outline:none;text-align:center;letter-spacing:.1em;margin-bottom:8px;"
       onkeydown="if(event.key==='Enter')checkPw()"
-      oninput="document.getElementById('pwErr').style.display='none'"
-    >
+      oninput="document.getElementById('pwErr').style.display='none'">
     <div id="pwErr" style="color:#B82E2E;font-size:13px;margin-bottom:10px;display:none">รหัสผ่านไม่ถูกต้อง</div>
-    <button onclick="checkPw()" style="
-      width:100%;background:#0A6478;color:#fff;border:none;
-      border-radius:12px;padding:13px;font-size:15px;font-weight:700;
-      font-family:inherit;cursor:pointer;
-    ">เข้าสู่ระบบ</button>
+    <button onclick="checkPw()" style="width:100%;background:#0A6478;color:#fff;border:none;border-radius:12px;padding:13px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;">เข้าสู่ระบบ</button>
   </div>
 </div>
 
@@ -532,10 +353,8 @@
 </div>
 
 <script>
-/* ============================================================
-   AUTH
-   ============================================================ */
-const PW_HASH = '054d00a58d2ae4cfcc5563b642c7159e4475602d40809ea02bf5c97a9652a44f'; // SHA-256 ของ Mec60776078
+/* ============================================================ AUTH ============================================================ */
+const PW_HASH = '054d00a58d2ae4cfcc5563b642c7159e4475602d40809ea02bf5c97a9652a44f';
 
 async function sha256(str) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
@@ -556,67 +375,60 @@ async function checkPw() {
   }
 }
 
-// ตรวจว่า login แล้วหรือยัง (session ยังค้างอยู่)
 if (sessionStorage.getItem('mems_auth') === '1') {
   document.getElementById('loginOverlay').style.display = 'none';
 }
 
-/* ============================================================
-   CONFIG
-   ============================================================ */
+/* ============================================================ CONFIG ============================================================ */
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz7_Q0Wtl7hDovuZga1q42xRTxVC6GXfuph4JU-C-aQ_zNLssdRVUsfde4a1vF15cIYtQ/exec';
 
-/* ============================================================
-   STATE
-   ============================================================ */
+/* ============================================================ STATE ============================================================ */
 let allRecords = [];
 let equipStatus = [];
 let filteredRecords = [];
 let currentPage = 0;
 const PAGE_SIZE = 20;
 
-let equipChart, shiftChart, trendChart;
+/* ============================================================ VIEWS ============================================================ */
+let currentView = 'home';
 
-/* ============================================================
-   INIT
-   ============================================================ */
-// loadAll เรียกจาก checkPw() หรือถ้า session ยังอยู่
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view' + name.charAt(0).toUpperCase() + name.slice(1)).classList.add('active');
+  currentView = name;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (name === 'ward')    renderWardChart();
+  if (name === 'status')  renderEquipStatus();
+  if (name === 'round')   populateRoundFilters();
+  if (name === 'records') renderTable();
+}
+
+/* ============================================================ INIT ============================================================ */
 window.addEventListener('DOMContentLoaded', () => {
   if (sessionStorage.getItem('mems_auth') === '1') loadAll();
 });
 
 async function loadAll() {
   const btn = document.getElementById('refreshBtn');
-  btn.disabled = true;
-  btn.textContent = '⟳ กำลังโหลด…';
-
+  btn.disabled = true; btn.textContent = '⟳ กำลังโหลด…';
   try {
     const [recRes, eqRes] = await Promise.all([
       fetchGAS('records', { limit: 1000 }),
       fetchGAS('equipment')
     ]);
-
-    allRecords  = recRes.records || [];
-    equipStatus = eqRes.equipment  || [];
-
+    allRecords  = recRes.records  || [];
+    equipStatus = eqRes.equipment || [];
     populateWardFilter();
     applyFilters();
-    renderEquipStatus();
-    if (roundVisible) populateRoundFilters();
-
     document.getElementById('lastUpdated').textContent =
       'อัพเดต ' + new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
   } catch (err) {
-    showError(err.message);
+    console.error(err);
   }
-
-  btn.disabled = false;
-  btn.textContent = '⟳ รีเฟรช';
+  btn.disabled = false; btn.textContent = '⟳ รีเฟรช';
 }
 
-/* ============================================================
-   FETCH GAS
-   ============================================================ */
+/* ============================================================ FETCH GAS ============================================================ */
 async function fetchGAS(action, params = {}) {
   const url = new URL(SCRIPT_URL);
   url.searchParams.set('action', action);
@@ -626,9 +438,7 @@ async function fetchGAS(action, params = {}) {
   return res.json();
 }
 
-/* ============================================================
-   FILTER
-   ============================================================ */
+/* ============================================================ FILTER ============================================================ */
 function populateWardFilter() {
   const wards = [...new Set(allRecords.map(r => r['ตึก/Ward']).filter(Boolean))].sort();
   const sel = document.getElementById('filterWard');
@@ -641,27 +451,17 @@ function getDateFilter() {
   const f = document.getElementById('filterDate').value;
   const now = new Date();
   if (f === 'today') {
-    const d = now.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    // thai format dd/MM/yyyy buddhist era — convert
     const dd = String(now.getDate()).padStart(2,'0');
     const mm = String(now.getMonth()+1).padStart(2,'0');
     const yyyy = now.getFullYear();
     return r => r['วันที่'] === `${dd}/${mm}/${yyyy}`;
   }
-  if (f === '7d') {
-    const d7 = new Date(now - 7*86400000);
-    return r => parseTSDate(r['Timestamp (ISO)']) >= d7;
-  }
-  if (f === '30d') {
-    const d30 = new Date(now - 30*86400000);
-    return r => parseTSDate(r['Timestamp (ISO)']) >= d30;
-  }
+  if (f === '7d')  { const d7  = new Date(now - 7*86400000);  return r => parseTSDate(r['Timestamp (ISO)']) >= d7; }
+  if (f === '30d') { const d30 = new Date(now - 30*86400000); return r => parseTSDate(r['Timestamp (ISO)']) >= d30; }
   return () => true;
 }
 
-function parseTSDate(ts) {
-  try { return new Date(ts); } catch { return new Date(0); }
-}
+function parseTSDate(ts) { try { return new Date(ts); } catch { return new Date(0); } }
 
 function applyFilters() {
   const dateFn = getDateFilter();
@@ -672,55 +472,35 @@ function applyFilters() {
     return true;
   });
   currentPage = 0;
-  renderAll();
-}
-
-function onSearch() {
-  currentPage = 0;
-  renderTable();
-}
-
-/* ============================================================
-   RENDER ALL
-   ============================================================ */
-function renderAll() {
   renderKPI();
-  renderWardChart();
-  renderEquipChart();
-  renderShiftChart();
-  renderTrendChart();
-  renderTable();
+  if (currentView !== 'home') showView(currentView);
 }
 
-/* ============================================================
-   KPI
-   ============================================================ */
+function onSearch() { currentPage = 0; renderTable(); }
+
+/* ============================================================ KPI ============================================================ */
 function renderKPI() {
   const borrows = filteredRecords.filter(r => String(r['ประเภท (ยืม/คืน)']).includes('ยืม'));
   const returns = filteredRecords.filter(r => String(r['ประเภท (ยืม/คืน)']).includes('คืน'));
   const active  = equipStatus.filter(e => e.isBorrowed);
   const wards   = new Set(filteredRecords.map(r => r['ตึก/Ward']).filter(Boolean));
-
-  // today counts
   const today = new Date();
   const dd = String(today.getDate()).padStart(2,'0');
   const mm = String(today.getMonth()+1).padStart(2,'0');
-  const yyyy = today.getFullYear();
-  const todayStr = `${dd}/${mm}/${yyyy}`;
+  const todayStr = `${dd}/${mm}/${today.getFullYear()}`;
   const bToday = borrows.filter(r => r['วันที่'] === todayStr).length;
   const rToday = returns.filter(r => r['วันที่'] === todayStr).length;
-
   document.getElementById('kpiBorrow').textContent = borrows.length;
   document.getElementById('kpiReturn').textContent = returns.length;
   document.getElementById('kpiActive').textContent = active.length;
   document.getElementById('kpiWards').textContent  = wards.size;
   document.getElementById('kpiBorrowToday').textContent = bToday ? `วันนี้ ${bToday} รายการ` : '';
   document.getElementById('kpiReturnToday').textContent = rToday ? `วันนี้ ${rToday} รายการ` : '';
+  document.getElementById('navStatusDesc').textContent =
+    active.length ? `ยืมอยู่ ${active.length} เครื่อง · ว่าง ${equipStatus.length - active.length} เครื่อง` : 'เครื่องที่ยืมอยู่และว่าง';
 }
 
-/* ============================================================
-   WARD CHART (horizontal bar list)
-   ============================================================ */
+/* ============================================================ WARD CHART ============================================================ */
 function renderWardChart() {
   const wardCount = {};
   filteredRecords.forEach(r => {
@@ -728,199 +508,54 @@ function renderWardChart() {
     wardCount[w] = (wardCount[w] || 0) + 1;
   });
   const sorted = Object.entries(wardCount).sort((a,b) => b[1]-a[1]);
-  const max    = sorted[0]?.[1] || 1;
-
+  const max = sorted[0]?.[1] || 1;
   const body = document.getElementById('wardChartBody');
-  if (!sorted.length) {
-    body.innerHTML = '<div class="empty">ไม่มีข้อมูล</div>';
-    return;
-  }
+  if (!sorted.length) { body.innerHTML = '<div class="empty">ไม่มีข้อมูล</div>'; return; }
   body.innerHTML = `<div class="ward-list">${
     sorted.map(([name, cnt]) => `
       <div class="ward-row">
         <div class="ward-name" title="${name}">${name}</div>
-        <div class="ward-bar-wrap">
-          <div class="ward-bar" style="width:${Math.round(cnt/max*100)}%"></div>
-        </div>
+        <div class="ward-bar-wrap"><div class="ward-bar" style="width:${Math.round(cnt/max*100)}%"></div></div>
         <div class="ward-count">${cnt}</div>
-      </div>
-    `).join('')
+      </div>`).join('')
   }</div>`;
 }
 
-/* ============================================================
-   EQUIPMENT CHART
-   ============================================================ */
-function renderEquipChart() {
-  const eqCount = {};
-  filteredRecords.forEach(r => {
-    const e = r['ชื่อเครื่อง'] || 'ไม่ระบุ';
-    eqCount[e] = (eqCount[e] || 0) + 1;
-  });
-  const sorted = Object.entries(eqCount).sort((a,b) => b[1]-a[1]);
-  const labels = sorted.map(e => e[0]);
-  const data   = sorted.map(e => e[1]);
-  const colors = ['#0A6478','#0E7D94','#1A7B4A','#D97706','#7C3AED','#B82E2E','#0891B2'];
-
-  if (equipChart) equipChart.destroy();
-  const ctx = document.getElementById('equipChart').getContext('2d');
-  equipChart = new Chart(ctx, {
-    type: 'doughnut',
-    data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 2 }] },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: {
-        legend: { position: 'right', labels: { font: { family: 'Sarabun', size: 12 }, boxWidth: 14, padding: 10 } }
-      }
-    }
-  });
-}
-
-/* ============================================================
-   SHIFT CHART
-   ============================================================ */
-function renderShiftChart() {
-  const shifts = { 'เวรเช้า': 0, 'เวรบ่าย': 0, 'เวรดึก': 0 };
-  filteredRecords.forEach(r => {
-    const s = r['เวร'];
-    if (s in shifts) shifts[s]++;
-  });
-
-  if (shiftChart) shiftChart.destroy();
-  const ctx = document.getElementById('shiftChart').getContext('2d');
-  shiftChart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: ['เวรเช้า ☀️', 'เวรบ่าย 🌤', 'เวรดึก 🌙'],
-      datasets: [{
-        label: 'จำนวนรายการ',
-        data: [shifts['เวรเช้า'], shifts['เวรบ่าย'], shifts['เวรดึก']],
-        backgroundColor: ['#FCD34D','#FB923C','#818CF8'],
-        borderRadius: 6
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        y: { beginAtZero: true, ticks: { stepSize: 1 } },
-        x: { ticks: { font: { family: 'Sarabun', size: 12 } } }
-      }
-    }
-  });
-}
-
-/* ============================================================
-   TREND CHART (last 7 days)
-   ============================================================ */
-function renderTrendChart() {
-  const days = [];
-  const labels = [];
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(Date.now() - i * 86400000);
-    const dd = String(d.getDate()).padStart(2,'0');
-    const mm = String(d.getMonth()+1).padStart(2,'0');
-    const yyyy = d.getFullYear();
-    days.push(`${dd}/${mm}/${yyyy}`);
-    labels.push(`${dd}/${mm}`);
-  }
-  const borrowByDay = days.map(day =>
-    allRecords.filter(r => r['วันที่'] === day && String(r['ประเภท (ยืม/คืน)']).includes('ยืม')).length
-  );
-  const returnByDay = days.map(day =>
-    allRecords.filter(r => r['วันที่'] === day && String(r['ประเภท (ยืม/คืน)']).includes('คืน')).length
-  );
-
-  if (trendChart) trendChart.destroy();
-  const ctx = document.getElementById('trendChart').getContext('2d');
-  trendChart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [
-        { label: 'ยืม', data: borrowByDay, borderColor: '#1A7B4A', backgroundColor: 'rgba(26,123,74,0.1)', tension: .3, fill: true, pointRadius: 4 },
-        { label: 'คืน', data: returnByDay, borderColor: '#B82E2E', backgroundColor: 'rgba(184,46,46,0.1)', tension: .3, fill: true, pointRadius: 4 }
-      ]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { labels: { font: { family: 'Sarabun', size: 12 }, boxWidth: 14 } } },
-      scales: {
-        y: { beginAtZero: true, ticks: { stepSize: 1 } },
-        x: { ticks: { font: { family: 'Sarabun', size: 11 } } }
-      }
-    }
-  });
-}
-
-/* ============================================================
-   EQUIPMENT STATUS
-   ============================================================ */
+/* ============================================================ EQUIPMENT STATUS ============================================================ */
 function renderEquipStatus() {
   const body  = document.getElementById('equipStatusBody');
   const count = document.getElementById('equipStatusCount');
-  if (!equipStatus.length) {
-    body.innerHTML = '<div class="empty">ไม่มีข้อมูลสถานะเครื่อง</div>';
-    return;
-  }
+  if (!equipStatus.length) { body.innerHTML = '<div class="empty">ไม่มีข้อมูลสถานะเครื่อง</div>'; return; }
   const borrowed = equipStatus.filter(e => e.isBorrowed);
   const returned = equipStatus.filter(e => !e.isBorrowed);
   count.textContent = `ยืมอยู่ ${borrowed.length} เครื่อง · ว่าง ${returned.length} เครื่อง`;
-
-  // show borrowed first
-  const sorted = [...borrowed, ...returned];
   body.innerHTML = `<div class="equip-grid">${
-    sorted.map(e => `
+    [...borrowed, ...returned].map(e => `
       <div class="equip-card ${e.isBorrowed ? 'borrowed' : 'returned'}">
         <div class="equip-name">${e.equipment}</div>
         <div class="equip-num">#${e.number}</div>
-        <div class="equip-badge ${e.isBorrowed ? 'borrow' : 'return'}">
-          ${e.isBorrowed ? '🔴 ยืมอยู่' : '🟢 ว่าง'}
-        </div>
-        ${e.isBorrowed ? `
-          <div class="equip-ward">📍 ${e.ward}</div>
-          <div class="equip-who">👤 ${e.borrowedBy}</div>
-        ` : ''}
-      </div>
-    `).join('')
+        <div class="equip-badge">${e.isBorrowed ? '🔴 ยืมอยู่' : '🟢 ว่าง'}</div>
+        ${e.isBorrowed ? `<div class="equip-ward">📍 ${e.ward}</div><div class="equip-who">👤 ${e.borrowedBy}</div>` : ''}
+      </div>`).join('')
   }</div>`;
 }
 
-/* ============================================================
-   TABLE
-   ============================================================ */
+/* ============================================================ TABLE ============================================================ */
 function renderTable() {
   const q = document.getElementById('searchInput').value.trim().toLowerCase();
   let rows = filteredRecords;
-  if (q) {
-    rows = rows.filter(r =>
-      Object.values(r).some(v => String(v).toLowerCase().includes(q))
-    );
-  }
-
+  if (q) rows = rows.filter(r => Object.values(r).some(v => String(v).toLowerCase().includes(q)));
   const total = rows.length;
   const start = currentPage * PAGE_SIZE;
   const paged = rows.slice(start, start + PAGE_SIZE);
-
-  const wrap = document.getElementById('tableWrap');
+  const wrap  = document.getElementById('tableWrap');
   if (!paged.length) {
     wrap.innerHTML = '<div class="empty">ไม่พบข้อมูล</div>';
     document.getElementById('pagination').innerHTML = '';
     return;
   }
-
   wrap.innerHTML = `<table>
-    <thead><tr>
-      <th>#</th>
-      <th>วันที่</th>
-      <th>เวลา</th>
-      <th>เวร</th>
-      <th>ประเภท</th>
-      <th>เครื่อง</th>
-      <th>หมายเลข</th>
-      <th>หน่วยงาน</th>
-      <th>ผู้ยืม</th>
-    </tr></thead>
+    <thead><tr><th>#</th><th>วันที่</th><th>เวลา</th><th>เวร</th><th>ประเภท</th><th>เครื่อง</th><th>หมายเลข</th><th>หน่วยงาน</th><th>ผู้บันทึก</th></tr></thead>
     <tbody>${paged.map((r,i) => {
       const isBorrow = String(r['ประเภท (ยืม/คืน)']).includes('ยืม');
       return `<tr>
@@ -928,97 +563,59 @@ function renderTable() {
         <td>${fmtDate(r['วันที่'])}</td>
         <td>${fmtTime(r['เวลา'])}</td>
         <td>${r['เวร']||''}</td>
-        <td><span class="badge ${isBorrow ? 'badge-borrow':'badge-return'}">${isBorrow?'ยืม':'คืน'}</span></td>
+        <td><span class="badge ${isBorrow?'badge-borrow':'badge-return'}">${isBorrow?'ยืม':'คืน'}</span></td>
         <td><strong>${r['ชื่อเครื่อง']||''}</strong></td>
         <td>${r['หมายเลขเครื่อง']||''}</td>
         <td>${r['ตึก/Ward']||''}</td>
         <td>${r['ชื่อผู้ยืม']||''}</td>
       </tr>`;
-    }).join('')}</tbody>
-  </table>`;
-
+    }).join('')}</tbody></table>`;
   const totalPages = Math.ceil(total / PAGE_SIZE);
   document.getElementById('pagination').innerHTML = `
     <button onclick="goPage(${currentPage-1})" ${currentPage===0?'disabled':''}>← ก่อนหน้า</button>
     <span>หน้า ${currentPage+1} / ${totalPages} (${total} รายการ)</span>
-    <button onclick="goPage(${currentPage+1})" ${currentPage>=totalPages-1?'disabled':''}>ถัดไป →</button>
-  `;
+    <button onclick="goPage(${currentPage+1})" ${currentPage>=totalPages-1?'disabled':''}>ถัดไป →</button>`;
 }
 
-function goPage(p) {
-  currentPage = p;
-  renderTable();
-  document.getElementById('tableWrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
+function goPage(p) { currentPage = p; renderTable(); document.getElementById('tableWrap').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 
-/* ============================================================
-   ERROR
-   ============================================================ */
-/* ============================================================
-   ROUND SECTION
-   ============================================================ */
-let roundVisible = false;
+/* ============================================================ ROUND ============================================================ */
+function getRoundRecords() { return allRecords.filter(r => String(r['ประเภท (ยืม/คืน)']).includes('Round')); }
 
-function toggleRoundSection() {
-  roundVisible = !roundVisible;
-  document.getElementById('roundBody').style.display = roundVisible ? 'block' : 'none';
-  document.getElementById('roundToggleBtn').textContent = roundVisible ? '▲ ซ่อน' : '▼ ดูรายงาน';
-  if (roundVisible) populateRoundFilters();
-}
-
-function getRoundRecords() {
-  return allRecords.filter(r => String(r['ประเภท (ยืม/คืน)']).includes('Round'));
-}
-
-// แปลง ISO timestamp → dd/MM/yyyy
 function fmtDate(val) {
   if (!val) return '';
   const s = String(val);
   if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s;
   try {
-    const d = new Date(s);
-    if (isNaN(d)) return s;
-    const dd = String(d.getDate()).padStart(2,'0');
-    const mm = String(d.getMonth()+1).padStart(2,'0');
-    const yyyy = d.getFullYear();
-    return `${dd}/${mm}/${yyyy}`;
+    const d = new Date(s); if (isNaN(d)) return s;
+    return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
   } catch { return s; }
 }
 
-// แปลงเวลา → HH:mm (รองรับ HH:mm:ss string และ 1899-12-30T... serial จาก Sheets)
 function fmtTime(val) {
   if (!val) return '';
   const s = String(val);
-  if (/^\d{2}:\d{2}/.test(s)) return s.substring(0, 5);
+  if (/^\d{2}:\d{2}/.test(s)) return s.substring(0,5);
   try {
-    const d = new Date(s);
-    if (isNaN(d)) return s;
-    const hh = String(d.getUTCHours()).padStart(2,'0');
-    const mi = String(d.getUTCMinutes()).padStart(2,'0');
-    return `${hh}:${mi}`;
+    const d = new Date(s); if (isNaN(d)) return s;
+    return `${String(d.getUTCHours()).padStart(2,'0')}:${String(d.getUTCMinutes()).padStart(2,'0')}`;
   } catch { return s; }
 }
 
-// ดึงสถานะ Round — ลอง key ต่างๆ ที่อาจเป็นไปได้
-function getRoundStatus(r) {
-  return r['สถานะ Round'] || r[''] || '';
-}
+function getRoundStatus(r) { return r['สถานะ Round'] || r[''] || ''; }
 
 function populateRoundFilters() {
   const records = getRoundRecords();
-
   const wards = [...new Set(records.map(r => r['ตึก/Ward']).filter(Boolean))].sort();
   const wardSel = document.getElementById('roundWardSel');
   const curWard = wardSel.value;
   wardSel.innerHTML = '<option value="">— ทั้งหมด —</option>' +
-    wards.map(w => `<option value="${w}" ${w===curWard?'selected':''}>${w}</option>`).join('');
-
+    wards.map(w => `<option value="${w}"${w===curWard?' selected':''}>${w}</option>`).join('');
   const dates = [...new Set(records.map(r => fmtDate(r['วันที่'])).filter(Boolean))].sort((a,b) => b.localeCompare(a));
   const dateSel = document.getElementById('roundDateSel');
   const curDate = dateSel.value;
   dateSel.innerHTML = '<option value="">— ทั้งหมด —</option>' +
-    dates.map(d => `<option value="${d}" ${d===curDate?'selected':''}>${d}</option>`).join('');
-
+    dates.map(d => `<option value="${d}"${d===curDate?' selected':''}>${d}</option>`).join('');
   renderRoundTable();
 }
 
@@ -1029,56 +626,40 @@ function renderRoundTable() {
   if (ward) rows = rows.filter(r => r['ตึก/Ward'] === ward);
   if (date) rows = rows.filter(r => fmtDate(r['วันที่']) === date);
 
-  // Summary chips
-  const cnt = { use:0, idle:0, broken:0, lost:0, other:0 };
+  const cnt = { use:0, idle:0, broken:0, lost:0 };
   rows.forEach(r => {
     const s = getRoundStatus(r);
     if (s.includes('ใช้งานอยู่'))    cnt.use++;
     else if (s.includes('ไม่ได้ใช้')) cnt.idle++;
     else if (s.includes('ชำรุด'))     cnt.broken++;
     else if (s.includes('สูญหาย'))    cnt.lost++;
-    else if (s)                        cnt.other++;
   });
 
-  const totalRound = rows.length;
-  document.getElementById('roundSummary').innerHTML = totalRound === 0 ? '' : `
+  document.getElementById('roundSummary').innerHTML = rows.length === 0 ? '' : `
     <span class="rs-badge rs-use">🟢 ใช้งานอยู่ ${cnt.use}</span>
     <span class="rs-badge rs-idle">🔵 ไม่ได้ใช้งาน ${cnt.idle}</span>
     <span class="rs-badge rs-broken">🟡 ชำรุด ${cnt.broken}</span>
     <span class="rs-badge rs-lost">🔴 สูญหาย ${cnt.lost}</span>
-    <span style="font-size:12px;color:var(--muted);margin-left:4px">รวม ${totalRound} รายการ</span>
-  `;
+    <span style="font-size:12px;color:var(--muted);margin-left:4px">รวม ${rows.length} รายการ</span>`;
 
   const wrap = document.getElementById('roundTableWrap');
   const printWrap = document.getElementById('roundPrintWrap');
-  if (!rows.length) {
-    wrap.innerHTML = '<div class="empty">ไม่พบข้อมูล Round</div>';
-    printWrap.style.display = 'none';
-    return;
-  }
+  if (!rows.length) { wrap.innerHTML = '<div class="empty">ไม่พบข้อมูล Round</div>'; printWrap.style.display = 'none'; return; }
 
   wrap.innerHTML = `<table>
-    <thead><tr>
-      <th>วันที่</th><th>เวร</th><th>หน่วยงาน</th>
-      <th>เครื่อง No.</th><th>สถานะ</th><th>ผู้บันทึก</th><th>หมายเหตุ</th>
-    </tr></thead>
+    <thead><tr><th>วันที่</th><th>หน่วยงาน</th><th>เครื่อง No.</th><th>สถานะ</th><th>ผู้บันทึก</th><th>หมายเหตุ</th></tr></thead>
     <tbody>${rows.map(r => {
       const s = getRoundStatus(r);
-      const cls = s.includes('ใช้งานอยู่') ? 'rs-use'
-                : s.includes('ไม่ได้ใช้')  ? 'rs-idle'
-                : s.includes('ชำรุด')       ? 'rs-broken'
-                : s.includes('สูญหาย')      ? 'rs-lost' : '';
+      const cls = s.includes('ใช้งานอยู่')?'rs-use': s.includes('ไม่ได้ใช้')?'rs-idle': s.includes('ชำรุด')?'rs-broken': s.includes('สูญหาย')?'rs-lost':'';
       return `<tr>
         <td>${fmtDate(r['วันที่'])}</td>
-        <td>${r['เวร']||''}</td>
         <td>${r['ตึก/Ward']||''}</td>
         <td><strong>${r['หมายเลขเครื่อง']||'-'}</strong></td>
         <td><span class="rs-badge ${cls}">${s||'-'}</span></td>
         <td>${r['ชื่อผู้ยืม']||''}</td>
         <td style="font-size:12px;color:var(--muted)">${r['หมายเหตุ']||r['']||''}</td>
       </tr>`;
-    }).join('')}</tbody>
-  </table>`;
+    }).join('')}</tbody></table>`;
 
   printWrap.style.display = 'block';
   window._roundPrintData = { rows, ward, date, cnt };
@@ -1087,56 +668,30 @@ function renderRoundTable() {
 function printRoundReport() {
   const { rows, ward, date, cnt } = window._roundPrintData || {};
   if (!rows || !rows.length) return;
-
-  const title = `รายงาน Round เครื่อง Infusion Pump`;
-  const meta  = [
+  const meta = [
     ward ? `หน่วยงาน: ${ward}` : 'ทุกหน่วยงาน',
     date ? `วันที่: ${date}` : 'ทุกวันที่',
-    `พิมพ์เมื่อ: ${new Date().toLocaleString('th-TH')}`,
+    `พิมพ์เมื่อ: ${new Date().toLocaleString('th-TH', {dateStyle:'short',timeStyle:'short'})}`,
     `รวม ${rows.length} รายการ`
   ].join('  |  ');
-
-  const summary = `ใช้งานอยู่ ${cnt.use}  |  ไม่ได้ใช้งาน ${cnt.idle}  |  ชำรุด ${cnt.broken}  |  สูญหาย ${cnt.lost}`;
-
-  const tableRows = rows.map(r => `<tr>
-    <td>${fmtDate(r['วันที่'])}</td><td>${r['เวร']||''}</td>
-    <td>${r['ตึก/Ward']||''}</td><td>${r['หมายเลขเครื่อง']||'-'}</td>
-    <td>${getRoundStatus(r)||'-'}</td><td>${r['ชื่อผู้ยืม']||''}</td>
-    <td>${r['หมายเหตุ']||r['']||''}</td>
-  </tr>`).join('');
-
   let area = document.getElementById('printArea');
-  if (!area) {
-    area = document.createElement('div');
-    area.id = 'printArea';
-    document.body.appendChild(area);
-  }
+  if (!area) { area = document.createElement('div'); area.id = 'printArea'; document.body.appendChild(area); }
   area.innerHTML = `
-    <div class="print-title">💉 ${title}</div>
+    <div class="print-title">💉 รายงาน Round เครื่อง Infusion Pump</div>
     <div class="print-meta">${meta}</div>
-    <div class="print-meta" style="font-weight:700">${summary}</div>
+    <div class="print-meta" style="font-weight:700">ใช้งานอยู่ ${cnt.use}  |  ไม่ได้ใช้งาน ${cnt.idle}  |  ชำรุด ${cnt.broken}  |  สูญหาย ${cnt.lost}</div>
     <table>
-      <thead><tr>
-        <th>วันที่</th><th>เวร</th><th>หน่วยงาน</th>
-        <th>เครื่อง No.</th><th>สถานะ</th><th>ผู้บันทึก</th><th>หมายเหตุ</th>
-      </tr></thead>
-      <tbody>${tableRows}</tbody>
+      <thead><tr><th>วันที่</th><th>หน่วยงาน</th><th>เครื่อง No.</th><th>สถานะ</th><th>ผู้บันทึก</th><th>หมายเหตุ</th></tr></thead>
+      <tbody>${rows.map(r => `<tr>
+        <td>${fmtDate(r['วันที่'])}</td><td>${r['ตึก/Ward']||''}</td>
+        <td>${r['หมายเลขเครื่อง']||'-'}</td><td>${getRoundStatus(r)||'-'}</td>
+        <td>${r['ชื่อผู้ยืม']||''}</td><td>${r['หมายเหตุ']||r['']||''}</td>
+      </tr>`).join('')}</tbody>
     </table>
     <div style="margin-top:30px;font-size:11px;color:#999">
-      โรงพยาบาลพหลพลพยุหเสนา จ.กาญจนบุรี — MEMs Medical Equipment Management Systems
-    </div>
-  `;
+      โรงพยาบาลพหลพลพยุหเสนา จ.กาญจนบุรี — MEMs Medical Equipment Management Systems — พัฒนาโดย Pawarit Somchipeng
+    </div>`;
   window.print();
-}
-
-/* ============================================================
-   ERROR
-   ============================================================ */
-function showError(msg) {
-  document.getElementById('wardChartBody').innerHTML =
-    `<div class="state-error">⚠️ โหลดข้อมูลไม่ได้<br><small>${msg}</small></div>`;
-  document.getElementById('tableWrap').innerHTML =
-    `<div class="state-error">⚠️ ${msg}</div>`;
 }
 </script>
 </body>
