@@ -32,78 +32,81 @@
       color: var(--txt);
       min-height: 100vh;
       font-size: 15px;
-      -webkit-font-smoothing: antialiased;
     }
 
     /* ── HEADER ── */
     .header {
       background: linear-gradient(135deg, var(--a) 0%, var(--a2) 100%);
       color: #fff;
-      padding: 14px 16px 16px;
-      position: sticky; top: 0; z-index: 100;
+      padding: 18px 20px 20px;
     }
-    .main { position: relative; z-index: 1; }
     .header-inner {
-      max-width: 1200px;
+      max-width: 1100px;
       margin: 0 auto;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      flex-wrap: wrap;
       gap: 10px;
     }
-    .header h1 { font-size: clamp(15px,2.5vw,20px); font-weight: 800; letter-spacing: -.01em; white-space: nowrap; }
-    .header .sub { font-size: 11px; opacity: .7; margin-top: 1px; }
-    .header-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-    .clock-box {
-      background: rgba(255,255,255,0.15);
-      border: 1px solid rgba(255,255,255,0.25);
-      border-radius: 12px; padding: 6px 12px;
-      text-align: center; min-width: 110px;
-    }
-    .clock-box .time { font-size: clamp(16px,2vw,20px); font-weight: 800; letter-spacing: .04em; font-variant-numeric: tabular-nums; line-height: 1; }
-    .clock-box .date-txt { font-size: 10px; opacity: .75; margin-top: 1px; }
-    .clock-box .bar-wrap { margin-top: 5px; height: 3px; background: rgba(255,255,255,0.2); border-radius: 3px; overflow: hidden; }
-    .clock-box .bar-fill { height: 100%; background: rgba(255,255,255,0.75); border-radius: 3px; width: 100%; transition: width 1s linear; }
-    .clock-box .cd-txt { font-size: 9px; opacity: .65; margin-top: 2px; }
+    .header h1 { font-size: 20px; font-weight: 800; letter-spacing: -.01em; }
+    .header .sub { font-size: 12px; opacity: .7; margin-top: 2px; }
+    .header-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     .btn-back {
-      background: rgba(255,255,255,0.18); color: #fff;
+      background: rgba(255,255,255,0.18);
+      color: #fff;
       border: 1px solid rgba(255,255,255,0.3);
-      padding: 6px 12px; border-radius: 20px;
-      font-size: 12px; font-family: inherit;
-      cursor: pointer; text-decoration: none;
-      white-space: nowrap;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-family: inherit;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
     }
     .btn-back:hover { background: rgba(255,255,255,0.28); }
-    #lastUpdated { font-size: 11px; opacity: .7; white-space: nowrap; }
+    #lastUpdated { font-size: 12px; opacity: .7; }
 
     /* ── MAIN ── */
     .main {
-      max-width: 1200px;
+      max-width: 1100px;
       margin: 0 auto;
-      padding: clamp(12px,2vw,20px) clamp(10px,2vw,16px) 60px;
+      padding: 20px 16px 60px;
     }
 
     /* ── FILTER BAR ── */
     .filter-bar {
-      display: flex; gap: 8px; flex-wrap: wrap;
-      align-items: center; margin-bottom: 16px;
-      background: var(--card); border-radius: var(--r);
-      padding: 10px 14px; box-shadow: var(--sh);
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 20px;
     }
-    .filter-bar label { font-size: 12px; color: var(--muted); font-weight: 600; white-space: nowrap; }
-    .filter-bar select {
-      border: 1px solid var(--border); border-radius: 8px;
-      padding: 6px 10px; font-size: 13px; font-family: inherit;
-      background: var(--bg); color: var(--txt); outline: none;
-      max-width: 150px;
+    .filter-bar label { font-size: 13px; color: var(--muted); font-weight: 600; }
+    .filter-bar select, .filter-bar input {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 7px 12px;
+      font-size: 13px;
+      font-family: inherit;
+      background: var(--card);
+      color: var(--txt);
+      outline: none;
     }
-    .filter-bar select:focus { border-color: var(--a); }
+    .filter-bar select:focus, .filter-bar input:focus { border-color: var(--a); }
     .btn-refresh {
-      background: var(--a); color: #fff; border: none;
-      padding: 6px 14px; border-radius: 8px;
-      font-size: 13px; font-family: inherit;
-      cursor: pointer; font-weight: 600; margin-left: auto;
-      white-space: nowrap;
+      background: var(--a);
+      color: #fff;
+      border: none;
+      padding: 7px 16px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-family: inherit;
+      cursor: pointer;
+      font-weight: 600;
+      margin-left: auto;
     }
     .btn-refresh:hover { background: var(--a2); }
     .btn-refresh:disabled { opacity: .5; cursor: default; }
@@ -111,176 +114,222 @@
     /* ── KPI CARDS ── */
     .kpi-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 10px; margin-bottom: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
     }
     .kpi {
-      background: var(--card); border-radius: var(--r);
-      padding: clamp(10px,1.5vw,16px) clamp(12px,1.5vw,18px);
-      box-shadow: var(--sh); border-top: 4px solid var(--a);
+      background: var(--card);
+      border-radius: var(--r);
+      padding: 16px 18px;
+      box-shadow: var(--sh);
+      border-top: 4px solid var(--a);
     }
     .kpi.green  { border-color: var(--green); }
     .kpi.red    { border-color: var(--red);   }
     .kpi.orange { border-color: #D97706;      }
     .kpi.purple { border-color: #7C3AED;      }
-    .kpi-label  { font-size: 11px; color: var(--muted); font-weight: 600; margin-bottom: 4px; text-transform: uppercase; letter-spacing: .04em; }
-    .kpi-value  { font-size: clamp(24px,3vw,36px); font-weight: 800; line-height: 1; }
+    .kpi-label  { font-size: 12px; color: var(--muted); font-weight: 600; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .04em; }
+    .kpi-value  { font-size: 32px; font-weight: 800; line-height: 1; }
     .kpi.green  .kpi-value { color: var(--green); }
     .kpi.red    .kpi-value { color: var(--red);   }
     .kpi.orange .kpi-value { color: #D97706;      }
     .kpi.purple .kpi-value { color: #7C3AED;      }
-    .kpi-sub    { font-size: 11px; color: var(--muted); margin-top: 3px; }
+    .kpi-sub    { font-size: 11px; color: var(--muted); margin-top: 4px; }
 
     /* ── GRID 2 COLS ── */
     .grid-2 {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 12px; margin-bottom: 12px;
+      gap: 16px;
+      margin-bottom: 16px;
     }
+    @media (max-width: 680px) { .grid-2 { grid-template-columns: 1fr; } }
 
     /* ── CARD ── */
     .card {
-      background: var(--card); border-radius: var(--r);
-      box-shadow: var(--sh); overflow: hidden;
-      margin-bottom: 0;
+      background: var(--card);
+      border-radius: var(--r);
+      box-shadow: var(--sh);
+      overflow: hidden;
     }
     .card-head {
-      padding: 11px 14px 10px;
+      padding: 14px 18px 12px;
       border-bottom: 1px solid var(--border);
-      font-weight: 700; font-size: 13px;
-      display: flex; align-items: center;
-      justify-content: space-between; gap: 8px;
+      font-weight: 700;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
     }
-    .card-body { padding: 14px 16px; }
-    .chart-wrap { position: relative; height: clamp(160px,20vw,220px); }
+    .card-body { padding: 16px 18px; }
+    .chart-wrap { position: relative; height: 220px; }
 
     /* ── EQUIPMENT STATUS ── */
     .equip-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 8px;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 10px;
     }
     .equip-card {
-      border: 1.5px solid var(--border); border-radius: 12px;
-      padding: 10px 12px; font-size: 13px;
-      display: flex; flex-direction: column; gap: 3px;
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 13px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
     }
     .equip-card.borrowed { border-color: #F87171; background: #FEF2F2; }
     .equip-card.returned { border-color: #34D399; background: #F0FDF4; }
-    .equip-name { font-weight: 700; font-size: 13px; }
-    .equip-num  { color: var(--muted); font-size: 11px; }
+    .equip-name { font-weight: 700; font-size: 14px; }
+    .equip-num  { color: var(--muted); font-size: 12px; }
     .equip-badge {
-      display: inline-block; padding: 2px 8px;
-      border-radius: 20px; font-size: 11px;
-      font-weight: 700; margin-top: 2px; width: fit-content;
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      margin-top: 2px;
+      width: fit-content;
     }
     .equip-badge.borrow { background: #FEE2E2; color: #B91C1C; }
     .equip-badge.return { background: #DCFCE7; color: #166534; }
-    .equip-ward { color: var(--muted); font-size: 11px; }
-    .equip-who  { color: var(--txt); font-size: 11px; font-weight: 600; }
+    .equip-ward { color: var(--muted); font-size: 12px; }
+    .equip-who  { color: var(--txt); font-size: 12px; font-weight: 600; }
 
     /* ── TABLE ── */
-    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .table-wrap { overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; font-size: 13px; }
     th {
-      background: var(--al); color: var(--a);
-      font-weight: 700; padding: 8px 10px;
-      text-align: left; white-space: nowrap;
+      background: var(--al);
+      color: var(--a);
+      font-weight: 700;
+      padding: 9px 12px;
+      text-align: left;
+      white-space: nowrap;
     }
-    td { padding: 7px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
     tr:last-child td { border-bottom: none; }
     tr:hover td { background: #F0F9FC; }
-    .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+    }
     .badge-borrow { background: #DCFCE7; color: #166534; }
     .badge-return { background: #FEE2E2; color: #B91C1C; }
-    .empty { text-align: center; padding: 30px 20px; color: var(--muted); font-size: 13px; }
+    .empty { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 14px; }
 
     /* ── SEARCH ── */
-    .search-row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+    .search-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
     .search-row input {
-      flex: 1; border: 1px solid var(--border); border-radius: 8px;
-      padding: 7px 12px; font-size: 13px; font-family: inherit; outline: none;
+      flex: 1;
+      min-width: 180px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 7px 12px;
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
     }
     .search-row input:focus { border-color: var(--a); }
     .pagination {
-      display: flex; gap: 8px; align-items: center;
-      margin-top: 10px; font-size: 13px; color: var(--muted); flex-wrap: wrap;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-top: 12px;
+      font-size: 13px;
+      color: var(--muted);
     }
     .pagination button {
-      border: 1px solid var(--border); background: var(--card);
-      padding: 5px 12px; border-radius: 8px;
-      cursor: pointer; font-size: 12px; font-family: inherit;
+      border: 1px solid var(--border);
+      background: var(--card);
+      padding: 4px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 12px;
+      font-family: inherit;
     }
     .pagination button:disabled { opacity: .4; cursor: default; }
     .pagination button:hover:not(:disabled) { background: var(--al); }
 
     /* ── WARD BAR LIST ── */
-    .ward-list { display: flex; flex-direction: column; gap: 7px; }
-    .ward-row { display: flex; align-items: center; gap: 8px; font-size: 13px; }
-    .ward-name { min-width: 100px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .ward-bar-wrap { flex: 1; background: var(--al); border-radius: 6px; height: 12px; overflow: hidden; }
+    .ward-list { display: flex; flex-direction: column; gap: 8px; }
+    .ward-row { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+    .ward-name { min-width: 110px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ward-bar-wrap { flex: 1; background: var(--al); border-radius: 6px; height: 14px; overflow: hidden; }
     .ward-bar { height: 100%; border-radius: 6px; background: var(--a); transition: width .5s ease; }
-    .ward-count { min-width: 28px; text-align: right; color: var(--muted); }
+    .ward-count { min-width: 30px; text-align: right; color: var(--muted); }
 
     /* ── LOADING / ERROR ── */
-    .state-loading, .state-error { text-align: center; padding: 40px 20px; color: var(--muted); }
+    .state-loading, .state-error {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+    }
     .state-error { color: #B82E2E; }
     .spinner {
-      width: 32px; height: 32px;
-      border: 3px solid var(--border); border-top-color: var(--a);
-      border-radius: 50%; animation: spin .8s linear infinite;
-      margin: 0 auto 10px;
+      width: 36px; height: 36px;
+      border: 3px solid var(--border);
+      border-top-color: var(--a);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+      margin: 0 auto 12px;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ── WARD CARDS ── */
-    .ward-cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px,1fr)); gap: 8px; }
-    .ward-stat-card {
-      border: 1.5px solid var(--border); border-radius: 12px;
-      padding: 10px 12px; cursor: pointer;
-      transition: border-color .2s, box-shadow .2s;
+    /* ── TABS ── */
+    .tabs { display: flex; gap: 4px; border-bottom: 2px solid var(--border); margin-bottom: 16px; }
+    .tab {
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      border: none;
+      background: none;
+      color: var(--muted);
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
     }
-    .ward-stat-card:hover { border-color: var(--a); box-shadow: 0 2px 8px rgba(10,100,120,0.12); }
-    .ward-stat-card.active { border-color: var(--a); background: var(--al); }
-    .ward-stat-card.no-data { opacity: .45; }
-    .wsc-name  { font-weight: 700; font-size: 12px; margin-bottom: 7px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .wsc-stats { display: flex; gap: 6px; }
-    .wsc-stat  { flex: 1; text-align: center; }
-    .wsc-num   { font-size: 18px; font-weight: 800; line-height: 1; }
-    .wsc-lbl   { font-size: 9px; color: var(--muted); font-weight: 600; margin-top: 2px; text-transform: uppercase; }
-    .wsc-equip { font-size: 10px; color: var(--muted); margin-top: 5px; border-top: 1px solid var(--border); padding-top: 5px; }
-    .wsc-equip span { display: inline-block; background: #FEE2E2; color: #B91C1C; border-radius: 6px; padding: 1px 5px; font-size: 9px; font-weight: 700; margin: 1px; }
+    .tab.active { color: var(--a); border-bottom-color: var(--a); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    /* ROUND STATUS BADGES */
+    .rs-use    { background:#DCF2E5; color:#14612D; }
+    .rs-idle   { background:#DAF0F5; color:#0A6478; }
+    .rs-broken { background:#FFF3CD; color:#8B5000; }
+    .rs-lost   { background:#FDEAEA; color:#B82E2E; }
+    .rs-badge  { display:inline-block; font-size:12px; font-weight:700; border-radius:6px; padding:2px 9px; }
 
-    /* ── TOGGLE BTN ── */
-    .btn-toggle {
-      background: var(--a); color: #fff; border: none;
-      border-radius: 8px; padding: 4px 12px;
-      font-size: 12px; font-weight: 700; font-family: inherit; cursor: pointer;
-      white-space: nowrap; flex-shrink: 0;
-    }
-    .btn-toggle:hover { background: var(--a2); }
-
-    /* ── MOBILE ── */
-    @media (max-width: 600px) {
-      .header .sub { display: none; }
-      .clock-box .date-txt { display: none; }
-      #lastUpdated { display: none; }
-      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
-      .grid-2   { grid-template-columns: 1fr; }
-      .filter-bar label { display: none; }
-      .filter-bar select { max-width: none; flex: 1; }
-      .btn-refresh { margin-left: 0; }
-      th.hide-mobile, td.hide-mobile { display: none; }
-    }
-
-    @media (min-width: 601px) and (max-width: 900px) {
-      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    /* PRINT STYLES */
+    @media print {
+      body * { visibility: hidden; }
+      #printArea, #printArea * { visibility: visible; }
+      #printArea {
+        position: fixed; inset: 0; background: #fff;
+        padding: 20px 28px; font-family: 'Sarabun', sans-serif;
+        font-size: 13px; color: #000;
+      }
+      #printArea table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+      #printArea th, #printArea td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; font-size: 12px; }
+      #printArea th { background: #0A6478; color: #fff; }
+      #printArea .print-title { font-size: 18px; font-weight: 800; margin-bottom: 4px; }
+      #printArea .print-meta  { font-size: 12px; color: #555; margin-bottom: 10px; }
     }
   </style>
 </head>
 <body>
-
-<canvas id="bgCanvas" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;"></canvas>
 
 <!-- HEADER -->
 <div class="header">
@@ -290,15 +339,8 @@
       <div class="sub">ระบบติดตามการยืม-คืนครุภัณฑ์การแพทย์</div>
     </div>
     <div class="header-right">
-      <!-- นาฬิกา + countdown -->
-      <div class="clock-box">
-        <div id="dashClock" class="time">00:00:00</div>
-        <div id="dashDate" class="date-txt"></div>
-        <div class="bar-wrap"><div id="refreshBar" class="bar-fill"></div></div>
-        <div id="nextRefresh" class="cd-txt">refresh ใน 30s</div>
-      </div>
       <span id="lastUpdated"></span>
-      <a href="index.html" class="btn-back">← กลับ</a>
+      <a href="index.html" class="btn-back">← กลับหน้าแบบฟอร์ม</a>
     </div>
   </div>
 </div>
@@ -318,37 +360,6 @@
     <label>หน่วยงาน</label>
     <select id="filterWard" onchange="applyFilters()">
       <option value="">ทั้งหมด</option>
-      <option>ER</option>
-      <option>อายุรกรรมหญิง (M.ญ)</option>
-      <option>EENT</option>
-      <option>ศัลยกรรมหญิง</option>
-      <option>ศัลยกรรมกระดูก</option>
-      <option>ศัลยกรรมชาย</option>
-      <option>อายุรกรรมชาย (M.ช)</option>
-      <option>Semi ICU</option>
-      <option>ICU 100 ปี</option>
-      <option>กจ.3</option>
-      <option>กจ.2</option>
-      <option>TM</option>
-      <option>เด็กล่าง</option>
-      <option>PICU</option>
-      <option>เด็กบน</option>
-      <option>ICU ญสส.</option>
-      <option>ห้องคลอด LR</option>
-      <option>หลังคลอด PP</option>
-      <option>ญสส.9</option>
-      <option>Premium ญสส.8</option>
-      <option>ICU.S</option>
-      <option>ICU Nuero</option>
-      <option>NICU</option>
-      <option>SNB</option>
-      <option>กจ.4</option>
-      <option>AIIR</option>
-      <option>สธ.7</option>
-      <option>สธ.6</option>
-      <option>ศูนย์เปล</option>
-      <option>เคมีบำบัด</option>
-      <option>อื่นๆ</option>
     </select>
     <button class="btn-refresh" id="refreshBtn" onclick="loadAll()">⟳ รีเฟรช</button>
   </div>
@@ -381,18 +392,16 @@
   <div class="grid-2">
     <!-- Ward usage -->
     <div class="card">
-      <div class="card-head">🏥 การใช้งานแต่ละหน่วยงาน
-        <button onclick="toggleSection('wardChartBody','wardChartBtn',renderWardChart)" id="wardChartBtn" class="btn-toggle">ดู ▾</button>
+      <div class="card-head">🏥 การใช้งานแต่ละหน่วยงาน</div>
+      <div class="card-body" id="wardChartBody">
+        <div class="state-loading"><div class="spinner"></div>กำลังโหลด…</div>
       </div>
-      <div id="wardChartBody" style="display:none"></div>
     </div>
     <!-- Equipment usage -->
     <div class="card">
-      <div class="card-head">🔬 ครุภัณฑ์ที่ใช้งานมากที่สุด
-        <button onclick="toggleSection('equipChartBody','equipChartBtn',renderEquipChart)" id="equipChartBtn" class="btn-toggle">ดู ▾</button>
-      </div>
-      <div id="equipChartBody" style="display:none">
-        <div style="padding:16px 18px"><div class="chart-wrap"><canvas id="equipChart"></canvas></div></div>
+      <div class="card-head">🔬 ครุภัณฑ์ที่ใช้งานมากที่สุด</div>
+      <div class="card-body">
+        <div class="chart-wrap"><canvas id="equipChart"></canvas></div>
       </div>
     </div>
   </div>
@@ -400,19 +409,15 @@
   <!-- SHIFT + TREND -->
   <div class="grid-2" style="margin-bottom:16px">
     <div class="card">
-      <div class="card-head">🌙 การใช้งานแต่ละเวร
-        <button onclick="toggleSection('shiftChartBody','shiftChartBtn',renderShiftChart)" id="shiftChartBtn" class="btn-toggle">ดู ▾</button>
-      </div>
-      <div id="shiftChartBody" style="display:none">
-        <div style="padding:16px 18px"><div class="chart-wrap"><canvas id="shiftChart"></canvas></div></div>
+      <div class="card-head">🌙 การใช้งานแต่ละเวร</div>
+      <div class="card-body">
+        <div class="chart-wrap"><canvas id="shiftChart"></canvas></div>
       </div>
     </div>
     <div class="card">
-      <div class="card-head">📈 แนวโน้ม 7 วันล่าสุด
-        <button onclick="toggleSection('trendChartBody','trendChartBtn',renderTrendChart)" id="trendChartBtn" class="btn-toggle">ดู ▾</button>
-      </div>
-      <div id="trendChartBody" style="display:none">
-        <div style="padding:16px 18px"><div class="chart-wrap"><canvas id="trendChart"></canvas></div></div>
+      <div class="card-head">📈 แนวโน้ม 7 วันล่าสุด</div>
+      <div class="card-body">
+        <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
       </div>
     </div>
   </div>
@@ -421,28 +426,59 @@
   <div class="card" style="margin-bottom:16px">
     <div class="card-head">
       📋 สถานะเครื่องปัจจุบัน
-      <div style="display:flex;align-items:center;gap:10px">
-        <span id="equipStatusCount" style="font-size:12px;font-weight:400;color:var(--muted)"></span>
-        <button onclick="toggleSection('equipStatusBody','equipStatusBtn',renderEquipStatus)" id="equipStatusBtn" class="btn-toggle">ดู ▾</button>
+      <span id="equipStatusCount" style="font-size:12px;font-weight:400;color:var(--muted)"></span>
+    </div>
+    <div class="card-body" id="equipStatusBody">
+      <div class="state-loading"><div class="spinner"></div>กำลังโหลด…</div>
+    </div>
+  </div>
+
+  <!-- ROUND RECORDS SECTION -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-head" style="cursor:pointer;user-select:none" onclick="toggleRoundSection()">
+      💉 บันทึกการ Round เครื่อง Infusion Pump
+      <span id="roundToggleBtn" style="font-size:12px;background:rgba(255,255,255,0.18);padding:4px 10px;border-radius:20px;margin-left:auto">▼ ดูรายงาน</span>
+    </div>
+    <div id="roundBody" style="display:none">
+      <div class="card-body" style="border-top:1px solid var(--border)">
+
+        <!-- Filters -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+          <div>
+            <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:5px">หน่วยงาน</label>
+            <select id="roundWardSel" onchange="renderRoundTable()" style="width:100%;padding:9px 12px;border:2px solid var(--border);border-radius:10px;font-family:'Sarabun',sans-serif;font-size:14px;background:#fff;color:var(--txt);outline:none;cursor:pointer">
+              <option value="">— ทั้งหมด —</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:5px">วันที่</label>
+            <select id="roundDateSel" onchange="renderRoundTable()" style="width:100%;padding:9px 12px;border:2px solid var(--border);border-radius:10px;font-family:'Sarabun',sans-serif;font-size:14px;background:#fff;color:var(--txt);outline:none;cursor:pointer">
+              <option value="">— ทั้งหมด —</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Summary chips -->
+        <div id="roundSummary" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"></div>
+
+        <!-- Table -->
+        <div class="table-wrap" id="roundTableWrap">
+          <div class="empty">เลือกหน่วยงานหรือวันที่เพื่อดูรายการ</div>
+        </div>
+
+        <!-- Print button -->
+        <div style="margin-top:12px;text-align:right" id="roundPrintWrap" style="display:none">
+          <button onclick="printRoundReport()" style="padding:10px 20px;background:var(--a);color:#fff;border:none;border-radius:10px;font-family:'Sarabun',sans-serif;font-size:14px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px">
+            🖨️ พิมพ์รายงาน
+          </button>
+        </div>
+
       </div>
     </div>
-    <div id="equipStatusBody" style="display:none"></div>
   </div>
 
-  <!-- WARD CARDS -->
-  <div class="card" style="margin-bottom:16px">
-    <div class="card-head" style="cursor:default">
-      🏥 สรุปแต่ละหน่วยงาน
-      <button onclick="toggleWardCards()" id="wardCardsToggleBtn" style="
-        background:var(--a);color:#fff;border:none;border-radius:10px;
-        padding:5px 14px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;
-      ">ดูข้อมูลหน่วยงาน ▾</button>
-    </div>
-    <div id="wardCardsBody" style="display:none"></div>
-  </div>
-
-  <!-- RECORDS TABLE (ล่างสุด) -->
-  <div class="card" style="margin-bottom:16px">
+  <!-- RECORDS TABLE -->
+  <div class="card">
     <div class="card-head">📝 รายการทั้งหมด</div>
     <div class="card-body">
       <div class="search-row">
@@ -483,12 +519,8 @@
     <button onclick="checkPw()" style="
       width:100%;background:#0A6478;color:#fff;border:none;
       border-radius:12px;padding:13px;font-size:15px;font-weight:700;
-      font-family:inherit;cursor:pointer;margin-bottom:10px;
+      font-family:inherit;cursor:pointer;
     ">เข้าสู่ระบบ</button>
-    <a href="index.html" style="
-      display:block;text-align:center;font-size:13px;color:#6A8A96;
-      text-decoration:none;padding:6px;
-    ">← กลับหน้าแบบฟอร์ม</a>
   </div>
 </div>
 
@@ -535,117 +567,44 @@ let equipStatus = [];
 let filteredRecords = [];
 let currentPage = 0;
 const PAGE_SIZE = 20;
-const POLL_INTERVAL = 30000; // 30 วินาที
-let pollTimer = null;
 
 let equipChart, shiftChart, trendChart;
 
 /* ============================================================
    INIT
    ============================================================ */
+// loadAll เรียกจาก checkPw() หรือถ้า session ยังอยู่
 window.addEventListener('DOMContentLoaded', () => {
   if (sessionStorage.getItem('mems_auth') === '1') loadAll();
 });
 
-async function loadAll(silent = false) {
+async function loadAll() {
   const btn = document.getElementById('refreshBtn');
-  if (!silent) {
-    btn.disabled = true;
-    btn.textContent = '⟳ กำลังโหลด…';
-  }
+  btn.disabled = true;
+  btn.textContent = '⟳ กำลังโหลด…';
 
   try {
-    const prevCount = allRecords.length;
-
     const [recRes, eqRes] = await Promise.all([
       fetchGAS('records', { limit: 1000 }),
       fetchGAS('equipment')
     ]);
 
     allRecords  = recRes.records || [];
-    equipStatus = eqRes.equipment || [];
-
-    const newCount = allRecords.length - prevCount;
-    if (silent && newCount > 0) showToast(`🔔 มีรายการใหม่ ${newCount} รายการ`);
+    equipStatus = eqRes.equipment  || [];
 
     populateWardFilter();
     applyFilters();
-    if (isOpen('equipStatusBody')) renderEquipStatus();
+    renderEquipStatus();
+    if (roundVisible) populateRoundFilters();
 
     document.getElementById('lastUpdated').textContent =
       'อัพเดต ' + new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
   } catch (err) {
-    if (!silent) showError(err.message);
+    showError(err.message);
   }
 
-  if (!silent) {
-    btn.disabled = false;
-    btn.textContent = '⟳ รีเฟรช';
-  }
-
-  // ตั้ง timer ต่อไปเรื่อยๆ
-  clearTimeout(pollTimer);
-  pollTimer = setTimeout(() => loadAll(true), POLL_INTERVAL);
-  startCountdown();
-}
-
-/* ============================================================
-   CLOCK
-   ============================================================ */
-function startClock() {
-  function tick() {
-    const now = new Date();
-    const hh  = String(now.getHours()).padStart(2,'0');
-    const mm  = String(now.getMinutes()).padStart(2,'0');
-    const ss  = String(now.getSeconds()).padStart(2,'0');
-    document.getElementById('dashClock').textContent = `${hh}:${mm}:${ss}`;
-    document.getElementById('dashDate').textContent  =
-      now.toLocaleDateString('th-TH', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
-  }
-  tick();
-  setInterval(tick, 1000);
-}
-startClock();
-
-/* ============================================================
-   COUNTDOWN
-   ============================================================ */
-let countdownTimer = null;
-function startCountdown() {
-  let total = POLL_INTERVAL / 1000;
-  let sec   = total;
-  const label = document.getElementById('nextRefresh');
-  const bar   = document.getElementById('refreshBar');
-  clearInterval(countdownTimer);
-  countdownTimer = setInterval(() => {
-    sec--;
-    if (sec <= 0) { clearInterval(countdownTimer); label.textContent = 'กำลังโหลด…'; bar.style.width = '0%'; return; }
-    label.textContent = `refresh ใน ${sec}s`;
-    bar.style.width   = `${(sec / total) * 100}%`;
-  }, 1000);
-}
-
-/* ============================================================
-   TOAST
-   ============================================================ */
-function showToast(msg) {
-  let t = document.getElementById('toast');
-  if (!t) {
-    t = document.createElement('div');
-    t.id = 'toast';
-    t.style.cssText = `
-      position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);
-      background:#192D35;color:#fff;padding:12px 22px;border-radius:30px;
-      font-size:14px;font-weight:600;font-family:'Sarabun',sans-serif;
-      box-shadow:0 4px 20px rgba(0,0,0,0.25);z-index:9000;
-      transition:transform .35s cubic-bezier(.4,0,.2,1);pointer-events:none;
-    `;
-    document.body.appendChild(t);
-  }
-  t.textContent = msg;
-  t.style.transform = 'translateX(-50%) translateY(0)';
-  clearTimeout(t._hide);
-  t._hide = setTimeout(() => { t.style.transform = 'translateX(-50%) translateY(80px)'; }, 4000);
+  btn.disabled = false;
+  btn.textContent = '⟳ รีเฟรช';
 }
 
 /* ============================================================
@@ -663,22 +622,12 @@ async function fetchGAS(action, params = {}) {
 /* ============================================================
    FILTER
    ============================================================ */
-const WARD_LIST = [
-  'ER','อายุรกรรมหญิง (M.ญ)','EENT','ศัลยกรรมหญิง','ศัลยกรรมกระดูก','ศัลยกรรมชาย',
-  'อายุรกรรมชาย (M.ช)','Semi ICU','ICU 100 ปี','กจ.3','กจ.2','TM','เด็กล่าง','PICU',
-  'เด็กบน','ICU ญสส.','ห้องคลอด LR','หลังคลอด PP','ญสส.9','Premium ญสส.8',
-  'ICU.S','ICU Nuero','NICU','SNB','กจ.4','AIIR','สธ.7','สธ.6','ศูนย์เปล','เคมีบำบัด'
-];
-
 function populateWardFilter() {
-  // merge WARD_LIST กับ ward จาก data (กรณีมีอื่นๆ)
-  const fromData = [...new Set(allRecords.map(r => r['ตึก/Ward']).filter(Boolean))];
-  const extra = fromData.filter(w => !WARD_LIST.includes(w));
-  const all = [...WARD_LIST, ...extra];
+  const wards = [...new Set(allRecords.map(r => r['ตึก/Ward']).filter(Boolean))].sort();
   const sel = document.getElementById('filterWard');
   const cur = sel.value;
   sel.innerHTML = '<option value="">ทั้งหมด</option>' +
-    all.map(w => `<option value="${w}"${w===cur?' selected':''}>${w}</option>`).join('');
+    wards.map(w => `<option value="${w}"${w===cur?' selected':''}>${w}</option>`).join('');
 }
 
 function getDateFilter() {
@@ -727,17 +676,13 @@ function onSearch() {
 /* ============================================================
    RENDER ALL
    ============================================================ */
-function isOpen(id) { return document.getElementById(id).style.display !== 'none'; }
-
 function renderAll() {
   renderKPI();
+  renderWardChart();
+  renderEquipChart();
+  renderShiftChart();
+  renderTrendChart();
   renderTable();
-  if (isOpen('wardChartBody'))  renderWardChart();
-  if (isOpen('equipChartBody')) renderEquipChart();
-  if (isOpen('shiftChartBody')) renderShiftChart();
-  if (isOpen('trendChartBody')) renderTrendChart();
-  if (isOpen('equipStatusBody')) renderEquipStatus();
-  if (isOpen('wardCardsBody'))  renderWardCards();
 }
 
 /* ============================================================
@@ -780,10 +725,10 @@ function renderWardChart() {
 
   const body = document.getElementById('wardChartBody');
   if (!sorted.length) {
-    body.innerHTML = '<div class="empty" style="padding:16px 18px">ไม่มีข้อมูล</div>';
+    body.innerHTML = '<div class="empty">ไม่มีข้อมูล</div>';
     return;
   }
-  body.innerHTML = `<div class="ward-list" style="padding:16px 18px">${
+  body.innerHTML = `<div class="ward-list">${
     sorted.map(([name, cnt]) => `
       <div class="ward-row">
         <div class="ward-name" title="${name}">${name}</div>
@@ -902,145 +847,35 @@ function renderTrendChart() {
 }
 
 /* ============================================================
-   WARD CARDS
-   ============================================================ */
-function renderWardCards() {
-  const body = document.getElementById('wardCardsBody');
-  const activeWard = document.getElementById('filterWard').value;
-
-  // นับยืม/คืนต่อ ward จาก filteredRecords
-  const stats = {};
-  filteredRecords.forEach(r => {
-    const w = r['ตึก/Ward'] || 'ไม่ระบุ';
-    if (!stats[w]) stats[w] = { borrow: 0, return: 0 };
-    if (String(r['ประเภท (ยืม/คืน)']).includes('ยืม')) stats[w].borrow++;
-    else stats[w].return++;
-  });
-
-  // เครื่องที่ยืมอยู่ต่อ ward (จาก equipStatus)
-  const borrowedByWard = {};
-  equipStatus.filter(e => e.isBorrowed).forEach(e => {
-    if (!borrowedByWard[e.ward]) borrowedByWard[e.ward] = [];
-    borrowedByWard[e.ward].push(e.equipment);
-  });
-
-  // merge WARD_LIST + ward ที่มีข้อมูลจริง
-  const fromData = Object.keys(stats).filter(w => !WARD_LIST.includes(w));
-  const allWards = [...WARD_LIST, ...fromData];
-
-  body.innerHTML = `<div class="ward-cards-grid">${
-    allWards.map(w => {
-      const s = stats[w] || { borrow: 0, return: 0 };
-      const borrowed = borrowedByWard[w] || [];
-      const noData = s.borrow === 0 && s.return === 0;
-      const isActive = activeWard === w;
-      return `
-        <div class="ward-stat-card ${noData ? 'no-data' : ''} ${isActive ? 'active' : ''}"
-             onclick="filterByWard('${w}')">
-          <div class="wsc-name" title="${w}">${w}</div>
-          <div class="wsc-stats">
-            <div class="wsc-stat">
-              <div class="wsc-num" style="color:var(--green)">${s.borrow}</div>
-              <div class="wsc-lbl">ยืม</div>
-            </div>
-            <div class="wsc-stat">
-              <div class="wsc-num" style="color:var(--red)">${s.return}</div>
-              <div class="wsc-lbl">คืน</div>
-            </div>
-            <div class="wsc-stat">
-              <div class="wsc-num" style="color:#D97706">${borrowed.length}</div>
-              <div class="wsc-lbl">ค้างอยู่</div>
-            </div>
-          </div>
-          ${borrowed.length ? `<div class="wsc-equip">${[...new Set(borrowed)].map(e=>`<span>${e}</span>`).join('')}</div>` : ''}
-        </div>`;
-    }).join('')
-  }</div>`;
-}
-
-/* ── generic section toggle ── */
-function toggleSection(bodyId, btnId, renderFn) {
-  const body = document.getElementById(bodyId);
-  const btn  = document.getElementById(btnId);
-  const open = body.style.display === 'none';
-  body.style.display = open ? 'block' : 'none';
-  btn.textContent = open ? 'ซ่อน ▴' : 'ดู ▾';
-  if (open && renderFn) renderFn();
-}
-
-function toggleWardCards() {
-  const body = document.getElementById('wardCardsBody');
-  const btn  = document.getElementById('wardCardsToggleBtn');
-  const isHidden = body.style.display === 'none';
-  if (isHidden) {
-    body.style.display = 'block';
-    body.style.padding = '16px 18px';
-    btn.textContent = 'ซ่อน ▴';
-    renderWardCards();
-  } else {
-    body.style.display = 'none';
-    btn.textContent = 'ดูข้อมูลหน่วยงาน ▾';
-  }
-}
-
-function filterByWard(w) {
-  const sel = document.getElementById('filterWard');
-  sel.value = (sel.value === w) ? '' : w; // คลิกซ้ำ = ล้าง filter
-  applyFilters();
-}
-
-/* ============================================================
    EQUIPMENT STATUS
    ============================================================ */
 function renderEquipStatus() {
   const body  = document.getElementById('equipStatusBody');
   const count = document.getElementById('equipStatusCount');
   if (!equipStatus.length) {
-    body.innerHTML = '<div class="empty" style="padding:16px 18px">ไม่มีข้อมูลสถานะเครื่อง</div>';
+    body.innerHTML = '<div class="empty">ไม่มีข้อมูลสถานะเครื่อง</div>';
     return;
   }
-
   const borrowed = equipStatus.filter(e => e.isBorrowed);
   const returned = equipStatus.filter(e => !e.isBorrowed);
   count.textContent = `ยืมอยู่ ${borrowed.length} เครื่อง · ว่าง ${returned.length} เครื่อง`;
 
-  // จัดกลุ่มตามชื่อเครื่อง
-  const groups = {};
-  [...borrowed, ...returned].forEach(e => {
-    if (!groups[e.equipment]) groups[e.equipment] = [];
-    groups[e.equipment].push(e);
-  });
-
-  body.innerHTML = `<div style="padding:14px 16px;display:flex;flex-direction:column;gap:14px">${
-    Object.entries(groups).map(([name, items]) => {
-      const bCount = items.filter(e => e.isBorrowed).length;
-      const rCount = items.filter(e => !e.isBorrowed).length;
-      return `
-        <div>
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-            <div style="font-weight:800;font-size:14px">${name}</div>
-            <div style="font-size:11px;background:var(--al);color:var(--a);border-radius:20px;padding:2px 10px;font-weight:700">
-              ${items.length} เครื่อง
-            </div>
-            ${bCount ? `<div style="font-size:11px;background:#FEE2E2;color:#B91C1C;border-radius:20px;padding:2px 10px;font-weight:700">🔴 ยืม ${bCount}</div>` : ''}
-            ${rCount ? `<div style="font-size:11px;background:#DCFCE7;color:#166534;border-radius:20px;padding:2px 10px;font-weight:700">🟢 ว่าง ${rCount}</div>` : ''}
-          </div>
-          <div class="equip-grid">${
-            items.map(e => `
-              <div class="equip-card ${e.isBorrowed ? 'borrowed' : 'returned'}">
-                <div class="equip-num" style="font-weight:700">#${e.number}</div>
-                <div class="equip-badge ${e.isBorrowed ? 'borrow' : 'return'}">
-                  ${e.isBorrowed ? '🔴 ยืมอยู่' : '🟢 ว่าง'}
-                </div>
-                ${e.isBorrowed ? `
-                  <div class="equip-ward">📍 ${e.ward}</div>
-                  <div class="equip-who">👤 ${e.borrowedBy}</div>
-                ` : ''}
-              </div>
-            `).join('')
-          }</div>
-        </div>`;
-    }).join('')
+  // show borrowed first
+  const sorted = [...borrowed, ...returned];
+  body.innerHTML = `<div class="equip-grid">${
+    sorted.map(e => `
+      <div class="equip-card ${e.isBorrowed ? 'borrowed' : 'returned'}">
+        <div class="equip-name">${e.equipment}</div>
+        <div class="equip-num">#${e.number}</div>
+        <div class="equip-badge ${e.isBorrowed ? 'borrow' : 'return'}">
+          ${e.isBorrowed ? '🔴 ยืมอยู่' : '🟢 ว่าง'}
+        </div>
+        ${e.isBorrowed ? `
+          <div class="equip-ward">📍 ${e.ward}</div>
+          <div class="equip-who">👤 ${e.borrowedBy}</div>
+        ` : ''}
+      </div>
+    `).join('')
   }</div>`;
 }
 
@@ -1069,23 +904,23 @@ function renderTable() {
 
   wrap.innerHTML = `<table>
     <thead><tr>
-      <th class="hide-mobile">#</th>
+      <th>#</th>
       <th>วันที่</th>
-      <th class="hide-mobile">เวลา</th>
-      <th class="hide-mobile">เวร</th>
+      <th>เวลา</th>
+      <th>เวร</th>
       <th>ประเภท</th>
       <th>เครื่อง</th>
-      <th class="hide-mobile">หมายเลข</th>
+      <th>หมายเลข</th>
       <th>หน่วยงาน</th>
       <th>ผู้ยืม</th>
     </tr></thead>
     <tbody>${paged.map((r,i) => {
       const isBorrow = String(r['ประเภท (ยืม/คืน)']).includes('ยืม');
       return `<tr>
-        <td class="hide-mobile">${start+i+1}</td>
+        <td>${start+i+1}</td>
         <td>${r['วันที่']||''}</td>
-        <td class="hide-mobile">${r['เวลา']||''}</td>
-        <td class="hide-mobile">${r['เวร']||''}</td>
+        <td>${r['เวลา']||''}</td>
+        <td>${r['เวร']||''}</td>
         <td><span class="badge ${isBorrow ? 'badge-borrow':'badge-return'}">${isBorrow?'ยืม':'คืน'}</span></td>
         <td><strong>${r['ชื่อเครื่อง']||''}</strong></td>
         <td>${r['หมายเลขเครื่อง']||''}</td>
@@ -1112,74 +947,158 @@ function goPage(p) {
 /* ============================================================
    ERROR
    ============================================================ */
-function showError(msg) {
-  document.getElementById('wardChartBody').innerHTML =
-    `<div class="state-error" style="padding:16px 18px">⚠️ โหลดข้อมูลไม่ได้<br><small>${msg}</small></div>`;
-  document.getElementById('tableWrap').innerHTML =
-    `<div class="state-error">⚠️ ${msg}</div>`;
+/* ============================================================
+   ROUND SECTION
+   ============================================================ */
+let roundVisible = false;
+
+function toggleRoundSection() {
+  roundVisible = !roundVisible;
+  document.getElementById('roundBody').style.display = roundVisible ? 'block' : 'none';
+  document.getElementById('roundToggleBtn').textContent = roundVisible ? '▲ ซ่อน' : '▼ ดูรายงาน';
+  if (roundVisible) populateRoundFilters();
+}
+
+function getRoundRecords() {
+  return allRecords.filter(r => String(r['ประเภท (ยืม/คืน)']).includes('Round'));
+}
+
+function populateRoundFilters() {
+  const records = getRoundRecords();
+
+  const wards = [...new Set(records.map(r => r['ตึก/Ward']).filter(Boolean))].sort();
+  const wardSel = document.getElementById('roundWardSel');
+  const curWard = wardSel.value;
+  wardSel.innerHTML = '<option value="">— ทั้งหมด —</option>' +
+    wards.map(w => `<option value="${w}" ${w===curWard?'selected':''}>${w}</option>`).join('');
+
+  const dates = [...new Set(records.map(r => r['วันที่']).filter(Boolean))].sort((a,b) => b.localeCompare(a));
+  const dateSel = document.getElementById('roundDateSel');
+  const curDate = dateSel.value;
+  dateSel.innerHTML = '<option value="">— ทั้งหมด —</option>' +
+    dates.map(d => `<option value="${d}" ${d===curDate?'selected':''}>${d}</option>`).join('');
+
+  renderRoundTable();
+}
+
+function renderRoundTable() {
+  const ward = document.getElementById('roundWardSel').value;
+  const date = document.getElementById('roundDateSel').value;
+  let rows = getRoundRecords();
+  if (ward) rows = rows.filter(r => r['ตึก/Ward'] === ward);
+  if (date) rows = rows.filter(r => r['วันที่'] === date);
+
+  // Summary chips
+  const cnt = { use:0, idle:0, broken:0, lost:0, other:0 };
+  rows.forEach(r => {
+    const s = String(r['สถานะ Round'] || '');
+    if (s.includes('ใช้งานอยู่'))     cnt.use++;
+    else if (s.includes('ไม่ได้ใช้'))  cnt.idle++;
+    else if (s.includes('ชำรุด'))      cnt.broken++;
+    else if (s.includes('สูญหาย'))     cnt.lost++;
+    else                                cnt.other++;
+  });
+
+  const totalRound = rows.length;
+  document.getElementById('roundSummary').innerHTML = totalRound === 0 ? '' : `
+    <span class="rs-badge rs-use">🟢 ใช้งานอยู่ ${cnt.use}</span>
+    <span class="rs-badge rs-idle">🔵 ไม่ได้ใช้งาน ${cnt.idle}</span>
+    <span class="rs-badge rs-broken">🟡 ชำรุด ${cnt.broken}</span>
+    <span class="rs-badge rs-lost">🔴 สูญหาย ${cnt.lost}</span>
+    <span style="font-size:12px;color:var(--muted);margin-left:4px">รวม ${totalRound} รายการ</span>
+  `;
+
+  const wrap = document.getElementById('roundTableWrap');
+  const printWrap = document.getElementById('roundPrintWrap');
+  if (!rows.length) {
+    wrap.innerHTML = '<div class="empty">ไม่พบข้อมูล Round</div>';
+    printWrap.style.display = 'none';
+    return;
+  }
+
+  wrap.innerHTML = `<table>
+    <thead><tr>
+      <th>วันที่</th><th>เวร</th><th>หน่วยงาน</th>
+      <th>เครื่อง No.</th><th>สถานะ</th><th>ผู้บันทึก</th><th>หมายเหตุ</th>
+    </tr></thead>
+    <tbody>${rows.map(r => {
+      const s = String(r['สถานะ Round'] || '');
+      const cls = s.includes('ใช้งานอยู่') ? 'rs-use'
+                : s.includes('ไม่ได้ใช้')  ? 'rs-idle'
+                : s.includes('ชำรุด')       ? 'rs-broken'
+                : s.includes('สูญหาย')      ? 'rs-lost' : '';
+      return `<tr>
+        <td>${r['วันที่']||''}</td>
+        <td>${r['เวร']||''}</td>
+        <td>${r['ตึก/Ward']||''}</td>
+        <td><strong>${r['หมายเลขเครื่อง']||'-'}</strong></td>
+        <td><span class="rs-badge ${cls}">${s||'-'}</span></td>
+        <td>${r['ชื่อผู้ยืม']||''}</td>
+        <td style="font-size:12px;color:var(--muted)">${r['หมายเหตุ']||''}</td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table>`;
+
+  printWrap.style.display = 'block';
+
+  // Store for print
+  window._roundPrintData = { rows, ward, date, cnt };
+}
+
+function printRoundReport() {
+  const { rows, ward, date, cnt } = window._roundPrintData || {};
+  if (!rows || !rows.length) return;
+
+  const title = `รายงาน Round เครื่อง Infusion Pump`;
+  const meta  = [
+    ward ? `หน่วยงาน: ${ward}` : 'ทุกหน่วยงาน',
+    date ? `วันที่: ${date}` : 'ทุกวันที่',
+    `พิมพ์เมื่อ: ${new Date().toLocaleString('th-TH')}`,
+    `รวม ${rows.length} รายการ`
+  ].join('  |  ');
+
+  const summary = `ใช้งานอยู่ ${cnt.use}  |  ไม่ได้ใช้งาน ${cnt.idle}  |  ชำรุด ${cnt.broken}  |  สูญหาย ${cnt.lost}`;
+
+  const tableRows = rows.map(r => `<tr>
+    <td>${r['วันที่']||''}</td><td>${r['เวร']||''}</td>
+    <td>${r['ตึก/Ward']||''}</td><td>${r['หมายเลขเครื่อง']||'-'}</td>
+    <td>${r['สถานะ Round']||'-'}</td><td>${r['ชื่อผู้ยืม']||''}</td>
+    <td>${r['หมายเหตุ']||''}</td>
+  </tr>`).join('');
+
+  let area = document.getElementById('printArea');
+  if (!area) {
+    area = document.createElement('div');
+    area.id = 'printArea';
+    document.body.appendChild(area);
+  }
+  area.innerHTML = `
+    <div class="print-title">💉 ${title}</div>
+    <div class="print-meta">${meta}</div>
+    <div class="print-meta" style="font-weight:700">${summary}</div>
+    <table>
+      <thead><tr>
+        <th>วันที่</th><th>เวร</th><th>หน่วยงาน</th>
+        <th>เครื่อง No.</th><th>สถานะ</th><th>ผู้บันทึก</th><th>หมายเหตุ</th>
+      </tr></thead>
+      <tbody>${tableRows}</tbody>
+    </table>
+    <div style="margin-top:30px;font-size:11px;color:#999">
+      โรงพยาบาลพหลพลพยุหเสนา จ.กาญจนบุรี — MEMs Medical Equipment Management Systems
+    </div>
+  `;
+  window.print();
 }
 
 /* ============================================================
-   BACKGROUND PARTICLE ANIMATION
+   ERROR
    ============================================================ */
-(function () {
-  const canvas = document.getElementById('bgCanvas');
-  const ctx    = canvas.getContext('2d');
-
-  function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-  window.addEventListener('resize', resize);
-  resize();
-
-  function accentRGBA(alpha) {
-    const raw = getComputedStyle(document.documentElement).getPropertyValue('--a').trim() || '#0A6478';
-    let r = 10, g = 100, b = 120;
-    if (raw.startsWith('#')) {
-      const h = raw.slice(1);
-      r = parseInt(h.slice(0,2),16); g = parseInt(h.slice(2,4),16); b = parseInt(h.slice(4,6),16);
-    }
-    return `rgba(${r},${g},${b},${alpha})`;
-  }
-
-  function Particle() { this.init(true); }
-  Particle.prototype.init = function (scatter) {
-    this.x = Math.random() * canvas.width;
-    this.y = scatter ? Math.random() * canvas.height : canvas.height + 20;
-    this.r = 2 + Math.random() * 12;
-    this.speed = 0.2 + Math.random() * 0.7;
-    this.drift = (Math.random() - 0.5) * 0.5;
-    this.alpha = 0.05 + Math.random() * 0.12;
-    this.type  = Math.random() < 0.4 ? 'cross' : 'circle';
-    this.rot   = Math.random() * Math.PI * 2;
-    this.rotSpeed = (Math.random() - 0.5) * 0.015;
-  };
-  Particle.prototype.update = function () {
-    this.y -= this.speed; this.x += this.drift; this.rot += this.rotSpeed;
-    if (this.y < -20 || this.x < -30 || this.x > canvas.width + 30) this.init(false);
-  };
-  Particle.prototype.draw = function () {
-    ctx.save();
-    ctx.translate(this.x, this.y);
-    ctx.rotate(this.rot);
-    ctx.globalAlpha = this.alpha;
-    if (this.type === 'cross') {
-      ctx.strokeStyle = accentRGBA(1); ctx.lineWidth = this.r * 0.5; ctx.lineCap = 'round';
-      ctx.beginPath(); ctx.moveTo(-this.r,0); ctx.lineTo(this.r,0);
-      ctx.moveTo(0,-this.r); ctx.lineTo(0,this.r); ctx.stroke();
-    } else {
-      ctx.fillStyle = accentRGBA(1);
-      ctx.beginPath(); ctx.arc(0,0,this.r,0,Math.PI*2); ctx.fill();
-    }
-    ctx.restore();
-  };
-
-  const parts = Array.from({ length: 60 }, () => new Particle());
-  function loop() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    parts.forEach(p => { p.update(); p.draw(); });
-    requestAnimationFrame(loop);
-  }
-  loop();
-})();
+function showError(msg) {
+  document.getElementById('wardChartBody').innerHTML =
+    `<div class="state-error">⚠️ โหลดข้อมูลไม่ได้<br><small>${msg}</small></div>`;
+  document.getElementById('tableWrap').innerHTML =
+    `<div class="state-error">⚠️ ${msg}</div>`;
+}
 </script>
 </body>
 </html>
