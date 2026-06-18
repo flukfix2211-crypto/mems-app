@@ -842,6 +842,15 @@ function fmtDuration(hrs) {
   return s.trim() || (hrs > 0 ? '< 1 นาที' : '—');
 }
 
+function parseThaiDT(s) {
+  if (!s) return null;
+  // "dd/MM/yyyy HH:mm:ss" หรือ "dd/MM/yyyy HH:mm"
+  const m = String(s).match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})(?::(\d{2}))?/);
+  if (m) return new Date(+m[3], +m[2]-1, +m[1], +m[4], +m[5], +(m[6]||0));
+  const d = new Date(s);
+  return isNaN(d) ? null : d;
+}
+
 function renderC2Stats() {
   const month = document.getElementById('c2MonthSel').value;
   const ward  = document.getElementById('c2WardSel').value;
@@ -868,19 +877,26 @@ function renderC2Stats() {
 
   const rows = [];
   Object.entries(byNum).forEach(([num, recs]) => {
+    // เรียงตาม timestamp ก่อนเสมอ
+    recs.sort((a, b) => {
+      const ta = parseThaiDT(a['Timestamp (ISO)'] || a['วันที่']);
+      const tb = parseThaiDT(b['Timestamp (ISO)'] || b['วันที่']);
+      return (ta||0) - (tb||0);
+    });
     let borrows = 0, returns = 0, totalHrs = 0, sessions = [];
     let pending = null;
     recs.forEach(r => {
       const act = String(r['ประเภท (ยืม/คืน)']);
-      const ts  = new Date(r['Timestamp (ISO)'] || r['วันที่']);
+      const ts  = parseThaiDT(r['Timestamp (ISO)'] || r['วันที่']);
       if (act.includes('ยืม')) { pending = ts; borrows++; }
       else if (act.includes('คืน')) {
         returns++;
-        if (pending) {
+        if (pending && ts) {
           const hrs = (ts - pending) / 3600000;
-          const days = hrs / 24;
-          totalHrs += hrs;
-          sessions.push({ hrs: Math.round(hrs*10)/10, days: Math.round(days*10)/10 });
+          if (hrs > 0) {
+            totalHrs += hrs;
+            sessions.push({ hrs: Math.round(hrs*10)/10 });
+          }
           pending = null;
         }
       }
