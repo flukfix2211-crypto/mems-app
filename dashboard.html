@@ -72,6 +72,7 @@
     /* SECTION VIEWS */
     .view { display: none; }
     .view.active { display: block; }
+    #viewKpi.active { display: flex !important; flex-direction: column; }
     .view-header { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
     .btn-view-back { padding: 8px 16px; background: var(--a); color: #fff; border: none; border-radius: 10px; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer; flex-shrink: 0; }
     .view-title { font-size: 18px; font-weight: 800; }
@@ -100,11 +101,12 @@
     .equip-ward, .equip-who { font-size: 12px; color: var(--muted); margin-top: 2px; }
 
     /* KPI DISPLAY */
-    .kd { border-radius:16px;padding:18px 16px;color:#fff;display:flex;flex-direction:column;gap:2px;position:relative;overflow:hidden; }
-    .kd::after { content:'';position:absolute;inset:0;background:rgba(255,255,255,.06); }
+    .kd { border-radius:18px;padding:20px 18px;color:#fff;display:flex;flex-direction:column;gap:4px;position:relative;overflow:hidden; }
     .kd-label { font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;opacity:.8; }
-    .kd-val   { font-size:44px;font-weight:800;line-height:1;letter-spacing:-.02em; }
-    .kd-sub   { font-size:12px;opacity:.7; }
+    .kd-val   { font-size:52px;font-weight:800;line-height:1;letter-spacing:-.02em; }
+    .kd-sub   { font-size:13px;opacity:.7; }
+    .kpi-slide { min-width:100%;height:100%;display:flex;flex-direction:column;padding:14px 18px 10px;box-sizing:border-box; }
+    .slide-title { font-size:13px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px;flex-shrink:0; }
 
     /* TABLE */
     .search-row { margin-bottom: 12px; }
@@ -366,83 +368,103 @@
 </div>
 
 <!-- KPI DISPLAY VIEW -->
-<div id="viewKpi" class="view" style="background:#0f172a;min-height:100vh;margin:-20px -16px -60px;padding:0">
-  <div style="padding:16px 20px;background:#0f172a;border-bottom:1px solid #1e293b;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-    <div style="display:flex;align-items:center;gap:12px">
-      <button onclick="showView('home')" style="background:#1e293b;border:none;color:#94a3b8;font-size:13px;font-weight:700;padding:7px 14px;border-radius:20px;cursor:pointer;font-family:inherit">← กลับ</button>
+<div id="viewKpi" class="view" style="background:#0f172a;min-height:100vh;margin:-20px -16px -60px;padding:0;display:none;flex-direction:column">
+
+  <!-- TOP BAR -->
+  <div style="padding:12px 18px;background:rgba(15,23,42,.95);border-bottom:1px solid #1e293b;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-shrink:0">
+    <div style="display:flex;align-items:center;gap:10px">
+      <button onclick="showView('home')" style="background:#1e293b;border:none;color:#94a3b8;font-size:12px;font-weight:700;padding:6px 12px;border-radius:16px;cursor:pointer;font-family:inherit">← กลับ</button>
       <div>
-        <div style="font-size:16px;font-weight:800;color:#e2e8f0">📺 MEMs KPI Display</div>
-        <div style="font-size:11px;color:#64748b">ระบบติดตามการยืม-คืนครุภัณฑ์การแพทย์ • เรียลไทม์</div>
+        <div style="font-size:14px;font-weight:800;color:#e2e8f0">📺 MEMs KPI Display</div>
+        <div style="font-size:10px;color:#475569">เรียลไทม์ • รพ.พหลพลพยุหเสนา</div>
       </div>
     </div>
-    <div style="display:flex;align-items:center;gap:16px">
+    <div style="display:flex;align-items:center;gap:14px">
       <div style="text-align:right">
-        <div id="kpiClock" style="font-size:22px;font-weight:800;color:#38bdf8;font-variant-numeric:tabular-nums;letter-spacing:.04em">--:--:--</div>
-        <div id="kpiDate"  style="font-size:11px;color:#64748b"></div>
+        <div id="kpiClock" style="font-size:20px;font-weight:800;color:#38bdf8;font-variant-numeric:tabular-nums">--:--:--</div>
+        <div id="kpiDate" style="font-size:10px;color:#475569"></div>
       </div>
-      <button onclick="refreshKpi()" style="background:#0ea5e9;border:none;color:#fff;font-size:13px;font-weight:700;padding:8px 16px;border-radius:20px;cursor:pointer;font-family:inherit">↻ รีเฟรช</button>
+      <button onclick="refreshKpi()" style="background:#0ea5e9;border:none;color:#fff;font-size:12px;font-weight:700;padding:7px 14px;border-radius:16px;cursor:pointer;font-family:inherit">↻</button>
     </div>
   </div>
 
-  <div style="padding:16px 20px 40px;display:flex;flex-direction:column;gap:14px">
+  <!-- PROGRESS BAR -->
+  <div style="height:3px;background:#1e293b;flex-shrink:0"><div id="kpiProgress" style="height:100%;background:linear-gradient(90deg,#38bdf8,#818cf8);width:0%;transition:none"></div></div>
 
-    <!-- KPI BIG NUMBERS -->
-    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px" id="kpiBigRow">
-      <div class="kd" style="background:linear-gradient(135deg,#0ea5e9,#0284c7)">
-        <div class="kd-label">ยืมอยู่ตอนนี้</div>
-        <div class="kd-val" id="kdBorrowed">—</div>
-        <div class="kd-sub">เครื่อง</div>
+  <!-- SLIDE DOTS -->
+  <div style="display:flex;justify-content:center;gap:6px;padding:8px 0 4px;flex-shrink:0" id="kpiDots"></div>
+
+  <!-- SLIDES CONTAINER -->
+  <div style="flex:1;overflow:hidden;position:relative" id="kpiSlideWrap">
+    <div id="kpiSlides" style="display:flex;height:100%;transition:transform .5s cubic-bezier(.4,0,.2,1)">
+
+      <!-- SLIDE 1: BIG KPIs -->
+      <div class="kpi-slide">
+        <div class="slide-title">📊 ภาพรวมการใช้งานวันนี้</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;flex:1">
+          <div class="kd" style="background:linear-gradient(135deg,#0ea5e9 0%,#0369a1 100%)">
+            <div class="kd-label">ยืมอยู่ตอนนี้</div>
+            <div class="kd-val" id="kdBorrowed">—</div>
+            <div class="kd-sub">เครื่อง</div>
+          </div>
+          <div class="kd" style="background:linear-gradient(135deg,#10b981 0%,#047857 100%)">
+            <div class="kd-label">ว่างอยู่</div>
+            <div class="kd-val" id="kdFree">—</div>
+            <div class="kd-sub">เครื่อง</div>
+          </div>
+          <div class="kd" style="background:linear-gradient(135deg,#f59e0b 0%,#b45309 100%)">
+            <div class="kd-label">ยืมวันนี้</div>
+            <div class="kd-val" id="kdTodayBorrow">—</div>
+            <div class="kd-sub">ครั้ง</div>
+          </div>
+          <div class="kd" style="background:linear-gradient(135deg,#8b5cf6 0%,#6d28d9 100%)">
+            <div class="kd-label">คืนวันนี้</div>
+            <div class="kd-val" id="kdTodayReturn">—</div>
+            <div class="kd-sub">ครั้ง</div>
+          </div>
+        </div>
       </div>
-      <div class="kd" style="background:linear-gradient(135deg,#10b981,#059669)">
-        <div class="kd-label">ว่างอยู่</div>
-        <div class="kd-val" id="kdFree">—</div>
-        <div class="kd-sub">เครื่อง</div>
+
+      <!-- SLIDE 2: EQUIPMENT BREAKDOWN -->
+      <div class="kpi-slide">
+        <div class="slide-title">🔧 เครื่องที่ยืมอยู่แยกตามประเภท</div>
+        <div id="kpiEquipBreak" style="display:flex;flex-direction:column;gap:14px;flex:1;justify-content:center"></div>
       </div>
-      <div class="kd" style="background:linear-gradient(135deg,#f59e0b,#d97706)">
-        <div class="kd-label">ยืมวันนี้</div>
-        <div class="kd-val" id="kdTodayBorrow">—</div>
-        <div class="kd-sub">ครั้ง</div>
+
+      <!-- SLIDE 3: WARD RANKING -->
+      <div class="kpi-slide">
+        <div class="slide-title">🏥 หน่วยงานที่ยืมอยู่มากสุด</div>
+        <div id="kpiWardRank" style="display:flex;flex-direction:column;gap:10px;flex:1;justify-content:center"></div>
       </div>
-      <div class="kd" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed)">
-        <div class="kd-label">คืนวันนี้</div>
-        <div class="kd-val" id="kdTodayReturn">—</div>
-        <div class="kd-sub">ครั้ง</div>
+
+      <!-- SLIDE 4: C2 GRID -->
+      <div class="kpi-slide">
+        <div class="slide-title">💊 สถานะ C2 No.1–60</div>
+        <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:12px">
+          <div id="kpiC2Grid" style="display:grid;grid-template-columns:repeat(10,1fr);gap:6px"></div>
+          <div style="display:flex;gap:20px;justify-content:center;font-size:12px;color:#64748b">
+            <span><span style="display:inline-block;width:12px;height:12px;background:#ef4444;border-radius:4px;margin-right:5px;vertical-align:middle"></span>ยืมอยู่</span>
+            <span><span style="display:inline-block;width:12px;height:12px;background:#22c55e;border-radius:4px;margin-right:5px;vertical-align:middle"></span>ว่าง</span>
+          </div>
+          <div id="kpiC2Summary" style="text-align:center;font-size:13px;color:#94a3b8"></div>
+        </div>
       </div>
-    </div>
 
-    <!-- EQUIPMENT BREAKDOWN -->
-    <div style="background:#1e293b;border-radius:16px;padding:16px">
-      <div style="font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">📊 เครื่องที่ยืมอยู่แยกตามประเภท</div>
-      <div id="kpiEquipBreak" style="display:flex;flex-direction:column;gap:8px"></div>
-    </div>
-
-    <!-- WARD RANKING -->
-    <div style="background:#1e293b;border-radius:16px;padding:16px">
-      <div style="font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">🏥 หน่วยงานที่ยืมอยู่มากสุด</div>
-      <div id="kpiWardRank" style="display:flex;flex-direction:column;gap:7px"></div>
-    </div>
-
-    <!-- C2 MINI GRID -->
-    <div style="background:#1e293b;border-radius:16px;padding:16px">
-      <div style="font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">💊 สถานะ C2 No.1–60</div>
-      <div id="kpiC2Grid" style="display:grid;grid-template-columns:repeat(10,1fr);gap:4px"></div>
-      <div style="display:flex;gap:16px;margin-top:10px;font-size:11px;color:#64748b">
-        <span><span style="display:inline-block;width:10px;height:10px;background:#ef4444;border-radius:3px;margin-right:4px"></span>ยืมอยู่</span>
-        <span><span style="display:inline-block;width:10px;height:10px;background:#22c55e;border-radius:3px;margin-right:4px"></span>ว่าง</span>
+      <!-- SLIDE 5: RECENT ACTIVITY -->
+      <div class="kpi-slide">
+        <div class="slide-title">🕐 รายการล่าสุด</div>
+        <div id="kpiRecent" style="display:flex;flex-direction:column;gap:8px;flex:1;overflow:hidden"></div>
       </div>
-    </div>
 
-    <!-- RECENT ACTIVITY -->
-    <div style="background:#1e293b;border-radius:16px;padding:16px">
-      <div style="font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">🕐 รายการล่าสุด</div>
-      <div id="kpiRecent" style="display:flex;flex-direction:column;gap:7px"></div>
     </div>
-
-    <div style="text-align:center;font-size:11px;color:#334155">
-      อัพเดตอัตโนมัติทุก 60 วินาที • <span id="kpiNextRefresh"></span>
-    </div>
-
   </div>
+
+  <!-- BOTTOM STATUS -->
+  <div style="padding:6px 18px;background:rgba(15,23,42,.9);display:flex;justify-content:space-between;align-items:center;font-size:10px;color:#334155;flex-shrink:0">
+    <span id="kpiSlideLabel">—</span>
+    <span id="kpiNextRefresh"></span>
+  </div>
+
 </div>
 
 <!-- LOGIN OVERLAY -->
@@ -1044,31 +1066,98 @@ function printRoundReport() {
 }
 
 /* ============================================================ KPI DISPLAY ============================================================ */
-let kpiTimer = null;
-let kpiCountdown = 60;
+const KPI_SLIDES = ['📊 ภาพรวมวันนี้','🔧 แยกตามประเภทเครื่อง','🏥 หน่วยงานที่ยืมมากสุด','💊 สถานะ C2','🕐 รายการล่าสุด'];
+let kpiSlideIdx = 0;
+let kpiSlideTimer = null;
+let kpiRefreshTimer = null;
 let kpiClockTimer = null;
+let kpiRefreshCountdown = 60;
+const KPI_SLIDE_SEC = 10;
+let kpiSlideSec = KPI_SLIDE_SEC;
+let kpiProgressAnim = null;
 
 function startKpiView() {
-  renderKpiDisplay();
+  renderKpiData();
+  buildKpiDots();
+  goToSlide(0, false);
   startKpiClock();
-  clearInterval(kpiTimer);
-  kpiCountdown = 60;
-  kpiTimer = setInterval(() => {
-    kpiCountdown--;
-    const el = document.getElementById('kpiNextRefresh');
-    if (el) el.textContent = 'รีเฟรชอีก ' + kpiCountdown + ' วินาที';
-    if (kpiCountdown <= 0) { kpiCountdown = 60; loadAll().then(renderKpiDisplay); }
-  }, 1000);
+  startKpiSlideTimer();
+  startKpiRefreshTimer();
 }
 
 function stopKpiView() {
-  clearInterval(kpiTimer);
+  clearInterval(kpiSlideTimer);
+  clearInterval(kpiRefreshTimer);
   clearInterval(kpiClockTimer);
+  cancelAnimationFrame(kpiProgressAnim);
 }
 
 function refreshKpi() {
-  kpiCountdown = 60;
-  loadAll().then(renderKpiDisplay);
+  kpiRefreshCountdown = 60;
+  loadAll().then(() => { renderKpiData(); goToSlide(kpiSlideIdx, false); });
+}
+
+function buildKpiDots() {
+  const wrap = document.getElementById('kpiDots');
+  if (!wrap) return;
+  wrap.innerHTML = KPI_SLIDES.map((_, i) =>
+    `<div id="kpiDot${i}" onclick="goToSlide(${i},true)" style="width:8px;height:8px;border-radius:50%;background:${i===0?'#38bdf8':'#334155'};cursor:pointer;transition:all .3s"></div>`
+  ).join('');
+}
+
+function goToSlide(idx, resetTimer) {
+  kpiSlideIdx = idx;
+  const slides = document.getElementById('kpiSlides');
+  if (slides) slides.style.transform = `translateX(-${idx * 100}%)`;
+  // dots
+  KPI_SLIDES.forEach((_, i) => {
+    const d = document.getElementById('kpiDot' + i);
+    if (d) { d.style.background = i === idx ? '#38bdf8' : '#334155'; d.style.width = i === idx ? '22px' : '8px'; d.style.borderRadius = '4px'; }
+  });
+  const lbl = document.getElementById('kpiSlideLabel');
+  if (lbl) lbl.textContent = `${idx+1}/${KPI_SLIDES.length} — ${KPI_SLIDES[idx]}`;
+  // progress bar
+  if (resetTimer) { kpiSlideSec = KPI_SLIDE_SEC; startKpiSlideTimer(); }
+  animateProgress();
+}
+
+function animateProgress() {
+  cancelAnimationFrame(kpiProgressAnim);
+  const bar = document.getElementById('kpiProgress');
+  if (!bar) return;
+  const start = performance.now();
+  const elapsed = (KPI_SLIDE_SEC - kpiSlideSec) * 1000;
+  const total = KPI_SLIDE_SEC * 1000;
+  bar.style.transition = 'none';
+  bar.style.width = (elapsed / total * 100) + '%';
+  requestAnimationFrame(() => {
+    bar.style.transition = `width ${kpiSlideSec}s linear`;
+    bar.style.width = '100%';
+  });
+}
+
+function startKpiSlideTimer() {
+  clearInterval(kpiSlideTimer);
+  kpiSlideSec = KPI_SLIDE_SEC;
+  kpiSlideTimer = setInterval(() => {
+    kpiSlideSec--;
+    if (kpiSlideSec <= 0) {
+      kpiSlideSec = KPI_SLIDE_SEC;
+      goToSlide((kpiSlideIdx + 1) % KPI_SLIDES.length, false);
+      animateProgress();
+    }
+  }, 1000);
+}
+
+function startKpiRefreshTimer() {
+  clearInterval(kpiRefreshTimer);
+  kpiRefreshCountdown = 60;
+  kpiRefreshTimer = setInterval(() => {
+    kpiRefreshCountdown--;
+    const el = document.getElementById('kpiNextRefresh');
+    if (el) el.textContent = 'รีเฟรชข้อมูลอีก ' + kpiRefreshCountdown + 'วิ';
+    if (kpiRefreshCountdown <= 0) { kpiRefreshCountdown = 60; loadAll().then(() => { renderKpiData(); goToSlide(kpiSlideIdx, false); }); }
+  }, 1000);
 }
 
 function startKpiClock() {
@@ -1078,34 +1167,28 @@ function startKpiClock() {
     const cl = document.getElementById('kpiClock');
     const dt = document.getElementById('kpiDate');
     if (!cl) return;
-    cl.textContent = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    if (dt) dt.textContent = now.toLocaleDateString('th-TH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    cl.textContent = now.toLocaleTimeString('th-TH', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+    if (dt) dt.textContent = now.toLocaleDateString('th-TH', { weekday:'short', day:'2-digit', month:'short', year:'2-digit' });
   };
   tick();
   kpiClockTimer = setInterval(tick, 1000);
 }
 
-function renderKpiDisplay() {
-  if (currentView !== 'kpi') return;
-
+function renderKpiData() {
   const today = new Date();
   const dd = String(today.getDate()).padStart(2,'0');
   const mm = String(today.getMonth()+1).padStart(2,'0');
   const yyyy = today.getFullYear();
   const todayStr = dd + '/' + mm + '/' + yyyy;
 
-  // Big KPIs
   const borrowed = equipStatus.filter(e => e.isBorrowed);
   const free     = equipStatus.filter(e => !e.isBorrowed);
-  const todayRecs = allRecords.filter(r => {
-    const d = String(r['วันที่'] || '');
-    return d.startsWith(todayStr) || d.includes(todayStr);
-  });
+  const todayRecs = allRecords.filter(r => String(r['วันที่']||'').includes(todayStr));
   const todayBorrow = todayRecs.filter(r => String(r['ประเภท (ยืม/คืน)']).includes('ยืม')).length;
   const todayReturn = todayRecs.filter(r => String(r['ประเภท (ยืม/คืน)']).includes('คืน')).length;
 
-  document.getElementById('kdBorrowed').textContent  = borrowed.length;
-  document.getElementById('kdFree').textContent      = free.length;
+  document.getElementById('kdBorrowed').textContent   = borrowed.length;
+  document.getElementById('kdFree').textContent       = free.length;
   document.getElementById('kdTodayBorrow').textContent = todayBorrow;
   document.getElementById('kdTodayReturn').textContent = todayReturn;
 
@@ -1115,69 +1198,62 @@ function renderKpiDisplay() {
   const ebSorted = Object.entries(equipBreak).sort((a,b) => b[1]-a[1]);
   const maxEb = ebSorted[0]?.[1] || 1;
   const ECOLS = { 'C2':'#ef4444','Infusion Pump':'#0ea5e9','High Flow':'#f59e0b','Brid เขียว':'#10b981','T1':'#8b5cf6','Monnal t60':'#ec4899','Syringe pump':'#06b6d4' };
-  const ebEl = document.getElementById('kpiEquipBreak');
-  ebEl.innerHTML = ebSorted.length ? ebSorted.map(([name, cnt]) => {
+  document.getElementById('kpiEquipBreak').innerHTML = ebSorted.length ? ebSorted.map(([name, cnt]) => {
     const col = ECOLS[name] || '#94a3b8';
-    return `<div style="display:flex;align-items:center;gap:10px">
-      <div style="width:120px;font-size:12px;font-weight:600;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name}</div>
-      <div style="flex:1;background:#0f172a;border-radius:20px;height:10px;overflow:hidden">
-        <div style="width:${Math.round(cnt/maxEb*100)}%;height:100%;background:${col};border-radius:20px;transition:width .5s"></div>
+    return `<div style="display:flex;align-items:center;gap:12px">
+      <div style="width:130px;font-size:14px;font-weight:700;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name}</div>
+      <div style="flex:1;background:#0f172a;border-radius:20px;height:14px;overflow:hidden">
+        <div style="width:${Math.round(cnt/maxEb*100)}%;height:100%;background:${col};border-radius:20px"></div>
       </div>
-      <div style="width:28px;text-align:right;font-size:13px;font-weight:800;color:${col}">${cnt}</div>
+      <div style="width:36px;text-align:right;font-size:18px;font-weight:800;color:${col}">${cnt}</div>
     </div>`;
-  }).join('') : '<div style="color:#475569;font-size:13px">ไม่มีเครื่องที่ยืมอยู่</div>';
+  }).join('') : '<div style="color:#475569;font-size:14px">ไม่มีเครื่องที่ยืมอยู่</div>';
 
   // Ward ranking
   const wardCount = {};
   borrowed.forEach(e => { if (e.ward) wardCount[e.ward] = (wardCount[e.ward] || 0) + 1; });
-  const wardSorted = Object.entries(wardCount).sort((a,b) => b[1]-a[1]).slice(0,8);
+  const wardSorted = Object.entries(wardCount).sort((a,b) => b[1]-a[1]).slice(0,7);
   const maxW = wardSorted[0]?.[1] || 1;
-  const wrEl = document.getElementById('kpiWardRank');
-  const rankColors = ['#f59e0b','#94a3b8','#cd7c3e','#0ea5e9','#10b981','#8b5cf6','#ec4899','#06b6d4'];
-  wrEl.innerHTML = wardSorted.length ? wardSorted.map(([name, cnt], i) => `
-    <div style="display:flex;align-items:center;gap:10px">
-      <div style="width:22px;height:22px;border-radius:50%;background:${rankColors[i]||'#475569'};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0">${i+1}</div>
-      <div style="width:110px;font-size:12px;font-weight:600;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name}</div>
-      <div style="flex:1;background:#0f172a;border-radius:20px;height:8px;overflow:hidden">
-        <div style="width:${Math.round(cnt/maxW*100)}%;height:100%;background:${rankColors[i]||'#475569'};border-radius:20px"></div>
+  const RCOLS = ['#f59e0b','#94a3b8','#cd7c3e','#0ea5e9','#10b981','#8b5cf6','#ec4899'];
+  document.getElementById('kpiWardRank').innerHTML = wardSorted.length ? wardSorted.map(([name, cnt], i) => `
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="width:26px;height:26px;border-radius:50%;background:${RCOLS[i]||'#475569'};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0">${i+1}</div>
+      <div style="width:120px;font-size:14px;font-weight:700;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name}</div>
+      <div style="flex:1;background:#0f172a;border-radius:20px;height:12px;overflow:hidden">
+        <div style="width:${Math.round(cnt/maxW*100)}%;height:100%;background:${RCOLS[i]||'#475569'};border-radius:20px"></div>
       </div>
-      <div style="width:28px;text-align:right;font-size:13px;font-weight:800;color:${rankColors[i]||'#94a3b8'}">${cnt}</div>
-    </div>`).join('') : '<div style="color:#475569;font-size:13px">ไม่มีข้อมูล</div>';
+      <div style="width:36px;text-align:right;font-size:18px;font-weight:800;color:${RCOLS[i]||'#94a3b8'}">${cnt}</div>
+    </div>`).join('') : '<div style="color:#475569;font-size:14px">ไม่มีข้อมูล</div>';
 
-  // C2 mini grid
-  const c2El = document.getElementById('kpiC2Grid');
-  const c2Borrowed = new Set(
-    equipStatus.filter(e => e.isBorrowed && String(e.equipment).includes('C2')).map(e => String(e.number))
-  );
+  // C2 grid
+  const c2Borrowed = new Set(equipStatus.filter(e => e.isBorrowed && String(e.equipment).includes('C2')).map(e => String(e.number)));
   let c2Html = '';
   for (let i = 1; i <= 60; i++) {
-    const isBorrow = c2Borrowed.has(String(i));
-    c2Html += `<div title="No.${i}${isBorrow ? ' (ยืมอยู่)' : ' (ว่าง)'}" style="aspect-ratio:1;border-radius:4px;background:${isBorrow ? '#ef4444' : '#22c55e'};opacity:${isBorrow ? '1' : '.5'};display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#fff">${i}</div>`;
+    const b = c2Borrowed.has(String(i));
+    c2Html += `<div style="aspect-ratio:1;border-radius:5px;background:${b?'#ef4444':'#22c55e'};opacity:${b?'1':'.45'};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff">${i}</div>`;
   }
-  c2El.innerHTML = c2Html;
+  document.getElementById('kpiC2Grid').innerHTML = c2Html;
+  const c2s = document.getElementById('kpiC2Summary');
+  if (c2s) c2s.textContent = `ยืมอยู่ ${c2Borrowed.size} เครื่อง · ว่าง ${60 - c2Borrowed.size} เครื่อง`;
 
-  // Recent activity (last 8)
-  const sorted = [...allRecords].sort((a,b) => (parseThaiDT(b)||0) - (parseThaiDT(a)||0)).slice(0,8);
-  const reEl = document.getElementById('kpiRecent');
-  reEl.innerHTML = sorted.length ? sorted.map(r => {
-    const isBorrow = String(r['ประเภท (ยืม/คืน)']).includes('ยืม');
+  // Recent
+  const recent = [...allRecords].sort((a,b) => (parseThaiDT(b)||0) - (parseThaiDT(a)||0)).slice(0,6);
+  document.getElementById('kpiRecent').innerHTML = recent.length ? recent.map(r => {
+    const b = String(r['ประเภท (ยืม/คืน)']).includes('ยืม');
     const dt = parseThaiDT(r);
-    const timeStr = dt ? dt.toLocaleTimeString('th-TH', { hour:'2-digit', minute:'2-digit' }) : '';
-    const dateStr = dt ? dt.toLocaleDateString('th-TH', { day:'2-digit', month:'short' }) : '';
-    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:#0f172a;border-radius:10px;border-left:3px solid ${isBorrow ? '#0ea5e9' : '#10b981'}">
-      <div style="font-size:16px">${isBorrow ? '📤' : '📥'}</div>
+    const ts = dt ? dt.toLocaleString('th-TH', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) : '';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#0f172a;border-radius:12px;border-left:3px solid ${b?'#0ea5e9':'#10b981'}">
+      <div style="font-size:18px">${b?'📤':'📥'}</div>
       <div style="flex:1;min-width:0">
-        <div style="font-size:12px;font-weight:700;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r['ชื่อเครื่อง']||''} ${r['หมายเลขเครื่อง'] ? '#'+r['หมายเลขเครื่อง'] : ''}</div>
+        <div style="font-size:13px;font-weight:700;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r['ชื่อเครื่อง']||''} ${r['หมายเลขเครื่อง']?'#'+r['หมายเลขเครื่อง']:''}</div>
         <div style="font-size:11px;color:#64748b">${r['ตึก/Ward']||''} • ${r['ชื่อผู้ยืม']||''}</div>
       </div>
       <div style="text-align:right;flex-shrink:0">
-        <div style="font-size:11px;font-weight:700;color:${isBorrow ? '#0ea5e9' : '#10b981'}">${isBorrow ? 'ยืม' : 'คืน'}</div>
-        <div style="font-size:10px;color:#475569">${dateStr} ${timeStr}</div>
+        <div style="font-size:12px;font-weight:700;color:${b?'#0ea5e9':'#10b981'}">${b?'ยืม':'คืน'}</div>
+        <div style="font-size:10px;color:#475569">${ts}</div>
       </div>
     </div>`;
   }).join('') : '<div style="color:#475569;font-size:13px">ไม่มีรายการ</div>';
-
-  document.getElementById('kpiNextRefresh').textContent = 'รีเฟรชอีก ' + kpiCountdown + ' วินาที';
 }
 
 // stop timers when leaving kpi view
