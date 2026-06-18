@@ -312,6 +312,14 @@
     .wsc-equip { font-size: 11px; color: var(--muted); margin-top: 6px; border-top: 1px solid var(--border); padding-top: 6px; }
     .wsc-equip span { display: inline-block; background: #FEE2E2; color: #B91C1C; border-radius: 8px; padding: 1px 6px; font-size: 10px; font-weight: 700; margin: 1px; }
 
+    /* ── TOGGLE BTN ── */
+    .btn-toggle {
+      background: var(--a); color: #fff; border: none;
+      border-radius: 10px; padding: 5px 14px;
+      font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer;
+    }
+    .btn-toggle:hover { background: var(--a2); }
+
     /* ── TABS ── */
     .tabs { display: flex; gap: 4px; border-bottom: 2px solid var(--border); margin-bottom: 16px; }
     .tab {
@@ -425,16 +433,18 @@
   <div class="grid-2">
     <!-- Ward usage -->
     <div class="card">
-      <div class="card-head">🏥 การใช้งานแต่ละหน่วยงาน</div>
-      <div class="card-body" id="wardChartBody">
-        <div class="state-loading"><div class="spinner"></div>กำลังโหลด…</div>
+      <div class="card-head">🏥 การใช้งานแต่ละหน่วยงาน
+        <button onclick="toggleSection('wardChartBody','wardChartBtn',null)" id="wardChartBtn" class="btn-toggle">ดู ▾</button>
       </div>
+      <div id="wardChartBody" style="display:none"></div>
     </div>
     <!-- Equipment usage -->
     <div class="card">
-      <div class="card-head">🔬 ครุภัณฑ์ที่ใช้งานมากที่สุด</div>
-      <div class="card-body">
-        <div class="chart-wrap"><canvas id="equipChart"></canvas></div>
+      <div class="card-head">🔬 ครุภัณฑ์ที่ใช้งานมากที่สุด
+        <button onclick="toggleSection('equipChartBody','equipChartBtn',null)" id="equipChartBtn" class="btn-toggle">ดู ▾</button>
+      </div>
+      <div id="equipChartBody" style="display:none">
+        <div style="padding:16px 18px"><div class="chart-wrap"><canvas id="equipChart"></canvas></div></div>
       </div>
     </div>
   </div>
@@ -442,15 +452,19 @@
   <!-- SHIFT + TREND -->
   <div class="grid-2" style="margin-bottom:16px">
     <div class="card">
-      <div class="card-head">🌙 การใช้งานแต่ละเวร</div>
-      <div class="card-body">
-        <div class="chart-wrap"><canvas id="shiftChart"></canvas></div>
+      <div class="card-head">🌙 การใช้งานแต่ละเวร
+        <button onclick="toggleSection('shiftChartBody','shiftChartBtn',null)" id="shiftChartBtn" class="btn-toggle">ดู ▾</button>
+      </div>
+      <div id="shiftChartBody" style="display:none">
+        <div style="padding:16px 18px"><div class="chart-wrap"><canvas id="shiftChart"></canvas></div></div>
       </div>
     </div>
     <div class="card">
-      <div class="card-head">📈 แนวโน้ม 7 วันล่าสุด</div>
-      <div class="card-body">
-        <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
+      <div class="card-head">📈 แนวโน้ม 7 วันล่าสุด
+        <button onclick="toggleSection('trendChartBody','trendChartBtn',null)" id="trendChartBtn" class="btn-toggle">ดู ▾</button>
+      </div>
+      <div id="trendChartBody" style="display:none">
+        <div style="padding:16px 18px"><div class="chart-wrap"><canvas id="trendChart"></canvas></div></div>
       </div>
     </div>
   </div>
@@ -690,15 +704,16 @@ function onSearch() {
 /* ============================================================
    RENDER ALL
    ============================================================ */
+function isOpen(id) { return document.getElementById(id).style.display !== 'none'; }
+
 function renderAll() {
   renderKPI();
-  renderWardChart();
-  renderEquipChart();
-  renderShiftChart();
-  renderTrendChart();
   renderTable();
-  // render ward cards เฉพาะตอนเปิดอยู่
-  if (document.getElementById('wardCardsBody').style.display !== 'none') renderWardCards();
+  if (isOpen('wardChartBody'))  renderWardChart();
+  if (isOpen('equipChartBody')) renderEquipChart();
+  if (isOpen('shiftChartBody')) renderShiftChart();
+  if (isOpen('trendChartBody')) renderTrendChart();
+  if (isOpen('wardCardsBody'))  renderWardCards();
 }
 
 /* ============================================================
@@ -741,10 +756,10 @@ function renderWardChart() {
 
   const body = document.getElementById('wardChartBody');
   if (!sorted.length) {
-    body.innerHTML = '<div class="empty">ไม่มีข้อมูล</div>';
+    body.innerHTML = '<div class="empty" style="padding:16px 18px">ไม่มีข้อมูล</div>';
     return;
   }
-  body.innerHTML = `<div class="ward-list">${
+  body.innerHTML = `<div class="ward-list" style="padding:16px 18px">${
     sorted.map(([name, cnt]) => `
       <div class="ward-row">
         <div class="ward-name" title="${name}">${name}</div>
@@ -919,6 +934,16 @@ function renderWardCards() {
   }</div>`;
 }
 
+/* ── generic section toggle ── */
+function toggleSection(bodyId, btnId, renderFn) {
+  const body = document.getElementById(bodyId);
+  const btn  = document.getElementById(btnId);
+  const open = body.style.display === 'none';
+  body.style.display = open ? 'block' : 'none';
+  btn.textContent = open ? 'ซ่อน ▴' : 'ดู ▾';
+  if (open && renderFn) renderFn();
+}
+
 function toggleWardCards() {
   const body = document.getElementById('wardCardsBody');
   const btn  = document.getElementById('wardCardsToggleBtn');
@@ -1043,7 +1068,7 @@ function goPage(p) {
    ============================================================ */
 function showError(msg) {
   document.getElementById('wardChartBody').innerHTML =
-    `<div class="state-error">⚠️ โหลดข้อมูลไม่ได้<br><small>${msg}</small></div>`;
+    `<div class="state-error" style="padding:16px 18px">⚠️ โหลดข้อมูลไม่ได้<br><small>${msg}</small></div>`;
   document.getElementById('tableWrap').innerHTML =
     `<div class="state-error">⚠️ ${msg}</div>`;
 }
