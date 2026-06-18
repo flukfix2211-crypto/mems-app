@@ -753,6 +753,10 @@ function pickEquip(btn, e) {
 
 function onWardChange(sel) {
   document.getElementById('otherWrap').classList.toggle('hidden', sel.value !== 'อื่นๆ โปรดระบุชื่อตึก');
+  if (S.equip === 'C2' && S.action === 'return' && c2Status) {
+    c2SelectedNums.clear();
+    renderC2Grid();
+  }
 }
 
 /* ====== MULTI EQUIP FIELDS ====== */
@@ -835,23 +839,46 @@ function renderC2Grid() {
   const grid     = document.getElementById('c2Grid');
   const isReturn = (S.action === 'return');
   grid.innerHTML = '';
-  for (let i = 1; i <= 60; i++) {
-    const num  = String(i);
-    const unit = c2Status?.[num] || { isBorrowed: false, ward: '' };
-    const btn  = document.createElement('button');
-    btn.type       = 'button';
-    btn.dataset.num = num;
-    if (isReturn) {
-      btn.disabled  = !unit.isBorrowed;
-      btn.className = 'c2-btn ' + (unit.isBorrowed ? 'ret-able' : 'avail');
-      btn.innerHTML = `<div>No.${i}</div>${unit.isBorrowed ? `<div style="font-size:9px">${unit.ward||''}</div>` : ''}`;
-    } else {
+
+  if (isReturn) {
+    const ward = document.getElementById('wardSel').value;
+    if (!ward || ward === 'อื่นๆ โปรดระบุชื่อตึก') {
+      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:14px 0;font-size:13px;color:var(--muted)">📍 เลือกหน่วยงานก่อน เพื่อดู No. ที่ยืมไป</div>';
+      updateC2SelInfo();
+      return;
+    }
+    // แสดงเฉพาะ No. ที่หน่วยงานนั้นยืมไป
+    const borrowed = [];
+    for (let i = 1; i <= 60; i++) {
+      const unit = c2Status?.[String(i)];
+      if (unit && unit.isBorrowed && unit.ward === ward) borrowed.push({ i, unit });
+    }
+    if (!borrowed.length) {
+      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:14px 0;font-size:13px;color:var(--muted)">ไม่มีเครื่องที่ยืมโดยหน่วยงานนี้</div>';
+      updateC2SelInfo();
+      return;
+    }
+    borrowed.forEach(({ i, unit }) => {
+      const num = String(i);
+      const btn = document.createElement('button');
+      btn.type = 'button'; btn.dataset.num = num;
+      btn.className = 'c2-btn ret-able';
+      btn.innerHTML = `<div>No.${i}</div>`;
+      btn.onclick = () => toggleC2Num(num, btn);
+      grid.appendChild(btn);
+    });
+  } else {
+    for (let i = 1; i <= 60; i++) {
+      const num  = String(i);
+      const unit = c2Status?.[num] || { isBorrowed: false, ward: '' };
+      const btn  = document.createElement('button');
+      btn.type = 'button'; btn.dataset.num = num;
       btn.disabled  = unit.isBorrowed;
       btn.className = 'c2-btn ' + (unit.isBorrowed ? 'borrowed' : 'avail');
       btn.innerHTML = `<div>No.${i}</div>${unit.isBorrowed ? `<div style="font-size:9px">${unit.ward||''}</div>` : ''}`;
+      if (!btn.disabled) btn.onclick = () => toggleC2Num(num, btn);
+      grid.appendChild(btn);
     }
-    if (!btn.disabled) btn.onclick = () => toggleC2Num(num, btn);
-    grid.appendChild(btn);
   }
   updateC2SelInfo();
 }
