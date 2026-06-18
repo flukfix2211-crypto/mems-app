@@ -481,7 +481,19 @@
     <div id="equipStatusBody" style="display:none"></div>
   </div>
 
-  <!-- RECORDS TABLE -->
+  <!-- WARD CARDS -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-head" style="cursor:default">
+      🏥 สรุปแต่ละหน่วยงาน
+      <button onclick="toggleWardCards()" id="wardCardsToggleBtn" style="
+        background:var(--a);color:#fff;border:none;border-radius:10px;
+        padding:5px 14px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;
+      ">ดูข้อมูลหน่วยงาน ▾</button>
+    </div>
+    <div id="wardCardsBody" style="display:none"></div>
+  </div>
+
+  <!-- RECORDS TABLE (ล่างสุด) -->
   <div class="card" style="margin-bottom:16px">
     <div class="card-head">📝 รายการทั้งหมด</div>
     <div class="card-body">
@@ -493,18 +505,6 @@
       </div>
       <div class="pagination" id="pagination"></div>
     </div>
-  </div>
-
-  <!-- WARD CARDS (ย้ายมาล่างสุด + ซ่อนไว้) -->
-  <div class="card" style="margin-bottom:16px">
-    <div class="card-head" style="cursor:default">
-      🏥 สรุปแต่ละหน่วยงาน
-      <button onclick="toggleWardCards()" id="wardCardsToggleBtn" style="
-        background:var(--a);color:#fff;border:none;border-radius:10px;
-        padding:5px 14px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;
-      ">ดูข้อมูลหน่วยงาน ▾</button>
-    </div>
-    <div id="wardCardsBody" style="display:none"></div>
   </div>
 
 </div>
