@@ -227,10 +227,8 @@ function formatHeader(sheet) {
   sheet.setColumnWidth(3, 80);
 }
 
-function jsonResponse(obj, code) {
-  const output = ContentService.createTextOutput(JSON.stringify(obj))
-                               .setMimeType(ContentService.MimeType.JSON);
-  // Google Apps Script ไม่รองรับ HTTP status code โดยตรง
-  // CORS headers จะถูกเพิ่มโดย GAS อัตโนมัติเมื่อ deploy เป็น Web App
-  return output;
+function jsonResponse(obj) {
+  // GAS เพิ่ม Access-Control-Allow-Origin: * อัตโนมัติเมื่อ deploy แบบ "Anyone"
+  return ContentService.createTextOutput(JSON.stringify(obj))
+                       .setMimeType(ContentService.MimeType.JSON);
 }
