@@ -281,6 +281,15 @@
     .other-wrap { margin-top: 10px; }
     .other-wrap.hidden { display: none; }
 
+    .c2-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:6px; margin-top:10px; }
+    .c2-btn  { padding:10px 4px; border-radius:10px; border:2px solid; font-size:12px; font-weight:700; cursor:pointer; text-align:center; line-height:1.2; transition:all .15s; background:none; font-family:inherit; }
+    .c2-btn.avail    { background:#DCF2E5; border-color:#86EFAC; color:#1A7B4A; }
+    .c2-btn.borrowed { background:#FDEAEA; border-color:#FCA5A5; color:#B82E2E; cursor:not-allowed; opacity:.7; }
+    .c2-btn.selected { background:#0A6478; border-color:#0A6478; color:#fff; }
+    .c2-btn.ret-able { background:#FDEAEA; border-color:#F87171; color:#B82E2E; cursor:pointer; }
+    .c2-btn.ret-able.selected { background:#B82E2E; border-color:#B82E2E; color:#fff; }
+    .c2-sel-info { margin-top:10px; font-size:13px; font-weight:600; color:var(--a); min-height:20px; }
+
     /* ====== MULTI EQUIP ====== */
     .add-equip-btn {
       display: flex;
@@ -500,7 +509,8 @@
     </div>
   </div>
 
-  <!-- หมายเลขเครื่อง -->
+  <!-- หมายเลขเครื่อง (normal) -->
+  <div id="normalNumCard">
   <div class="card">
     <div class="sec-label"><span class="req-dot"></span>หมายเลขเครื่อง <span style="font-size:10px;font-weight:500;color:var(--muted);text-transform:none;letter-spacing:0">(สูงสุด 5 เครื่อง)</span></div>
     <div id="enumRows">
@@ -702,6 +712,7 @@ function setAction(a) {
   document.querySelectorAll('.action-btn').forEach(b => b.classList.remove('active'));
   document.querySelector('.action-btn.' + a).classList.add('active');
   document.body.className = 'mode-' + a;
+  if (S.equip === 'C2' && c2Status) { c2SelectedNums.clear(); renderC2Grid(); }
 }
 
 function setShift(s) {
@@ -725,6 +736,10 @@ function pickEquip(btn, e) {
   S.equip = e;
   document.querySelectorAll('.equip-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
+  const isC2 = (e === 'C2');
+  document.getElementById('normalNumCard').style.display = isC2 ? 'none' : '';
+  document.getElementById('c2GridCard').style.display    = isC2 ? '' : 'none';
+  if (isC2) { c2SelectedNums.clear(); loadC2Status(); }
 }
 
 function onWardChange(sel) {
@@ -733,6 +748,8 @@ function onWardChange(sel) {
 
 /* ====== MULTI EQUIP FIELDS ====== */
 let equipFields = 1;
+let c2Status = null;
+let c2SelectedNums = new Set();
 
 function addEquipField() {
   if (equipFields >= 5) return;
@@ -770,6 +787,7 @@ function updateAddBtn() {
 }
 
 function getEquipNumbers() {
+  if (S.equip === 'C2') return [...c2SelectedNums].sort((a,b) => +a - +b);
   const nums = [];
   document.querySelectorAll('#enumRows .enum-input').forEach(inp => {
     const v = inp.value.trim();
@@ -786,6 +804,62 @@ function resetEquipFields() {
 }
 
 /* ====== SUBMIT ====== */
+async function loadC2Status() {
+  const msg = document.getElementById('c2StatusMsg');
+  msg.textContent = 'กำลังโหลดสถานะ C2…';
+  try {
+    const url = new URL(SCRIPT_URL);
+    url.searchParams.set('action', 'c2status');
+    const res  = await fetch(url.toString(), { mode: 'cors' });
+    const data = await res.json();
+    c2Status = {};
+    (data.units || []).forEach(u => { c2Status[String(u.number)] = u; });
+    msg.textContent = '';
+    renderC2Grid();
+  } catch (e) {
+    msg.textContent = '⚠️ โหลดสถานะไม่ได้ กรอกหมายเลขเองด้านล่าง';
+    document.getElementById('normalNumCard').style.display = '';
+  }
+}
+
+function renderC2Grid() {
+  const grid     = document.getElementById('c2Grid');
+  const isReturn = (S.action === 'return');
+  grid.innerHTML = '';
+  for (let i = 1; i <= 60; i++) {
+    const num  = String(i);
+    const unit = c2Status?.[num] || { isBorrowed: false, ward: '' };
+    const btn  = document.createElement('button');
+    btn.type       = 'button';
+    btn.dataset.num = num;
+    if (isReturn) {
+      btn.disabled  = !unit.isBorrowed;
+      btn.className = 'c2-btn ' + (unit.isBorrowed ? 'ret-able' : 'avail');
+      btn.innerHTML = `<div>No.${i}</div>${unit.isBorrowed ? `<div style="font-size:9px">${unit.ward||''}</div>` : ''}`;
+    } else {
+      btn.disabled  = unit.isBorrowed;
+      btn.className = 'c2-btn ' + (unit.isBorrowed ? 'borrowed' : 'avail');
+      btn.innerHTML = `<div>No.${i}</div>${unit.isBorrowed ? `<div style="font-size:9px">${unit.ward||''}</div>` : ''}`;
+    }
+    if (!btn.disabled) btn.onclick = () => toggleC2Num(num, btn);
+    grid.appendChild(btn);
+  }
+  updateC2SelInfo();
+}
+
+function toggleC2Num(num, btn) {
+  if (c2SelectedNums.has(num)) { c2SelectedNums.delete(num); btn.classList.remove('selected'); }
+  else { c2SelectedNums.add(num); btn.classList.add('selected'); }
+  updateC2SelInfo();
+}
+
+function updateC2SelInfo() {
+  const el = document.getElementById('c2SelInfo');
+  if (c2SelectedNums.size === 0) { el.textContent = ''; return; }
+  const sorted = [...c2SelectedNums].sort((a,b) => +a - +b);
+  el.innerHTML = `เลือกแล้ว ${c2SelectedNums.size} เครื่อง: ${sorted.map(n => `<strong>No.${n}</strong>`).join(', ')}`;
+}
+
 async function handleSubmit() {
   const nums   = getEquipNumbers();
   const ward   = document.getElementById('wardSel').value;
@@ -860,6 +934,9 @@ function resetForm() {
   document.querySelectorAll('.action-btn, .equip-btn').forEach(b => b.classList.remove('active'));
   ['otherWard','staffName'].forEach(id => { document.getElementById(id).value = ''; });
   resetEquipFields();
+  c2SelectedNums.clear();
+  document.getElementById('c2GridCard').style.display = 'none';
+  document.getElementById('normalNumCard').style.display = '';
   document.getElementById('wardSel').value = '';
   document.getElementById('otherWrap').classList.add('hidden');
   document.getElementById('successScreen').classList.remove('show');
