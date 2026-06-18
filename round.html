@@ -169,7 +169,6 @@
     <div class="sec-label"><span class="req-dot"></span>เลือกหน่วยงานที่ต้องการ Round</div>
     <div class="info-row" style="margin-bottom:12px">
       <div class="info-chip"><span class="info-chip-label">วันที่</span><span id="dateChip">—</span></div>
-      <div class="info-chip"><span class="info-chip-label">เวร</span><span id="shiftChip">—</span></div>
     </div>
     <select class="field" id="wardSel" onchange="onWardChange()">
       <option value="">— เลือกตึก/หน่วยงาน —</option>
@@ -270,8 +269,6 @@
     document.getElementById('dateChip').textContent =
       now.toLocaleDateString('th-TH', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
     const h = now.getHours();
-    document.getElementById('shiftChip').textContent =
-      h >= 7 && h < 15 ? '🌤 เวรเช้า' : h >= 15 && h < 23 ? '🌆 เวรบ่าย' : '🌙 เวรดึก';
   };
 
   (function tick() {
@@ -445,7 +442,6 @@
 
     const now = new Date();
     const h = now.getHours();
-    const shift = h >= 7 && h < 15 ? 'เวรเช้า' : h >= 15 && h < 23 ? 'เวรบ่าย' : 'เวรดึก';
     const note = document.getElementById('noteField').value.trim();
 
     await Promise.all(items.map(item =>
@@ -453,7 +449,7 @@
         method: 'POST', mode: 'no-cors',
         headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify({
-          action: '🔵 Round', shift, ward,
+          action: '🔵 Round', shift: '', ward,
           equipment: 'Infusion Pump',
           equipmentNumber: item.no,
           roundStatus: item.stLabel,
@@ -466,7 +462,7 @@
     const cnt = { use:0, idle:0, broken:0, lost:0 };
     items.forEach(i => cnt[i.stKey]++);
     document.getElementById('sucMeta').textContent =
-      `${ward} | ผู้บันทึก: ${name} | ${shift} | ${items.length} เครื่อง`;
+      `${ward} | ผู้บันทึก: ${name} | ${items.length} เครื่อง`;
     document.getElementById('sucGrid').innerHTML = `
       <div class="suc-chip sc-use"><span class="sc-n">${cnt.use}</span>ใช้งานอยู่</div>
       <div class="suc-chip sc-idle"><span class="sc-n">${cnt.idle}</span>ไม่ได้ใช้งาน</div>
