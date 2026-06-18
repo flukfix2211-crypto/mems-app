@@ -156,7 +156,20 @@ function getRecords(limit, offset, filter) {
 
   const records = paged.map(row => {
     const obj = {};
-    COLS.forEach((h, i) => { obj[h] = row[i]; });
+    COLS.forEach((h, i) => {
+      let val = row[i];
+      // แปลง Date object → string ในรูปแบบที่ใช้งานได้
+      if (val instanceof Date) {
+        if (h === 'วันที่') {
+          val = Utilities.formatDate(val, 'Asia/Bangkok', 'dd/MM/yyyy');
+        } else if (h === 'เวลา') {
+          val = Utilities.formatDate(val, 'Asia/Bangkok', 'HH:mm:ss');
+        } else {
+          val = Utilities.formatDate(val, 'Asia/Bangkok', 'dd/MM/yyyy HH:mm:ss');
+        }
+      }
+      obj[h] = val;
+    });
     return obj;
   });
 
