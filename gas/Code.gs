@@ -78,8 +78,9 @@ function saveRecord(data) {
   if (sheet.getLastRow() === 0) {
     sheet.appendRow([
       'ลำดับ', 'วันที่', 'เวลา', 'เวร',
-      'ประเภท (ยืม/คืน)', 'ชื่อเครื่อง', 'หมายเลขเครื่อง',
-      'ตึก/Ward', 'ชื่อผู้ยืม', 'Timestamp (ISO)'
+      'ประเภท (ยืม/คืน/Round)', 'ชื่อเครื่อง', 'หมายเลขเครื่อง',
+      'ตึก/Ward', 'ชื่อผู้บันทึก', 'Timestamp (ISO)',
+      'สถานะ Round', 'หมายเหตุ'
     ]);
     sheet.setFrozenRows(1);
     formatHeader(sheet);
@@ -94,20 +95,23 @@ function saveRecord(data) {
     rowNumber,
     dateStr,
     timeStr,
-    data.shift        || '',
-    data.action       || '',
-    data.equipment    || '',
+    data.shift           || '',
+    data.action          || '',
+    data.equipment       || '',
     data.equipmentNumber || '',
-    data.ward         || '',
-    data.name         || '',
-    data.timestamp    || now.toISOString()
+    data.ward            || '',
+    data.name            || '',
+    data.timestamp       || now.toISOString(),
+    data.roundStatus     || '',   // col 11: สถานะ Round (ปกติ/ชำรุด/สูญหาย)
+    data.note            || ''    // col 12: หมายเหตุ
   ]);
 
   // color row by action
   const lastRow = sheet.getLastRow();
+  const isRound  = (data.action || '').includes('Round');
   const isBorrow = (data.action || '').includes('ยืม');
-  sheet.getRange(lastRow, 1, 1, 10)
-       .setBackground(isBorrow ? '#DCF2E5' : '#FDEAEA');
+  const bg = isRound ? '#DAF0F5' : isBorrow ? '#DCF2E5' : '#FDEAEA';
+  sheet.getRange(lastRow, 1, 1, 12).setBackground(bg);
 
   return { row: rowNumber, timestamp: now.toISOString() };
 }
@@ -120,8 +124,8 @@ function getRecords(limit, offset, filter) {
   const sheet = ss.getSheetByName(SHEET_BORROW);
   if (!sheet || sheet.getLastRow() <= 1) return { ok: true, total: 0, records: [] };
 
-  const headers = sheet.getRange(1, 1, 1, 10).getValues()[0];
-  const dataRange = sheet.getRange(2, 1, sheet.getLastRow() - 1, 10);
+  const headers = sheet.getRange(1, 1, 1, 12).getValues()[0];
+  const dataRange = sheet.getRange(2, 1, sheet.getLastRow() - 1, 12);
   let rows = dataRange.getValues();
 
   // กรองข้อมูล
@@ -155,7 +159,7 @@ function getSummary() {
   const sheet = ss.getSheetByName(SHEET_BORROW);
   if (!sheet || sheet.getLastRow() <= 1) return { ok: true, summary: [] };
 
-  const rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, 10).getValues();
+  const rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, 12).getValues();
   const byDate = {};
 
   rows.forEach(r => {
@@ -182,7 +186,7 @@ function getEquipmentStatus() {
   const sheet = ss.getSheetByName(SHEET_BORROW);
   if (!sheet || sheet.getLastRow() <= 1) return { ok: true, equipment: {} };
 
-  const rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, 10).getValues();
+  const rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, 12).getValues();
 
   // คำนวณสถานะล่าสุดของแต่ละหมายเลขเครื่อง
   const statusMap = {};
@@ -217,12 +221,12 @@ function getOrCreateSheet(ss, name) {
 }
 
 function formatHeader(sheet) {
-  const header = sheet.getRange(1, 1, 1, 10);
+  const header = sheet.getRange(1, 1, 1, 12);
   header.setBackground('#0A6478')
         .setFontColor('#FFFFFF')
         .setFontWeight('bold')
         .setHorizontalAlignment('center');
-  sheet.setColumnWidths(1, 10, 120);
+  sheet.setColumnWidths(1, 12, 120);
   sheet.setColumnWidth(2, 100);
   sheet.setColumnWidth(3, 80);
 }
