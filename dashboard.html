@@ -455,17 +455,6 @@
     </div>
   </div>
 
-  <!-- WARD CARDS -->
-  <div class="card" style="margin-bottom:16px">
-    <div class="card-head">
-      🏥 สรุปแต่ละหน่วยงาน
-      <span style="font-size:12px;font-weight:400;color:var(--muted)">คลิกเพื่อกรอง</span>
-    </div>
-    <div class="card-body" id="wardCardsBody">
-      <div class="state-loading"><div class="spinner"></div>กำลังโหลด…</div>
-    </div>
-  </div>
-
   <!-- EQUIPMENT STATUS -->
   <div class="card" style="margin-bottom:16px">
     <div class="card-head">
@@ -478,7 +467,7 @@
   </div>
 
   <!-- RECORDS TABLE -->
-  <div class="card">
+  <div class="card" style="margin-bottom:16px">
     <div class="card-head">📝 รายการทั้งหมด</div>
     <div class="card-body">
       <div class="search-row">
@@ -489,6 +478,18 @@
       </div>
       <div class="pagination" id="pagination"></div>
     </div>
+  </div>
+
+  <!-- WARD CARDS (ย้ายมาล่างสุด + ซ่อนไว้) -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-head" style="cursor:default">
+      🏥 สรุปแต่ละหน่วยงาน
+      <button onclick="toggleWardCards()" id="wardCardsToggleBtn" style="
+        background:var(--a);color:#fff;border:none;border-radius:10px;
+        padding:5px 14px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;
+      ">ดูข้อมูลหน่วยงาน ▾</button>
+    </div>
+    <div id="wardCardsBody" style="display:none"></div>
   </div>
 
 </div>
@@ -692,11 +693,12 @@ function onSearch() {
 function renderAll() {
   renderKPI();
   renderWardChart();
-  renderWardCards();
   renderEquipChart();
   renderShiftChart();
   renderTrendChart();
   renderTable();
+  // render ward cards เฉพาะตอนเปิดอยู่
+  if (document.getElementById('wardCardsBody').style.display !== 'none') renderWardCards();
 }
 
 /* ============================================================
@@ -915,6 +917,21 @@ function renderWardCards() {
         </div>`;
     }).join('')
   }</div>`;
+}
+
+function toggleWardCards() {
+  const body = document.getElementById('wardCardsBody');
+  const btn  = document.getElementById('wardCardsToggleBtn');
+  const isHidden = body.style.display === 'none';
+  if (isHidden) {
+    body.style.display = 'block';
+    body.style.padding = '16px 18px';
+    btn.textContent = 'ซ่อน ▴';
+    renderWardCards();
+  } else {
+    body.style.display = 'none';
+    btn.textContent = 'ดูข้อมูลหน่วยงาน ▾';
+  }
 }
 
 function filterByWard(w) {
