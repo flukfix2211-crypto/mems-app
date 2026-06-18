@@ -434,14 +434,14 @@
     <!-- Ward usage -->
     <div class="card">
       <div class="card-head">🏥 การใช้งานแต่ละหน่วยงาน
-        <button onclick="toggleSection('wardChartBody','wardChartBtn',null)" id="wardChartBtn" class="btn-toggle">ดู ▾</button>
+        <button onclick="toggleSection('wardChartBody','wardChartBtn',renderWardChart)" id="wardChartBtn" class="btn-toggle">ดู ▾</button>
       </div>
       <div id="wardChartBody" style="display:none"></div>
     </div>
     <!-- Equipment usage -->
     <div class="card">
       <div class="card-head">🔬 ครุภัณฑ์ที่ใช้งานมากที่สุด
-        <button onclick="toggleSection('equipChartBody','equipChartBtn',null)" id="equipChartBtn" class="btn-toggle">ดู ▾</button>
+        <button onclick="toggleSection('equipChartBody','equipChartBtn',renderEquipChart)" id="equipChartBtn" class="btn-toggle">ดู ▾</button>
       </div>
       <div id="equipChartBody" style="display:none">
         <div style="padding:16px 18px"><div class="chart-wrap"><canvas id="equipChart"></canvas></div></div>
@@ -453,7 +453,7 @@
   <div class="grid-2" style="margin-bottom:16px">
     <div class="card">
       <div class="card-head">🌙 การใช้งานแต่ละเวร
-        <button onclick="toggleSection('shiftChartBody','shiftChartBtn',null)" id="shiftChartBtn" class="btn-toggle">ดู ▾</button>
+        <button onclick="toggleSection('shiftChartBody','shiftChartBtn',renderShiftChart)" id="shiftChartBtn" class="btn-toggle">ดู ▾</button>
       </div>
       <div id="shiftChartBody" style="display:none">
         <div style="padding:16px 18px"><div class="chart-wrap"><canvas id="shiftChart"></canvas></div></div>
@@ -461,7 +461,7 @@
     </div>
     <div class="card">
       <div class="card-head">📈 แนวโน้ม 7 วันล่าสุด
-        <button onclick="toggleSection('trendChartBody','trendChartBtn',null)" id="trendChartBtn" class="btn-toggle">ดู ▾</button>
+        <button onclick="toggleSection('trendChartBody','trendChartBtn',renderTrendChart)" id="trendChartBtn" class="btn-toggle">ดู ▾</button>
       </div>
       <div id="trendChartBody" style="display:none">
         <div style="padding:16px 18px"><div class="chart-wrap"><canvas id="trendChart"></canvas></div></div>
