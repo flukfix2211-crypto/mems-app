@@ -486,15 +486,24 @@ function renderKPI() {
 }
 
 /* ============================================================ WARD VIEW ============================================================ */
-function initWardView() {
+async function initWardView() {
+  const body = document.getElementById('wardDetailBody');
+  // If data not loaded yet, fetch now
+  if (!equipStatus.length && !allRecords.length) {
+    body.innerHTML = '<div class="card"><div class="card-body"><div class="empty">⏳ กำลังโหลดข้อมูล...</div></div></div>';
+    await loadAll();
+  }
   const sel = document.getElementById('wardViewSel');
-  // Use equipStatus (live borrow status) + allRecords for ward list
   const fromEquip = equipStatus.filter(e => e.isBorrowed).map(e => e.ward).filter(Boolean);
   const fromRecs  = allRecords.map(r => r['ตึก/Ward']).filter(Boolean);
   const wards = [...new Set([...fromEquip, ...fromRecs])].sort();
   const prev = sel.value;
   sel.innerHTML = '<option value="">— เลือกตึก/Ward —</option>' +
     wards.map(w => `<option value="${w}"${w === prev ? ' selected' : ''}>${w}</option>`).join('');
+  if (!wards.length) {
+    body.innerHTML = '<div class="card"><div class="card-body"><div class="empty">ไม่พบข้อมูลหน่วยงาน (equipStatus: ' + equipStatus.length + ', records: ' + allRecords.length + ')</div></div></div>';
+    return;
+  }
   renderWardDetail();
 }
 
