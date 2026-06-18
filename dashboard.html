@@ -101,12 +101,14 @@
     .equip-ward, .equip-who { font-size: 12px; color: var(--muted); margin-top: 2px; }
 
     /* KPI DISPLAY */
-    .kd { border-radius:18px;padding:20px 18px;color:#fff;display:flex;flex-direction:column;gap:4px;position:relative;overflow:hidden; }
-    .kd-label { font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;opacity:.8; }
-    .kd-val   { font-size:52px;font-weight:800;line-height:1;letter-spacing:-.02em; }
-    .kd-sub   { font-size:13px;opacity:.7; }
-    .kpi-slide { min-width:100%;height:100%;display:flex;flex-direction:column;padding:14px 18px 10px;box-sizing:border-box; }
-    .slide-title { font-size:13px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px;flex-shrink:0; }
+    .kd { border-radius:18px;padding:20px 18px;color:#fff;display:flex;flex-direction:column;gap:4px;position:relative;overflow:hidden;backdrop-filter:blur(10px); }
+    .kd-label { font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;opacity:.7; }
+    .kd-val   { font-size:58px;font-weight:800;line-height:1;letter-spacing:-.02em; }
+    .kd-sub   { font-size:15px;opacity:.6; }
+    .kpi-slide { min-width:100%;height:100%;display:flex;flex-direction:column;padding:14px 18px 8px;box-sizing:border-box; }
+    .slide-title { font-size:12px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;flex-shrink:0; }
+    .kpi-blob { position:absolute;border-radius:50%;filter:blur(40px); }
+    @keyframes blobmove { 0%,100%{transform:translate(0,0) scale(1)} 33%{transform:translate(6%,4%) scale(1.08)} 66%{transform:translate(-4%,8%) scale(.94)} }
 
     /* TABLE */
     .search-row { margin-bottom: 12px; }
@@ -368,58 +370,66 @@
 </div>
 
 <!-- KPI DISPLAY VIEW -->
-<div id="viewKpi" class="view" style="background:#0f172a;min-height:100vh;margin:-20px -16px -60px;padding:0;display:none;flex-direction:column">
+<div id="viewKpi" class="view" style="background:#060d1a;min-height:100vh;margin:-20px -16px -60px;padding:0;display:none;flex-direction:column;overflow:hidden;position:relative">
+
+  <!-- ANIMATED BG -->
+  <canvas id="kpiBgCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0"></canvas>
+  <div style="position:absolute;inset:0;pointer-events:none;z-index:1">
+    <div class="kpi-blob" style="top:-20%;left:-10%;width:60vw;height:60vw;background:radial-gradient(circle,rgba(14,165,233,.18) 0%,transparent 70%);animation:blobmove 12s ease-in-out infinite"></div>
+    <div class="kpi-blob" style="bottom:-20%;right:-10%;width:50vw;height:50vw;background:radial-gradient(circle,rgba(139,92,246,.15) 0%,transparent 70%);animation:blobmove 16s ease-in-out infinite reverse"></div>
+    <div class="kpi-blob" style="top:40%;left:30%;width:40vw;height:40vw;background:radial-gradient(circle,rgba(16,185,129,.1) 0%,transparent 70%);animation:blobmove 20s ease-in-out infinite 4s"></div>
+  </div>
 
   <!-- TOP BAR -->
-  <div style="padding:12px 18px;background:rgba(15,23,42,.95);border-bottom:1px solid #1e293b;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-shrink:0">
+  <div style="position:relative;z-index:10;padding:10px 16px;background:rgba(6,13,26,.85);backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:space-between;gap:8px;flex-shrink:0">
     <div style="display:flex;align-items:center;gap:10px">
-      <button onclick="showView('home')" style="background:#1e293b;border:none;color:#94a3b8;font-size:12px;font-weight:700;padding:6px 12px;border-radius:16px;cursor:pointer;font-family:inherit">← กลับ</button>
+      <button onclick="showView('home')" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);color:#94a3b8;font-size:12px;font-weight:700;padding:6px 12px;border-radius:16px;cursor:pointer;font-family:inherit">← กลับ</button>
       <div>
-        <div style="font-size:14px;font-weight:800;color:#e2e8f0">📺 MEMs KPI Display</div>
-        <div style="font-size:10px;color:#475569">เรียลไทม์ • รพ.พหลพลพยุหเสนา</div>
+        <div style="font-size:15px;font-weight:800;color:#e2e8f0;letter-spacing:.01em">📺 MEMs KPI Display</div>
+        <div style="font-size:10px;color:#475569">รพ.พหลพลพยุหเสนา จ.กาญจนบุรี</div>
       </div>
     </div>
-    <div style="display:flex;align-items:center;gap:14px">
+    <div style="display:flex;align-items:center;gap:12px">
       <div style="text-align:right">
-        <div id="kpiClock" style="font-size:20px;font-weight:800;color:#38bdf8;font-variant-numeric:tabular-nums">--:--:--</div>
+        <div id="kpiClock" style="font-size:22px;font-weight:800;color:#38bdf8;font-variant-numeric:tabular-nums;text-shadow:0 0 20px rgba(56,189,248,.4)">--:--:--</div>
         <div id="kpiDate" style="font-size:10px;color:#475569"></div>
       </div>
-      <button onclick="refreshKpi()" style="background:#0ea5e9;border:none;color:#fff;font-size:12px;font-weight:700;padding:7px 14px;border-radius:16px;cursor:pointer;font-family:inherit">↻</button>
+      <button onclick="refreshKpi()" style="background:rgba(14,165,233,.2);border:1px solid rgba(14,165,233,.3);color:#38bdf8;font-size:13px;font-weight:700;padding:7px 14px;border-radius:16px;cursor:pointer;font-family:inherit">↻</button>
     </div>
   </div>
 
   <!-- PROGRESS BAR -->
-  <div style="height:3px;background:#1e293b;flex-shrink:0"><div id="kpiProgress" style="height:100%;background:linear-gradient(90deg,#38bdf8,#818cf8);width:0%;transition:none"></div></div>
+  <div style="position:relative;z-index:10;height:3px;background:rgba(255,255,255,.05);flex-shrink:0"><div id="kpiProgress" style="height:100%;background:linear-gradient(90deg,#38bdf8,#818cf8,#ec4899);width:0%;transition:none;box-shadow:0 0 8px rgba(56,189,248,.6)"></div></div>
 
   <!-- SLIDE DOTS -->
-  <div style="display:flex;justify-content:center;gap:6px;padding:8px 0 4px;flex-shrink:0" id="kpiDots"></div>
+  <div style="position:relative;z-index:10;display:flex;justify-content:center;gap:6px;padding:6px 0 2px;flex-shrink:0" id="kpiDots"></div>
 
   <!-- SLIDES CONTAINER -->
-  <div style="flex:1;overflow:hidden;position:relative" id="kpiSlideWrap">
-    <div id="kpiSlides" style="display:flex;height:100%;transition:transform .5s cubic-bezier(.4,0,.2,1)">
+  <div style="flex:1;overflow:hidden;position:relative;z-index:10" id="kpiSlideWrap">
+    <div id="kpiSlides" style="display:flex;height:100%;transition:transform .6s cubic-bezier(.4,0,.2,1)">
 
       <!-- SLIDE 1: BIG KPIs -->
       <div class="kpi-slide">
         <div class="slide-title">📊 ภาพรวมการใช้งานวันนี้</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;flex:1">
-          <div class="kd" style="background:linear-gradient(135deg,#0ea5e9 0%,#0369a1 100%)">
+          <div class="kd" style="background:linear-gradient(135deg,rgba(14,165,233,.3),rgba(3,105,161,.4));border:1px solid rgba(14,165,233,.25)">
             <div class="kd-label">ยืมอยู่ตอนนี้</div>
-            <div class="kd-val" id="kdBorrowed">—</div>
+            <div class="kd-val" id="kdBorrowed" style="color:#38bdf8;text-shadow:0 0 30px rgba(56,189,248,.5)">—</div>
             <div class="kd-sub">เครื่อง</div>
           </div>
-          <div class="kd" style="background:linear-gradient(135deg,#10b981 0%,#047857 100%)">
+          <div class="kd" style="background:linear-gradient(135deg,rgba(16,185,129,.3),rgba(4,120,87,.4));border:1px solid rgba(16,185,129,.25)">
             <div class="kd-label">ว่างอยู่</div>
-            <div class="kd-val" id="kdFree">—</div>
+            <div class="kd-val" id="kdFree" style="color:#34d399;text-shadow:0 0 30px rgba(52,211,153,.5)">—</div>
             <div class="kd-sub">เครื่อง</div>
           </div>
-          <div class="kd" style="background:linear-gradient(135deg,#f59e0b 0%,#b45309 100%)">
+          <div class="kd" style="background:linear-gradient(135deg,rgba(245,158,11,.3),rgba(180,83,9,.4));border:1px solid rgba(245,158,11,.25)">
             <div class="kd-label">ยืมวันนี้</div>
-            <div class="kd-val" id="kdTodayBorrow">—</div>
+            <div class="kd-val" id="kdTodayBorrow" style="color:#fbbf24;text-shadow:0 0 30px rgba(251,191,36,.5)">—</div>
             <div class="kd-sub">ครั้ง</div>
           </div>
-          <div class="kd" style="background:linear-gradient(135deg,#8b5cf6 0%,#6d28d9 100%)">
+          <div class="kd" style="background:linear-gradient(135deg,rgba(139,92,246,.3),rgba(109,40,217,.4));border:1px solid rgba(139,92,246,.25)">
             <div class="kd-label">คืนวันนี้</div>
-            <div class="kd-val" id="kdTodayReturn">—</div>
+            <div class="kd-val" id="kdTodayReturn" style="color:#a78bfa;text-shadow:0 0 30px rgba(167,139,250,.5)">—</div>
             <div class="kd-sub">ครั้ง</div>
           </div>
         </div>
@@ -428,25 +438,25 @@
       <!-- SLIDE 2: EQUIPMENT BREAKDOWN -->
       <div class="kpi-slide">
         <div class="slide-title">🔧 เครื่องที่ยืมอยู่แยกตามประเภท</div>
-        <div id="kpiEquipBreak" style="display:flex;flex-direction:column;gap:14px;flex:1;justify-content:center"></div>
+        <div id="kpiEquipBreak" style="display:flex;flex-direction:column;gap:16px;flex:1;justify-content:center"></div>
       </div>
 
       <!-- SLIDE 3: WARD RANKING -->
       <div class="kpi-slide">
         <div class="slide-title">🏥 หน่วยงานที่ยืมอยู่มากสุด</div>
-        <div id="kpiWardRank" style="display:flex;flex-direction:column;gap:10px;flex:1;justify-content:center"></div>
+        <div id="kpiWardRank" style="display:flex;flex-direction:column;gap:12px;flex:1;justify-content:center"></div>
       </div>
 
       <!-- SLIDE 4: C2 GRID -->
       <div class="kpi-slide">
         <div class="slide-title">💊 สถานะ C2 No.1–60</div>
-        <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:12px">
-          <div id="kpiC2Grid" style="display:grid;grid-template-columns:repeat(10,1fr);gap:6px"></div>
-          <div style="display:flex;gap:20px;justify-content:center;font-size:12px;color:#64748b">
-            <span><span style="display:inline-block;width:12px;height:12px;background:#ef4444;border-radius:4px;margin-right:5px;vertical-align:middle"></span>ยืมอยู่</span>
-            <span><span style="display:inline-block;width:12px;height:12px;background:#22c55e;border-radius:4px;margin-right:5px;vertical-align:middle"></span>ว่าง</span>
+        <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:10px">
+          <div id="kpiC2Grid" style="display:grid;grid-template-columns:repeat(12,1fr);gap:5px"></div>
+          <div style="display:flex;gap:20px;justify-content:center;font-size:13px;color:#64748b">
+            <span><span style="display:inline-block;width:12px;height:12px;background:#ef4444;border-radius:3px;margin-right:5px;vertical-align:middle;box-shadow:0 0 6px rgba(239,68,68,.6)"></span>ยืมอยู่</span>
+            <span><span style="display:inline-block;width:12px;height:12px;background:#22c55e;border-radius:3px;margin-right:5px;vertical-align:middle"></span>ว่าง</span>
           </div>
-          <div id="kpiC2Summary" style="text-align:center;font-size:13px;color:#94a3b8"></div>
+          <div id="kpiC2Summary" style="text-align:center;font-size:15px;font-weight:700;color:#94a3b8"></div>
         </div>
       </div>
 
@@ -460,7 +470,7 @@
   </div>
 
   <!-- BOTTOM STATUS -->
-  <div style="padding:6px 18px;background:rgba(15,23,42,.9);display:flex;justify-content:space-between;align-items:center;font-size:10px;color:#334155;flex-shrink:0">
+  <div style="position:relative;z-index:10;padding:5px 16px;background:rgba(6,13,26,.8);backdrop-filter:blur(8px);display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#334155;flex-shrink:0">
     <span id="kpiSlideLabel">—</span>
     <span id="kpiNextRefresh"></span>
   </div>
@@ -1083,6 +1093,48 @@ function startKpiView() {
   startKpiClock();
   startKpiSlideTimer();
   startKpiRefreshTimer();
+  startKpiParticles();
+}
+
+/* ---- particle background ---- */
+let kpiParticleAnim = null;
+function startKpiParticles() {
+  cancelAnimationFrame(kpiParticleAnim);
+  const canvas = document.getElementById('kpiBgCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const resize = () => { canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight; };
+  resize();
+  const pts = Array.from({ length: 60 }, () => ({
+    x: Math.random() * canvas.width, y: Math.random() * canvas.height,
+    vx: (Math.random() - .5) * .4, vy: (Math.random() - .5) * .4,
+    r: Math.random() * 1.5 + .5,
+    a: Math.random() * .5 + .1
+  }));
+  const draw = () => {
+    if (currentView !== 'kpi') return;
+    canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    pts.forEach(p => {
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < 0) p.x = canvas.width; if (p.x > canvas.width) p.x = 0;
+      if (p.y < 0) p.y = canvas.height; if (p.y > canvas.height) p.y = 0;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(56,189,248,${p.a})`; ctx.fill();
+    });
+    pts.forEach((p, i) => {
+      for (let j = i+1; j < pts.length; j++) {
+        const dx = p.x - pts[j].x, dy = p.y - pts[j].y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < 100) {
+          ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(pts[j].x, pts[j].y);
+          ctx.strokeStyle = `rgba(56,189,248,${(.12*(1-dist/100)).toFixed(3)})`; ctx.lineWidth = .6; ctx.stroke();
+        }
+      }
+    });
+    kpiParticleAnim = requestAnimationFrame(draw);
+  };
+  draw();
 }
 
 function stopKpiView() {
@@ -1090,6 +1142,7 @@ function stopKpiView() {
   clearInterval(kpiRefreshTimer);
   clearInterval(kpiClockTimer);
   cancelAnimationFrame(kpiProgressAnim);
+  cancelAnimationFrame(kpiParticleAnim);
 }
 
 function refreshKpi() {
@@ -1230,7 +1283,7 @@ function renderKpiData() {
   let c2Html = '';
   for (let i = 1; i <= 60; i++) {
     const b = c2Borrowed.has(String(i));
-    c2Html += `<div style="aspect-ratio:1;border-radius:5px;background:${b?'#ef4444':'#22c55e'};opacity:${b?'1':'.45'};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff">${i}</div>`;
+    c2Html += `<div style="aspect-ratio:1;border-radius:6px;background:${b?'#ef4444':'rgba(34,197,94,.3)'};border:1px solid ${b?'rgba(239,68,68,.6)':'rgba(34,197,94,.2)'};box-shadow:${b?'0 0 8px rgba(239,68,68,.4)':''};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:${b?'#fff':'rgba(255,255,255,.4)'}">${i}</div>`;
   }
   document.getElementById('kpiC2Grid').innerHTML = c2Html;
   const c2s = document.getElementById('kpiC2Summary');
