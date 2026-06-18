@@ -61,6 +61,12 @@ function doGet(e) {
       return jsonResponse(getEquipmentStatus());
     }
 
+    if (action === 'roundHistory') {
+      const ward      = e.parameter.ward      || '';
+      const equipment = e.parameter.equipment || 'Infusion Pump';
+      return jsonResponse(getRoundHistory(ward, equipment));
+    }
+
     return jsonResponse({ ok: false, error: 'unknown action' }, 400);
   } catch (err) {
     return jsonResponse({ ok: false, error: err.message }, 500);
@@ -211,6 +217,39 @@ function getEquipmentStatus() {
   });
 
   return { ok: true, equipment: Object.values(statusMap) };
+}
+
+// ============================================================
+// getRoundHistory — สถานะล่าสุดของเครื่องใน ward นั้น (Round เท่านั้น)
+// ============================================================
+function getRoundHistory(ward, equipmentType) {
+  const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(SHEET_BORROW);
+  if (!sheet || sheet.getLastRow() <= 1) return { ok: true, machines: [] };
+
+  const rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, 12).getValues();
+
+  // เก็บ record ล่าสุดของแต่ละหมายเลขเครื่องใน ward นี้
+  const map = {};
+  rows.forEach(r => {
+    const action  = String(r[4]);
+    const equip   = String(r[5]);
+    const num     = String(r[6]);
+    const w       = String(r[7]);
+    const date    = String(r[1]);
+    const time    = String(r[2]);
+    const status  = String(r[10]);
+
+    if (!action.includes('Round')) return;
+    if (equipmentType && equip !== equipmentType) return;
+    if (ward && w !== ward) return;
+
+    // rows เรียงเก่า→ใหม่ ดังนั้นเขียนทับได้เรื่อยๆ เพื่อเก็บล่าสุด
+    map[num] = { number: num, lastStatus: status, lastDate: date, lastTime: time };
+  });
+
+  const machines = Object.values(map).filter(m => m.number && m.number !== '');
+  return { ok: true, ward, equipment: equipmentType, machines };
 }
 
 // ============================================================
