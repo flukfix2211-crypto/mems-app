@@ -42,6 +42,7 @@
       padding: 14px 16px 16px;
       position: sticky; top: 0; z-index: 100;
     }
+    .main { position: relative; z-index: 1; }
     .header-inner {
       max-width: 1200px;
       margin: 0 auto;
@@ -278,6 +279,8 @@
   </style>
 </head>
 <body>
+
+<canvas id="bgCanvas" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;"></canvas>
 
 <!-- HEADER -->
 <div class="header">
@@ -1093,6 +1096,68 @@ function showError(msg) {
   document.getElementById('tableWrap').innerHTML =
     `<div class="state-error">⚠️ ${msg}</div>`;
 }
+
+/* ============================================================
+   BACKGROUND PARTICLE ANIMATION
+   ============================================================ */
+(function () {
+  const canvas = document.getElementById('bgCanvas');
+  const ctx    = canvas.getContext('2d');
+
+  function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+  window.addEventListener('resize', resize);
+  resize();
+
+  function accentRGBA(alpha) {
+    const raw = getComputedStyle(document.documentElement).getPropertyValue('--a').trim() || '#0A6478';
+    let r = 10, g = 100, b = 120;
+    if (raw.startsWith('#')) {
+      const h = raw.slice(1);
+      r = parseInt(h.slice(0,2),16); g = parseInt(h.slice(2,4),16); b = parseInt(h.slice(4,6),16);
+    }
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+
+  function Particle() { this.init(true); }
+  Particle.prototype.init = function (scatter) {
+    this.x = Math.random() * canvas.width;
+    this.y = scatter ? Math.random() * canvas.height : canvas.height + 20;
+    this.r = 2 + Math.random() * 12;
+    this.speed = 0.2 + Math.random() * 0.7;
+    this.drift = (Math.random() - 0.5) * 0.5;
+    this.alpha = 0.05 + Math.random() * 0.12;
+    this.type  = Math.random() < 0.4 ? 'cross' : 'circle';
+    this.rot   = Math.random() * Math.PI * 2;
+    this.rotSpeed = (Math.random() - 0.5) * 0.015;
+  };
+  Particle.prototype.update = function () {
+    this.y -= this.speed; this.x += this.drift; this.rot += this.rotSpeed;
+    if (this.y < -20 || this.x < -30 || this.x > canvas.width + 30) this.init(false);
+  };
+  Particle.prototype.draw = function () {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.rot);
+    ctx.globalAlpha = this.alpha;
+    if (this.type === 'cross') {
+      ctx.strokeStyle = accentRGBA(1); ctx.lineWidth = this.r * 0.5; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(-this.r,0); ctx.lineTo(this.r,0);
+      ctx.moveTo(0,-this.r); ctx.lineTo(0,this.r); ctx.stroke();
+    } else {
+      ctx.fillStyle = accentRGBA(1);
+      ctx.beginPath(); ctx.arc(0,0,this.r,0,Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+  };
+
+  const parts = Array.from({ length: 60 }, () => new Particle());
+  function loop() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    parts.forEach(p => { p.update(); p.draw(); });
+    requestAnimationFrame(loop);
+  }
+  loop();
+})();
 </script>
 </body>
 </html>
