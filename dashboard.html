@@ -305,6 +305,28 @@
     .tab.active { color: var(--a); border-bottom-color: var(--a); }
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
+    /* ROUND STATUS BADGES */
+    .rs-use    { background:#DCF2E5; color:#14612D; }
+    .rs-idle   { background:#DAF0F5; color:#0A6478; }
+    .rs-broken { background:#FFF3CD; color:#8B5000; }
+    .rs-lost   { background:#FDEAEA; color:#B82E2E; }
+    .rs-badge  { display:inline-block; font-size:12px; font-weight:700; border-radius:6px; padding:2px 9px; }
+
+    /* PRINT STYLES */
+    @media print {
+      body * { visibility: hidden; }
+      #printArea, #printArea * { visibility: visible; }
+      #printArea {
+        position: fixed; inset: 0; background: #fff;
+        padding: 20px 28px; font-family: 'Sarabun', sans-serif;
+        font-size: 13px; color: #000;
+      }
+      #printArea table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+      #printArea th, #printArea td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; font-size: 12px; }
+      #printArea th { background: #0A6478; color: #fff; }
+      #printArea .print-title { font-size: 18px; font-weight: 800; margin-bottom: 4px; }
+      #printArea .print-meta  { font-size: 12px; color: #555; margin-bottom: 10px; }
+    }
   </style>
 </head>
 <body>
@@ -408,6 +430,50 @@
     </div>
     <div class="card-body" id="equipStatusBody">
       <div class="state-loading"><div class="spinner"></div>กำลังโหลด…</div>
+    </div>
+  </div>
+
+  <!-- ROUND RECORDS SECTION -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-head" style="cursor:pointer;user-select:none" onclick="toggleRoundSection()">
+      💉 บันทึกการ Round เครื่อง Infusion Pump
+      <span id="roundToggleBtn" style="font-size:12px;background:rgba(255,255,255,0.18);padding:4px 10px;border-radius:20px;margin-left:auto">▼ ดูรายงาน</span>
+    </div>
+    <div id="roundBody" style="display:none">
+      <div class="card-body" style="border-top:1px solid var(--border)">
+
+        <!-- Filters -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+          <div>
+            <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:5px">หน่วยงาน</label>
+            <select id="roundWardSel" onchange="renderRoundTable()" style="width:100%;padding:9px 12px;border:2px solid var(--border);border-radius:10px;font-family:'Sarabun',sans-serif;font-size:14px;background:#fff;color:var(--txt);outline:none;cursor:pointer">
+              <option value="">— ทั้งหมด —</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:5px">วันที่</label>
+            <select id="roundDateSel" onchange="renderRoundTable()" style="width:100%;padding:9px 12px;border:2px solid var(--border);border-radius:10px;font-family:'Sarabun',sans-serif;font-size:14px;background:#fff;color:var(--txt);outline:none;cursor:pointer">
+              <option value="">— ทั้งหมด —</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Summary chips -->
+        <div id="roundSummary" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"></div>
+
+        <!-- Table -->
+        <div class="table-wrap" id="roundTableWrap">
+          <div class="empty">เลือกหน่วยงานหรือวันที่เพื่อดูรายการ</div>
+        </div>
+
+        <!-- Print button -->
+        <div style="margin-top:12px;text-align:right" id="roundPrintWrap" style="display:none">
+          <button onclick="printRoundReport()" style="padding:10px 20px;background:var(--a);color:#fff;border:none;border-radius:10px;font-family:'Sarabun',sans-serif;font-size:14px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px">
+            🖨️ พิมพ์รายงาน
+          </button>
+        </div>
+
+      </div>
     </div>
   </div>
 
@@ -529,6 +595,7 @@ async function loadAll() {
     populateWardFilter();
     applyFilters();
     renderEquipStatus();
+    if (roundVisible) populateRoundFilters();
 
     document.getElementById('lastUpdated').textContent =
       'อัพเดต ' + new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
@@ -875,6 +942,152 @@ function goPage(p) {
   currentPage = p;
   renderTable();
   document.getElementById('tableWrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/* ============================================================
+   ERROR
+   ============================================================ */
+/* ============================================================
+   ROUND SECTION
+   ============================================================ */
+let roundVisible = false;
+
+function toggleRoundSection() {
+  roundVisible = !roundVisible;
+  document.getElementById('roundBody').style.display = roundVisible ? 'block' : 'none';
+  document.getElementById('roundToggleBtn').textContent = roundVisible ? '▲ ซ่อน' : '▼ ดูรายงาน';
+  if (roundVisible) populateRoundFilters();
+}
+
+function getRoundRecords() {
+  return allRecords.filter(r => String(r['ประเภท (ยืม/คืน)']).includes('Round'));
+}
+
+function populateRoundFilters() {
+  const records = getRoundRecords();
+
+  const wards = [...new Set(records.map(r => r['ตึก/Ward']).filter(Boolean))].sort();
+  const wardSel = document.getElementById('roundWardSel');
+  const curWard = wardSel.value;
+  wardSel.innerHTML = '<option value="">— ทั้งหมด —</option>' +
+    wards.map(w => `<option value="${w}" ${w===curWard?'selected':''}>${w}</option>`).join('');
+
+  const dates = [...new Set(records.map(r => r['วันที่']).filter(Boolean))].sort((a,b) => b.localeCompare(a));
+  const dateSel = document.getElementById('roundDateSel');
+  const curDate = dateSel.value;
+  dateSel.innerHTML = '<option value="">— ทั้งหมด —</option>' +
+    dates.map(d => `<option value="${d}" ${d===curDate?'selected':''}>${d}</option>`).join('');
+
+  renderRoundTable();
+}
+
+function renderRoundTable() {
+  const ward = document.getElementById('roundWardSel').value;
+  const date = document.getElementById('roundDateSel').value;
+  let rows = getRoundRecords();
+  if (ward) rows = rows.filter(r => r['ตึก/Ward'] === ward);
+  if (date) rows = rows.filter(r => r['วันที่'] === date);
+
+  // Summary chips
+  const cnt = { use:0, idle:0, broken:0, lost:0, other:0 };
+  rows.forEach(r => {
+    const s = String(r['สถานะ Round'] || '');
+    if (s.includes('ใช้งานอยู่'))     cnt.use++;
+    else if (s.includes('ไม่ได้ใช้'))  cnt.idle++;
+    else if (s.includes('ชำรุด'))      cnt.broken++;
+    else if (s.includes('สูญหาย'))     cnt.lost++;
+    else                                cnt.other++;
+  });
+
+  const totalRound = rows.length;
+  document.getElementById('roundSummary').innerHTML = totalRound === 0 ? '' : `
+    <span class="rs-badge rs-use">🟢 ใช้งานอยู่ ${cnt.use}</span>
+    <span class="rs-badge rs-idle">🔵 ไม่ได้ใช้งาน ${cnt.idle}</span>
+    <span class="rs-badge rs-broken">🟡 ชำรุด ${cnt.broken}</span>
+    <span class="rs-badge rs-lost">🔴 สูญหาย ${cnt.lost}</span>
+    <span style="font-size:12px;color:var(--muted);margin-left:4px">รวม ${totalRound} รายการ</span>
+  `;
+
+  const wrap = document.getElementById('roundTableWrap');
+  const printWrap = document.getElementById('roundPrintWrap');
+  if (!rows.length) {
+    wrap.innerHTML = '<div class="empty">ไม่พบข้อมูล Round</div>';
+    printWrap.style.display = 'none';
+    return;
+  }
+
+  wrap.innerHTML = `<table>
+    <thead><tr>
+      <th>วันที่</th><th>เวร</th><th>หน่วยงาน</th>
+      <th>เครื่อง No.</th><th>สถานะ</th><th>ผู้บันทึก</th><th>หมายเหตุ</th>
+    </tr></thead>
+    <tbody>${rows.map(r => {
+      const s = String(r['สถานะ Round'] || '');
+      const cls = s.includes('ใช้งานอยู่') ? 'rs-use'
+                : s.includes('ไม่ได้ใช้')  ? 'rs-idle'
+                : s.includes('ชำรุด')       ? 'rs-broken'
+                : s.includes('สูญหาย')      ? 'rs-lost' : '';
+      return `<tr>
+        <td>${r['วันที่']||''}</td>
+        <td>${r['เวร']||''}</td>
+        <td>${r['ตึก/Ward']||''}</td>
+        <td><strong>${r['หมายเลขเครื่อง']||'-'}</strong></td>
+        <td><span class="rs-badge ${cls}">${s||'-'}</span></td>
+        <td>${r['ชื่อผู้ยืม']||''}</td>
+        <td style="font-size:12px;color:var(--muted)">${r['หมายเหตุ']||''}</td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table>`;
+
+  printWrap.style.display = 'block';
+
+  // Store for print
+  window._roundPrintData = { rows, ward, date, cnt };
+}
+
+function printRoundReport() {
+  const { rows, ward, date, cnt } = window._roundPrintData || {};
+  if (!rows || !rows.length) return;
+
+  const title = `รายงาน Round เครื่อง Infusion Pump`;
+  const meta  = [
+    ward ? `หน่วยงาน: ${ward}` : 'ทุกหน่วยงาน',
+    date ? `วันที่: ${date}` : 'ทุกวันที่',
+    `พิมพ์เมื่อ: ${new Date().toLocaleString('th-TH')}`,
+    `รวม ${rows.length} รายการ`
+  ].join('  |  ');
+
+  const summary = `ใช้งานอยู่ ${cnt.use}  |  ไม่ได้ใช้งาน ${cnt.idle}  |  ชำรุด ${cnt.broken}  |  สูญหาย ${cnt.lost}`;
+
+  const tableRows = rows.map(r => `<tr>
+    <td>${r['วันที่']||''}</td><td>${r['เวร']||''}</td>
+    <td>${r['ตึก/Ward']||''}</td><td>${r['หมายเลขเครื่อง']||'-'}</td>
+    <td>${r['สถานะ Round']||'-'}</td><td>${r['ชื่อผู้ยืม']||''}</td>
+    <td>${r['หมายเหตุ']||''}</td>
+  </tr>`).join('');
+
+  let area = document.getElementById('printArea');
+  if (!area) {
+    area = document.createElement('div');
+    area.id = 'printArea';
+    document.body.appendChild(area);
+  }
+  area.innerHTML = `
+    <div class="print-title">💉 ${title}</div>
+    <div class="print-meta">${meta}</div>
+    <div class="print-meta" style="font-weight:700">${summary}</div>
+    <table>
+      <thead><tr>
+        <th>วันที่</th><th>เวร</th><th>หน่วยงาน</th>
+        <th>เครื่อง No.</th><th>สถานะ</th><th>ผู้บันทึก</th><th>หมายเหตุ</th>
+      </tr></thead>
+      <tbody>${tableRows}</tbody>
+    </table>
+    <div style="margin-top:30px;font-size:11px;color:#999">
+      โรงพยาบาลพหลพลพยุหเสนา จ.กาญจนบุรี — MEMs Medical Equipment Management Systems
+    </div>
+  `;
+  window.print();
 }
 
 /* ============================================================

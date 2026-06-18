@@ -130,7 +130,13 @@ function getRecords(limit, offset, filter) {
   const sheet = ss.getSheetByName(SHEET_BORROW);
   if (!sheet || sheet.getLastRow() <= 1) return { ok: true, total: 0, records: [] };
 
-  const headers = sheet.getRange(1, 1, 1, 12).getValues()[0];
+  // ใช้ชื่อคอลัมน์ fixed เพื่อรองรับ sheet เดิมที่ header ยังไม่ครบ 12 คอลัมน์
+  const COLS = [
+    'ลำดับ','วันที่','เวลา','เวร',
+    'ประเภท (ยืม/คืน)','ชื่อเครื่อง','หมายเลขเครื่อง',
+    'ตึก/Ward','ชื่อผู้ยืม','Timestamp (ISO)',
+    'สถานะ Round','หมายเหตุ'
+  ];
   const dataRange = sheet.getRange(2, 1, sheet.getLastRow() - 1, 12);
   let rows = dataRange.getValues();
 
@@ -150,7 +156,7 @@ function getRecords(limit, offset, filter) {
 
   const records = paged.map(row => {
     const obj = {};
-    headers.forEach((h, i) => { obj[h] = row[i]; });
+    COLS.forEach((h, i) => { obj[h] = row[i]; });
     return obj;
   });
 
