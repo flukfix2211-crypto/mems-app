@@ -488,7 +488,10 @@ function renderKPI() {
 /* ============================================================ WARD VIEW ============================================================ */
 function initWardView() {
   const sel = document.getElementById('wardViewSel');
-  const wards = [...new Set(allRecords.map(r => r['ตึก/Ward']).filter(Boolean))].sort();
+  // Use equipStatus (live borrow status) + allRecords for ward list
+  const fromEquip = equipStatus.filter(e => e.isBorrowed).map(e => e.ward).filter(Boolean);
+  const fromRecs  = allRecords.map(r => r['ตึก/Ward']).filter(Boolean);
+  const wards = [...new Set([...fromEquip, ...fromRecs])].sort();
   const prev = sel.value;
   sel.innerHTML = '<option value="">— เลือกตึก/Ward —</option>' +
     wards.map(w => `<option value="${w}"${w === prev ? ' selected' : ''}>${w}</option>`).join('');
@@ -500,51 +503,27 @@ function renderWardDetail() {
   const body = document.getElementById('wardDetailBody');
   if (!ward) { body.innerHTML = ''; return; }
 
-  // Build active borrows: pair ยืม/คืน per (equipment, number)
-  const groups = {};
-  allRecords.forEach(r => {
-    const eq  = r['ชื่อเครื่อง'] || r['อุปกรณ์'] || '';
-    const num = r['หมายเลข'] || '';
-    const key = eq + '|' + num;
-    if (!groups[key]) groups[key] = { eq, num, records: [] };
-    groups[key].records.push(r);
-  });
-
-  const active = [];
-  Object.values(groups).forEach(({ eq, num, records }) => {
-    records.sort((a, b) => (parseThaiDT(a) || 0) - (parseThaiDT(b) || 0));
-    // Walk records to find currently borrowed by this ward
-    let borrowRec = null;
-    records.forEach(r => {
-      const isBorrow = String(r['ประเภท (ยืม/คืน)']).includes('ยืม');
-      const isReturn = String(r['ประเภท (ยืม/คืน)']).includes('คืน');
-      if (isBorrow) borrowRec = r;
-      else if (isReturn) borrowRec = null;
-    });
-    if (borrowRec && (borrowRec['ตึก/Ward'] || '') === ward) {
-      active.push({ eq, num, rec: borrowRec });
-    }
-  });
+  // Use equipStatus for live borrow status per ward
+  const active = equipStatus
+    .filter(e => e.isBorrowed && e.ward === ward)
+    .sort((a, b) => String(a.equipment).localeCompare(String(b.equipment), 'th') || String(a.number).localeCompare(String(b.number)));
 
   if (!active.length) {
     body.innerHTML = `<div class="card"><div class="card-body"><div class="empty">ไม่มีเครื่องที่ยืมอยู่ในขณะนี้</div></div></div>`;
     return;
   }
 
-  active.sort((a, b) => a.eq.localeCompare(b.eq, 'th') || String(a.num).localeCompare(String(b.num)));
-
   body.innerHTML = `
     <div class="card">
       <div class="card-body">
         <div style="font-size:13px;color:var(--muted);margin-bottom:12px">พบ <strong>${active.length}</strong> เครื่องที่ยืมอยู่</div>
         <div style="display:flex;flex-direction:column;gap:10px">
-          ${active.map(({ eq, num }) => {
-            return `<div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg);border-radius:10px;border:1.5px solid var(--border)">
+          ${active.map(e => `
+            <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg);border-radius:10px;border:1.5px solid var(--border)">
               <div style="width:44px;height:44px;border-radius:10px;background:#EFF6FF;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">📟</div>
-              <div style="flex:1;font-weight:700;font-size:14px">${eq}${num ? ` <span style="color:var(--primary)">No.${num}</span>` : ''}</div>
+              <div style="flex:1;font-weight:700;font-size:14px">${e.equipment}${e.number ? ` <span style="color:var(--a)">No.${e.number}</span>` : ''}</div>
               <div style="font-size:11px;font-weight:700;color:#DC2626;background:#FEF2F2;padding:4px 8px;border-radius:20px;white-space:nowrap">ยืมอยู่</div>
-            </div>`;
-          }).join('')}
+            </div>`).join('')}
         </div>
       </div>
     </div>`;
