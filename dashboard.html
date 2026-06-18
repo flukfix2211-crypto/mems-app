@@ -350,6 +350,7 @@
     </div>
     <div class="header-right">
       <span id="lastUpdated"></span>
+      <span id="nextRefresh" style="font-size:11px;opacity:.6"></span>
       <a href="index.html" class="btn-back">← กลับหน้าแบบฟอร์ม</a>
     </div>
   </div>
@@ -587,43 +588,96 @@ let equipStatus = [];
 let filteredRecords = [];
 let currentPage = 0;
 const PAGE_SIZE = 20;
+const POLL_INTERVAL = 30000; // 30 วินาที
+let pollTimer = null;
 
 let equipChart, shiftChart, trendChart;
 
 /* ============================================================
    INIT
    ============================================================ */
-// loadAll เรียกจาก checkPw() หรือถ้า session ยังอยู่
 window.addEventListener('DOMContentLoaded', () => {
   if (sessionStorage.getItem('mems_auth') === '1') loadAll();
 });
 
-async function loadAll() {
+async function loadAll(silent = false) {
   const btn = document.getElementById('refreshBtn');
-  btn.disabled = true;
-  btn.textContent = '⟳ กำลังโหลด…';
+  if (!silent) {
+    btn.disabled = true;
+    btn.textContent = '⟳ กำลังโหลด…';
+  }
 
   try {
+    const prevCount = allRecords.length;
+
     const [recRes, eqRes] = await Promise.all([
       fetchGAS('records', { limit: 1000 }),
       fetchGAS('equipment')
     ]);
 
     allRecords  = recRes.records || [];
-    equipStatus = eqRes.equipment  || [];
+    equipStatus = eqRes.equipment || [];
+
+    const newCount = allRecords.length - prevCount;
+    if (silent && newCount > 0) showToast(`🔔 มีรายการใหม่ ${newCount} รายการ`);
 
     populateWardFilter();
     applyFilters();
-    renderEquipStatus();
+    if (isOpen('equipStatusBody')) renderEquipStatus();
 
     document.getElementById('lastUpdated').textContent =
       'อัพเดต ' + new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
   } catch (err) {
-    showError(err.message);
+    if (!silent) showError(err.message);
   }
 
-  btn.disabled = false;
-  btn.textContent = '⟳ รีเฟรช';
+  if (!silent) {
+    btn.disabled = false;
+    btn.textContent = '⟳ รีเฟรช';
+  }
+
+  // ตั้ง timer ต่อไปเรื่อยๆ
+  clearTimeout(pollTimer);
+  pollTimer = setTimeout(() => loadAll(true), POLL_INTERVAL);
+  startCountdown();
+}
+
+/* ============================================================
+   COUNTDOWN
+   ============================================================ */
+let countdownTimer = null;
+function startCountdown() {
+  let sec = POLL_INTERVAL / 1000;
+  const el = document.getElementById('nextRefresh');
+  clearInterval(countdownTimer);
+  countdownTimer = setInterval(() => {
+    sec--;
+    if (sec <= 0) { clearInterval(countdownTimer); el.textContent = ''; return; }
+    el.textContent = `· refresh ใน ${sec}s`;
+  }, 1000);
+}
+
+/* ============================================================
+   TOAST
+   ============================================================ */
+function showToast(msg) {
+  let t = document.getElementById('toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'toast';
+    t.style.cssText = `
+      position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);
+      background:#192D35;color:#fff;padding:12px 22px;border-radius:30px;
+      font-size:14px;font-weight:600;font-family:'Sarabun',sans-serif;
+      box-shadow:0 4px 20px rgba(0,0,0,0.25);z-index:9000;
+      transition:transform .35s cubic-bezier(.4,0,.2,1);pointer-events:none;
+    `;
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.transform = 'translateX(-50%) translateY(0)';
+  clearTimeout(t._hide);
+  t._hide = setTimeout(() => { t.style.transform = 'translateX(-50%) translateY(80px)'; }, 4000);
 }
 
 /* ============================================================
