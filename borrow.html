@@ -954,6 +954,11 @@ async function loadEquipStatus() {
   }
 }
 
+function isErIcu(wardName) {
+  const w = (wardName || '').toUpperCase();
+  return w === 'ER' || w.includes('ICU');
+}
+
 function renderEquipReturnGrid() {
   const grid = document.getElementById('c2Grid');
   const ward = document.getElementById('wardSel').value;
@@ -963,7 +968,18 @@ function renderEquipReturnGrid() {
     updateC2SelInfo(); return;
   }
   if (!allEquipStatus) { loadEquipStatus(); return; }
-  const borrowed = allEquipStatus.filter(e => e.isBorrowed && e.ward === ward && e.equipment === S.equip);
+
+  let borrowed;
+  if (S.equip === 'High Flow') {
+    // ER/ICU ที่ยืม → ทุก ward คืนได้, ward อื่นๆ → เห็นเฉพาะของตัวเอง
+    borrowed = allEquipStatus.filter(e =>
+      e.isBorrowed && e.equipment === 'High Flow' &&
+      (isErIcu(e.ward) || e.ward === ward)
+    );
+  } else {
+    borrowed = allEquipStatus.filter(e => e.isBorrowed && e.ward === ward && e.equipment === S.equip);
+  }
+
   if (!borrowed.length) {
     grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:14px 0;font-size:13px;color:var(--muted)">ไม่มีเครื่องที่ยืมโดยหน่วยงานนี้</div>';
     updateC2SelInfo(); return;
@@ -973,7 +989,7 @@ function renderEquipReturnGrid() {
     const btn = document.createElement('button');
     btn.type = 'button'; btn.dataset.num = num;
     btn.className = 'c2-btn ret-able';
-    btn.innerHTML = `<div>No.${num}</div>`;
+    btn.innerHTML = `<div>No.${num}</div>${isErIcu(e.ward) && S.equip === 'High Flow' ? `<div style="font-size:9px">${e.ward}</div>` : ''}`;
     btn.onclick = () => {
       if (!c2SelectedNums.has(num) && c2SelectedNums.size >= 10) {
         alert('คืนได้สูงสุด 10 หมายเลขพร้อมกัน'); return;
