@@ -842,13 +842,20 @@ function fmtDuration(hrs) {
   return s.trim() || (hrs > 0 ? '< 1 นาที' : '—');
 }
 
-function parseThaiDT(s) {
-  if (!s) return null;
-  // "dd/MM/yyyy HH:mm:ss" หรือ "dd/MM/yyyy HH:mm"
-  const m = String(s).match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})(?::(\d{2}))?/);
-  if (m) return new Date(+m[3], +m[2]-1, +m[1], +m[4], +m[5], +(m[6]||0));
-  const d = new Date(s);
-  return isNaN(d) ? null : d;
+function parseThaiDT(r) {
+  // ลอง Timestamp (ISO) ก่อน: "dd/MM/yyyy HH:mm:ss"
+  const ts = String(r['Timestamp (ISO)'] || '');
+  const mt = ts.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})(?::(\d{2}))?/);
+  if (mt) return new Date(+mt[3], +mt[2]-1, +mt[1], +mt[4], +mt[5], +(mt[6]||0));
+  const dIso = new Date(ts);
+  if (!isNaN(dIso) && ts) return dIso;
+  // Fallback: วันที่ (dd/MM/yyyy) + เวลา (HH:mm[:ss])
+  const ds = String(r['วันที่'] || '');
+  const tm = String(r['เวลา'] || '');
+  const md = ds.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  const mh = tm.match(/^(\d{2}):(\d{2})(?::(\d{2}))?/);
+  if (md && mh) return new Date(+md[3], +md[2]-1, +md[1], +mh[1], +mh[2], +(mh[3]||0));
+  return null;
 }
 
 function renderC2Stats() {
@@ -878,16 +885,12 @@ function renderC2Stats() {
   const rows = [];
   Object.entries(byNum).forEach(([num, recs]) => {
     // เรียงตาม timestamp ก่อนเสมอ
-    recs.sort((a, b) => {
-      const ta = parseThaiDT(a['Timestamp (ISO)'] || a['วันที่']);
-      const tb = parseThaiDT(b['Timestamp (ISO)'] || b['วันที่']);
-      return (ta||0) - (tb||0);
-    });
+    recs.sort((a, b) => (parseThaiDT(a)||0) - (parseThaiDT(b)||0));
     let borrows = 0, returns = 0, totalHrs = 0, sessions = [];
     let pending = null;
     recs.forEach(r => {
       const act = String(r['ประเภท (ยืม/คืน)']);
-      const ts  = parseThaiDT(r['Timestamp (ISO)'] || r['วันที่']);
+      const ts  = parseThaiDT(r);
       if (act.includes('ยืม')) { pending = ts; borrows++; }
       else if (act.includes('คืน')) {
         returns++;
