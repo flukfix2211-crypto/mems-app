@@ -170,22 +170,6 @@
 <!-- MAIN -->
 <div class="main">
 
-  <!-- FILTER BAR -->
-  <div class="filter-bar">
-    <label>ช่วงเวลา</label>
-    <select id="filterDate" onchange="loadAll()">
-      <option value="today">วันนี้</option>
-      <option value="7d">7 วันล่าสุด</option>
-      <option value="30d">30 วันล่าสุด</option>
-      <option value="all" selected>ทั้งหมด</option>
-    </select>
-    <label>หน่วยงาน</label>
-    <select id="filterWard" onchange="applyFilters()">
-      <option value="">ทั้งหมด</option>
-    </select>
-    <button class="btn-refresh" id="refreshBtn" onclick="loadAll()">⟳ รีเฟรช</button>
-  </div>
-
   <!-- KPI -->
   <div class="kpi-grid">
     <div class="kpi green">
@@ -465,8 +449,6 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 async function loadAll() {
-  const btn = document.getElementById('refreshBtn');
-  btn.disabled = true; btn.textContent = '⟳ กำลังโหลด…';
   try {
     const [recRes, eqRes] = await Promise.all([
       fetchGAS('records', { limit: 1000 }),
@@ -474,14 +456,12 @@ async function loadAll() {
     ]);
     allRecords  = recRes.records  || [];
     equipStatus = eqRes.equipment || [];
-    populateWardFilter();
     applyFilters();
     document.getElementById('lastUpdated').textContent =
       'อัพเดต ' + new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
   } catch (err) {
     console.error(err);
   }
-  btn.disabled = false; btn.textContent = '⟳ รีเฟรช';
 }
 
 /* ============================================================ FETCH GAS ============================================================ */
@@ -494,39 +474,8 @@ async function fetchGAS(action, params = {}) {
   return res.json();
 }
 
-/* ============================================================ FILTER ============================================================ */
-function populateWardFilter() {
-  const wards = [...new Set(allRecords.map(r => r['ตึก/Ward']).filter(Boolean))].sort();
-  const sel = document.getElementById('filterWard');
-  const cur = sel.value;
-  sel.innerHTML = '<option value="">ทั้งหมด</option>' +
-    wards.map(w => `<option value="${w}"${w===cur?' selected':''}>${w}</option>`).join('');
-}
-
-function getDateFilter() {
-  const f = document.getElementById('filterDate').value;
-  const now = new Date();
-  if (f === 'today') {
-    const dd = String(now.getDate()).padStart(2,'0');
-    const mm = String(now.getMonth()+1).padStart(2,'0');
-    const yyyy = now.getFullYear();
-    return r => r['วันที่'] === `${dd}/${mm}/${yyyy}`;
-  }
-  if (f === '7d')  { const d7  = new Date(now - 7*86400000);  return r => parseTSDate(r['Timestamp (ISO)']) >= d7; }
-  if (f === '30d') { const d30 = new Date(now - 30*86400000); return r => parseTSDate(r['Timestamp (ISO)']) >= d30; }
-  return () => true;
-}
-
-function parseTSDate(ts) { try { return new Date(ts); } catch { return new Date(0); } }
-
 function applyFilters() {
-  const dateFn = getDateFilter();
-  const ward   = document.getElementById('filterWard').value;
-  filteredRecords = allRecords.filter(r => {
-    if (!dateFn(r)) return false;
-    if (ward && r['ตึก/Ward'] !== ward) return false;
-    return true;
-  });
+  filteredRecords = allRecords.slice();
   currentPage = 0;
   renderKPI();
   if (currentView !== 'home') showView(currentView);
