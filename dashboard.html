@@ -342,9 +342,20 @@
     <div class="card">
       <div class="card-head">สถิติรายเดือน (C2)</div>
       <div class="card-body">
-        <select id="c2MonthSel" onchange="renderC2Stats()" style="width:100%;padding:9px 12px;border:2px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;background:#fff;outline:none;margin-bottom:12px">
-          <option value="">— เลือกเดือน —</option>
-        </select>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+          <div>
+            <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">เดือน</div>
+            <select id="c2MonthSel" onchange="renderC2Stats()" style="width:100%;padding:9px 12px;border:2px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;background:#fff;outline:none">
+              <option value="">— เลือกเดือน —</option>
+            </select>
+          </div>
+          <div>
+            <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">หน่วยงาน</div>
+            <select id="c2WardSel" onchange="renderC2Stats()" style="width:100%;padding:9px 12px;border:2px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;background:#fff;outline:none">
+              <option value="">— ทั้งหมด —</option>
+            </select>
+          </div>
+        </div>
         <div id="c2StatsWrap"><div class="empty">เลือกเดือนเพื่อดูสถิติ</div></div>
         <div id="c2PrintWrap" style="display:none;margin-top:12px;text-align:right">
           <button class="btn-print" onclick="printC2Stats()">🖨️ พิมพ์รายงาน</button>
@@ -728,7 +739,7 @@ async function printC2Stats() {
     <div style="font-family:'Sarabun',sans-serif;max-width:800px;margin:0 auto;padding:20px">
       <div style="text-align:center;margin-bottom:20px;border-bottom:2px solid #0A6478;padding-bottom:14px">
         <div style="font-size:22px;font-weight:800;color:#0A6478">💊 รายงานสถิติการใช้งาน C2</div>
-        <div style="font-size:14px;color:#666;margin-top:4px">เดือน: ${d.month}</div>
+        <div style="font-size:14px;color:#666;margin-top:4px">เดือน: ${d.month}${d.ward ? '  |  หน่วยงาน: '+d.ward : '  |  ทุกหน่วยงาน'}</div>
         <div style="font-size:12px;color:#999;margin-top:2px">พิมพ์เมื่อ: ${new Date().toLocaleString('th-TH',{dateStyle:'short',timeStyle:'short'})}</div>
         <div style="font-size:12px;color:#666;margin-top:2px">โรงพยาบาลพหลพลพยุหเสนา จ.กาญจนบุรี — งานศูนย์เครื่องมือแพทย์</div>
       </div>
@@ -798,24 +809,35 @@ async function renderC2Dashboard() {
 
 function buildC2MonthStats() {
   const c2recs = allRecords.filter(r => String(r['ชื่อเครื่อง']).includes('C2'));
+
   const months = [...new Set(c2recs.map(r => {
     const s = String(r['วันที่']);
-    if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s.slice(3);  // MM/YYYY
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s.slice(3);
     try { const d = new Date(s); return `${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`; } catch { return ''; }
   }).filter(Boolean))].sort((a,b) => b.localeCompare(a));
 
-  const sel = document.getElementById('c2MonthSel');
-  sel.innerHTML = '<option value="">— เลือกเดือน —</option>' +
-    months.map(m => `<option value="${m}">${m}</option>`).join('');
+  const wards = [...new Set(c2recs.map(r => r['ตึก/Ward']).filter(Boolean))].sort();
+
+  const monthSel = document.getElementById('c2MonthSel');
+  const curMonth = monthSel.value;
+  monthSel.innerHTML = '<option value="">— เลือกเดือน —</option>' +
+    months.map(m => `<option value="${m}"${m===curMonth?' selected':''}>${m}</option>`).join('');
+
+  const wardSel = document.getElementById('c2WardSel');
+  const curWard = wardSel.value;
+  wardSel.innerHTML = '<option value="">— ทั้งหมด —</option>' +
+    wards.map(w => `<option value="${w}"${w===curWard?' selected':''}>${w}</option>`).join('');
 }
 
 function renderC2Stats() {
   const month = document.getElementById('c2MonthSel').value;
+  const ward  = document.getElementById('c2WardSel').value;
   const wrap  = document.getElementById('c2StatsWrap');
   if (!month) { wrap.innerHTML = '<div class="empty">เลือกเดือนเพื่อดูสถิติ</div>'; return; }
 
   const c2recs = allRecords.filter(r => {
     if (!String(r['ชื่อเครื่อง']).includes('C2')) return false;
+    if (ward && r['ตึก/Ward'] !== ward) return false;
     const s = String(r['วันที่']);
     let m;
     if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) m = s.slice(3);
@@ -890,7 +912,7 @@ function renderC2Stats() {
       <td style="font-size:12px;color:var(--muted)">${r.sessions.map((s,i)=>`ครั้งที่${i+1}: ${s.days>=1?Math.floor(s.days)+'วัน ':''} ${s.hrs}ชม.`).join(' · ')||'—'}</td>
     </tr>`).join('')}</tbody></table></div>`;
 
-  window._c2PrintData = { month, rows, totalBorrow, totalReturn, totalHrsAll, activeNums };
+  window._c2PrintData = { month, ward, rows, totalBorrow, totalReturn, totalHrsAll, activeNums };
   document.getElementById('c2PrintWrap').style.display = 'block';
 }
 
