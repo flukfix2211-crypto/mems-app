@@ -259,7 +259,7 @@
     <div class="sum-chip sc-use"><span class="sc-num" id="sumUse">0</span>ใช้งานอยู่</div>
     <div class="sum-chip sc-idle"><span class="sc-num" id="sumIdle">0</span>ไม่ได้ใช้งาน</div>
     <div class="sum-chip sc-broken"><span class="sc-num" id="sumBroken">0</span>ชำรุด</div>
-    <div class="sum-chip sc-lost"><span class="sc-num" id="sumLost">0</span>หาไม่เจอ</div>
+    <div class="sum-chip sc-lost"><span class="sc-num" id="sumLost">0</span>สูญหาย</div>
   </div>
 
   <!-- Pump list -->
@@ -296,7 +296,7 @@
     { key:'use',    label:'ใช้งานอยู่',    icon:'🟢', cls:'active-use'    },
     { key:'idle',   label:'ไม่ได้ใช้งาน', icon:'🔵', cls:'active-idle'   },
     { key:'broken', label:'ชำรุด',         icon:'🟡', cls:'active-broken' },
-    { key:'lost',   label:'หาไม่เจอ',     icon:'🔴', cls:'active-lost'   },
+    { key:'lost',   label:'สูญหาย',     icon:'🔴', cls:'active-lost'   },
   ];
 
   let rowCount = 0;
@@ -447,7 +447,7 @@
       <div class="suc-chip sc-use"><span class="sc-n">${cnt.use}</span>ใช้งานอยู่</div>
       <div class="suc-chip sc-idle"><span class="sc-n">${cnt.idle}</span>ไม่ได้ใช้งาน</div>
       <div class="suc-chip sc-broken"><span class="sc-n">${cnt.broken}</span>ชำรุด</div>
-      <div class="suc-chip sc-lost"><span class="sc-n">${cnt.lost}</span>หาไม่เจอ</div>
+      <div class="suc-chip sc-lost"><span class="sc-n">${cnt.lost}</span>สูญหาย</div>
     `;
     document.getElementById('successScreen').classList.add('show');
     btn.disabled = false;
