@@ -227,10 +227,14 @@
       <div class="view-title">🏥 การใช้งานแต่ละหน่วยงาน</div>
     </div>
     <div class="card">
-      <div class="card-body" id="wardChartBody">
-        <div class="state-loading"><div class="spinner"></div>กำลังโหลด…</div>
+      <div class="card-body">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">เลือกหน่วยงาน</div>
+        <select id="wardViewSel" class="field" onchange="renderWardDetail()" style="width:100%;padding:9px 12px;border:2px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;background:#fff;outline:none;margin-bottom:0">
+          <option value="">— เลือกตึก/Ward —</option>
+        </select>
       </div>
     </div>
+    <div id="wardDetailBody"></div>
   </div>
 
   <!-- STATUS VIEW -->
@@ -412,7 +416,7 @@ function showView(name) {
   document.getElementById('view' + name.charAt(0).toUpperCase() + name.slice(1)).classList.add('active');
   currentView = name;
   window.scrollTo({ top: 0, behavior: 'smooth' });
-  if (name === 'ward')    renderWardChart();
+  if (name === 'ward')    initWardView();
   if (name === 'status')  renderEquipStatus();
   if (name === 'round')   populateRoundFilters();
   if (name === 'records') renderTable();
@@ -481,25 +485,69 @@ function renderKPI() {
     active.length ? `ยืมอยู่ ${active.length} เครื่อง · ว่าง ${equipStatus.length - active.length} เครื่อง` : 'เครื่องที่ยืมอยู่และว่าง';
 }
 
-/* ============================================================ WARD CHART ============================================================ */
-function renderWardChart() {
-  const wardCount = {};
-  filteredRecords.forEach(r => {
-    const w = r['ตึก/Ward'] || 'ไม่ระบุ';
-    wardCount[w] = (wardCount[w] || 0) + 1;
+/* ============================================================ WARD VIEW ============================================================ */
+function initWardView() {
+  const sel = document.getElementById('wardViewSel');
+  const wards = [...new Set(allRecords.map(r => r['ตึก/Ward']).filter(Boolean))].sort();
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">— เลือกตึก/Ward —</option>' +
+    wards.map(w => `<option value="${w}"${w === prev ? ' selected' : ''}>${w}</option>`).join('');
+  renderWardDetail();
+}
+
+function renderWardDetail() {
+  const ward = document.getElementById('wardViewSel').value;
+  const body = document.getElementById('wardDetailBody');
+  if (!ward) { body.innerHTML = ''; return; }
+
+  // Build active borrows: pair ยืม/คืน per (equipment, number)
+  const groups = {};
+  allRecords.forEach(r => {
+    const eq  = r['ชื่อเครื่อง'] || r['อุปกรณ์'] || '';
+    const num = r['หมายเลข'] || '';
+    const key = eq + '|' + num;
+    if (!groups[key]) groups[key] = { eq, num, records: [] };
+    groups[key].records.push(r);
   });
-  const sorted = Object.entries(wardCount).sort((a,b) => b[1]-a[1]);
-  const max = sorted[0]?.[1] || 1;
-  const body = document.getElementById('wardChartBody');
-  if (!sorted.length) { body.innerHTML = '<div class="empty">ไม่มีข้อมูล</div>'; return; }
-  body.innerHTML = `<div class="ward-list">${
-    sorted.map(([name, cnt]) => `
-      <div class="ward-row">
-        <div class="ward-name" title="${name}">${name}</div>
-        <div class="ward-bar-wrap"><div class="ward-bar" style="width:${Math.round(cnt/max*100)}%"></div></div>
-        <div class="ward-count">${cnt}</div>
-      </div>`).join('')
-  }</div>`;
+
+  const active = [];
+  Object.values(groups).forEach(({ eq, num, records }) => {
+    records.sort((a, b) => (parseThaiDT(a) || 0) - (parseThaiDT(b) || 0));
+    // Walk records to find currently borrowed by this ward
+    let borrowRec = null;
+    records.forEach(r => {
+      const isBorrow = String(r['ประเภท (ยืม/คืน)']).includes('ยืม');
+      const isReturn = String(r['ประเภท (ยืม/คืน)']).includes('คืน');
+      if (isBorrow) borrowRec = r;
+      else if (isReturn) borrowRec = null;
+    });
+    if (borrowRec && (borrowRec['ตึก/Ward'] || '') === ward) {
+      active.push({ eq, num, rec: borrowRec });
+    }
+  });
+
+  if (!active.length) {
+    body.innerHTML = `<div class="card"><div class="card-body"><div class="empty">ไม่มีเครื่องที่ยืมอยู่ในขณะนี้</div></div></div>`;
+    return;
+  }
+
+  active.sort((a, b) => a.eq.localeCompare(b.eq, 'th') || String(a.num).localeCompare(String(b.num)));
+
+  body.innerHTML = `
+    <div class="card">
+      <div class="card-body">
+        <div style="font-size:13px;color:var(--muted);margin-bottom:12px">พบ <strong>${active.length}</strong> เครื่องที่ยืมอยู่</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          ${active.map(({ eq, num }) => {
+            return `<div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg);border-radius:10px;border:1.5px solid var(--border)">
+              <div style="width:44px;height:44px;border-radius:10px;background:#EFF6FF;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">📟</div>
+              <div style="flex:1;font-weight:700;font-size:14px">${eq}${num ? ` <span style="color:var(--primary)">No.${num}</span>` : ''}</div>
+              <div style="font-size:11px;font-weight:700;color:#DC2626;background:#FEF2F2;padding:4px 8px;border-radius:20px;white-space:nowrap">ยืมอยู่</div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+    </div>`;
 }
 
 /* ============================================================ EQUIPMENT STATUS ============================================================ */
