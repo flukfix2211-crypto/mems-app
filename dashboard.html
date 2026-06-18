@@ -999,26 +999,48 @@ function renderEquipStatus() {
     body.innerHTML = '<div class="empty" style="padding:16px 18px">ไม่มีข้อมูลสถานะเครื่อง</div>';
     return;
   }
+
   const borrowed = equipStatus.filter(e => e.isBorrowed);
   const returned = equipStatus.filter(e => !e.isBorrowed);
   count.textContent = `ยืมอยู่ ${borrowed.length} เครื่อง · ว่าง ${returned.length} เครื่อง`;
 
-  // show borrowed first
-  const sorted = [...borrowed, ...returned];
-  body.innerHTML = `<div class="equip-grid" style="padding:16px 18px">${
-    sorted.map(e => `
-      <div class="equip-card ${e.isBorrowed ? 'borrowed' : 'returned'}">
-        <div class="equip-name">${e.equipment}</div>
-        <div class="equip-num">#${e.number}</div>
-        <div class="equip-badge ${e.isBorrowed ? 'borrow' : 'return'}">
-          ${e.isBorrowed ? '🔴 ยืมอยู่' : '🟢 ว่าง'}
-        </div>
-        ${e.isBorrowed ? `
-          <div class="equip-ward">📍 ${e.ward}</div>
-          <div class="equip-who">👤 ${e.borrowedBy}</div>
-        ` : ''}
-      </div>
-    `).join('')
+  // จัดกลุ่มตามชื่อเครื่อง
+  const groups = {};
+  [...borrowed, ...returned].forEach(e => {
+    if (!groups[e.equipment]) groups[e.equipment] = [];
+    groups[e.equipment].push(e);
+  });
+
+  body.innerHTML = `<div style="padding:14px 16px;display:flex;flex-direction:column;gap:14px">${
+    Object.entries(groups).map(([name, items]) => {
+      const bCount = items.filter(e => e.isBorrowed).length;
+      const rCount = items.filter(e => !e.isBorrowed).length;
+      return `
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <div style="font-weight:800;font-size:14px">${name}</div>
+            <div style="font-size:11px;background:var(--al);color:var(--a);border-radius:20px;padding:2px 10px;font-weight:700">
+              ${items.length} เครื่อง
+            </div>
+            ${bCount ? `<div style="font-size:11px;background:#FEE2E2;color:#B91C1C;border-radius:20px;padding:2px 10px;font-weight:700">🔴 ยืม ${bCount}</div>` : ''}
+            ${rCount ? `<div style="font-size:11px;background:#DCFCE7;color:#166534;border-radius:20px;padding:2px 10px;font-weight:700">🟢 ว่าง ${rCount}</div>` : ''}
+          </div>
+          <div class="equip-grid">${
+            items.map(e => `
+              <div class="equip-card ${e.isBorrowed ? 'borrowed' : 'returned'}">
+                <div class="equip-num" style="font-weight:700">#${e.number}</div>
+                <div class="equip-badge ${e.isBorrowed ? 'borrow' : 'return'}">
+                  ${e.isBorrowed ? '🔴 ยืมอยู่' : '🟢 ว่าง'}
+                </div>
+                ${e.isBorrowed ? `
+                  <div class="equip-ward">📍 ${e.ward}</div>
+                  <div class="equip-who">👤 ${e.borrowedBy}</div>
+                ` : ''}
+              </div>
+            `).join('')
+          }</div>
+        </div>`;
+    }).join('')
   }</div>`;
 }
 
