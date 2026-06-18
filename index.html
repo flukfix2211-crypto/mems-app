@@ -809,22 +809,41 @@ async function handleSubmit() {
   };
 
   // submit one record per equipment number
+  let savedCount = 0;
   for (let i = 0; i < nums.length; i++) {
     btn.textContent = `กำลังบันทึก… (${i + 1}/${nums.length})`;
     const payload = { ...basePayload, equipmentNumber: nums[i] };
     if (SCRIPT_URL) {
       try {
-        await fetch(SCRIPT_URL, {
+        const res = await fetch(SCRIPT_URL, {
           method : 'POST',
-          mode   : 'no-cors',
+          mode   : 'cors',
           headers: { 'Content-Type': 'application/json' },
           body   : JSON.stringify(payload)
         });
-      } catch (e) { /* silent */ }
+        const json = await res.json().catch(() => ({}));
+        if (json.ok === false) throw new Error(json.error || 'บันทึกไม่สำเร็จ');
+        savedCount++;
+      } catch (err) {
+        // fallback: ลอง no-cors (ไม่อ่าน response แต่ยังส่งได้)
+        try {
+          await fetch(SCRIPT_URL, {
+            method : 'POST',
+            mode   : 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body   : JSON.stringify(payload)
+          });
+          savedCount++;
+        } catch (e2) {
+          console.error('บันทึกล้มเหลว:', e2);
+        }
+      }
+    } else {
+      savedCount++; // ไม่มี URL — นับว่าผ่าน (demo mode)
     }
   }
 
-  showSuccess({ ...basePayload, equipmentNumbers: nums });
+  showSuccess({ ...basePayload, equipmentNumbers: nums, savedCount });
 }
 
 function showSuccess(d) {
@@ -833,10 +852,13 @@ function showSuccess(d) {
   document.getElementById('sTitle').textContent = isBorrow ? 'บันทึกการยืมสำเร็จ!' : 'บันทึกการคืนสำเร็จ!';
   const nums = d.equipmentNumbers || [d.equipmentNumber];
   const numStr = nums.map((n, i) => `เครื่องที่ ${i+1}: <strong>#${n}</strong>`).join('<br>');
+  const savedNote = (d.savedCount !== undefined && d.savedCount < nums.length)
+    ? `<br><small style="color:#c0392b">⚠️ บันทึกได้ ${d.savedCount}/${nums.length} รายการ</small>`
+    : '';
   document.getElementById('sDetail').innerHTML  =
     `<strong>${d.equipment}</strong><br>${numStr}<br>` +
     `ตึก: <strong>${d.ward}</strong><br>` +
-    `โดย: <strong>${d.name}</strong>`;
+    `โดย: <strong>${d.name}</strong>${savedNote}`;
   document.getElementById('sTag').textContent = d.shift + '  ·  ' + new Date().toLocaleDateString('th-TH', { day:'numeric', month:'short', year:'numeric' });
   document.getElementById('successScreen').classList.add('show');
 }
