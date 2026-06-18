@@ -527,18 +527,10 @@ function renderWardDetail() {
       <div class="card-body">
         <div style="font-size:13px;color:var(--muted);margin-bottom:12px">พบ <strong>${active.length}</strong> เครื่องที่ยืมอยู่</div>
         <div style="display:flex;flex-direction:column;gap:10px">
-          ${active.map(({ eq, num, rec }) => {
-            const dt = parseThaiDT(rec);
-            const dtStr = dt ? dt.toLocaleDateString('th-TH', { day:'2-digit', month:'short', year:'2-digit' }) + ' ' +
-              dt.toLocaleTimeString('th-TH', { hour:'2-digit', minute:'2-digit' }) : '—';
-            const who = rec['ผู้บันทึก'] || rec['ชื่อผู้ยืม/คืน'] || '—';
+          ${active.map(({ eq, num }) => {
             return `<div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg);border-radius:10px;border:1.5px solid var(--border)">
               <div style="width:44px;height:44px;border-radius:10px;background:#EFF6FF;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">📟</div>
-              <div style="flex:1;min-width:0">
-                <div style="font-weight:700;font-size:14px">${eq} ${num ? `<span style="color:var(--primary)">#${num}</span>` : ''}</div>
-                <div style="font-size:12px;color:var(--muted);margin-top:2px">ยืมเมื่อ ${dtStr}</div>
-                <div style="font-size:12px;color:var(--muted)">👤 ${who}</div>
-              </div>
+              <div style="flex:1;font-weight:700;font-size:14px">${eq}${num ? ` <span style="color:var(--primary)">No.${num}</span>` : ''}</div>
               <div style="font-size:11px;font-weight:700;color:#DC2626;background:#FEF2F2;padding:4px 8px;border-radius:20px;white-space:nowrap">ยืมอยู่</div>
             </div>`;
           }).join('')}
