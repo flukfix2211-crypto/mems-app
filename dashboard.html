@@ -707,6 +707,107 @@ function renderRoundTable() {
   window._roundPrintData = { rows, ward, date, cnt };
 }
 
+async function renderC2Dashboard() {
+  const msg  = document.getElementById('c2DashMsg');
+  const grid = document.getElementById('c2DashGrid');
+  msg.textContent = 'กำลังโหลด…';
+  grid.innerHTML  = '';
+  try {
+    const url = new URL(SCRIPT_URL);
+    url.searchParams.set('action', 'c2status');
+    const res  = await fetch(url.toString(), { mode: 'cors' });
+    const data = await res.json();
+    msg.textContent = '';
+    const units    = data.units || [];
+    const borrowed = units.filter(u => u.isBorrowed).length;
+    const avail    = 60 - borrowed;
+    document.getElementById('c2DashSummary').innerHTML = `
+      <span class="rs-badge rs-use">🟢 ว่าง ${avail}</span>
+      <span class="rs-badge rs-lost">🔴 ยืมอยู่ ${borrowed}</span>`;
+    document.getElementById('navC2Desc').textContent =
+      `ยืมอยู่ ${borrowed} เครื่อง · ว่าง ${avail} เครื่อง`;
+    grid.innerHTML = units.map(u => `
+      <div class="c2d-btn ${u.isBorrowed ? 'c2d-borrowed' : 'c2d-avail'}"
+           title="${u.isBorrowed ? (u.ward+' '+u.borrowedBy) : 'ว่าง'}">
+        <div>No.${u.number}</div>
+        ${u.isBorrowed ? `<div style="font-size:9px">${u.ward||''}</div>` : ''}
+      </div>`).join('');
+  } catch (e) {
+    msg.textContent = '⚠️ โหลดไม่ได้';
+  }
+  buildC2MonthStats();
+}
+
+function buildC2MonthStats() {
+  const c2recs = allRecords.filter(r => String(r['ชื่อเครื่อง']).includes('C2'));
+  const months = [...new Set(c2recs.map(r => {
+    const s = String(r['วันที่']);
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s.slice(3);  // MM/YYYY
+    try { const d = new Date(s); return `${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`; } catch { return ''; }
+  }).filter(Boolean))].sort((a,b) => b.localeCompare(a));
+
+  const sel = document.getElementById('c2MonthSel');
+  sel.innerHTML = '<option value="">— เลือกเดือน —</option>' +
+    months.map(m => `<option value="${m}">${m}</option>`).join('');
+}
+
+function renderC2Stats() {
+  const month = document.getElementById('c2MonthSel').value;
+  const wrap  = document.getElementById('c2StatsWrap');
+  if (!month) { wrap.innerHTML = '<div class="empty">เลือกเดือนเพื่อดูสถิติ</div>'; return; }
+
+  const c2recs = allRecords.filter(r => {
+    if (!String(r['ชื่อเครื่อง']).includes('C2')) return false;
+    const s = String(r['วันที่']);
+    let m;
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) m = s.slice(3);
+    else try { const d = new Date(s); m = `${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`; } catch { return false; }
+    return m === month;
+  });
+
+  // Group by number, pair borrow/return
+  const byNum = {};
+  c2recs.forEach(r => {
+    const n = String(r['หมายเลขเครื่อง']);
+    if (!byNum[n]) byNum[n] = [];
+    byNum[n].push(r);
+  });
+
+  const rows = [];
+  Object.entries(byNum).forEach(([num, recs]) => {
+    let borrows = 0, returns = 0, totalHrs = 0, sessions = [];
+    let pending = null;
+    recs.forEach(r => {
+      const act = String(r['ประเภท (ยืม/คืน)']);
+      const ts  = new Date(r['Timestamp (ISO)'] || r['วันที่']);
+      if (act.includes('ยืม')) { pending = ts; borrows++; }
+      else if (act.includes('คืน')) {
+        returns++;
+        if (pending) {
+          const hrs = (ts - pending) / 3600000;
+          const days = hrs / 24;
+          totalHrs += hrs;
+          sessions.push({ hrs: Math.round(hrs*10)/10, days: Math.round(days*10)/10 });
+          pending = null;
+        }
+      }
+    });
+    rows.push({ num, borrows, returns, sessions, totalHrs: Math.round(totalHrs*10)/10 });
+  });
+
+  rows.sort((a,b) => +a.num - +b.num);
+  if (!rows.length) { wrap.innerHTML = '<div class="empty">ไม่มีข้อมูลเดือนนี้</div>'; return; }
+
+  wrap.innerHTML = `<div class="table-wrap"><table>
+    <thead><tr><th>No.</th><th>ยืม</th><th>คืน</th><th>รวมชั่วโมง</th><th>รายละเอียด</th></tr></thead>
+    <tbody>${rows.map(r => `<tr>
+      <td><strong>No.${r.num}</strong></td>
+      <td>${r.borrows}</td><td>${r.returns}</td>
+      <td>${r.totalHrs > 0 ? r.totalHrs+' ชม.' : '—'}</td>
+      <td style="font-size:12px;color:var(--muted)">${r.sessions.map((s,i)=>`ครั้ง${i+1}: ${s.days>0?s.days+'วัน ':''} ${s.hrs}ชม.`).join(', ')||'—'}</td>
+    </tr>`).join('')}</tbody></table></div>`;
+}
+
 function printRoundReport() {
   const { rows, ward, date, cnt } = window._roundPrintData || {};
   if (!rows || !rows.length) return;
