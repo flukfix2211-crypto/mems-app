@@ -241,7 +241,7 @@ function getRoundHistory(ward, equipmentType) {
     const status  = String(r[10]);
 
     if (!action.includes('Round')) return;
-    if (equipmentType && equip !== equipmentType) return;
+    if (equipmentType && !equip.includes(equipmentType)) return;
     if (ward && w !== ward) return;
 
     // rows เรียงเก่า→ใหม่ ดังนั้นเขียนทับได้เรื่อยๆ เพื่อเก็บล่าสุด
