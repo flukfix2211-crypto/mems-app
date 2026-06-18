@@ -473,11 +473,12 @@
   <div class="card" style="margin-bottom:16px">
     <div class="card-head">
       📋 สถานะเครื่องปัจจุบัน
-      <span id="equipStatusCount" style="font-size:12px;font-weight:400;color:var(--muted)"></span>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span id="equipStatusCount" style="font-size:12px;font-weight:400;color:var(--muted)"></span>
+        <button onclick="toggleSection('equipStatusBody','equipStatusBtn',renderEquipStatus)" id="equipStatusBtn" class="btn-toggle">ดู ▾</button>
+      </div>
     </div>
-    <div class="card-body" id="equipStatusBody">
-      <div class="state-loading"><div class="spinner"></div>กำลังโหลด…</div>
-    </div>
+    <div id="equipStatusBody" style="display:none"></div>
   </div>
 
   <!-- RECORDS TABLE -->
@@ -713,6 +714,7 @@ function renderAll() {
   if (isOpen('equipChartBody')) renderEquipChart();
   if (isOpen('shiftChartBody')) renderShiftChart();
   if (isOpen('trendChartBody')) renderTrendChart();
+  if (isOpen('equipStatusBody')) renderEquipStatus();
   if (isOpen('wardCardsBody'))  renderWardCards();
 }
 
@@ -972,7 +974,7 @@ function renderEquipStatus() {
   const body  = document.getElementById('equipStatusBody');
   const count = document.getElementById('equipStatusCount');
   if (!equipStatus.length) {
-    body.innerHTML = '<div class="empty">ไม่มีข้อมูลสถานะเครื่อง</div>';
+    body.innerHTML = '<div class="empty" style="padding:16px 18px">ไม่มีข้อมูลสถานะเครื่อง</div>';
     return;
   }
   const borrowed = equipStatus.filter(e => e.isBorrowed);
@@ -981,7 +983,7 @@ function renderEquipStatus() {
 
   // show borrowed first
   const sorted = [...borrowed, ...returned];
-  body.innerHTML = `<div class="equip-grid">${
+  body.innerHTML = `<div class="equip-grid" style="padding:16px 18px">${
     sorted.map(e => `
       <div class="equip-card ${e.isBorrowed ? 'borrowed' : 'returned'}">
         <div class="equip-name">${e.equipment}</div>
