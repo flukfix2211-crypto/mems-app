@@ -494,9 +494,8 @@ async function initWardView() {
     await loadAll();
   }
   const sel = document.getElementById('wardViewSel');
-  const fromEquip = equipStatus.filter(e => e.isBorrowed).map(e => e.ward).filter(Boolean);
-  const fromRecs  = allRecords.map(r => r['ตึก/Ward']).filter(Boolean);
-  const wards = [...new Set([...fromEquip, ...fromRecs])].sort();
+  // Only show wards that currently have borrowed equipment
+  const wards = [...new Set(equipStatus.filter(e => e.isBorrowed).map(e => e.ward).filter(Boolean))].sort();
   const prev = sel.value;
   sel.innerHTML = '<option value="">— เลือกตึก/Ward —</option>' +
     wards.map(w => `<option value="${w}"${w === prev ? ' selected' : ''}>${w}</option>`).join('');
