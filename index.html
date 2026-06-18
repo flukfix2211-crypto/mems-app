@@ -815,28 +815,16 @@ async function handleSubmit() {
     const payload = { ...basePayload, equipmentNumber: nums[i] };
     if (SCRIPT_URL) {
       try {
-        const res = await fetch(SCRIPT_URL, {
+        // text/plain ไม่ trigger preflight → ใช้ได้กับ GAS no-cors
+        await fetch(SCRIPT_URL, {
           method : 'POST',
-          mode   : 'cors',
-          headers: { 'Content-Type': 'application/json' },
+          mode   : 'no-cors',
+          headers: { 'Content-Type': 'text/plain' },
           body   : JSON.stringify(payload)
         });
-        const json = await res.json().catch(() => ({}));
-        if (json.ok === false) throw new Error(json.error || 'บันทึกไม่สำเร็จ');
         savedCount++;
-      } catch (err) {
-        // fallback: ลอง no-cors (ไม่อ่าน response แต่ยังส่งได้)
-        try {
-          await fetch(SCRIPT_URL, {
-            method : 'POST',
-            mode   : 'no-cors',
-            headers: { 'Content-Type': 'application/json' },
-            body   : JSON.stringify(payload)
-          });
-          savedCount++;
-        } catch (e2) {
-          console.error('บันทึกล้มเหลว:', e2);
-        }
+      } catch (e2) {
+        console.error('บันทึกล้มเหลว:', e2);
       }
     } else {
       savedCount++; // ไม่มี URL — นับว่าผ่าน (demo mode)

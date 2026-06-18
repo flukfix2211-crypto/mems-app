@@ -25,7 +25,13 @@ const SHEET_SUMMARY  = 'สรุปรายวัน'; // sheet สรุป�
 // ============================================================
 function doPost(e) {
   try {
-    const data = JSON.parse(e.postData.contents);
+    let data;
+    if (e.postData && e.postData.contents) {
+      data = JSON.parse(e.postData.contents);
+    } else {
+      // fallback: form-encoded (e.parameter)
+      data = e.parameter || {};
+    }
     const result = saveRecord(data);
     return jsonResponse({ ok: true, id: result.row, timestamp: result.timestamp });
   } catch (err) {
