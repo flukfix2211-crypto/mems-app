@@ -349,8 +349,19 @@
       <div class="sub">ระบบติดตามการยืม-คืนครุภัณฑ์การแพทย์</div>
     </div>
     <div class="header-right">
+      <!-- นาฬิกา + countdown -->
+      <div style="
+        background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);
+        border-radius:14px;padding:8px 16px;text-align:center;min-width:130px;
+      ">
+        <div id="dashClock" style="font-size:22px;font-weight:800;letter-spacing:.04em;font-variant-numeric:tabular-nums;line-height:1">00:00:00</div>
+        <div id="dashDate" style="font-size:11px;opacity:.75;margin-top:2px"></div>
+        <div style="margin-top:6px;height:3px;background:rgba(255,255,255,0.2);border-radius:3px;overflow:hidden">
+          <div id="refreshBar" style="height:100%;background:rgba(255,255,255,0.7);border-radius:3px;width:100%;transition:width 1s linear"></div>
+        </div>
+        <div id="nextRefresh" style="font-size:10px;opacity:.65;margin-top:3px">refresh ใน 30s</div>
+      </div>
       <span id="lastUpdated"></span>
-      <span id="nextRefresh" style="font-size:11px;opacity:.6"></span>
       <a href="index.html" class="btn-back">← กลับหน้าแบบฟอร์ม</a>
     </div>
   </div>
@@ -643,17 +654,38 @@ async function loadAll(silent = false) {
 }
 
 /* ============================================================
+   CLOCK
+   ============================================================ */
+function startClock() {
+  function tick() {
+    const now = new Date();
+    const hh  = String(now.getHours()).padStart(2,'0');
+    const mm  = String(now.getMinutes()).padStart(2,'0');
+    const ss  = String(now.getSeconds()).padStart(2,'0');
+    document.getElementById('dashClock').textContent = `${hh}:${mm}:${ss}`;
+    document.getElementById('dashDate').textContent  =
+      now.toLocaleDateString('th-TH', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
+  }
+  tick();
+  setInterval(tick, 1000);
+}
+startClock();
+
+/* ============================================================
    COUNTDOWN
    ============================================================ */
 let countdownTimer = null;
 function startCountdown() {
-  let sec = POLL_INTERVAL / 1000;
-  const el = document.getElementById('nextRefresh');
+  let total = POLL_INTERVAL / 1000;
+  let sec   = total;
+  const label = document.getElementById('nextRefresh');
+  const bar   = document.getElementById('refreshBar');
   clearInterval(countdownTimer);
   countdownTimer = setInterval(() => {
     sec--;
-    if (sec <= 0) { clearInterval(countdownTimer); el.textContent = ''; return; }
-    el.textContent = `· refresh ใน ${sec}s`;
+    if (sec <= 0) { clearInterval(countdownTimer); label.textContent = 'กำลังโหลด…'; bar.style.width = '0%'; return; }
+    label.textContent = `refresh ใน ${sec}s`;
+    bar.style.width   = `${(sec / total) * 100}%`;
   }, 1000);
 }
 
