@@ -525,10 +525,20 @@
   </div>
   </div>
 
-  <!-- C2 grid card (แสดงเมื่อเลือก C2) -->
+  <!-- C2 borrow: input number -->
+  <div id="c2BorrowCard" style="display:none">
+  <div class="card">
+    <div class="sec-label"><span class="req-dot"></span>กรอกหมายเลข C2</div>
+    <input id="c2BorrowInput" type="number" min="1" max="60" placeholder="เช่น 12" oninput="onC2BorrowInput()"
+      style="width:100%;padding:12px 14px;border:2px solid var(--border);border-radius:10px;font-family:inherit;font-size:18px;font-weight:700;outline:none;text-align:center">
+    <div style="font-size:12px;color:var(--muted);margin-top:6px;text-align:center">หมายเลข 1–60</div>
+  </div>
+  </div>
+
+  <!-- C2 return: grid selection -->
   <div id="c2GridCard" style="display:none">
   <div class="card">
-    <div class="sec-label"><span class="req-dot"></span>เลือกหมายเลข C2</div>
+    <div class="sec-label"><span class="req-dot"></span>เลือกหมายเลข C2 ที่ต้องการคืน</div>
     <div id="c2StatusMsg" style="font-size:13px;color:var(--muted);margin-bottom:6px"></div>
     <div id="c2Grid" class="c2-grid"></div>
     <div class="c2-sel-info" id="c2SelInfo"></div>
@@ -722,7 +732,7 @@ function setAction(a) {
   document.querySelectorAll('.action-btn').forEach(b => b.classList.remove('active'));
   document.querySelector('.action-btn.' + a).classList.add('active');
   document.body.className = 'mode-' + a;
-  if (S.equip === 'C2' && c2Status) { c2SelectedNums.clear(); renderC2Grid(); }
+  if (S.equip === 'C2') { c2SelectedNums.clear(); showC2Cards(); if (c2Status) renderC2Grid(); }
 }
 
 function setShift(s) {
@@ -748,8 +758,8 @@ function pickEquip(btn, e) {
   btn.classList.add('active');
   const isC2 = (e === 'C2');
   document.getElementById('normalNumCard').style.display = isC2 ? 'none' : '';
-  document.getElementById('c2GridCard').style.display    = isC2 ? '' : 'none';
-  if (isC2) { c2SelectedNums.clear(); loadC2Status(); }
+  if (isC2) { c2SelectedNums.clear(); showC2Cards(); loadC2Status(); }
+  else { document.getElementById('c2BorrowCard').style.display = 'none'; document.getElementById('c2GridCard').style.display = 'none'; }
 }
 
 function onWardChange(sel) {
@@ -834,6 +844,22 @@ async function loadC2Status() {
     msg.textContent = '⚠️ โหลดสถานะไม่ได้ กรอกหมายเลขเองด้านล่าง';
     document.getElementById('normalNumCard').style.display = '';
   }
+}
+
+function showC2Cards() {
+  const isReturn = (S.action === 'return');
+  document.getElementById('c2BorrowCard').style.display = isReturn ? 'none' : '';
+  document.getElementById('c2GridCard').style.display   = isReturn ? '' : 'none';
+  if (!isReturn) {
+    document.getElementById('c2BorrowInput').value = '';
+    c2SelectedNums.clear();
+  }
+}
+
+function onC2BorrowInput() {
+  const val = parseInt(document.getElementById('c2BorrowInput').value, 10);
+  c2SelectedNums.clear();
+  if (val >= 1 && val <= 60) c2SelectedNums.add(String(val));
 }
 
 function renderC2Grid() {
@@ -973,6 +999,7 @@ function resetForm() {
   resetEquipFields();
   c2SelectedNums.clear();
   document.getElementById('c2GridCard').style.display = 'none';
+  document.getElementById('c2BorrowCard').style.display = 'none';
   document.getElementById('normalNumCard').style.display = '';
   document.getElementById('wardSel').value = '';
   document.getElementById('otherWrap').classList.add('hidden');
