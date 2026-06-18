@@ -288,6 +288,30 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
+    /* ── WARD CARDS ── */
+    .ward-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 10px;
+    }
+    .ward-stat-card {
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      cursor: pointer;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .ward-stat-card:hover { border-color: var(--a); box-shadow: 0 2px 8px rgba(10,100,120,0.12); }
+    .ward-stat-card.active { border-color: var(--a); background: var(--al); }
+    .ward-stat-card.no-data { opacity: .5; }
+    .wsc-name  { font-weight: 700; font-size: 13px; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .wsc-stats { display: flex; gap: 8px; }
+    .wsc-stat  { flex: 1; text-align: center; }
+    .wsc-num   { font-size: 20px; font-weight: 800; line-height: 1; }
+    .wsc-lbl   { font-size: 10px; color: var(--muted); font-weight: 600; margin-top: 2px; text-transform: uppercase; }
+    .wsc-equip { font-size: 11px; color: var(--muted); margin-top: 6px; border-top: 1px solid var(--border); padding-top: 6px; }
+    .wsc-equip span { display: inline-block; background: #FEE2E2; color: #B91C1C; border-radius: 8px; padding: 1px 6px; font-size: 10px; font-weight: 700; margin: 1px; }
+
     /* ── TABS ── */
     .tabs { display: flex; gap: 4px; border-bottom: 2px solid var(--border); margin-bottom: 16px; }
     .tab {
@@ -338,6 +362,37 @@
     <label>หน่วยงาน</label>
     <select id="filterWard" onchange="applyFilters()">
       <option value="">ทั้งหมด</option>
+      <option>ER</option>
+      <option>อายุรกรรมหญิง (M.ญ)</option>
+      <option>EENT</option>
+      <option>ศัลยกรรมหญิง</option>
+      <option>ศัลยกรรมกระดูก</option>
+      <option>ศัลยกรรมชาย</option>
+      <option>อายุรกรรมชาย (M.ช)</option>
+      <option>Semi ICU</option>
+      <option>ICU 100 ปี</option>
+      <option>กจ.3</option>
+      <option>กจ.2</option>
+      <option>TM</option>
+      <option>เด็กล่าง</option>
+      <option>PICU</option>
+      <option>เด็กบน</option>
+      <option>ICU ญสส.</option>
+      <option>ห้องคลอด LR</option>
+      <option>หลังคลอด PP</option>
+      <option>ญสส.9</option>
+      <option>Premium ญสส.8</option>
+      <option>ICU.S</option>
+      <option>ICU Nuero</option>
+      <option>NICU</option>
+      <option>SNB</option>
+      <option>กจ.4</option>
+      <option>AIIR</option>
+      <option>สธ.7</option>
+      <option>สธ.6</option>
+      <option>ศูนย์เปล</option>
+      <option>เคมีบำบัด</option>
+      <option>อื่นๆ</option>
     </select>
     <button class="btn-refresh" id="refreshBtn" onclick="loadAll()">⟳ รีเฟรช</button>
   </div>
@@ -397,6 +452,17 @@
       <div class="card-body">
         <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
       </div>
+    </div>
+  </div>
+
+  <!-- WARD CARDS -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-head">
+      🏥 สรุปแต่ละหน่วยงาน
+      <span style="font-size:12px;font-weight:400;color:var(--muted)">คลิกเพื่อกรอง</span>
+    </div>
+    <div class="card-body" id="wardCardsBody">
+      <div class="state-loading"><div class="spinner"></div>กำลังโหลด…</div>
     </div>
   </div>
 
@@ -559,12 +625,22 @@ async function fetchGAS(action, params = {}) {
 /* ============================================================
    FILTER
    ============================================================ */
+const WARD_LIST = [
+  'ER','อายุรกรรมหญิง (M.ญ)','EENT','ศัลยกรรมหญิง','ศัลยกรรมกระดูก','ศัลยกรรมชาย',
+  'อายุรกรรมชาย (M.ช)','Semi ICU','ICU 100 ปี','กจ.3','กจ.2','TM','เด็กล่าง','PICU',
+  'เด็กบน','ICU ญสส.','ห้องคลอด LR','หลังคลอด PP','ญสส.9','Premium ญสส.8',
+  'ICU.S','ICU Nuero','NICU','SNB','กจ.4','AIIR','สธ.7','สธ.6','ศูนย์เปล','เคมีบำบัด'
+];
+
 function populateWardFilter() {
-  const wards = [...new Set(allRecords.map(r => r['ตึก/Ward']).filter(Boolean))].sort();
+  // merge WARD_LIST กับ ward จาก data (กรณีมีอื่นๆ)
+  const fromData = [...new Set(allRecords.map(r => r['ตึก/Ward']).filter(Boolean))];
+  const extra = fromData.filter(w => !WARD_LIST.includes(w));
+  const all = [...WARD_LIST, ...extra];
   const sel = document.getElementById('filterWard');
   const cur = sel.value;
   sel.innerHTML = '<option value="">ทั้งหมด</option>' +
-    wards.map(w => `<option value="${w}"${w===cur?' selected':''}>${w}</option>`).join('');
+    all.map(w => `<option value="${w}"${w===cur?' selected':''}>${w}</option>`).join('');
 }
 
 function getDateFilter() {
@@ -616,6 +692,7 @@ function onSearch() {
 function renderAll() {
   renderKPI();
   renderWardChart();
+  renderWardCards();
   renderEquipChart();
   renderShiftChart();
   renderTrendChart();
@@ -781,6 +858,69 @@ function renderTrendChart() {
       }
     }
   });
+}
+
+/* ============================================================
+   WARD CARDS
+   ============================================================ */
+function renderWardCards() {
+  const body = document.getElementById('wardCardsBody');
+  const activeWard = document.getElementById('filterWard').value;
+
+  // นับยืม/คืนต่อ ward จาก filteredRecords
+  const stats = {};
+  filteredRecords.forEach(r => {
+    const w = r['ตึก/Ward'] || 'ไม่ระบุ';
+    if (!stats[w]) stats[w] = { borrow: 0, return: 0 };
+    if (String(r['ประเภท (ยืม/คืน)']).includes('ยืม')) stats[w].borrow++;
+    else stats[w].return++;
+  });
+
+  // เครื่องที่ยืมอยู่ต่อ ward (จาก equipStatus)
+  const borrowedByWard = {};
+  equipStatus.filter(e => e.isBorrowed).forEach(e => {
+    if (!borrowedByWard[e.ward]) borrowedByWard[e.ward] = [];
+    borrowedByWard[e.ward].push(e.equipment);
+  });
+
+  // merge WARD_LIST + ward ที่มีข้อมูลจริง
+  const fromData = Object.keys(stats).filter(w => !WARD_LIST.includes(w));
+  const allWards = [...WARD_LIST, ...fromData];
+
+  body.innerHTML = `<div class="ward-cards-grid">${
+    allWards.map(w => {
+      const s = stats[w] || { borrow: 0, return: 0 };
+      const borrowed = borrowedByWard[w] || [];
+      const noData = s.borrow === 0 && s.return === 0;
+      const isActive = activeWard === w;
+      return `
+        <div class="ward-stat-card ${noData ? 'no-data' : ''} ${isActive ? 'active' : ''}"
+             onclick="filterByWard('${w}')">
+          <div class="wsc-name" title="${w}">${w}</div>
+          <div class="wsc-stats">
+            <div class="wsc-stat">
+              <div class="wsc-num" style="color:var(--green)">${s.borrow}</div>
+              <div class="wsc-lbl">ยืม</div>
+            </div>
+            <div class="wsc-stat">
+              <div class="wsc-num" style="color:var(--red)">${s.return}</div>
+              <div class="wsc-lbl">คืน</div>
+            </div>
+            <div class="wsc-stat">
+              <div class="wsc-num" style="color:#D97706">${borrowed.length}</div>
+              <div class="wsc-lbl">ค้างอยู่</div>
+            </div>
+          </div>
+          ${borrowed.length ? `<div class="wsc-equip">${[...new Set(borrowed)].map(e=>`<span>${e}</span>`).join('')}</div>` : ''}
+        </div>`;
+    }).join('')
+  }</div>`;
+}
+
+function filterByWard(w) {
+  const sel = document.getElementById('filterWard');
+  sel.value = (sel.value === w) ? '' : w; // คลิกซ้ำ = ล้าง filter
+  applyFilters();
 }
 
 /* ============================================================
