@@ -106,6 +106,9 @@
 
     /* LOADING */
     .loading { text-align: center; padding: 40px; color: var(--muted); }
+    .type-chip { padding:7px 16px; border:2px solid var(--border); border-radius:20px; font-family:'Sarabun',sans-serif; font-size:13px; font-weight:700; background:#fff; color:var(--muted); cursor:pointer; transition:all .2s; -webkit-tap-highlight-color:transparent; }
+    .type-chip.active { background:var(--a); border-color:var(--a); color:#fff; }
+    .type-chip:hover:not(.active) { border-color:var(--a); color:var(--a); }
     .spinner { display: inline-block; width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--a); border-radius: 50%; animation: spin .7s linear infinite; margin-bottom: 10px; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -165,6 +168,15 @@
       <option value="จำหน่าย">จำหน่าย</option>
     </select>
     <button class="add-btn" onclick="openModal()">＋ เพิ่มเครื่องใหม่</button>
+  </div>
+
+  <!-- TYPE FILTER CHIPS -->
+  <div id="typeChips" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+    <button class="type-chip active" onclick="setTypeFilter('',this)">ทั้งหมด</button>
+    <button class="type-chip" onclick="setTypeFilter('C2',this)">C2</button>
+    <button class="type-chip" onclick="setTypeFilter('Infusion Pump',this)">Infusion Pump</button>
+    <button class="type-chip" onclick="setTypeFilter('Syringe Pump',this)">Syringe Pump</button>
+    <button class="type-chip" onclick="setTypeFilter('อื่นๆ',this)">อื่นๆ</button>
   </div>
 
   <!-- TABLE -->
@@ -293,14 +305,24 @@
     document.getElementById('statSold').textContent   = sold;
   }
 
+  let currentTypeFilter = '';
+
+  function setTypeFilter(type, btn) {
+    currentTypeFilter = type;
+    document.querySelectorAll('.type-chip').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    applyFilter();
+  }
+
   function applyFilter() {
     const q  = document.getElementById('searchInput').value.toLowerCase();
     const st = document.getElementById('statusFilter').value;
     const filtered = allAssets.filter(a => {
-      const matchSt = !st || a.สถานะ === st;
-      const matchQ  = !q || [a['No.'], a.เลขครุภัณฑ์, a['S/N'], a.ID, a.ประเภท, a.หมายเหตุ]
+      const matchSt   = !st || a.สถานะ === st;
+      const matchType = !currentTypeFilter || String(a.ประเภท || '') === currentTypeFilter;
+      const matchQ    = !q || [a['No.'], a.เลขครุภัณฑ์, a['S/N'], a.ID, a.ประเภท, a.หมายเหตุ]
         .some(v => String(v || '').toLowerCase().includes(q));
-      return matchSt && matchQ;
+      return matchSt && matchType && matchQ;
     });
     renderTable(filtered);
   }
