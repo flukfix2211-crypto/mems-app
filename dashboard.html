@@ -74,9 +74,10 @@
     .nav-card:hover .nav-arrow { opacity: 1; transform: translateX(4px); }
 
     /* SECTION VIEWS */
-    .view { display: none; }
-    .view.active { display: block; }
-    #viewKpi.active { display: flex !important; flex-direction: column; }
+    .view { display: none; opacity: 0; transform: translateY(18px); }
+    .view.active { display: block; animation: viewIn .32s cubic-bezier(.4,0,.2,1) forwards; }
+    #viewKpi.active { display: flex !important; flex-direction: column; animation: viewIn .32s cubic-bezier(.4,0,.2,1) forwards; }
+    @keyframes viewIn { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
     .view-header { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
     .btn-view-back { padding: 8px 16px; background: var(--a); color: #fff; border: none; border-radius: 10px; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer; flex-shrink: 0; }
     .view-title { font-size: 18px; font-weight: 800; }
@@ -1787,5 +1788,22 @@ showView = function(name) {
     <div style="padding:12px 20px;border-top:1px solid #C5E3ED;text-align:center;font-size:11px;color:#6A8A96;flex-shrink:0">MEMs v1.0 — งานศูนย์เครื่องมือแพทย์ โรงพยาบาลพหลพลพยุหเสนา</div>
   </div>
 </div>
+<style>
+  body { animation: pgIn .35s cubic-bezier(.4,0,.2,1) both; }
+  @keyframes pgIn { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:none; } }
+  .pg-out { animation: pgOut .25s cubic-bezier(.4,0,.2,1) forwards !important; }
+  @keyframes pgOut { to { opacity:0; transform:translateY(-10px); } }
+</style>
+<script>
+  document.addEventListener('click', function(e) {
+    const a = e.target.closest('a[href]');
+    if (!a) return;
+    const href = a.getAttribute('href');
+    if (!href || href.startsWith('#') || href.startsWith('javascript') || href.startsWith('http') || a.target === '_blank') return;
+    e.preventDefault();
+    document.body.classList.add('pg-out');
+    setTimeout(() => { location.href = href; }, 240);
+  });
+</script>
 </body>
 </html>
