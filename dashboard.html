@@ -718,10 +718,11 @@ function renderTable() {
     return;
   }
   wrap.innerHTML = `<table>
-    <thead><tr><th>#</th><th>วันที่</th><th>เวลา</th><th>เวร</th><th>ประเภท</th><th>เครื่อง</th><th>หมายเลข</th><th>หน่วยงาน</th><th>ผู้บันทึก</th></tr></thead>
+    <thead><tr><th>#</th><th>วันที่</th><th>เวลา</th><th>เวร</th><th>ประเภท</th><th>เครื่อง</th><th>หมายเลข</th><th>หน่วยงาน</th><th>ผู้บันทึก</th><th></th></tr></thead>
     <tbody>${paged.map((r,i) => {
       const isBorrow = String(r['ประเภท (ยืม/คืน)']).includes('ยืม');
-      return `<tr>
+      const rowIdx   = r['_rowIndex'];
+      return `<tr id="rec-row-${rowIdx}">
         <td>${start+i+1}</td>
         <td>${fmtDate(r['วันที่'])}</td>
         <td>${fmtTime(r['เวลา'])}</td>
@@ -731,6 +732,7 @@ function renderTable() {
         <td>${r['หมายเลขเครื่อง']||''}</td>
         <td>${r['ตึก/Ward']||''}</td>
         <td>${r['ชื่อผู้ยืม']||''}</td>
+        <td><button onclick="confirmDelete(${rowIdx},'${(r['ชื่อเครื่อง']||'').replace(/'/g,"\\'")} ${r['หมายเลขเครื่อง']||''}')" style="padding:4px 10px;background:#FDEAEA;color:#B82E2E;border:1.5px solid #f8c8c8;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s" onmouseover="this.style.background='#B82E2E';this.style.color='#fff'" onmouseout="this.style.background='#FDEAEA';this.style.color='#B82E2E'">ลบ</button></td>
       </tr>`;
     }).join('')}</tbody></table>`;
   const totalPages = Math.ceil(total / PAGE_SIZE);
@@ -738,6 +740,41 @@ function renderTable() {
     <button onclick="goPage(${currentPage-1})" ${currentPage===0?'disabled':''}>← ก่อนหน้า</button>
     <span>หน้า ${currentPage+1} / ${totalPages} (${total} รายการ)</span>
     <button onclick="goPage(${currentPage+1})" ${currentPage>=totalPages-1?'disabled':''}>ถัดไป →</button>`;
+}
+
+async function confirmDelete(rowIndex, label) {
+  if (!confirm(`ลบรายการ "${label}" ?\n\nรายการนี้จะถูกลบออกจาก Google Sheets ถาวร`)) return;
+  const row = document.getElementById('rec-row-' + rowIndex);
+  if (row) row.style.opacity = '0.4';
+  try {
+    const res = await fetch(SCRIPT_URL, {
+      method: 'POST', mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'delete', rowIndex })
+    });
+    // no-cors → ไม่มี response body → รอแล้วรีโหลด
+    allRecords = allRecords.filter(r => r['_rowIndex'] !== rowIndex);
+    filteredRecords = filteredRecords.filter(r => r['_rowIndex'] !== rowIndex);
+    renderTable();
+    showToast('ลบรายการเรียบร้อยแล้ว');
+  } catch (err) {
+    if (row) row.style.opacity = '1';
+    showToast('เกิดข้อผิดพลาด: ' + err.message);
+  }
+}
+
+function showToast(msg) {
+  let t = document.getElementById('deleteToast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'deleteToast';
+    t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:#192D35;color:#fff;padding:11px 22px;border-radius:40px;font-size:14px;font-weight:600;opacity:0;transition:all .3s ease;z-index:9999;pointer-events:none;white-space:nowrap';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1'; t.style.transform = 'translateX(-50%) translateY(0)';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.style.opacity='0'; t.style.transform='translateX(-50%) translateY(20px)'; }, 3000);
 }
 
 function goPage(p) { currentPage = p; renderTable(); document.getElementById('tableWrap').scrollIntoView({ behavior: 'smooth', block: 'start' }); }

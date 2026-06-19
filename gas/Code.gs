@@ -29,14 +29,30 @@ function doPost(e) {
     if (e.postData && e.postData.contents) {
       data = JSON.parse(e.postData.contents);
     } else {
-      // fallback: form-encoded (e.parameter)
       data = e.parameter || {};
     }
+
+    if (data.action === 'delete') {
+      deleteRecord(parseInt(data.rowIndex, 10));
+      return jsonResponse({ ok: true });
+    }
+
     const result = saveRecord(data);
     return jsonResponse({ ok: true, id: result.row, timestamp: result.timestamp });
   } catch (err) {
     return jsonResponse({ ok: false, error: err.message }, 500);
   }
+}
+
+// ============================================================
+// deleteRecord — ลบแถวออกจาก Sheet
+// ============================================================
+function deleteRecord(sheetRow) {
+  if (!sheetRow || sheetRow < 2) throw new Error('rowIndex ไม่ถูกต้อง');
+  const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(SHEET_BORROW);
+  if (!sheet) throw new Error('ไม่พบ Sheet: ' + SHEET_BORROW);
+  sheet.deleteRow(sheetRow);
 }
 
 // ============================================================
@@ -156,25 +172,27 @@ function getRecords(limit, offset, filter) {
   const dataRange = sheet.getRange(2, 1, sheet.getLastRow() - 1, 12);
   let rows = dataRange.getValues();
 
+  // แนบ rowIndex จริง (เลขแถวใน Sheet = index+2 เพราะ header อยู่แถว 1)
+  let indexed = rows.map((row, i) => ({ row, sheetRow: i + 2 }));
+
   // กรองข้อมูล
   if (filter) {
     const f = filter.toLowerCase();
-    rows = rows.filter(r =>
+    indexed = indexed.filter(({ row: r }) =>
       r.some(cell => String(cell).toLowerCase().includes(f))
     );
   }
 
   // เรียงจากใหม่ไปเก่า
-  rows.reverse();
+  indexed.reverse();
 
-  const total = rows.length;
-  const paged = rows.slice(offset, offset + limit);
+  const total = indexed.length;
+  const paged = indexed.slice(offset, offset + limit);
 
-  const records = paged.map(row => {
-    const obj = {};
+  const records = paged.map(({ row, sheetRow }) => {
+    const obj = { _rowIndex: sheetRow };
     COLS.forEach((h, i) => {
       let val = row[i];
-      // แปลง Date object → string ในรูปแบบที่ใช้งานได้
       if (val instanceof Date) {
         if (h === 'วันที่') {
           val = Utilities.formatDate(val, 'Asia/Bangkok', 'dd/MM/yyyy');
