@@ -603,14 +603,14 @@ function renderKPI() {
   const todayStr = `${dd}/${mm}/${today.getFullYear()}`;
   const bToday = borrows.filter(r => r['วันที่'] === todayStr).length;
   const rToday = returns.filter(r => r['วันที่'] === todayStr).length;
-  document.getElementById('kpiBorrow').textContent = borrows.length;
-  document.getElementById('kpiReturn').textContent = returns.length;
-  document.getElementById('kpiActive').textContent = active.length;
-  document.getElementById('kpiWards').textContent  = wards.size;
-  document.getElementById('kpiBorrowToday').textContent = bToday ? `วันนี้ ${bToday} รายการ` : '';
-  document.getElementById('kpiReturnToday').textContent = rToday ? `วันนี้ ${rToday} รายการ` : '';
-  document.getElementById('navStatusDesc').textContent =
-    active.length ? `ยืมอยู่ ${active.length} เครื่อง · ว่าง ${equipStatus.length - active.length} เครื่อง` : 'เครื่องที่ยืมอยู่และว่าง';
+  document.getElementById('kpiBorrow') && (document.getElementById('kpiBorrow').textContent = borrows.length);
+  document.getElementById('kpiReturn') && (document.getElementById('kpiReturn').textContent = returns.length);
+  document.getElementById('kpiActive') && (document.getElementById('kpiActive').textContent = active.length);
+  document.getElementById('kpiWards')  && (document.getElementById('kpiWards').textContent  = wards.size);
+  document.getElementById('kpiBorrowToday') && (document.getElementById('kpiBorrowToday').textContent = bToday ? `วันนี้ ${bToday} รายการ` : '');
+  document.getElementById('kpiReturnToday') && (document.getElementById('kpiReturnToday').textContent = rToday ? `วันนี้ ${rToday} รายการ` : '');
+  document.getElementById('navStatusDesc') && (document.getElementById('navStatusDesc').textContent =
+    active.length ? `ยืมอยู่ ${active.length} เครื่อง · ว่าง ${equipStatus.length - active.length} เครื่อง` : 'เครื่องที่ยืมอยู่และว่าง');
 }
 
 /* ============================================================ WARD VIEW ============================================================ */
@@ -755,7 +755,7 @@ function fmtTime(val) {
   } catch { return s; }
 }
 
-function getRoundStatus(r) { return r['สถานะ Round'] || r[''] || ''; }
+function getRoundStatus(r) { return r['สถานะ Round'] || ''; }
 
 function populateRoundFilters() {
   const records = getRoundRecords();
@@ -783,7 +783,7 @@ function renderRoundTable() {
   rows.forEach(r => {
     const s = getRoundStatus(r);
     if (s.includes('ใช้งานอยู่'))    cnt.use++;
-    else if (s.includes('ไม่ได้ใช้')) cnt.idle++;
+    else if (s.includes('ไม่ได้ใช้งาน')) cnt.idle++;
     else if (s.includes('ชำรุด'))     cnt.broken++;
     else if (s.includes('สูญหาย'))    cnt.lost++;
   });
@@ -803,14 +803,14 @@ function renderRoundTable() {
     <thead><tr><th>วันที่</th><th>หน่วยงาน</th><th>เครื่อง No.</th><th>สถานะ</th><th>ผู้บันทึก</th><th>หมายเหตุ</th></tr></thead>
     <tbody>${rows.map(r => {
       const s = getRoundStatus(r);
-      const cls = s.includes('ใช้งานอยู่')?'rs-use': s.includes('ไม่ได้ใช้')?'rs-idle': s.includes('ชำรุด')?'rs-broken': s.includes('สูญหาย')?'rs-lost':'';
+      const cls = s.includes('ใช้งานอยู่')?'rs-use': s.includes('ไม่ได้ใช้งาน')?'rs-idle': s.includes('ชำรุด')?'rs-broken': s.includes('สูญหาย')?'rs-lost':'';
       return `<tr>
         <td>${fmtDate(r['วันที่'])}</td>
         <td>${r['ตึก/Ward']||''}</td>
         <td><strong>${r['หมายเลขเครื่อง']||'-'}</strong></td>
         <td><span class="rs-badge ${cls}">${s||'-'}</span></td>
         <td>${r['ชื่อผู้ยืม']||''}</td>
-        <td style="font-size:12px;color:var(--muted)">${r['หมายเหตุ']||r['']||''}</td>
+        <td style="font-size:12px;color:var(--muted)">${r['หมายเหตุ']||''}</td>
       </tr>`;
     }).join('')}</tbody></table>`;
 
@@ -1065,7 +1065,7 @@ function printRoundReport() {
       <tbody>${rows.map(r => `<tr>
         <td>${fmtDate(r['วันที่'])}</td><td>${r['ตึก/Ward']||''}</td>
         <td>${r['หมายเลขเครื่อง']||'-'}</td><td>${getRoundStatus(r)||'-'}</td>
-        <td>${r['ชื่อผู้ยืม']||''}</td><td>${r['หมายเหตุ']||r['']||''}</td>
+        <td>${r['ชื่อผู้ยืม']||''}</td><td>${r['หมายเหตุ']||''}</td>
       </tr>`).join('')}</tbody>
     </table>
     <div style="margin-top:30px;font-size:11px;color:#999">
