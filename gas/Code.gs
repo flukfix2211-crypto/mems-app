@@ -42,11 +42,35 @@ function doPost(e) {
       return jsonResponse({ ok: true });
     }
 
+    if (data.action === 'edit') {
+      editRecord(parseInt(data.rowIndex, 10), data.fields || {});
+      return jsonResponse({ ok: true });
+    }
+
     const result = saveRecord(data);
     return jsonResponse({ ok: true, id: result.row, timestamp: result.timestamp });
   } catch (err) {
     return jsonResponse({ ok: false, error: err.message }, 500);
   }
+}
+
+// ============================================================
+// editRecord — แก้ไขข้อมูลในแถวที่ระบุ
+// ============================================================
+function editRecord(sheetRow, fields) {
+  if (!sheetRow || sheetRow < 2) throw new Error('rowIndex ไม่ถูกต้อง');
+  const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(SHEET_BORROW);
+  if (!sheet) throw new Error('ไม่พบ Sheet: ' + SHEET_BORROW);
+
+  // คอลัมน์ที่สามารถแก้ไขได้ (index เริ่มจาก 1)
+  // col 4: เวร, col 7: หมายเลขเครื่อง, col 8: ตึก/Ward,
+  // col 9: ชื่อผู้บันทึก, col 11: สถานะ Round, col 12: หมายเหตุ
+  if (fields.shift       !== undefined && fields.shift       !== null) sheet.getRange(sheetRow, 4).setValue(fields.shift);
+  if (fields.ward        !== undefined && fields.ward        !== null) sheet.getRange(sheetRow, 8).setValue(fields.ward);
+  if (fields.name        !== undefined && fields.name        !== null) sheet.getRange(sheetRow, 9).setValue(fields.name);
+  if (fields.roundStatus !== undefined && fields.roundStatus !== null) sheet.getRange(sheetRow, 11).setValue(fields.roundStatus);
+  if (fields.note        !== undefined && fields.note        !== null) sheet.getRange(sheetRow, 12).setValue(fields.note);
 }
 
 // ============================================================
