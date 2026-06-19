@@ -155,7 +155,7 @@
     .c2d-btn { padding:8px 4px; border-radius:8px; border:2px solid; font-size:11px; font-weight:700; text-align:center; line-height:1.3; }
     .c2d-avail    { background:#DCF2E5; border-color:#86EFAC; color:#1A7B4A; }
     .c2d-borrowed { background:#FDEAEA; border-color:#FCA5A5; color:#B82E2E; }
-    .c2d-sold     { background:#FDEAEA; border-color:#FCA5A5; color:#B82E2E; opacity:.6; }
+    .c2d-sold     { background:#FDEAEA; border-color:#FCA5A5; color:#B82E2E; opacity:.55; }
     .c2d-repair   { background:#F0F0F0; border-color:#C0C0C0; color:#666; }
     .c2d-broken   { background:#FFF3CD; border-color:#FCD34D; color:#8B5000; }
 
@@ -1207,45 +1207,40 @@ async function renderC2Dashboard() {
   msg.textContent = 'กำลังโหลด…';
   grid.innerHTML  = '';
   try {
-    const [c2Res, assetRes] = await Promise.all([
-      fetch(new URL(SCRIPT_URL + '?action=c2status&t=' + Date.now())).then(r => r.json()),
-      fetch(new URL(SCRIPT_URL + '?action=assets&t=' + Date.now())).then(r => r.json()).catch(() => ({ assets: [] }))
+    const [c2Data, assetData] = await Promise.all([
+      fetch(`${SCRIPT_URL}?action=c2status&t=${Date.now()}`, { mode: 'cors' }).then(r => r.json()),
+      fetch(`${SCRIPT_URL}?action=assets&t=${Date.now()}`, { mode: 'cors' }).then(r => r.json()).catch(() => ({ assets: [] }))
     ]);
     msg.textContent = '';
-    const units  = c2Res.units || [];
-    const assets = (assetRes.assets || []);
-    // Map asset status by No.
+    const units = c2Data.units || [];
     const assetMap = {};
-    assets.forEach(a => { if (a['No.']) assetMap[String(a['No.'])] = a['สถานะ'] || 'ใช้งานได้'; });
+    (assetData.assets || []).forEach(a => { if (a['No.']) assetMap[String(a['No.'])] = a['สถานะ'] || 'ใช้งานได้'; });
+    window._c2AssetMap = assetMap;
 
-    let borrowed = 0, avail = 0, repair = 0, sold = 0;
+    let cntBorrow = 0, cntAvail = 0, cntRepair = 0, cntSold = 0;
     grid.innerHTML = units.map(u => {
-      const assetStatus = assetMap[String(u.number)] || 'ใช้งานได้';
-      let cls, label, icon = '', title = '';
-      if (assetStatus === 'จำหน่าย') {
-        cls = 'c2d-sold'; label = ''; icon = '❌'; title = 'จำหน่ายแล้ว'; sold++;
-      } else if (assetStatus === 'ส่งซ่อม' || assetStatus === 'ชำรุด') {
-        cls = 'c2d-repair'; label = ''; icon = '🔧'; title = assetStatus; repair++;
+      const as = assetMap[String(u.number)] || 'ใช้งานได้';
+      let cls, sub;
+      if (as === 'จำหน่าย') {
+        cls = 'c2d-sold'; sub = '<div style="font-size:13px">❌</div>'; cntSold++;
+      } else if (as === 'ส่งซ่อม' || as === 'ชำรุด') {
+        cls = 'c2d-repair'; sub = '<div style="font-size:13px">🔧</div>'; cntRepair++;
       } else if (u.isBorrowed) {
-        cls = 'c2d-borrowed'; label = `<div style="font-size:9px">${u.ward||''}</div>`; title = (u.ward||'') + ' ' + (u.borrowedBy||''); borrowed++;
+        cls = 'c2d-borrowed'; sub = `<div style="font-size:9px">${u.ward||''}</div>`; cntBorrow++;
       } else {
-        cls = 'c2d-avail'; label = ''; title = 'พร้อมใช้'; avail++;
+        cls = 'c2d-avail'; sub = ''; cntAvail++;
       }
-      return `<div class="c2d-btn ${cls}" title="${title}">
-        <div>No.${u.number}</div>${icon ? `<div style="font-size:13px">${icon}</div>` : label}
-      </div>`;
+      const tip = as==='จำหน่าย'?'จำหน่ายแล้ว': as==='ส่งซ่อม'||as==='ชำรุด'?as: u.isBorrowed?(u.ward+' '+u.borrowedBy):'พร้อมใช้';
+      return `<div class="c2d-btn ${cls}" title="${tip}"><div>No.${u.number}</div>${sub}</div>`;
     }).join('');
 
     document.getElementById('c2DashSummary').innerHTML = `
-      <span class="rs-badge rs-use">🟢 พร้อมใช้ ${avail}</span>
-      <span class="rs-badge rs-lost">🔴 ยืมอยู่ ${borrowed}</span>
-      <span class="rs-badge" style="background:#F0F0F0;color:#555">🔧 ซ่อม ${repair}</span>
-      <span class="rs-badge" style="background:#FDEAEA;color:#B82E2E">❌ จำหน่าย ${sold}</span>`;
+      <span class="rs-badge rs-use">🟢 พร้อมใช้ ${cntAvail}</span>
+      <span class="rs-badge rs-lost">🔴 ยืมอยู่ ${cntBorrow}</span>
+      <span class="rs-badge" style="background:#F0F0F0;color:#555;border-radius:20px;padding:4px 12px;font-size:13px;font-weight:700">🔧 ซ่อม ${cntRepair}</span>
+      <span class="rs-badge" style="background:#FDEAEA;color:#B82E2E;border-radius:20px;padding:4px 12px;font-size:13px;font-weight:700">❌ จำหน่าย ${cntSold}</span>`;
     document.getElementById('navC2Desc').textContent =
-      `ยืมอยู่ ${borrowed} · พร้อมใช้ ${avail} · ซ่อม ${repair} · จำหน่าย ${sold}`;
-
-    // เก็บ assetMap ไว้ใช้ใน KPI slide
-    window._c2AssetMap = assetMap;
+      `พร้อมใช้ ${cntAvail} · ยืมอยู่ ${cntBorrow} · ซ่อม ${cntRepair} · จำหน่าย ${cntSold}`;
   } catch (e) {
     msg.textContent = '⚠️ โหลดไม่ได้';
   }
@@ -1628,26 +1623,25 @@ function renderKpiData() {
   // C2 grid
   const c2Borrowed = new Set(equipStatus.filter(e => e.isBorrowed && String(e.equipment).includes('C2')).map(e => String(e.number)));
   const assetMap = window._c2AssetMap || {};
-  let c2Html = '';
+  let c2Html = '', c2Borrow = 0, c2Avail = 0, c2Repair = 0, c2Sold = 0;
   for (let i = 1; i <= 60; i++) {
-    const key = String(i);
-    const as = assetMap[key] || 'ใช้งานได้';
-    const b  = c2Borrowed.has(key);
-    let bg, border, color, text = String(i);
+    const as = assetMap[String(i)] || 'ใช้งานได้';
+    const b  = c2Borrowed.has(String(i));
+    let bg, border, shadow, color, inner;
     if (as === 'จำหน่าย') {
-      bg = 'rgba(239,68,68,.25)'; border = 'rgba(239,68,68,.4)'; color = 'rgba(255,255,255,.5)'; text = '✕';
+      bg='rgba(239,68,68,.18)'; border='rgba(239,68,68,.35)'; shadow=''; color='rgba(239,68,68,.5)'; inner=`${i}<br><span style="font-size:9px">✕</span>`; c2Sold++;
     } else if (as === 'ส่งซ่อม' || as === 'ชำรุด') {
-      bg = 'rgba(150,150,150,.3)'; border = 'rgba(150,150,150,.4)'; color = 'rgba(255,255,255,.4)'; text = '🔧';
+      bg='rgba(160,160,160,.2)'; border='rgba(160,160,160,.35)'; shadow=''; color='rgba(255,255,255,.35)'; inner=`${i}<br><span style="font-size:9px">🔧</span>`; c2Repair++;
     } else if (b) {
-      bg = '#ef4444'; border = 'rgba(239,68,68,.6)'; color = '#fff';
+      bg='#ef4444'; border='rgba(239,68,68,.6)'; shadow='0 0 8px rgba(239,68,68,.4)'; color='#fff'; inner=i; c2Borrow++;
     } else {
-      bg = 'rgba(34,197,94,.3)'; border = 'rgba(34,197,94,.2)'; color = 'rgba(255,255,255,.4)';
+      bg='rgba(34,197,94,.3)'; border='rgba(34,197,94,.2)'; shadow=''; color='rgba(255,255,255,.4)'; inner=i; c2Avail++;
     }
-    c2Html += `<div style="aspect-ratio:1;border-radius:6px;background:${bg};border:1px solid ${border};box-shadow:${b&&as==='ใช้งานได้'?'0 0 8px rgba(239,68,68,.4)':''};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:${color}">${text}</div>`;
+    c2Html += `<div style="aspect-ratio:1;border-radius:6px;background:${bg};border:1px solid ${border};box-shadow:${shadow};display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:${color};line-height:1.1">${inner}</div>`;
   }
   document.getElementById('kpiC2Grid').innerHTML = c2Html;
   const c2s = document.getElementById('kpiC2Summary');
-  if (c2s) c2s.textContent = `ยืมอยู่ ${c2Borrowed.size} เครื่อง · พร้อมใช้ ${60 - c2Borrowed.size - Object.values(assetMap).filter(s=>s==='จำหน่าย'||s==='ส่งซ่อม'||s==='ชำรุด').length} เครื่อง`;
+  if (c2s) c2s.textContent = `พร้อมใช้ ${c2Avail} · ยืมอยู่ ${c2Borrow} · ซ่อม ${c2Repair} · จำหน่าย ${c2Sold}`;
 
   // Recent
   const recent = [...allRecords].sort((a,b) => (parseThaiDT(b)||0) - (parseThaiDT(a)||0)).slice(0,6);
