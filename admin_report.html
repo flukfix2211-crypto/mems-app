@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="MEMs Admin">
+  <link rel="apple-touch-icon" href="icon.png">
+  <link rel="icon" type="image/png" href="icon.png">
+  <title>MEMs — รายงานประจำเดือน</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --a: #0A6478; --a2: #0E7D94; --al: #DAF0F5;
+      --bg: #EBF5F8; --card: #FFFFFF; --txt: #192D35;
+      --muted: #6A8A96; --border: #C5E3ED;
+      --green: #1A7B4A; --red: #B82E2E; --orange: #D97706;
+      --sh: 0 2px 12px rgba(10,100,120,0.10);
+      --r: 18px; --rs: 12px; --tr: 0.25s ease;
+    }
+    body {
+      font-family: 'Sarabun', -apple-system, sans-serif;
+      background: var(--bg); color: var(--txt);
+      min-height: 100vh; font-size: 15px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── HEADER ── */
+    .header {
+      background: linear-gradient(145deg, var(--a) 0%, var(--a2) 100%);
+      color: #fff; padding: 20px 20px 22px;
+    }
+    .header-inner {
+      max-width: 860px; margin: 0 auto;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    }
+    .header h1 { font-size: 20px; font-weight: 800; }
+    .header .sub { font-size: 12px; opacity: .7; margin-top: 3px; }
+    .header-right { display: flex; align-items: center; gap: 10px; }
+    .btn-back {
+      font-size: 13px; font-weight: 700; color: #fff; text-decoration: none;
+      background: rgba(255,255,255,.18); padding: 7px 14px;
+      border-radius: 20px; white-space: nowrap;
+      border: 1.5px solid rgba(255,255,255,.3);
+    }
+    .hosp-sub { font-size: 11px; opacity: .65; margin-top: 1px; }
+
+    /* ── MAIN ── */
+    .main { max-width: 860px; margin: 0 auto; padding: 28px 16px 80px; }
+
+    /* ── SECTION LABEL ── */
+    .section-label {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .08em; color: var(--muted); margin: 0 0 14px;
+    }
+
+    /* ── ACTION CARDS ── */
+    .action-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 14px; margin-bottom: 32px;
+    }
+    .action-card {
+      background: var(--card); border-radius: var(--r); box-shadow: var(--sh);
+      padding: 24px 20px; border: 2px solid transparent;
+      transition: all var(--tr); cursor: pointer;
+      position: relative; overflow: hidden;
+    }
+    .action-card:hover { border-color: var(--a); transform: translateY(-2px); box-shadow: 0 8px 28px rgba(10,100,120,.15); }
+    .action-card.green:hover  { border-color: var(--green); }
+    .action-card.orange:hover { border-color: var(--orange); }
+    .action-card-icon {
+      width: 52px; height: 52px; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 26px; margin-bottom: 14px;
+    }
+    .action-card-icon.teal   { background: #DAF0F5; }
+    .action-card-icon.green  { background: #DCF2E5; }
+    .action-card-icon.orange { background: #FEF3C7; }
+    .action-card-title  { font-size: 16px; font-weight: 800; margin-bottom: 6px; }
+    .action-card-desc   { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 18px; }
+    .btn-action {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 20px; border-radius: 12px; border: none;
+      font-family: inherit; font-size: 14px; font-weight: 700;
+      cursor: pointer; transition: all var(--tr); width: 100%;
+      justify-content: center;
+    }
+    .btn-action.teal   { background: var(--a);     color: #fff; }
+    .btn-action.teal:hover   { background: var(--a2); }
+    .btn-action.green  { background: var(--green);  color: #fff; }
+    .btn-action.green:hover  { background: #1f9558; }
+    .btn-action.orange { background: var(--orange); color: #fff; }
+    .btn-action.orange:hover { background: #b45309; }
+    .btn-action:disabled { opacity: .55; cursor: not-allowed; }
+
+    /* ── SPINNER ── */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      display: inline-block; width: 16px; height: 16px;
+      border: 2.5px solid rgba(255,255,255,.4);
+      border-top-color: #fff; border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+
+    /* ── RESULT BOX ── */
+    .result-box {
+      display: none; background: var(--card); border-radius: var(--r);
+      box-shadow: var(--sh); padding: 20px 22px; margin-bottom: 32px;
+      border-left: 4px solid var(--a); animation: fadeIn .3s ease;
+    }
+    .result-box.visible { display: block; }
+    .result-box.success { border-left-color: var(--green); }
+    .result-box.error   { border-left-color: var(--red);   }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+    .result-title { font-size: 14px; font-weight: 800; margin-bottom: 10px; }
+    .result-box.success .result-title { color: var(--green); }
+    .result-box.error   .result-title { color: var(--red); }
+
+    .result-row { display: flex; gap: 10px; align-items: baseline; margin-bottom: 6px; }
+    .result-key { font-size: 13px; color: var(--muted); white-space: nowrap; min-width: 160px; }
+    .result-val { font-size: 14px; font-weight: 700; }
+
+    .drive-link {
+      display: inline-flex; align-items: center; gap: 8px;
+      margin-top: 14px; padding: 10px 18px; background: var(--al);
+      border-radius: 12px; color: var(--a); font-size: 14px; font-weight: 700;
+      text-decoration: none; border: 1.5px solid var(--border);
+      transition: all var(--tr);
+    }
+    .drive-link:hover { background: var(--a); color: #fff; }
+
+    /* ── HISTORY TABLE ── */
+    .history-card {
+      background: var(--card); border-radius: var(--r);
+      box-shadow: var(--sh); overflow: hidden;
+    }
+    .history-header {
+      padding: 16px 20px; border-bottom: 1.5px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .history-header h3 { font-size: 15px; font-weight: 800; }
+    .btn-refresh-hist {
+      padding: 6px 14px; background: var(--al); border: 1.5px solid var(--border);
+      border-radius: 10px; font-family: inherit; font-size: 12px; font-weight: 700;
+      color: var(--a); cursor: pointer; transition: all var(--tr);
+    }
+    .btn-refresh-hist:hover { background: var(--a); color: #fff; border-color: var(--a); }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 11px 16px; text-align: left; font-size: 13px; border-bottom: 1px solid var(--border); }
+    th { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); background: #F5FAFB; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #F0F9FC; }
+    .tag {
+      display: inline-block; padding: 3px 9px; border-radius: 20px;
+      font-size: 11px; font-weight: 700;
+    }
+    .tag.report  { background: #DAF0F5; color: #0A6478; }
+    .tag.exec    { background: #DCF2E5; color: #1A7B4A; }
+    .tag.pdf     { background: #FEF3C7; color: #D97706; }
+    .empty-state { padding: 40px; text-align: center; color: var(--muted); font-size: 14px; }
+
+    /* ── TOAST ── */
+    #toast {
+      position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px);
+      background: #192D35; color: #fff; padding: 12px 22px; border-radius: 40px;
+      font-size: 14px; font-weight: 600; opacity: 0;
+      transition: all .3s ease; z-index: 999; pointer-events: none; white-space: nowrap;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-inner">
+    <div>
+      <h1>📋 รายงานประจำเดือน</h1>
+      <div class="sub">MEMs — Medical Equipment Management Systems</div>
+      <div class="hosp-sub">โรงพยาบาลพหลพลพยุหเสนา จ.กาญจนบุรี</div>
+    </div>
+    <div class="header-right">
+      <a href="dashboard.html" class="btn-back">📊 แดชบอร์ด</a>
+      <a href="index.html" class="btn-back">← หน้าหลัก</a>
+    </div>
+  </div>
+</header>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- ── ACTION CARDS ── -->
+  <div class="section-label">เครื่องมือสร้างรายงาน</div>
+  <div class="action-grid">
+
+    <!-- การ์ด 1: สร้างรายงานประจำเดือน -->
+    <div class="action-card">
+      <div class="action-card-icon teal">📊</div>
+      <div class="action-card-title">สร้างรายงานประจำเดือน</div>
+      <div class="action-card-desc">
+        ดึงข้อมูลจากเดือนที่ผ่านมา สรุปการยืม-คืน อัตราการใช้งาน
+        และหน่วยงานที่ยืมมากที่สุด บันทึกลง Google Sheets อัตโนมัติ
+      </div>
+      <button class="btn-action teal" id="btnMonthly" onclick="runAction('monthly')">
+        <span id="iconMonthly">📊</span>
+        <span id="labelMonthly">สร้างรายงานประจำเดือน</span>
+      </button>
+    </div>
+
+    <!-- การ์ด 2: Export PDF -->
+    <div class="action-card">
+      <div class="action-card-icon orange">📄</div>
+      <div class="action-card-title">Export PDF</div>
+      <div class="action-card-desc">
+        แปลง Sheet รายงานล่าสุดเป็น PDF จัดหน้า A4 สวยงาม
+        บันทึกลง Google Drive ใน Folder MEMs_Reports
+        พร้อม Link ดาวน์โหลดทันที
+      </div>
+      <button class="btn-action orange" id="btnPDF" onclick="runAction('pdf')">
+        <span id="iconPDF">📄</span>
+        <span id="labelPDF">Export PDF</span>
+      </button>
+    </div>
+
+    <!-- การ์ด 3: สรุปผู้บริหาร -->
+    <div class="action-card">
+      <div class="action-card-icon green">🏆</div>
+      <div class="action-card-title">สรุปผู้บริหาร</div>
+      <div class="action-card-desc">
+        สรุปแบบ 1 หน้า อ่านได้ใน 30 วินาที แสดงตัวเลขสำคัญ:
+        ยอดรวม, อุปกรณ์ยอดนิยม, หน่วยงานที่ใช้มาก
+        และเครื่องที่ยังค้างอยู่
+      </div>
+      <button class="btn-action green" id="btnExec" onclick="runAction('exec')">
+        <span id="iconExec">🏆</span>
+        <span id="labelExec">สรุปผู้บริหาร</span>
+      </button>
+    </div>
+
+  </div>
+
+  <!-- ── RESULT BOX ── -->
+  <div id="resultBox" class="result-box">
+    <div class="result-title" id="resultTitle"></div>
+    <div id="resultBody"></div>
+  </div>
+
+  <!-- ── HISTORY ── -->
+  <div class="section-label" style="margin-top: 8px;">ประวัติรายงานที่สร้างล่าสุด</div>
+  <div class="history-card">
+    <div class="history-header">
+      <h3>ไฟล์รายงาน</h3>
+      <button class="btn-refresh-hist" onclick="loadHistory()">🔄 รีเฟรช</button>
+    </div>
+    <div id="historyBody">
+      <div class="empty-state">กำลังโหลด...</div>
+    </div>
+  </div>
+
+</main>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+  // ── CONFIG ──────────────────────────────────────────────────
+  // เปลี่ยนเป็น URL ของ Google Apps Script Web App ของคุณ
+  const SCRIPT_URL = 'YOUR_GAS_WEB_APP_URL_HERE';
+
+  // ── ประวัติในหน่วยความจำ (เซสชัน) ────────────────────────
+  const localHistory = JSON.parse(sessionStorage.getItem('memsReportHistory') || '[]');
+
+  // ── MAIN ACTION HANDLER ─────────────────────────────────────
+  async function runAction(type) {
+    const configs = {
+      monthly: {
+        btn: 'btnMonthly', icon: 'iconMonthly', label: 'labelMonthly',
+        action: 'monthlyReport', loadingText: 'กำลังสร้างรายงาน...',
+        tagClass: 'report', tagLabel: 'รายงานเดือน'
+      },
+      pdf: {
+        btn: 'btnPDF', icon: 'iconPDF', label: 'labelPDF',
+        action: 'exportPDF', loadingText: 'กำลัง Export PDF...',
+        tagClass: 'pdf', tagLabel: 'PDF'
+      },
+      exec: {
+        btn: 'btnExec', icon: 'iconExec', label: 'labelExec',
+        action: 'execSummary', loadingText: 'กำลังสร้างสรุปผู้บริหาร...',
+        tagClass: 'exec', tagLabel: 'สรุปผู้บริหาร'
+      }
+    };
+    const cfg = configs[type];
+
+    // แสดง loading
+    setLoading(cfg, true);
+    hideResult();
+
+    try {
+      const res = await callGAS(cfg.action);
+      setLoading(cfg, false);
+
+      if (!res.ok) {
+        showResult('error', '❌ เกิดข้อผิดพลาด', `<p style="color:var(--red);font-size:14px">${res.error || 'ไม่ทราบสาเหตุ'}</p>`);
+        toast('❌ ' + (res.error || 'เกิดข้อผิดพลาด'));
+        return;
+      }
+
+      // แสดงผลลัพธ์
+      showResultByType(type, res);
+
+      // บันทึก history
+      const entry = {
+        type: cfg.tagLabel, tagClass: cfg.tagClass,
+        name: res.sheetName || res.fileName || '-',
+        month: res.monthTH || '-',
+        fileUrl: res.fileUrl || res.viewUrl || null,
+        createdAt: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
+      };
+      localHistory.unshift(entry);
+      sessionStorage.setItem('memsReportHistory', JSON.stringify(localHistory.slice(0, 20)));
+      renderHistory();
+      toast('✅ ' + (res.message || 'สำเร็จ'));
+
+    } catch (err) {
+      setLoading(cfg, false);
+      showResult('error', '❌ ไม่สามารถเชื่อมต่อได้', `<p style="color:var(--red);font-size:14px">${err.message}</p>`);
+      toast('❌ เชื่อมต่อ GAS ไม่ได้');
+    }
+  }
+
+  // ── แสดงผลลัพธ์ตามประเภท ───────────────────────────────────
+  function showResultByType(type, res) {
+    if (type === 'monthly') {
+      const html = `
+        <div class="result-row"><span class="result-key">ชื่อ Sheet</span><span class="result-val">${res.sheetName}</span></div>
+        <div class="result-row"><span class="result-key">เดือน</span><span class="result-val">${res.monthTH}</span></div>
+        <div class="result-row"><span class="result-key">รายการยืมทั้งหมด</span><span class="result-val">${res.totalBorrow} ครั้ง</span></div>
+        <div class="result-row"><span class="result-key">รายการคืนทั้งหมด</span><span class="result-val">${res.totalReturn} ครั้ง</span></div>
+        <p style="margin-top:8px;font-size:13px;color:var(--muted)">เปิด Google Sheets เพื่อดูรายงาน หรือกด Export PDF ด้านบน</p>`;
+      showResult('success', '✅ สร้างรายงานสำเร็จ', html);
+    }
+    else if (type === 'pdf') {
+      const html = `
+        <div class="result-row"><span class="result-key">ชื่อไฟล์</span><span class="result-val">${res.fileName}</span></div>
+        <div class="result-row"><span class="result-key">บันทึกใน</span><span class="result-val">MEMs_Reports (Google Drive)</span></div>
+        <a href="${res.viewUrl}" target="_blank" class="drive-link">
+          📄 เปิด PDF ใน Google Drive →
+        </a>`;
+      showResult('success', '✅ Export PDF สำเร็จ', html);
+    }
+    else if (type === 'exec') {
+      const html = `
+        <div class="result-row"><span class="result-key">ชื่อ Sheet</span><span class="result-val">${res.sheetName}</span></div>
+        <div class="result-row"><span class="result-key">เดือน</span><span class="result-val">${res.monthTH}</span></div>
+        <div class="result-row"><span class="result-key">ยอดยืมทั้งหมด</span><span class="result-val">${res.totalBorrow} ครั้ง</span></div>
+        <div class="result-row"><span class="result-key">เครื่องค้างอยู่</span><span class="result-val">${res.stillBorrowed} เครื่อง</span></div>
+        <div class="result-row"><span class="result-key">อุปกรณ์ยอดนิยม</span><span class="result-val">${res.topEquip}</span></div>
+        <div class="result-row"><span class="result-key">หน่วยงานยืมมากสุด</span><span class="result-val">${res.topWard}</span></div>`;
+      showResult('success', '✅ สร้างสรุปผู้บริหารสำเร็จ', html);
+    }
+  }
+
+  // ── HELPERS ────────────────────────────────────────────────
+  async function callGAS(action) {
+    const url = SCRIPT_URL + '?action=' + encodeURIComponent(action);
+    const res  = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.json();
+  }
+
+  function setLoading(cfg, loading) {
+    const btn   = document.getElementById(cfg.btn);
+    const icon  = document.getElementById(cfg.icon);
+    const label = document.getElementById(cfg.label);
+    btn.disabled = loading;
+    if (loading) {
+      icon.outerHTML  = `<span id="${cfg.icon}" class="spinner"></span>`;
+      document.getElementById(cfg.label).textContent = cfg.loadingText;
+    } else {
+      // restore — spinner span may have new reference
+      const iconEl = document.getElementById(cfg.icon);
+      if (iconEl) iconEl.outerHTML = `<span id="${cfg.icon}"></span>`;
+      document.getElementById(cfg.label).textContent =
+        cfg.action === 'monthlyReport' ? 'สร้างรายงานประจำเดือน' :
+        cfg.action === 'exportPDF'     ? 'Export PDF' :
+                                         'สรุปผู้บริหาร';
+    }
+  }
+
+  function showResult(type, title, bodyHtml) {
+    const box = document.getElementById('resultBox');
+    box.className = 'result-box visible ' + type;
+    document.getElementById('resultTitle').textContent = title;
+    document.getElementById('resultBody').innerHTML = bodyHtml;
+    box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function hideResult() {
+    document.getElementById('resultBox').className = 'result-box';
+  }
+
+  function toast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 3000);
+  }
+
+  // ── HISTORY ────────────────────────────────────────────────
+  function loadHistory() { renderHistory(); }
+
+  function renderHistory() {
+    const body = document.getElementById('historyBody');
+    if (localHistory.length === 0) {
+      body.innerHTML = '<div class="empty-state">ยังไม่มีรายงาน<br>กดปุ่มด้านบนเพื่อสร้างรายงาน</div>';
+      return;
+    }
+    const rows = localHistory.map(h => `
+      <tr>
+        <td><span class="tag ${h.tagClass}">${h.type}</span></td>
+        <td>${h.name}</td>
+        <td>${h.month}</td>
+        <td>${h.createdAt}</td>
+        <td>
+          ${h.fileUrl
+            ? `<a href="${h.fileUrl}" target="_blank" style="color:var(--a);font-weight:700;text-decoration:none;font-size:13px">เปิด →</a>`
+            : '<span style="color:var(--muted);font-size:13px">—</span>'
+          }
+        </td>
+      </tr>`).join('');
+    body.innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>ประเภท</th><th>ชื่อไฟล์ / Sheet</th>
+            <th>เดือน</th><th>เวลา</th><th>ลิงก์</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  }
+
+  // ── INIT ───────────────────────────────────────────────────
+  renderHistory();
+</script>
+</body>
+</html>
