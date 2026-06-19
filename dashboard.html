@@ -710,19 +710,51 @@ function renderWardDetail() {
 
   body.innerHTML = `
     <div style="font-size:13px;color:var(--muted);margin-bottom:10px">พบ <strong>${active.length}</strong> เครื่องที่ยืมอยู่</div>
-    ${groupKeys.map(eq => `
+    ${groupKeys.map(eq => {
+      const items = groups[eq];
+      // หา _rowIndex ของรายการยืมล่าสุดของแต่ละเครื่องใน ward นี้
+      const withIdx = items.map(e => {
+        const rec = allRecords.find(r =>
+          String(r['ชื่อเครื่อง']) === e.equipment &&
+          String(r['หมายเลขเครื่อง']) === String(e.number) &&
+          r['ตึก/Ward'] === ward &&
+          String(r['ประเภท (ยืม/คืน)']).includes('ยืม')
+        );
+        return { e, rowIdx: rec ? rec['_rowIndex'] : null };
+      });
+      return `
       <div class="card" style="margin-bottom:12px">
         <div class="card-head" style="background:var(--al);font-size:14px">
-          📟 ${eq} <span style="font-size:12px;font-weight:400;color:var(--muted);margin-left:6px">${groups[eq].length} เครื่อง</span>
+          📟 ${eq} <span style="font-size:12px;font-weight:400;color:var(--muted);margin-left:6px">${items.length} เครื่อง</span>
         </div>
         <div class="card-body" style="display:flex;flex-direction:column;gap:8px">
-          ${groups[eq].map(e => `
+          ${withIdx.map(({ e, rowIdx }) => `
             <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--bg);border-radius:10px;border:1.5px solid var(--border)">
               <div style="flex:1;font-weight:700;font-size:14px">No.${e.number || '—'}</div>
               <div style="font-size:11px;font-weight:700;color:#DC2626;background:#FEF2F2;padding:4px 8px;border-radius:20px;white-space:nowrap">ยืมอยู่</div>
+              ${rowIdx ? `<button onclick="confirmDeleteWard(${rowIdx},'${eq} No.${e.number}')" style="padding:4px 10px;background:#FDEAEA;color:#B82E2E;border:1.5px solid #f8c8c8;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s" onmouseover="this.style.background='#B82E2E';this.style.color='#fff'" onmouseout="this.style.background='#FDEAEA';this.style.color='#B82E2E'">ลบ</button>` : ''}
             </div>`).join('')}
         </div>
-      </div>`).join('')}`;
+      </div>`;
+    }).join('')}`;
+}
+
+async function confirmDeleteWard(rowIndex, label) {
+  if (!confirm(`ลบรายการยืม "${label}" ?\n\nรายการนี้จะถูกลบออกจาก Google Sheets ถาวร`)) return;
+  try {
+    await fetch(SCRIPT_URL, {
+      method: 'POST', mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'delete', rowIndex })
+    });
+    allRecords      = allRecords.filter(r => r['_rowIndex'] !== rowIndex);
+    filteredRecords = filteredRecords.filter(r => r['_rowIndex'] !== rowIndex);
+    // อัปเดต equipStatus ด้วย (เอาออกจากรายการยืมอยู่)
+    renderWardDetail();
+    showToast('ลบรายการเรียบร้อยแล้ว');
+  } catch (err) {
+    showToast('❌ เกิดข้อผิดพลาด: ' + err.message);
+  }
 }
 
 /* ============================================================ EQUIPMENT STATUS ============================================================ */
@@ -974,10 +1006,11 @@ function renderRoundTable() {
   if (!rows.length) { wrap.innerHTML = '<div class="empty">ไม่พบข้อมูล Round</div>'; printWrap.style.display = 'none'; return; }
 
   wrap.innerHTML = `<table>
-    <thead><tr><th>วันที่</th><th>หน่วยงาน</th><th>เครื่อง No.</th><th>สถานะ</th><th>ผู้บันทึก</th><th>หมายเหตุ</th></tr></thead>
+    <thead><tr><th>วันที่</th><th>หน่วยงาน</th><th>เครื่อง No.</th><th>สถานะ</th><th>ผู้บันทึก</th><th>หมายเหตุ</th><th></th></tr></thead>
     <tbody>${rows.map(r => {
       const s = getRoundStatus(r);
       const cls = s.includes('ใช้งานอยู่')?'rs-use': s.includes('ไม่ได้ใช้งาน')?'rs-idle': s.includes('ชำรุด')?'rs-broken': s.includes('สูญหาย')?'rs-lost':'';
+      const rowIdx = r['_rowIndex'];
       return `<tr>
         <td>${fmtDate(r['วันที่'])}</td>
         <td>${r['ตึก/Ward']||''}</td>
@@ -985,11 +1018,29 @@ function renderRoundTable() {
         <td><span class="rs-badge ${cls}">${s||'-'}</span></td>
         <td>${r['ชื่อผู้ยืม']||''}</td>
         <td style="font-size:12px;color:var(--muted)">${r['หมายเหตุ']||''}</td>
+        <td>${rowIdx ? `<button onclick="confirmDeleteRound(${rowIdx},'${fmtDate(r['วันที่'])} ${r['ตึก/Ward']||''}')" style="padding:4px 10px;background:#FDEAEA;color:#B82E2E;border:1.5px solid #f8c8c8;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s" onmouseover="this.style.background='#B82E2E';this.style.color='#fff'" onmouseout="this.style.background='#FDEAEA';this.style.color='#B82E2E'">ลบ</button>` : ''}</td>
       </tr>`;
     }).join('')}</tbody></table>`;
 
   printWrap.style.display = 'block';
   window._roundPrintData = { rows, ward, date, cnt };
+}
+
+async function confirmDeleteRound(rowIndex, label) {
+  if (!confirm(`ลบบันทึก Round "${label}" ?\n\nรายการนี้จะถูกลบออกจาก Google Sheets ถาวร`)) return;
+  try {
+    await fetch(SCRIPT_URL, {
+      method: 'POST', mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'delete', rowIndex })
+    });
+    allRecords      = allRecords.filter(r => r['_rowIndex'] !== rowIndex);
+    filteredRecords = filteredRecords.filter(r => r['_rowIndex'] !== rowIndex);
+    renderRoundTable();
+    showToast('ลบบันทึก Round เรียบร้อยแล้ว');
+  } catch (err) {
+    showToast('❌ เกิดข้อผิดพลาด: ' + err.message);
+  }
 }
 
 async function printC2Stats() {
