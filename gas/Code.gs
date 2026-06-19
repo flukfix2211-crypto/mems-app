@@ -37,6 +37,11 @@ function doPost(e) {
       return jsonResponse({ ok: true });
     }
 
+    if (data.action === 'deleteBulk') {
+      deleteBulkRecords(data.rowIndexes || []);
+      return jsonResponse({ ok: true });
+    }
+
     const result = saveRecord(data);
     return jsonResponse({ ok: true, id: result.row, timestamp: result.timestamp });
   } catch (err) {
@@ -45,7 +50,7 @@ function doPost(e) {
 }
 
 // ============================================================
-// deleteRecord — ลบแถวออกจาก Sheet
+// deleteRecord — ลบแถวเดียว
 // ============================================================
 function deleteRecord(sheetRow) {
   if (!sheetRow || sheetRow < 2) throw new Error('rowIndex ไม่ถูกต้อง');
@@ -53,6 +58,25 @@ function deleteRecord(sheetRow) {
   const sheet = ss.getSheetByName(SHEET_BORROW);
   if (!sheet) throw new Error('ไม่พบ Sheet: ' + SHEET_BORROW);
   sheet.deleteRow(sheetRow);
+}
+
+// ============================================================
+// deleteBulkRecords — ลบหลายแถวพร้อมกัน
+// ต้องเรียงจากมากไปน้อย (bottom→top) เพื่อไม่ให้เลข row เลื่อน
+// ============================================================
+function deleteBulkRecords(rowIndexes) {
+  if (!rowIndexes || rowIndexes.length === 0) return;
+  const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(SHEET_BORROW);
+  if (!sheet) throw new Error('ไม่พบ Sheet: ' + SHEET_BORROW);
+
+  // เรียง descending เพื่อลบจากล่างขึ้นบน
+  const sorted = rowIndexes
+    .map(i => parseInt(i, 10))
+    .filter(i => i >= 2)
+    .sort((a, b) => b - a);
+
+  sorted.forEach(row => sheet.deleteRow(row));
 }
 
 // ============================================================

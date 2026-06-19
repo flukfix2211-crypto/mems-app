@@ -363,6 +363,39 @@
       <button class="btn-view-back" onclick="showView('home')">← กลับ</button>
       <div class="view-title">📝 รายการทั้งหมด</div>
     </div>
+
+    <!-- ── ลบแบบกลุ่ม ── -->
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-body" style="padding:16px 18px">
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:12px">🗑️ ลบรายการแบบกลุ่ม</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px">
+
+          <!-- ลบตามวัน -->
+          <div style="background:#FFF5F5;border:1.5px solid #F8C8C8;border-radius:12px;padding:14px">
+            <div style="font-size:13px;font-weight:800;color:#B82E2E;margin-bottom:8px">ลบตามวันที่</div>
+            <input type="date" id="delByDay" style="width:100%;padding:7px 10px;border:1.5px solid #F8C8C8;border-radius:8px;font-family:inherit;font-size:13px;margin-bottom:8px;background:#fff">
+            <button onclick="bulkDelete('day')" style="width:100%;padding:8px;background:#B82E2E;color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">ลบวันนี้</button>
+          </div>
+
+          <!-- ลบตามเดือน -->
+          <div style="background:#FFF5F5;border:1.5px solid #F8C8C8;border-radius:12px;padding:14px">
+            <div style="font-size:13px;font-weight:800;color:#B82E2E;margin-bottom:8px">ลบตามเดือน</div>
+            <input type="month" id="delByMonth" style="width:100%;padding:7px 10px;border:1.5px solid #F8C8C8;border-radius:8px;font-family:inherit;font-size:13px;margin-bottom:8px;background:#fff">
+            <button onclick="bulkDelete('month')" style="width:100%;padding:8px;background:#B82E2E;color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">ลบเดือนนี้</button>
+          </div>
+
+          <!-- ลบตามปี -->
+          <div style="background:#FFF5F5;border:1.5px solid #F8C8C8;border-radius:12px;padding:14px">
+            <div style="font-size:13px;font-weight:800;color:#B82E2E;margin-bottom:8px">ลบตามปี</div>
+            <select id="delByYear" style="width:100%;padding:7px 10px;border:1.5px solid #F8C8C8;border-radius:8px;font-family:inherit;font-size:13px;margin-bottom:8px;background:#fff"></select>
+            <button onclick="bulkDelete('year')" style="width:100%;padding:8px;background:#B82E2E;color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">ลบปีนี้</button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ตารางรายการ ── -->
     <div class="card">
       <div class="card-body">
         <div class="search-row">
@@ -595,6 +628,7 @@ async function fetchGAS(action, params = {}) {
 function applyFilters() {
   filteredRecords = allRecords.slice();
   currentPage = 0;
+  populateYearSelect();
   renderKPI();
   if (currentView !== 'home') showView(currentView);
 }
@@ -778,6 +812,83 @@ function showToast(msg) {
 }
 
 function goPage(p) { currentPage = p; renderTable(); document.getElementById('tableWrap').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+
+// ── populate year dropdown จาก allRecords ──────────────────
+function populateYearSelect() {
+  const sel = document.getElementById('delByYear');
+  if (!sel) return;
+  const years = new Set();
+  allRecords.forEach(r => {
+    const d = String(r['วันที่'] || '');
+    const m = d.match(/\d{4}/);
+    if (m) years.add(m[0]);
+  });
+  const sorted = [...years].sort((a, b) => b - a);
+  sel.innerHTML = sorted.length
+    ? sorted.map(y => `<option value="${y}">${y}</option>`).join('')
+    : '<option value="">ไม่มีข้อมูล</option>';
+}
+
+// ── ลบแบบกลุ่ม ──────────────────────────────────────────────
+async function bulkDelete(mode) {
+  let value, label, matchFn;
+
+  if (mode === 'day') {
+    value = document.getElementById('delByDay').value;        // yyyy-MM-dd
+    if (!value) { showToast('กรุณาเลือกวันที่'); return; }
+    const [y, m, d] = value.split('-');
+    const ddmmyyyy = `${d}/${m}/${y}`;
+    label = `วันที่ ${ddmmyyyy}`;
+    matchFn = r => String(r['วันที่'] || '').trim() === ddmmyyyy;
+  }
+  else if (mode === 'month') {
+    value = document.getElementById('delByMonth').value;      // yyyy-MM
+    if (!value) { showToast('กรุณาเลือกเดือน'); return; }
+    const [y, m] = value.split('-');
+    label = `เดือน ${m}/${y}`;
+    matchFn = r => {
+      const s = String(r['วันที่'] || '');
+      return s.startsWith(`${String(m).padStart(2,'0')}/${y}`) ||    // dd/MM/yyyy format check below
+             (s.length >= 7 && s.slice(3,5) === m && s.slice(6,10) === y);
+    };
+  }
+  else if (mode === 'year') {
+    value = document.getElementById('delByYear').value;
+    if (!value) { showToast('ไม่มีข้อมูลปีให้เลือก'); return; }
+    label = `ปี ${value}`;
+    matchFn = r => String(r['วันที่'] || '').includes(value);
+  }
+
+  const targets = allRecords.filter(matchFn);
+  if (targets.length === 0) { showToast('ไม่พบรายการใน' + label); return; }
+
+  if (!confirm(`ลบ ${targets.length} รายการใน${label} ?\n\nข้อมูลจะถูกลบออกจาก Google Sheets ถาวร`)) return;
+
+  // แสดง loading toast
+  showToast(`⏳ กำลังลบ ${targets.length} รายการ…`);
+
+  // ส่ง rowIndex ทั้งหมด (เรียงจากมากไปน้อยเพื่อไม่ให้แถวเลื่อน)
+  const rowIndexes = targets.map(r => r['_rowIndex']).sort((a, b) => b - a);
+
+  try {
+    await fetch(SCRIPT_URL, {
+      method: 'POST', mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'deleteBulk', rowIndexes })
+    });
+
+    // ลบออกจาก local cache
+    const delSet = new Set(rowIndexes);
+    allRecords       = allRecords.filter(r => !delSet.has(r['_rowIndex']));
+    filteredRecords  = filteredRecords.filter(r => !delSet.has(r['_rowIndex']));
+    currentPage      = 0;
+    renderTable();
+    populateYearSelect();
+    showToast(`✅ ลบ ${targets.length} รายการใน${label} เรียบร้อยแล้ว`);
+  } catch (err) {
+    showToast('❌ เกิดข้อผิดพลาด: ' + err.message);
+  }
+}
 
 /* ============================================================ ROUND ============================================================ */
 function getRoundRecords() { return allRecords.filter(r => String(r['ประเภท (ยืม/คืน)']).includes('Round')); }
