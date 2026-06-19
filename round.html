@@ -369,18 +369,31 @@
             <span class="prev-date">${dateText}</span>
           </div>` : ''}
         </div>
-        ${rowCount > 1 && !no ? `<button class="rm-btn" onclick="removeRow(${id})">✕</button>` : ''}
+        <button class="rm-btn" id="rmBtn_${id}" onclick="removeRow(${id})">✕</button>
       </div>
       <div class="status-grid">${stBtns}</div>
       <input type="hidden" id="pstatus_${id}" value="">
     `;
     document.getElementById('pumpList').appendChild(div);
     div.querySelectorAll('.pump-no-input').forEach(el => el.addEventListener('input', updateSummary));
+    resequenceRows();
   }
 
   function removeRow(id) {
     document.getElementById('prow_' + id).remove();
+    resequenceRows();
     updateSummary();
+  }
+
+  function resequenceRows() {
+    const rows = document.querySelectorAll('.pump-row');
+    rows.forEach((row, i) => {
+      const seq = row.querySelector('.pump-seq');
+      if (seq) seq.textContent = i + 1;
+      // ซ่อนปุ่มลบถ้าเหลือแถวเดียว
+      const btn = row.querySelector('.rm-btn');
+      if (btn) btn.style.display = rows.length > 1 ? '' : 'none';
+    });
   }
 
   function setStatus(id, key, btn) {
