@@ -209,7 +209,8 @@
         <div class="form-group">
           <div class="form-label">ประเภท</div>
           <select class="form-input" id="fType">
-            <option>Infusion Pump C2</option>
+            <option>Infusion Pump</option>
+            <option>C2</option>
             <option>Syringe Pump</option>
             <option>อื่นๆ</option>
           </select>
@@ -347,7 +348,7 @@
       document.getElementById('modalTitle').textContent = `แก้ไข No.${a['No.']}`;
       document.getElementById('editRowIndex').value = rowIndex;
       document.getElementById('fNo').value     = a['No.'] || '';
-      document.getElementById('fType').value   = a.ประเภท || 'Infusion Pump C2';
+      document.getElementById('fType').value   = a.ประเภท || 'Infusion Pump';
       document.getElementById('fAsset').value  = a.เลขครุภัณฑ์ || '';
       document.getElementById('fSN').value     = a['S/N'] || '';
       document.getElementById('fID').value     = a.ID || '';
@@ -357,7 +358,7 @@
       document.getElementById('modalTitle').textContent = 'เพิ่มเครื่องใหม่';
       document.getElementById('editRowIndex').value = '';
       ['fNo','fAsset','fSN','fID','fNote'].forEach(id => document.getElementById(id).value = '');
-      document.getElementById('fType').value   = 'Infusion Pump C2';
+      document.getElementById('fType').value   = 'Infusion Pump';
       document.getElementById('fStatus').value = 'ใช้งานได้';
     }
     modal.classList.add('show');
