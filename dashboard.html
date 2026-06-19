@@ -1569,7 +1569,15 @@ function startKpiClock() {
   kpiClockTimer = setInterval(tick, 1000);
 }
 
-function renderKpiData() {
+async function renderKpiData() {
+  if (!window._c2AssetMap) {
+    try {
+      const ad = await fetch(`${SCRIPT_URL}?action=assets&t=${Date.now()}`, { mode: 'cors' }).then(r => r.json());
+      const m = {};
+      (ad.assets || []).forEach(a => { if (a['No.']) m[String(a['No.'])] = a['สถานะ'] || 'ใช้งานได้'; });
+      window._c2AssetMap = m;
+    } catch(e) { window._c2AssetMap = {}; }
+  }
   const today = new Date();
   const dd = String(today.getDate()).padStart(2,'0');
   const mm = String(today.getMonth()+1).padStart(2,'0');
@@ -1641,7 +1649,11 @@ function renderKpiData() {
   }
   document.getElementById('kpiC2Grid').innerHTML = c2Html;
   const c2s = document.getElementById('kpiC2Summary');
-  if (c2s) c2s.textContent = `พร้อมใช้ ${c2Avail} · ยืมอยู่ ${c2Borrow} · ซ่อม ${c2Repair} · จำหน่าย ${c2Sold}`;
+  if (c2s) c2s.innerHTML =
+    `<span style="color:#4ade80;font-weight:800">🟢 ${c2Avail}</span> พร้อมใช้ &nbsp;` +
+    `<span style="color:#f87171;font-weight:800">🔴 ${c2Borrow}</span> ยืมอยู่ &nbsp;` +
+    `<span style="color:#94a3b8;font-weight:800">🔧 ${c2Repair}</span> ซ่อม &nbsp;` +
+    `<span style="color:rgba(239,68,68,.5);font-weight:800">✕ ${c2Sold}</span> จำหน่าย`;
 
   // Recent
   const recent = [...allRecords].sort((a,b) => (parseThaiDT(b)||0) - (parseThaiDT(a)||0)).slice(0,6);
