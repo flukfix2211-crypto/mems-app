@@ -51,9 +51,9 @@
     select.fsel { padding: 10px 36px 10px 12px; border: 2px solid var(--border); border-radius: var(--rs); font-family: 'Sarabun', sans-serif; font-size: 14px; background: #FAFCFD url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%236A8A96' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 10px center; outline: none; cursor: pointer; -webkit-appearance: none; appearance: none; color: var(--txt); }
     .add-btn { padding: 10px 18px; background: linear-gradient(135deg, var(--a), var(--a2)); color: #fff; border: none; border-radius: var(--rs); font-family: 'Sarabun', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap; box-shadow: 0 3px 12px rgba(10,100,120,.25); transition: all .2s; -webkit-tap-highlight-color: transparent; }
     .add-btn:active { transform: scale(.97); }
-    .type-chips { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 10px; }
-    .type-chip { padding: 6px 14px; border: 2px solid var(--border); border-radius: 20px; font-family: 'Sarabun', sans-serif; font-size: 13px; font-weight: 700; background: var(--card); color: var(--muted); cursor: pointer; transition: all .18s; -webkit-tap-highlight-color: transparent; }
-    .type-chip.active { background: var(--a); border-color: var(--a); color: #fff; box-shadow: 0 2px 8px rgba(10,100,120,.25); }
+    .type-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    .type-chip { padding: 9px 20px; border: 2px solid var(--border); border-radius: 24px; font-family: 'Sarabun', sans-serif; font-size: 15px; font-weight: 700; background: var(--card); color: var(--muted); cursor: pointer; transition: all .18s; -webkit-tap-highlight-color: transparent; box-shadow: var(--sh); }
+    .type-chip.active { background: var(--a); border-color: var(--a); color: #fff; box-shadow: 0 3px 10px rgba(10,100,120,.3); }
 
     /* TABLE */
     .tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
@@ -134,6 +134,15 @@
 </header>
 
 <div class="content">
+  <!-- TYPE CHIPS -->
+  <div class="type-chips">
+    <button class="type-chip active" onclick="setTypeFilter('')">ทั้งหมด</button>
+    <button class="type-chip" onclick="setTypeFilter('C2')">C2</button>
+    <button class="type-chip" onclick="setTypeFilter('Infusion Pump')">Infusion Pump</button>
+    <button class="type-chip" onclick="setTypeFilter('Syringe Pump')">Syringe Pump</button>
+    <button class="type-chip" onclick="setTypeFilter('อื่นๆ')">อื่นๆ</button>
+  </div>
+
   <!-- STATS -->
   <div class="stats-row">
     <div class="stat-chip">
@@ -155,13 +164,6 @@
   </div>
 
   <!-- CONTROLS -->
-  <div class="type-chips">
-    <button class="type-chip active" onclick="setTypeFilter('')">ทั้งหมด</button>
-    <button class="type-chip" onclick="setTypeFilter('C2')">C2</button>
-    <button class="type-chip" onclick="setTypeFilter('Infusion Pump')">Infusion Pump</button>
-    <button class="type-chip" onclick="setTypeFilter('Syringe Pump')">Syringe Pump</button>
-    <button class="type-chip" onclick="setTypeFilter('อื่นๆ')">อื่นๆ</button>
-  </div>
   <div class="ctrl-row">
     <div class="search-wrap">
       <input type="text" id="searchInput" placeholder="ค้นหา No., เลขครุภัณฑ์, S/N..." oninput="applyFilter()">
@@ -292,15 +294,12 @@
     }
   }
 
-  function updateStats() {
-    const total  = allAssets.length;
-    const ok     = allAssets.filter(a => a.สถานะ === 'ใช้งานได้').length;
-    const broken = allAssets.filter(a => a.สถานะ === 'ชำรุด' || a.สถานะ === 'ส่งซ่อม').length;
-    const sold   = allAssets.filter(a => a.สถานะ === 'จำหน่าย').length;
-    document.getElementById('statTotal').textContent  = total;
-    document.getElementById('statOk').textContent     = ok;
-    document.getElementById('statBroken').textContent = broken;
-    document.getElementById('statSold').textContent   = sold;
+  function updateStats(subset) {
+    const src = subset || allAssets;
+    document.getElementById('statTotal').textContent  = src.length;
+    document.getElementById('statOk').textContent     = src.filter(a => a.สถานะ === 'ใช้งานได้').length;
+    document.getElementById('statBroken').textContent = src.filter(a => a.สถานะ === 'ชำรุด' || a.สถานะ === 'ส่งซ่อม').length;
+    document.getElementById('statSold').textContent   = src.filter(a => a.สถานะ === 'จำหน่าย').length;
   }
 
   let currentTypeFilter = '';
@@ -317,12 +316,15 @@
   function applyFilter() {
     const q  = document.getElementById('searchInput').value.toLowerCase();
     const st = document.getElementById('statusFilter').value;
-    const filtered = allAssets.filter(a => {
-      const matchSt   = !st || a.สถานะ === st;
-      const matchType = !currentTypeFilter || (a.ประเภท || '') === currentTypeFilter;
-      const matchQ    = !q || [a['No.'], a.เลขครุภัณฑ์, a['S/N'], a.ID, a.ประเภท, a.หมายเหตุ]
+    const typeSubset = currentTypeFilter
+      ? allAssets.filter(a => (a.ประเภท || '') === currentTypeFilter)
+      : allAssets;
+    updateStats(typeSubset);
+    const filtered = typeSubset.filter(a => {
+      const matchSt = !st || a.สถานะ === st;
+      const matchQ  = !q || [a['No.'], a.เลขครุภัณฑ์, a['S/N'], a.ID, a.ประเภท, a.หมายเหตุ]
         .some(v => String(v || '').toLowerCase().includes(q));
-      return matchSt && matchType && matchQ;
+      return matchSt && matchQ;
     });
     renderTable(filtered);
   }
