@@ -732,6 +732,7 @@ function renderWardDetail() {
             <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--bg);border-radius:10px;border:1.5px solid var(--border)">
               <div style="flex:1;font-weight:700;font-size:14px">No.${e.number || '—'}</div>
               <div style="font-size:11px;font-weight:700;color:#DC2626;background:#FEF2F2;padding:4px 8px;border-radius:20px;white-space:nowrap">ยืมอยู่</div>
+              ${rowIdx ? `<button onclick="openEditModal(${rowIdx},'ward')" style="padding:4px 10px;background:#DAF0F5;color:#0A6478;border:1.5px solid #C5E3ED;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s" onmouseover="this.style.background='#0A6478';this.style.color='#fff'" onmouseout="this.style.background='#DAF0F5';this.style.color='#0A6478'">แก้ไข</button>` : ''}
               ${rowIdx ? `<button onclick="confirmDeleteWard(${rowIdx},'${eq} No.${e.number}')" style="padding:4px 10px;background:#FDEAEA;color:#B82E2E;border:1.5px solid #f8c8c8;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s" onmouseover="this.style.background='#B82E2E';this.style.color='#fff'" onmouseout="this.style.background='#FDEAEA';this.style.color='#B82E2E'">ลบ</button>` : ''}
             </div>`).join('')}
         </div>
@@ -805,7 +806,10 @@ function renderTable() {
         <td>${r['หมายเลขเครื่อง']||''}</td>
         <td>${r['ตึก/Ward']||''}</td>
         <td>${r['ชื่อผู้ยืม']||''}</td>
-        <td><button onclick="confirmDelete(${rowIdx},'${(r['ชื่อเครื่อง']||'').replace(/'/g,"\\'")} ${r['หมายเลขเครื่อง']||''}')" style="padding:4px 10px;background:#FDEAEA;color:#B82E2E;border:1.5px solid #f8c8c8;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s" onmouseover="this.style.background='#B82E2E';this.style.color='#fff'" onmouseout="this.style.background='#FDEAEA';this.style.color='#B82E2E'">ลบ</button></td>
+        <td style="display:flex;gap:4px;align-items:center">
+          <button onclick="openEditModal(${rowIdx},'records')" style="padding:4px 10px;background:#DAF0F5;color:#0A6478;border:1.5px solid #C5E3ED;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s" onmouseover="this.style.background='#0A6478';this.style.color='#fff'" onmouseout="this.style.background='#DAF0F5';this.style.color='#0A6478'">แก้ไข</button>
+          <button onclick="confirmDelete(${rowIdx},'${(r['ชื่อเครื่อง']||'').replace(/'/g,"\\'")} ${r['หมายเลขเครื่อง']||''}')" style="padding:4px 10px;background:#FDEAEA;color:#B82E2E;border:1.5px solid #f8c8c8;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s" onmouseover="this.style.background='#B82E2E';this.style.color='#fff'" onmouseout="this.style.background='#FDEAEA';this.style.color='#B82E2E'">ลบ</button>
+        </td>
       </tr>`;
     }).join('')}</tbody></table>`;
   const totalPages = Math.ceil(total / PAGE_SIZE);
@@ -835,6 +839,97 @@ async function confirmDelete(rowIndex, label) {
     showToast('เกิดข้อผิดพลาด: ' + err.message);
   }
 }
+
+// ── EDIT MODAL ──────────────────────────────────────────────
+let _editRowIndex = null;
+let _editContext  = null;  // 'records' | 'round' | 'ward'
+
+function openEditModal(rowIndex, context) {
+  _editRowIndex = rowIndex;
+  _editContext  = context;
+  const rec = allRecords.find(r => r['_rowIndex'] === rowIndex);
+  if (!rec) { showToast('ไม่พบข้อมูล'); return; }
+
+  // Populate ward options
+  const wardSel = document.getElementById('editWard');
+  const wards   = [...new Set(allRecords.map(r => r['ตึก/Ward']).filter(Boolean))].sort((a,b) => a.localeCompare(b,'th'));
+  wardSel.innerHTML = wards.map(w => `<option value="${w}" ${w === rec['ตึก/Ward'] ? 'selected' : ''}>${w}</option>`).join('');
+
+  // Set current values
+  document.getElementById('editShift').value       = rec['เวร']         || '';
+  document.getElementById('editRoundStatus').value = rec['สถานะ Round'] || 'ใช้งานอยู่';
+  document.getElementById('editName').value        = rec['ชื่อผู้ยืม']  || '';
+  document.getElementById('editNote').value        = rec['หมายเหตุ']    || '';
+
+  // Show/hide fields by context
+  document.getElementById('editFieldShift').style.display       = context === 'records' ? 'block' : 'none';
+  document.getElementById('editFieldRoundStatus').style.display = context === 'round'   ? 'block' : 'none';
+  document.getElementById('editFieldName').style.display        = context !== 'ward'    ? 'block' : 'none';
+
+  document.getElementById('editModal').style.display = 'flex';
+}
+
+function closeEditModal() {
+  document.getElementById('editModal').style.display = 'none';
+  _editRowIndex = null;
+  _editContext  = null;
+}
+
+async function saveEdit() {
+  if (!_editRowIndex) return;
+  const btn = document.getElementById('btnSaveEdit');
+  btn.textContent = '⏳ กำลังบันทึก…'; btn.disabled = true;
+
+  const fields = {
+    ward:        document.getElementById('editWard').value,
+    shift:       document.getElementById('editShift').value,
+    roundStatus: document.getElementById('editRoundStatus').value,
+    name:        document.getElementById('editName').value,
+    note:        document.getElementById('editNote').value,
+  };
+
+  try {
+    await fetch(SCRIPT_URL, {
+      method: 'POST', mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'edit', rowIndex: _editRowIndex, fields })
+    });
+
+    // Update local cache
+    const rec = allRecords.find(r => r['_rowIndex'] === _editRowIndex);
+    if (rec) {
+      rec['ตึก/Ward']     = fields.ward;
+      rec['เวร']          = fields.shift;
+      rec['สถานะ Round']  = fields.roundStatus;
+      rec['ชื่อผู้ยืม']   = fields.name;
+      rec['หมายเหตุ']     = fields.note;
+    }
+    const frec = filteredRecords.find(r => r['_rowIndex'] === _editRowIndex);
+    if (frec) {
+      frec['ตึก/Ward']    = fields.ward;
+      frec['เวร']         = fields.shift;
+      frec['สถานะ Round'] = fields.roundStatus;
+      frec['ชื่อผู้ยืม']  = fields.name;
+      frec['หมายเหตุ']    = fields.note;
+    }
+
+    closeEditModal();
+    // Re-render ตาม context
+    if (_editContext === 'records' || !_editContext) { renderTable(); }
+    else if (_editContext === 'round') { renderRoundTable(); }
+    else if (_editContext === 'ward')  { renderWardDetail(); }
+    showToast('✅ แก้ไขข้อมูลเรียบร้อยแล้ว');
+  } catch (err) {
+    showToast('❌ เกิดข้อผิดพลาด: ' + err.message);
+  } finally {
+    btn.textContent = '💾 บันทึก'; btn.disabled = false;
+  }
+}
+
+// close modal when clicking backdrop
+document.addEventListener('click', e => {
+  if (e.target.id === 'editModal') closeEditModal();
+});
 
 function showToast(msg) {
   let t = document.getElementById('deleteToast');
@@ -1018,7 +1113,10 @@ function renderRoundTable() {
         <td><span class="rs-badge ${cls}">${s||'-'}</span></td>
         <td>${r['ชื่อผู้ยืม']||''}</td>
         <td style="font-size:12px;color:var(--muted)">${r['หมายเหตุ']||''}</td>
-        <td>${rowIdx ? `<button onclick="confirmDeleteRound(${rowIdx},'${fmtDate(r['วันที่'])} ${r['ตึก/Ward']||''}')" style="padding:4px 10px;background:#FDEAEA;color:#B82E2E;border:1.5px solid #f8c8c8;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s" onmouseover="this.style.background='#B82E2E';this.style.color='#fff'" onmouseout="this.style.background='#FDEAEA';this.style.color='#B82E2E'">ลบ</button>` : ''}</td>
+        <td style="display:flex;gap:4px;align-items:center">
+          ${rowIdx ? `<button onclick="openEditModal(${rowIdx},'round')" style="padding:4px 10px;background:#DAF0F5;color:#0A6478;border:1.5px solid #C5E3ED;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s" onmouseover="this.style.background='#0A6478';this.style.color='#fff'" onmouseout="this.style.background='#DAF0F5';this.style.color='#0A6478'">แก้ไข</button>` : ''}
+          ${rowIdx ? `<button onclick="confirmDeleteRound(${rowIdx},'${fmtDate(r['วันที่'])} ${r['ตึก/Ward']||''}')" style="padding:4px 10px;background:#FDEAEA;color:#B82E2E;border:1.5px solid #f8c8c8;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s" onmouseover="this.style.background='#B82E2E';this.style.color='#fff'" onmouseout="this.style.background='#FDEAEA';this.style.color='#B82E2E'">ลบ</button>` : ''}
+        </td>
       </tr>`;
     }).join('')}</tbody></table>`;
 
@@ -1540,6 +1638,52 @@ showView = function(name) {
   _origShowView(name);
 };
 </script>
+<!-- EDIT MODAL -->
+<div id="editModal" style="display:none;position:fixed;inset:0;background:rgba(10,30,40,0.6);z-index:9998;align-items:center;justify-content:center;padding:16px">
+  <div style="background:#fff;border-radius:20px;width:100%;max-width:440px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+    <div style="background:linear-gradient(135deg,#0A6478,#0E7D94);padding:16px 20px;display:flex;align-items:center;justify-content:space-between">
+      <div style="color:#fff;font-size:16px;font-weight:800">✏️ แก้ไขข้อมูล</div>
+      <button onclick="closeEditModal()" style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.2);border:none;color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">×</button>
+    </div>
+    <div style="padding:20px;display:flex;flex-direction:column;gap:14px">
+      <div id="editFieldWard">
+        <div style="font-size:12px;font-weight:700;color:#6A8A96;margin-bottom:5px">ตึก / หน่วยงาน</div>
+        <select id="editWard" style="width:100%;padding:9px 12px;border:2px solid #C5E3ED;border-radius:10px;font-family:inherit;font-size:14px;background:#fff;outline:none"></select>
+      </div>
+      <div id="editFieldShift">
+        <div style="font-size:12px;font-weight:700;color:#6A8A96;margin-bottom:5px">เวร</div>
+        <select id="editShift" style="width:100%;padding:9px 12px;border:2px solid #C5E3ED;border-radius:10px;font-family:inherit;font-size:14px;background:#fff;outline:none">
+          <option value="">— ไม่ระบุ —</option>
+          <option value="เช้า">เช้า</option>
+          <option value="บ่าย">บ่าย</option>
+          <option value="ดึก">ดึก</option>
+        </select>
+      </div>
+      <div id="editFieldRoundStatus">
+        <div style="font-size:12px;font-weight:700;color:#6A8A96;margin-bottom:5px">สถานะ Round</div>
+        <select id="editRoundStatus" style="width:100%;padding:9px 12px;border:2px solid #C5E3ED;border-radius:10px;font-family:inherit;font-size:14px;background:#fff;outline:none">
+          <option value="ใช้งานอยู่">🟢 ใช้งานอยู่</option>
+          <option value="ไม่ได้ใช้งาน">🔵 ไม่ได้ใช้งาน</option>
+          <option value="ชำรุด">🟡 ชำรุด</option>
+          <option value="สูญหาย">🔴 สูญหาย</option>
+        </select>
+      </div>
+      <div id="editFieldName">
+        <div style="font-size:12px;font-weight:700;color:#6A8A96;margin-bottom:5px">ชื่อผู้บันทึก</div>
+        <input id="editName" type="text" placeholder="ชื่อผู้บันทึก" style="width:100%;padding:9px 12px;border:2px solid #C5E3ED;border-radius:10px;font-family:inherit;font-size:14px;outline:none">
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#6A8A96;margin-bottom:5px">หมายเหตุ</div>
+        <input id="editNote" type="text" placeholder="หมายเหตุ (ถ้ามี)" style="width:100%;padding:9px 12px;border:2px solid #C5E3ED;border-radius:10px;font-family:inherit;font-size:14px;outline:none">
+      </div>
+    </div>
+    <div style="padding:14px 20px;display:flex;gap:10px;border-top:1px solid #C5E3ED">
+      <button onclick="closeEditModal()" style="flex:1;padding:11px;background:#EBF5F8;color:#6A8A96;border:none;border-radius:12px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer">ยกเลิก</button>
+      <button onclick="saveEdit()" id="btnSaveEdit" style="flex:2;padding:11px;background:#0A6478;color:#fff;border:none;border-radius:12px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer">💾 บันทึก</button>
+    </div>
+  </div>
+</div>
+
 <!-- HELP MODAL -->
 <div id="helpModal" style="display:none;position:fixed;inset:0;background:rgba(10,30,40,0.65);z-index:9999;align-items:center;justify-content:center;padding:16px">
   <div style="background:#fff;border-radius:20px;width:100%;max-width:480px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
