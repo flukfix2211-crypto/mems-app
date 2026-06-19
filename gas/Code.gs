@@ -414,7 +414,7 @@ function getC2Status() {
     let   ts     = r[9];
     if (!equip.includes('C2')) return;
     const n = parseInt(num, 10);
-    if (isNaN(n) || n < 1 || n > 60) return;
+    if (isNaN(n) || n < 1 || n > 58) return;
     statusMap[num] = {
       number:     num,
       isBorrowed: action.includes('ยืม'),
@@ -431,7 +431,7 @@ function getC2Status() {
 
 function buildC2Units(statusMap) {
   const units = [];
-  for (let i = 1; i <= 60; i++) {
+  for (let i = 1; i <= 58; i++) {
     const key = String(i);
     units.push(statusMap[key] || { number: key, isBorrowed: false, ward: '', borrowedBy: '', lastUpdate: '' });
   }

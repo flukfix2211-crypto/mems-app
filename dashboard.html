@@ -1624,7 +1624,7 @@ function renderKpiData() {
   const c2Borrowed = new Set(equipStatus.filter(e => e.isBorrowed && String(e.equipment).includes('C2')).map(e => String(e.number)));
   const assetMap = window._c2AssetMap || {};
   let c2Html = '', c2Borrow = 0, c2Avail = 0, c2Repair = 0, c2Sold = 0;
-  for (let i = 1; i <= 60; i++) {
+  for (let i = 1; i <= 58; i++) {
     const as = assetMap[String(i)] || 'ใช้งานได้';
     const b  = c2Borrowed.has(String(i));
     let bg, border, shadow, color, inner;
