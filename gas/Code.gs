@@ -16,7 +16,7 @@
 // ============================================================
 // CONFIG — ใส่ Spreadsheet ID ของคุณ
 // ============================================================
-const SPREADSHEET_ID = 'YOUR_SPREADSHEET_ID_HERE';
+const SPREADSHEET_ID = '1Ju2STRjjFaC4ZjuTNAjsrDEyvW6cBM42Yt5NsXALgtg';
 const SHEET_BORROW   = 'ยืม-คืน';   // sheet สำหรับบันทึกรายการยืม/คืน
 const SHEET_SUMMARY  = 'สรุปรายวัน'; // sheet สรุปรายวัน (สร้างอัตโนมัติ)
 
@@ -69,6 +69,18 @@ function doGet(e) {
 
     if (action === 'c2status') {
       return jsonResponse(getC2Status());
+    }
+
+    if (action === 'monthlyReport') {
+      return jsonResponse(generateMonthlyReport());
+    }
+
+    if (action === 'exportPDF') {
+      return jsonResponse(exportReportToPDF(e.parameter.sheetName || ''));
+    }
+
+    if (action === 'execSummary') {
+      return jsonResponse(generateExecutiveSummary());
     }
 
     return jsonResponse({ ok: false, error: 'unknown action' }, 400);

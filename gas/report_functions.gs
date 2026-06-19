@@ -9,28 +9,13 @@
  */
 
 // ============================================================
-// CONFIG (ซิงค์กับ Code.gs)
+// CONFIG
 // ============================================================
-// const SPREADSHEET_ID = 'YOUR_SPREADSHEET_ID_HERE';  // ← กำหนดแค่ครั้งเดียวใน Code.gs
-// const SHEET_BORROW   = 'ยืม-คืน';                  // ← ใช้ร่วมกับ Code.gs
+// SPREADSHEET_ID และ SHEET_BORROW ถูกกำหนดแล้วใน Code.gs
+// ไฟล์นี้ใช้ตัวแปรเหล่านั้นร่วมกันโดยอัตโนมัติ
 
-const DRIVE_FOLDER_NAME = 'MEMs_Reports';   // ชื่อ Folder ใน Google Drive
+const DRIVE_FOLDER_NAME = 'MEMs_Reports';
 const HOSPITAL_NAME     = 'โรงพยาบาลพหลพลพยุหเสนา จ.กาญจนบุรี';
-
-// ============================================================
-// doGet handler — เพิ่ม action ใหม่ (ต่อจาก doGet ใน Code.gs)
-// ============================================================
-// *** ถ้า Code.gs มี doGet อยู่แล้ว ให้เพิ่ม if-block นี้เข้าไปใน doGet เดิม ***
-//
-//  if (action === 'monthlyReport') {
-//    return jsonResponse(generateMonthlyReport());
-//  }
-//  if (action === 'exportPDF') {
-//    return jsonResponse(exportReportToPDF(e.parameter.sheetName || ''));
-//  }
-//  if (action === 'execSummary') {
-//    return jsonResponse(generateExecutiveSummary());
-//  }
 
 // ============================================================
 // 1. generateMonthlyReport()
