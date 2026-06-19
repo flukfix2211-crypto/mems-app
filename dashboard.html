@@ -364,31 +364,38 @@
       <div class="view-title">📝 รายการทั้งหมด</div>
     </div>
 
-    <!-- ── ลบแบบกลุ่ม ── -->
+    <!-- ── ลบแบบกลุ่ม (collapsible) ── -->
     <div class="card" style="margin-bottom:14px">
-      <div class="card-body" style="padding:16px 18px">
-        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:12px">🗑️ ลบรายการแบบกลุ่ม</div>
+      <div style="padding:14px 18px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none" onclick="toggleBulkDelete()">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:16px">🗑️</span>
+          <span style="font-size:14px;font-weight:800;color:#B82E2E">ลบรายการแบบกลุ่ม</span>
+          <span style="font-size:11px;font-weight:600;background:#FFF5F5;color:#B82E2E;border:1px solid #F8C8C8;padding:2px 8px;border-radius:20px">วัน / เดือน / ปี</span>
+        </div>
+        <span id="bulkDelChevron" style="font-size:18px;color:#B82E2E;transition:transform .25s ease">▸</span>
+      </div>
+      <div id="bulkDelPanel" style="display:none;padding:0 18px 16px">
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px">
 
           <!-- ลบตามวัน -->
           <div style="background:#FFF5F5;border:1.5px solid #F8C8C8;border-radius:12px;padding:14px">
             <div style="font-size:13px;font-weight:800;color:#B82E2E;margin-bottom:8px">ลบตามวันที่</div>
             <input type="date" id="delByDay" style="width:100%;padding:7px 10px;border:1.5px solid #F8C8C8;border-radius:8px;font-family:inherit;font-size:13px;margin-bottom:8px;background:#fff">
-            <button onclick="bulkDelete('day')" style="width:100%;padding:8px;background:#B82E2E;color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">ลบวันนี้</button>
+            <button onclick="bulkDelete('day')" style="width:100%;padding:8px;background:#B82E2E;color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">ลบวันที่เลือก</button>
           </div>
 
           <!-- ลบตามเดือน -->
           <div style="background:#FFF5F5;border:1.5px solid #F8C8C8;border-radius:12px;padding:14px">
             <div style="font-size:13px;font-weight:800;color:#B82E2E;margin-bottom:8px">ลบตามเดือน</div>
             <input type="month" id="delByMonth" style="width:100%;padding:7px 10px;border:1.5px solid #F8C8C8;border-radius:8px;font-family:inherit;font-size:13px;margin-bottom:8px;background:#fff">
-            <button onclick="bulkDelete('month')" style="width:100%;padding:8px;background:#B82E2E;color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">ลบเดือนนี้</button>
+            <button onclick="bulkDelete('month')" style="width:100%;padding:8px;background:#B82E2E;color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">ลบเดือนที่เลือก</button>
           </div>
 
           <!-- ลบตามปี -->
           <div style="background:#FFF5F5;border:1.5px solid #F8C8C8;border-radius:12px;padding:14px">
             <div style="font-size:13px;font-weight:800;color:#B82E2E;margin-bottom:8px">ลบตามปี</div>
             <select id="delByYear" style="width:100%;padding:7px 10px;border:1.5px solid #F8C8C8;border-radius:8px;font-family:inherit;font-size:13px;margin-bottom:8px;background:#fff"></select>
-            <button onclick="bulkDelete('year')" style="width:100%;padding:8px;background:#B82E2E;color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">ลบปีนี้</button>
+            <button onclick="bulkDelete('year')" style="width:100%;padding:8px;background:#B82E2E;color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">ลบปีที่เลือก</button>
           </div>
 
         </div>
@@ -812,6 +819,15 @@ function showToast(msg) {
 }
 
 function goPage(p) { currentPage = p; renderTable(); document.getElementById('tableWrap').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+
+// ── toggle bulk delete panel ────────────────────────────────
+function toggleBulkDelete() {
+  const panel   = document.getElementById('bulkDelPanel');
+  const chevron = document.getElementById('bulkDelChevron');
+  const open    = panel.style.display === 'none';
+  panel.style.display   = open ? 'block' : 'none';
+  chevron.style.transform = open ? 'rotate(90deg)' : 'rotate(0deg)';
+}
 
 // ── populate year dropdown จาก allRecords ──────────────────
 function populateYearSelect() {
