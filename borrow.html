@@ -440,6 +440,7 @@
       <a href="index.html" style="font-size:11px;font-weight:700;background:rgba(255,255,255,0.18);color:#fff;padding:4px 10px;border-radius:20px;text-decoration:none;border:1px solid rgba(255,255,255,0.3)">🏠 หน้าหลัก</a>
       <a href="dashboard.html" style="font-size:11px;font-weight:700;background:rgba(255,255,255,0.18);color:#fff;padding:4px 10px;border-radius:20px;text-decoration:none;border:1px solid rgba(255,255,255,0.3)">📊 แดชบอร์ด</a>
       <span class="clock" id="clock"></span>
+      <button onclick="document.getElementById('helpModal').style.display='flex'" style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.4);color:#fff;font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">?</button>
     </div>
   </div>
   <a href="index.html" style="text-decoration:none"><h1 style="
@@ -1103,6 +1104,65 @@ function resetForm() {
   MEMs — Medical Equipment Management Systems v1.0<br>
   งานศูนย์เครื่องมือแพทย์ โรงพยาบาลพหลพลพยุหเสนา จ.กาญจนบุรี<br>
   พัฒนาโดย Pawarit Somchipeng
+</div>
+<!-- HELP MODAL -->
+<div id="helpModal" style="display:none;position:fixed;inset:0;background:rgba(10,30,40,0.65);z-index:9999;align-items:center;justify-content:center;padding:16px">
+  <div style="background:#fff;border-radius:20px;width:100%;max-width:480px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+    <div style="background:linear-gradient(135deg,#0A6478,#0E7D94);padding:18px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+      <div>
+        <div style="color:#fff;font-size:17px;font-weight:800">📖 วิธีใช้งาน MEMs</div>
+        <div style="color:rgba(255,255,255,.7);font-size:12px;margin-top:2px">Medical Equipment Management Systems</div>
+      </div>
+      <button onclick="document.getElementById('helpModal').style.display='none'" style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.2);border:none;color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">×</button>
+    </div>
+    <div style="overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:16px">
+      <div style="background:#EBF5F8;border-radius:14px;padding:16px">
+        <div style="font-size:15px;font-weight:800;color:#0A6478;margin-bottom:10px">🔄 ยืม-คืนเครื่องมือแพทย์</div>
+        <div style="font-size:13px;color:#192D35;line-height:1.8">
+          <b>การยืม:</b><br>
+          1. เลือก <b>ยืม</b> → เลือกประเภทเครื่อง<br>
+          2. เลือก <b>หน่วยงาน</b> ที่ยืม<br>
+          3. กรอก <b>ชื่อผู้ยืม</b><br>
+          4. สำหรับ C2, High Flow, Brid เขียว, T1, Monnal t60 → <b>กรอกหมายเลขเครื่อง</b><br>
+          5. กด <b>บันทึก</b><br><br>
+          <b>การคืน:</b><br>
+          1. เลือก <b>คืน</b> → เลือกประเภทเครื่อง<br>
+          2. เลือก <b>หน่วยงาน</b> ที่คืน<br>
+          3. กรอก <b>ชื่อผู้คืน</b><br>
+          4. สำหรับเครื่องข้างต้น → <b>กดเลือกหมายเลขเครื่อง</b> (คืนได้สูงสุด 10 เครื่องพร้อมกัน)<br>
+          5. กด <b>บันทึก</b>
+        </div>
+      </div>
+      <div style="background:#EBF5F8;border-radius:14px;padding:16px">
+        <div style="font-size:15px;font-weight:800;color:#0A6478;margin-bottom:10px">📊 แดชบอร์ด</div>
+        <div style="font-size:13px;color:#192D35;line-height:1.8">
+          <b>การใช้งานแต่ละหน่วยงาน:</b> ดูเครื่องที่ยืมอยู่ แยกตามประเภทเครื่อง<br>
+          <b>สถานะ C2:</b> ดูสถานะเครื่อง C2 ทั้ง 60 เครื่องแบบ real-time<br>
+          <b>รายงาน/สถิติ:</b> ดูสถิติการยืม-คืนรายเดือน แยกตามหน่วยงาน<br>
+          <b>รายการทั้งหมด:</b> ดูประวัติการยืม-คืนย้อนหลัง<br>
+          <b>KPI Display:</b> โหมดแสดงผลบนจอขนาดใหญ่ เปลี่ยนสไลด์อัตโนมัติทุก 10 วินาที
+        </div>
+      </div>
+      <div style="background:#EBF5F8;border-radius:14px;padding:16px">
+        <div style="font-size:15px;font-weight:800;color:#0A6478;margin-bottom:10px">🏥 บันทึกการ Round Ward</div>
+        <div style="font-size:13px;color:#192D35;line-height:1.8">
+          1. เลือก <b>หน่วยงาน</b> และ <b>เวร</b><br>
+          2. บันทึกสถานะเครื่องมือแต่ละชิ้น (ใช้งานได้ / ไม่ได้ใช้งาน / ส่งซ่อม)<br>
+          3. เพิ่มหมายเหตุได้ถ้ามีปัญหา<br>
+          4. กด <b>บันทึก Round</b> เพื่อส่งข้อมูล
+        </div>
+      </div>
+      <div style="background:#EBF5F8;border-radius:14px;padding:16px">
+        <div style="font-size:15px;font-weight:800;color:#0A6478;margin-bottom:10px">💡 เคล็ดลับ</div>
+        <div style="font-size:13px;color:#192D35;line-height:1.8">
+          • High Flow: ถ้า <b>ER หรือ ICU</b> เป็นผู้ยืม หน่วยงานใดก็สามารถคืนได้<br>
+          • บันทึกหน้าเว็บเป็น Shortcut บน iPhone หรือ Desktop เพื่อใช้งานเหมือนแอป<br>
+          • ข้อมูลบันทึกลง Google Sheets อัตโนมัติ
+        </div>
+      </div>
+    </div>
+    <div style="padding:12px 20px;border-top:1px solid #C5E3ED;text-align:center;font-size:11px;color:#6A8A96;flex-shrink:0">MEMs v1.0 — งานศูนย์เครื่องมือแพทย์ โรงพยาบาลพหลพลพยุหเสนา</div>
+  </div>
 </div>
 </body>
 </html>
