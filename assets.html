@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>MEMs — ทะเบียนครุภัณฑ์ C2</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --a: #0A6478; --a2: #0E7D94; --al: #DAF0F5;
+      --bg: #EBF5F8; --card: #fff; --txt: #192D35;
+      --muted: #6A8A96; --border: #C5E3ED;
+      --sh: 0 2px 10px rgba(10,100,120,0.08), 0 1px 3px rgba(0,0,0,0.05);
+      --r: 18px; --rs: 12px; --tr: 0.3s cubic-bezier(.4,0,.2,1);
+      --green: #14612D; --green-bg: #DCF2E5;
+      --red: #B82E2E; --red-bg: #FDEAEA;
+      --yellow: #8B5000; --yellow-bg: #FFF3CD;
+      --grey: #555; --grey-bg: #F0F0F0;
+    }
+    body { font-family: 'Sarabun', sans-serif; background: var(--bg); color: var(--txt); min-height: 100vh; font-size: 16px; -webkit-font-smoothing: antialiased; }
+
+    .header { background: linear-gradient(145deg, var(--a) 0%, var(--a2) 100%); color: #fff; padding: 22px 18px 60px; position: relative; overflow: hidden; }
+    .header::after { content: ''; position: absolute; bottom: -30px; left: -10px; right: -10px; height: 60px; background: var(--bg); border-radius: 50% 50% 0 0 / 100% 100% 0 0; }
+    .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .hosp-badge { font-size: 10px; font-weight: 700; letter-spacing: 0.04em; background: rgba(255,255,255,0.18); padding: 4px 10px; border-radius: 20px; }
+    .header h1 { font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 44px; letter-spacing: 0.12em; background: linear-gradient(135deg,#fff 0%,rgba(255,255,255,.65) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; line-height: 1.1; margin-bottom: 4px; }
+    .header .sub { font-size: 11px; font-weight: 500; opacity: 0.6; letter-spacing: 0.18em; text-transform: uppercase; }
+    .header .page-title { font-size: 16px; font-weight: 700; opacity: 0.92; margin-top: 8px; display: flex; align-items: center; gap: 8px; }
+
+    .content { max-width: 800px; margin: -22px auto 0; padding: 0 14px 100px; position: relative; z-index: 1; }
+    .card { background: var(--card); border-radius: var(--r); box-shadow: var(--sh); padding: 18px; margin-bottom: 12px; }
+
+    /* STATS */
+    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px; }
+    .stat-chip { background: var(--card); border-radius: var(--rs); box-shadow: var(--sh); padding: 14px 10px; text-align: center; }
+    .stat-num { font-size: 26px; font-weight: 900; color: var(--a); line-height: 1; }
+    .stat-num.green { color: var(--green); }
+    .stat-num.red { color: var(--red); }
+    .stat-num.yellow { color: var(--yellow); }
+    .stat-lbl { font-size: 11px; font-weight: 700; color: var(--muted); margin-top: 4px; }
+
+    /* CONTROLS */
+    .ctrl-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; }
+    .search-wrap { flex: 1; min-width: 160px; position: relative; }
+    .search-wrap input { width: 100%; padding: 10px 36px 10px 14px; border: 2px solid var(--border); border-radius: var(--rs); font-family: 'Sarabun', sans-serif; font-size: 14px; outline: none; background: #FAFCFD; transition: border-color .2s; }
+    .search-wrap input:focus { border-color: var(--a); background: #fff; }
+    .search-wrap .si { position: absolute; right: 11px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 15px; }
+    select.fsel { padding: 10px 36px 10px 12px; border: 2px solid var(--border); border-radius: var(--rs); font-family: 'Sarabun', sans-serif; font-size: 14px; background: #FAFCFD url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%236A8A96' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 10px center; outline: none; cursor: pointer; -webkit-appearance: none; appearance: none; color: var(--txt); }
+    .add-btn { padding: 10px 18px; background: linear-gradient(135deg, var(--a), var(--a2)); color: #fff; border: none; border-radius: var(--rs); font-family: 'Sarabun', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap; box-shadow: 0 3px 12px rgba(10,100,120,.25); transition: all .2s; -webkit-tap-highlight-color: transparent; }
+    .add-btn:active { transform: scale(.97); }
+
+    /* TABLE */
+    .tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    table { width: 100%; border-collapse: collapse; min-width: 560px; }
+    thead th { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); padding: 10px 12px; text-align: left; border-bottom: 2px solid var(--border); background: #FAFCFD; position: sticky; top: 0; }
+    tbody tr { border-bottom: 1px solid #ECF4F7; transition: background .15s; }
+    tbody tr:hover { background: #F5FBFD; }
+    tbody td { padding: 11px 12px; font-size: 14px; vertical-align: middle; }
+    td.no-col { font-weight: 800; color: var(--a); text-align: center; }
+    td.asset-col { font-family: monospace; font-size: 12px; color: var(--txt); }
+    td.sn-col { font-size: 13px; color: var(--muted); }
+
+    /* STATUS BADGE */
+    .badge { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; border-radius: 20px; padding: 3px 10px; white-space: nowrap; }
+    .badge.ok     { background: var(--green-bg); color: var(--green); }
+    .badge.sold   { background: var(--red-bg);   color: var(--red); }
+    .badge.broken { background: var(--yellow-bg); color: var(--yellow); }
+    .badge.repair { background: #E8F0FE; color: #1A56C4; }
+
+    /* ACTION BTNS */
+    .act-wrap { display: flex; gap: 6px; flex-wrap: nowrap; }
+    .act-btn { padding: 5px 12px; border: none; border-radius: 8px; font-family: 'Sarabun', sans-serif; font-size: 12px; font-weight: 700; cursor: pointer; transition: all .15s; -webkit-tap-highlight-color: transparent; white-space: nowrap; }
+    .act-btn:active { transform: scale(.95); }
+    .act-edit { background: #EBF5F8; color: var(--a); }
+    .act-edit:hover { background: var(--al); }
+    .act-del  { background: #FDEAEA; color: var(--red); }
+    .act-del:hover  { background: #fcd7d7; }
+
+    /* MODAL */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(10,30,40,.6); z-index: 9999; align-items: flex-end; justify-content: center; padding: 0; }
+    .modal-overlay.show { display: flex; }
+    .modal-box { background: #fff; border-radius: 22px 22px 0 0; width: 100%; max-width: 540px; max-height: 92vh; overflow-y: auto; padding: 0 0 32px; box-shadow: 0 -8px 40px rgba(0,0,0,.2); animation: slideUp .3s cubic-bezier(.4,0,.2,1); }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .modal-head { background: linear-gradient(135deg, var(--a), var(--a2)); padding: 18px 20px; display: flex; align-items: center; justify-content: space-between; border-radius: 22px 22px 0 0; }
+    .modal-head-title { color: #fff; font-size: 16px; font-weight: 800; }
+    .modal-close { width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,.2); border: none; color: #fff; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .modal-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-label { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+    .form-input { padding: 13px 15px; border: 2px solid var(--border); border-radius: var(--rs); font-family: 'Sarabun', sans-serif; font-size: 15px; color: var(--txt); background: #FAFCFD; outline: none; transition: border-color .2s; -webkit-appearance: none; appearance: none; width: 100%; }
+    .form-input:focus { border-color: var(--a); background: #fff; }
+    select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%236A8A96' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 13px center; padding-right: 40px; cursor: pointer; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .save-btn { width: 100%; padding: 15px; background: linear-gradient(135deg, var(--a), var(--a2)); color: #fff; border: none; border-radius: var(--rs); font-family: 'Sarabun', sans-serif; font-size: 17px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 18px rgba(10,100,120,.25); transition: all .2s; margin-top: 4px; }
+    .save-btn:disabled { opacity: .5; cursor: default; box-shadow: none; }
+
+    /* EMPTY */
+    .empty-row td { text-align: center; padding: 40px; color: var(--muted); font-size: 14px; }
+
+    /* TOAST */
+    #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); background: #192D35; color: #fff; padding: 11px 22px; border-radius: 40px; font-size: 14px; font-weight: 600; opacity: 0; transition: all .3s; pointer-events: none; z-index: 99999; white-space: nowrap; }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* LOADING */
+    .loading { text-align: center; padding: 40px; color: var(--muted); }
+    .spinner { display: inline-block; width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--a); border-radius: 50%; animation: spin .7s linear infinite; margin-bottom: 10px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 420px) {
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .stat-num { font-size: 22px; }
+      .form-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-top">
+    <span class="hosp-badge">โรงพยาบาลพหลพลพยุหเสนา จ.กาญจนบุรี</span>
+    <div style="display:flex;align-items:center;gap:8px">
+      <a href="index.html" style="font-size:11px;font-weight:700;background:rgba(255,255,255,.18);color:#fff;padding:4px 10px;border-radius:20px;text-decoration:none;border:1px solid rgba(255,255,255,.3)">🏠 หน้าหลัก</a>
+    </div>
+  </div>
+  <a href="index.html" style="text-decoration:none"><h1>MEMs</h1></a>
+  <div class="sub">Medical Equipment Management Systems</div>
+  <div class="page-title"><span style="font-size:20px">📋</span> ทะเบียนครุภัณฑ์ศูนย์เครื่องมือแพทย์</div>
+</header>
+
+<div class="content">
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat-chip">
+      <div class="stat-num" id="statTotal">—</div>
+      <div class="stat-lbl">ทั้งหมด</div>
+    </div>
+    <div class="stat-chip">
+      <div class="stat-num green" id="statOk">—</div>
+      <div class="stat-lbl">ใช้งานได้</div>
+    </div>
+    <div class="stat-chip">
+      <div class="stat-num yellow" id="statBroken">—</div>
+      <div class="stat-lbl">ชำรุด/ซ่อม</div>
+    </div>
+    <div class="stat-chip">
+      <div class="stat-num red" id="statSold">—</div>
+      <div class="stat-lbl">จำหน่าย</div>
+    </div>
+  </div>
+
+  <!-- CONTROLS -->
+  <div class="ctrl-row">
+    <div class="search-wrap">
+      <input type="text" id="searchInput" placeholder="ค้นหา No., เลขครุภัณฑ์, S/N..." oninput="applyFilter()">
+      <span class="si">🔍</span>
+    </div>
+    <select class="fsel" id="statusFilter" onchange="applyFilter()">
+      <option value="">ทุกสถานะ</option>
+      <option value="ใช้งานได้">ใช้งานได้</option>
+      <option value="ชำรุด">ชำรุด</option>
+      <option value="ส่งซ่อม">ส่งซ่อม</option>
+      <option value="จำหน่าย">จำหน่าย</option>
+    </select>
+    <button class="add-btn" onclick="openModal()">＋ เพิ่มเครื่องใหม่</button>
+  </div>
+
+  <!-- TABLE -->
+  <div class="card" style="padding:0;overflow:hidden">
+    <div class="tbl-wrap">
+      <table id="assetTable">
+        <thead>
+          <tr>
+            <th style="text-align:center;width:46px">No.</th>
+            <th>เลขครุภัณฑ์</th>
+            <th>S/N</th>
+            <th>ID</th>
+            <th>ประเภท</th>
+            <th>สถานะ</th>
+            <th>หมายเหตุ</th>
+            <th style="text-align:center">จัดการ</th>
+          </tr>
+        </thead>
+        <tbody id="assetBody">
+          <tr class="empty-row"><td colspan="8"><div class="spinner"></div><br>กำลังโหลดข้อมูล...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div id="recordCount" style="font-size:12px;color:var(--muted);text-align:right;margin-top:4px"></div>
+</div>
+
+<!-- MODAL เพิ่ม/แก้ไข -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div class="modal-head-title" id="modalTitle">เพิ่มเครื่องใหม่</div>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editRowIndex">
+      <div class="form-row">
+        <div class="form-group">
+          <div class="form-label">No. เครื่อง C2</div>
+          <input class="form-input" id="fNo" type="number" min="1" placeholder="1-100">
+        </div>
+        <div class="form-group">
+          <div class="form-label">ประเภท</div>
+          <select class="form-input" id="fType">
+            <option>Infusion Pump C2</option>
+            <option>Syringe Pump</option>
+            <option>อื่นๆ</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <div class="form-label">เลขครุภัณฑ์</div>
+        <input class="form-input" id="fAsset" type="text" placeholder="6515-003-2102-xx/xx">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <div class="form-label">Serial Number (S/N)</div>
+          <input class="form-input" id="fSN" type="text" placeholder="12345">
+        </div>
+        <div class="form-group">
+          <div class="form-label">ID</div>
+          <input class="form-input" id="fID" type="text" placeholder="100000">
+        </div>
+      </div>
+      <div class="form-group">
+        <div class="form-label">สถานะ</div>
+        <select class="form-input" id="fStatus">
+          <option value="ใช้งานได้">✅ ใช้งานได้</option>
+          <option value="ชำรุด">⚠️ ชำรุด</option>
+          <option value="ส่งซ่อม">🔧 ส่งซ่อม</option>
+          <option value="จำหน่าย">❌ จำหน่าย</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <div class="form-label">หมายเหตุ</div>
+        <input class="form-input" id="fNote" type="text" placeholder="หมายเหตุเพิ่มเติม...">
+      </div>
+      <button class="save-btn" id="saveBtn" onclick="saveAsset()">💾 บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz7_Q0Wtl7hDovuZga1q42xRTxVC6GXfuph4JU-C-aQ_zMlssdRVUsfde4a1vF15cIYtQ/exec';
+
+  let allAssets = [];
+
+  const STATUS_CLASS = {
+    'ใช้งานได้': 'ok',
+    'ชำรุด':    'broken',
+    'ส่งซ่อม':  'repair',
+    'จำหน่าย':  'sold'
+  };
+  const STATUS_ICON = {
+    'ใช้งานได้': '✅',
+    'ชำรุด':    '⚠️',
+    'ส่งซ่อม':  '🔧',
+    'จำหน่าย':  '❌'
+  };
+
+  async function loadAssets() {
+    try {
+      const res = await fetch(`${SCRIPT_URL}?action=assets&t=${Date.now()}`);
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error);
+      allAssets = json.assets || [];
+      updateStats();
+      renderTable(allAssets);
+    } catch (err) {
+      document.getElementById('assetBody').innerHTML =
+        `<tr class="empty-row"><td colspan="8">⚠️ โหลดข้อมูลไม่ได้: ${err.message}</td></tr>`;
+    }
+  }
+
+  function updateStats() {
+    const total  = allAssets.length;
+    const ok     = allAssets.filter(a => a.สถานะ === 'ใช้งานได้').length;
+    const broken = allAssets.filter(a => a.สถานะ === 'ชำรุด' || a.สถานะ === 'ส่งซ่อม').length;
+    const sold   = allAssets.filter(a => a.สถานะ === 'จำหน่าย').length;
+    document.getElementById('statTotal').textContent  = total;
+    document.getElementById('statOk').textContent     = ok;
+    document.getElementById('statBroken').textContent = broken;
+    document.getElementById('statSold').textContent   = sold;
+  }
+
+  function applyFilter() {
+    const q  = document.getElementById('searchInput').value.toLowerCase();
+    const st = document.getElementById('statusFilter').value;
+    const filtered = allAssets.filter(a => {
+      const matchSt = !st || a.สถานะ === st;
+      const matchQ  = !q || [a['No.'], a.เลขครุภัณฑ์, a['S/N'], a.ID, a.ประเภท, a.หมายเหตุ]
+        .some(v => String(v || '').toLowerCase().includes(q));
+      return matchSt && matchQ;
+    });
+    renderTable(filtered);
+  }
+
+  function renderTable(assets) {
+    const body = document.getElementById('assetBody');
+    document.getElementById('recordCount').textContent =
+      assets.length !== allAssets.length
+        ? `แสดง ${assets.length} จาก ${allAssets.length} รายการ`
+        : `ทั้งหมด ${assets.length} รายการ`;
+
+    if (!assets.length) {
+      body.innerHTML = '<tr class="empty-row"><td colspan="8">ไม่พบข้อมูล</td></tr>';
+      return;
+    }
+
+    body.innerHTML = assets.map(a => {
+      const cls  = STATUS_CLASS[a.สถานะ] || 'ok';
+      const icon = STATUS_ICON[a.สถานะ]  || '✅';
+      const ri   = a._rowIndex;
+      return `<tr>
+        <td class="no-col">${a['No.']}</td>
+        <td class="asset-col">${a.เลขครุภัณฑ์ || '—'}</td>
+        <td class="sn-col">${a['S/N'] || '—'}</td>
+        <td class="sn-col">${a.ID || '—'}</td>
+        <td style="font-size:13px">${a.ประเภท || '—'}</td>
+        <td><span class="badge ${cls}">${icon} ${a.สถานะ || '—'}</span></td>
+        <td style="font-size:13px;color:var(--muted)">${a.หมายเหตุ || ''}</td>
+        <td>
+          <div class="act-wrap">
+            <button class="act-btn act-edit" onclick="openModal(${ri})">✏️ แก้ไข</button>
+            <button class="act-btn act-del"  onclick="confirmDelete(${ri}, 'No.${a['No.']} ${a.เลขครุภัณฑ์||''}')">🗑️</button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  // --- MODAL ---
+  function openModal(rowIndex) {
+    const modal = document.getElementById('editModal');
+    if (rowIndex) {
+      const a = allAssets.find(x => x._rowIndex === rowIndex);
+      if (!a) return;
+      document.getElementById('modalTitle').textContent = `แก้ไข No.${a['No.']}`;
+      document.getElementById('editRowIndex').value = rowIndex;
+      document.getElementById('fNo').value     = a['No.'] || '';
+      document.getElementById('fType').value   = a.ประเภท || 'Infusion Pump C2';
+      document.getElementById('fAsset').value  = a.เลขครุภัณฑ์ || '';
+      document.getElementById('fSN').value     = a['S/N'] || '';
+      document.getElementById('fID').value     = a.ID || '';
+      document.getElementById('fStatus').value = a.สถานะ || 'ใช้งานได้';
+      document.getElementById('fNote').value   = a.หมายเหตุ || '';
+    } else {
+      document.getElementById('modalTitle').textContent = 'เพิ่มเครื่องใหม่';
+      document.getElementById('editRowIndex').value = '';
+      ['fNo','fAsset','fSN','fID','fNote'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('fType').value   = 'Infusion Pump C2';
+      document.getElementById('fStatus').value = 'ใช้งานได้';
+    }
+    modal.classList.add('show');
+  }
+
+  function closeModal() {
+    document.getElementById('editModal').classList.remove('show');
+  }
+
+  document.getElementById('editModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('editModal')) closeModal();
+  });
+
+  async function saveAsset() {
+    const no    = document.getElementById('fNo').value.trim();
+    const asset = document.getElementById('fAsset').value.trim();
+    if (!no) { showToast('กรุณาระบุ No. เครื่อง'); return; }
+
+    const rowIndex = document.getElementById('editRowIndex').value;
+    const fields = {
+      no:     parseInt(no, 10),
+      asset:  asset,
+      sn:     document.getElementById('fSN').value.trim(),
+      id:     document.getElementById('fID').value.trim(),
+      type:   document.getElementById('fType').value,
+      status: document.getElementById('fStatus').value,
+      note:   document.getElementById('fNote').value.trim()
+    };
+
+    const btn = document.getElementById('saveBtn');
+    btn.disabled = true; btn.textContent = '⏳ กำลังบันทึก...';
+
+    try {
+      const body = rowIndex
+        ? { action: 'editAsset', rowIndex: parseInt(rowIndex, 10), fields }
+        : { action: 'saveAsset', fields };
+
+      await fetch(SCRIPT_URL, {
+        method: 'POST', mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(body)
+      });
+
+      showToast(rowIndex ? '✅ แก้ไขสำเร็จ' : '✅ เพิ่มเครื่องสำเร็จ');
+      closeModal();
+      setTimeout(loadAssets, 1200);
+    } catch (err) {
+      showToast('❌ เกิดข้อผิดพลาด: ' + err.message);
+    } finally {
+      btn.disabled = false; btn.textContent = '💾 บันทึก';
+    }
+  }
+
+  async function confirmDelete(rowIndex, label) {
+    if (!confirm(`ลบรายการ: ${label}\n\nยืนยันการลบ?`)) return;
+    try {
+      await fetch(SCRIPT_URL, {
+        method: 'POST', mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ action: 'deleteAsset', rowIndex })
+      });
+      showToast('🗑️ ลบสำเร็จ');
+      setTimeout(loadAssets, 1200);
+    } catch (err) {
+      showToast('❌ ลบไม่ได้: ' + err.message);
+    }
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2800);
+  }
+
+  loadAssets();
+</script>
+</body>
+</html>

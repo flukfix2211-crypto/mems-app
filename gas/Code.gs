@@ -17,8 +17,9 @@
 // CONFIG — ใส่ Spreadsheet ID ของคุณ
 // ============================================================
 const SPREADSHEET_ID = '1Ju2STRjjFaC4ZjuTNAjsrDEyvW6cBM42Yt5NsXALgtg';
-const SHEET_BORROW   = 'ยืม-คืน';   // sheet สำหรับบันทึกรายการยืม/คืน
-const SHEET_SUMMARY  = 'สรุปรายวัน'; // sheet สรุปรายวัน (สร้างอัตโนมัติ)
+const SHEET_BORROW   = 'ยืม-คืน';
+const SHEET_SUMMARY  = 'สรุปรายวัน';
+const SHEET_ASSETS   = 'ครุภัณฑ์_C2';
 
 // ============================================================
 // doPost — รับข้อมูลจาก frontend
@@ -44,6 +45,21 @@ function doPost(e) {
 
     if (data.action === 'edit') {
       editRecord(parseInt(data.rowIndex, 10), data.fields || {});
+      return jsonResponse({ ok: true });
+    }
+
+    if (data.action === 'saveAsset') {
+      saveAsset(data.fields || {});
+      return jsonResponse({ ok: true });
+    }
+
+    if (data.action === 'editAsset') {
+      editAsset(parseInt(data.rowIndex, 10), data.fields || {});
+      return jsonResponse({ ok: true });
+    }
+
+    if (data.action === 'deleteAsset') {
+      deleteAsset(parseInt(data.rowIndex, 10));
       return jsonResponse({ ok: true });
     }
 
@@ -145,6 +161,10 @@ function doGet(e) {
 
     if (action === 'execSummary') {
       return jsonResponse(generateExecutiveSummary());
+    }
+
+    if (action === 'assets') {
+      return jsonResponse(getAssets());
     }
 
     return jsonResponse({ ok: false, error: 'unknown action' }, 400);
@@ -416,4 +436,141 @@ function buildC2Units(statusMap) {
     units.push(statusMap[key] || { number: key, isBorrowed: false, ward: '', borrowedBy: '', lastUpdate: '' });
   }
   return units;
+}
+
+// ============================================================
+// ASSET MANAGEMENT — ทะเบียนครุภัณฑ์ C2
+// ============================================================
+const ASSET_COLS = ['No.', 'เลขครุภัณฑ์', 'S/N', 'ID', 'ประเภท', 'สถานะ', 'หมายเหตุ', 'อัปเดตล่าสุด'];
+
+function getOrCreateAssetSheet(ss) {
+  let sheet = ss.getSheetByName(SHEET_ASSETS);
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEET_ASSETS);
+    sheet.appendRow(ASSET_COLS);
+    sheet.setFrozenRows(1);
+    const h = sheet.getRange(1, 1, 1, ASSET_COLS.length);
+    h.setBackground('#0A6478').setFontColor('#fff').setFontWeight('bold').setHorizontalAlignment('center');
+    sheet.setColumnWidths(1, ASSET_COLS.length, 130);
+    initAssetData(sheet);
+  }
+  return sheet;
+}
+
+function initAssetData(sheet) {
+  const INIT = [
+    [1,'6515-003-2101-14/53',1835,103981,'Infusion Pump C2','จำหน่าย','จำหน่าย'],
+    [2,'6515-003-2102-33/58',8658,114722,'Infusion Pump C2','ใช้งานได้',''],
+    [3,'6515-003-2102-34/58',8688,114723,'Infusion Pump C2','ใช้งานได้',''],
+    [4,'6515-003-2102-35/58',8656,114724,'Infusion Pump C2','ใช้งานได้',''],
+    [5,'6515-003-2102-36/58',8650,114725,'Infusion Pump C2','ใช้งานได้',''],
+    [6,'6515-003-2102-37/58',8676,114726,'Infusion Pump C2','ใช้งานได้',''],
+    [7,'6515-003-2102-38/58',8670,114727,'Infusion Pump C2','ใช้งานได้',''],
+    [8,'6515-003-2102-39/58',8651,114728,'Infusion Pump C2','ใช้งานได้',''],
+    [9,'6515-003-2102-40/58',8662,114749,'Infusion Pump C2','ใช้งานได้',''],
+    [10,'6515-003-2102-41/58',8679,114730,'Infusion Pump C2','ใช้งานได้',''],
+    [11,'6515-003-2102-43/58',10280,124980,'Infusion Pump C2','ใช้งานได้',''],
+    [12,'6515-003-2102-44/58',10158,124981,'Infusion Pump C2','ใช้งานได้',''],
+    [13,'6515-003-2102-45/58',10204,124982,'Infusion Pump C2','ใช้งานได้',''],
+    [14,'6515-003-2102-46/58',10207,124983,'Infusion Pump C2','ใช้งานได้',''],
+    [15,'6515-003-2102-47/58',10288,124984,'Infusion Pump C2','ใช้งานได้',''],
+    [16,'6515-003-2102-48/58',10271,124985,'Infusion Pump C2','ใช้งานได้',''],
+    [17,'6515-003-2102-49/58',10275,124986,'Infusion Pump C2','ใช้งานได้',''],
+    [18,'6515-003-2102-50/58',10277,124987,'Infusion Pump C2','ใช้งานได้',''],
+    [19,'6515-003-2102-51/58',10205,124988,'Infusion Pump C2','ใช้งานได้',''],
+    [20,'6515-003-2102-52/58',10198,124989,'Infusion Pump C2','ใช้งานได้',''],
+    [21,'6515-003-2102-53/58',10188,124990,'Infusion Pump C2','ใช้งานได้',''],
+    [22,'6515-003-2102-54/58',10235,124992,'Infusion Pump C2','ใช้งานได้',''],
+    [23,'6515-003-2102-55/58',10191,124993,'Infusion Pump C2','ใช้งานได้',''],
+    [24,'6515-003-2102-58/59',10284,127000,'Infusion Pump C2','ใช้งานได้',''],
+    [25,'6515-003-2102-59/59',10266,127001,'Infusion Pump C2','ใช้งานได้',''],
+    [26,'6515-026-2201-35/59',11228,130646,'Infusion Pump C2','ใช้งานได้',''],
+    [27,'6515-026-2001-36/59',11477,130647,'Infusion Pump C2','ใช้งานได้',''],
+    [28,'6515-026-2001-37/59',11479,130648,'Infusion Pump C2','ใช้งานได้',''],
+    [29,'6515-026-2001-38/59',11537,130649,'Infusion Pump C2','ใช้งานได้',''],
+    [30,'6515-026-2001-39/59',11495,130650,'Infusion Pump C2','ใช้งานได้',''],
+    [31,'6515-026-2001-24/55',1748,119965,'Infusion Pump C2','จำหน่าย','จำหน่าย'],
+    [32,'6515-026-2001-25/55',1300,114756,'Infusion Pump C2','จำหน่าย','จำหน่าย'],
+    [33,'6515-026-2001-40/60',12030,132537,'Infusion Pump C2','ใช้งานได้',''],
+    [34,'6515-026-2001-41/60',12039,132538,'Infusion Pump C2','ใช้งานได้',''],
+    [35,'6515-026-2001-42/60',12053,132539,'Infusion Pump C2','ใช้งานได้',''],
+    [36,'6515-003-2102-60/60',12057,133131,'Infusion Pump C2','ใช้งานได้',''],
+    [37,'6515-026-2001-43/62',13365,136296,'Infusion Pump C2','ใช้งานได้',''],
+    [38,'6515-026-2001-44/62',13364,136853,'Infusion Pump C2','ใช้งานได้',''],
+    [39,'6515-003-2102-88/63',13845,138310,'Infusion Pump C2','ใช้งานได้',''],
+    [40,'6515-003-2102-89/63',13851,138311,'Infusion Pump C2','ใช้งานได้',''],
+    [41,'6515-003-2102-90/63',13856,138312,'Infusion Pump C2','ใช้งานได้',''],
+    [42,'6515-003-2102-91/63',13848,138313,'Infusion Pump C2','ใช้งานได้',''],
+    [43,'6515-003-2102-92/63',12871,138314,'Infusion Pump C2','ใช้งานได้',''],
+    [44,'6515-003-2102-98/64',10387,139526,'Infusion Pump C2','ใช้งานได้',''],
+    [45,'6515-003-2102-99/64',10487,139527,'Infusion Pump C2','ใช้งานได้',''],
+    [46,'6515-003-2102-100/64',10497,139528,'Infusion Pump C2','ใช้งานได้',''],
+    [47,'6515-003-2102-101/64',10492,139529,'Infusion Pump C2','ใช้งานได้',''],
+    [48,'6515-003-2102-102/64',13263,142508,'Infusion Pump C2','ใช้งานได้',''],
+    [49,'6515-003-2102-113/67','',150143,'Infusion Pump C2','ใช้งานได้',''],
+    [50,'6515-003-2102-114/67',17827,150751,'Infusion Pump C2','ใช้งานได้',''],
+    [51,'6515-003-2102-115/67',17828,150752,'Infusion Pump C2','ใช้งานได้',''],
+    [52,'6515-003-2102-116/67',17829,150753,'Infusion Pump C2','ใช้งานได้',''],
+    [53,'6515-003-2102-200/68','',155175,'Infusion Pump C2','ใช้งานได้',''],
+    [54,'6515-003-2102-201/68','',155185,'Infusion Pump C2','ใช้งานได้',''],
+    [55,'6515-003-2102-202/68','',155191,'Infusion Pump C2','ใช้งานได้',''],
+    [56,'6515-003-2102-203/68','',155192,'Infusion Pump C2','ใช้งานได้',''],
+    [57,'6515-003-2102-204/68','',155193,'Infusion Pump C2','ใช้งานได้',''],
+    [58,'6515-003-2102-207/69','',157180,'Infusion Pump C2','ใช้งานได้',''],
+  ];
+  const ts = new Date().toISOString();
+  INIT.forEach(r => sheet.appendRow([...r, ts]));
+}
+
+function getAssets() {
+  const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = getOrCreateAssetSheet(ss);
+  if (sheet.getLastRow() <= 1) return { ok: true, assets: [] };
+
+  const rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, ASSET_COLS.length).getValues();
+  const assets = rows
+    .map((row, i) => {
+      const obj = { _rowIndex: i + 2 };
+      ASSET_COLS.forEach((h, j) => { obj[h] = row[j] instanceof Date ? row[j].toISOString() : row[j]; });
+      return obj;
+    })
+    .filter(a => a['No.'] !== '' && a['No.'] !== null);
+
+  assets.sort((a, b) => (Number(a['No.']) || 0) - (Number(b['No.']) || 0));
+  return { ok: true, assets };
+}
+
+function saveAsset(fields) {
+  const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = getOrCreateAssetSheet(ss);
+  const ts    = new Date().toISOString();
+  sheet.appendRow([
+    fields.no || '', fields.asset || '', fields.sn || '', fields.id || '',
+    fields.type || 'Infusion Pump C2', fields.status || 'ใช้งานได้',
+    fields.note || '', ts
+  ]);
+}
+
+function editAsset(sheetRow, fields) {
+  if (!sheetRow || sheetRow < 2) throw new Error('rowIndex ไม่ถูกต้อง');
+  const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(SHEET_ASSETS);
+  if (!sheet) throw new Error('ไม่พบ Sheet: ' + SHEET_ASSETS);
+
+  if (fields.no     != null) sheet.getRange(sheetRow, 1).setValue(fields.no);
+  if (fields.asset  != null) sheet.getRange(sheetRow, 2).setValue(fields.asset);
+  if (fields.sn     != null) sheet.getRange(sheetRow, 3).setValue(fields.sn);
+  if (fields.id     != null) sheet.getRange(sheetRow, 4).setValue(fields.id);
+  if (fields.type   != null) sheet.getRange(sheetRow, 5).setValue(fields.type);
+  if (fields.status != null) sheet.getRange(sheetRow, 6).setValue(fields.status);
+  if (fields.note   != null) sheet.getRange(sheetRow, 7).setValue(fields.note);
+  sheet.getRange(sheetRow, 8).setValue(new Date().toISOString());
+}
+
+function deleteAsset(sheetRow) {
+  if (!sheetRow || sheetRow < 2) throw new Error('rowIndex ไม่ถูกต้อง');
+  const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(SHEET_ASSETS);
+  if (!sheet) throw new Error('ไม่พบ Sheet: ' + SHEET_ASSETS);
+  sheet.deleteRow(sheetRow);
 }
