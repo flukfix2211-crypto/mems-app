@@ -732,8 +732,8 @@ function renderWardDetail() {
             <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--bg);border-radius:10px;border:1.5px solid var(--border)">
               <div style="flex:1;font-weight:700;font-size:14px">No.${e.number || '—'}</div>
               <div style="font-size:11px;font-weight:700;color:#DC2626;background:#FEF2F2;padding:4px 8px;border-radius:20px;white-space:nowrap">ยืมอยู่</div>
-              ${rowIdx ? `<button onclick="openEditModal(${rowIdx},'ward')" style="padding:4px 10px;background:#DAF0F5;color:#0A6478;border:1.5px solid #C5E3ED;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s" onmouseover="this.style.background='#0A6478';this.style.color='#fff'" onmouseout="this.style.background='#DAF0F5';this.style.color='#0A6478'">แก้ไข</button>` : ''}
-              ${rowIdx ? `<button onclick="confirmDeleteWard(${rowIdx},'${eq} No.${e.number}')" style="padding:4px 10px;background:#FDEAEA;color:#B82E2E;border:1.5px solid #f8c8c8;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s" onmouseover="this.style.background='#B82E2E';this.style.color='#fff'" onmouseout="this.style.background='#FDEAEA';this.style.color='#B82E2E'">ลบ</button>` : ''}
+              <button onclick="${rowIdx?`openEditModal(${rowIdx},'ward')`:'void 0'}" ${!rowIdx?'disabled title="Deploy GAS ใหม่ก่อน"':''} style="padding:4px 10px;background:#DAF0F5;color:#0A6478;border:1.5px solid #C5E3ED;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;opacity:${rowIdx?1:.4}" onmouseover="if(${rowIdx?1:0})this.style.background='#0A6478',this.style.color='#fff'" onmouseout="this.style.background='#DAF0F5',this.style.color='#0A6478'">แก้ไข</button>
+              <button onclick="${rowIdx?`confirmDeleteWard(${rowIdx},'${eq} No.${e.number}')`:'void 0'}" ${!rowIdx?'disabled title="Deploy GAS ใหม่ก่อน"':''} style="padding:4px 10px;background:#FDEAEA;color:#B82E2E;border:1.5px solid #f8c8c8;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;opacity:${rowIdx?1:.4}" onmouseover="if(${rowIdx?1:0})this.style.background='#B82E2E',this.style.color='#fff'" onmouseout="this.style.background='#FDEAEA',this.style.color='#B82E2E'">ลบ</button>
             </div>`).join('')}
         </div>
       </div>`;
@@ -1105,7 +1105,9 @@ function renderRoundTable() {
     <tbody>${rows.map(r => {
       const s = getRoundStatus(r);
       const cls = s.includes('ใช้งานอยู่')?'rs-use': s.includes('ไม่ได้ใช้งาน')?'rs-idle': s.includes('ชำรุด')?'rs-broken': s.includes('สูญหาย')?'rs-lost':'';
-      const rowIdx = r['_rowIndex'];
+      const rowIdx = r['_rowIndex'] || 0;
+      const dateLabel = (fmtDate(r['วันที่'])||'').replace(/'/g,"\\'");
+      const wardLabel = (r['ตึก/Ward']||'').replace(/'/g,"\\'");
       return `<tr>
         <td>${fmtDate(r['วันที่'])}</td>
         <td>${r['ตึก/Ward']||''}</td>
@@ -1113,9 +1115,9 @@ function renderRoundTable() {
         <td><span class="rs-badge ${cls}">${s||'-'}</span></td>
         <td>${r['ชื่อผู้ยืม']||''}</td>
         <td style="font-size:12px;color:var(--muted)">${r['หมายเหตุ']||''}</td>
-        <td style="display:flex;gap:4px;align-items:center">
-          ${rowIdx ? `<button onclick="openEditModal(${rowIdx},'round')" style="padding:4px 10px;background:#DAF0F5;color:#0A6478;border:1.5px solid #C5E3ED;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s" onmouseover="this.style.background='#0A6478';this.style.color='#fff'" onmouseout="this.style.background='#DAF0F5';this.style.color='#0A6478'">แก้ไข</button>` : ''}
-          ${rowIdx ? `<button onclick="confirmDeleteRound(${rowIdx},'${fmtDate(r['วันที่'])} ${r['ตึก/Ward']||''}')" style="padding:4px 10px;background:#FDEAEA;color:#B82E2E;border:1.5px solid #f8c8c8;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s" onmouseover="this.style.background='#B82E2E';this.style.color='#fff'" onmouseout="this.style.background='#FDEAEA';this.style.color='#B82E2E'">ลบ</button>` : ''}
+        <td style="display:flex;gap:4px;align-items:center;min-width:110px">
+          <button onclick="openEditModal(${rowIdx},'round')" ${!rowIdx?'disabled title="Deploy GAS ใหม่ก่อน"':''} style="padding:4px 10px;background:#DAF0F5;color:#0A6478;border:1.5px solid #C5E3ED;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;opacity:${rowIdx?1:.4}" onmouseover="if(${rowIdx})this.style.background='#0A6478',this.style.color='#fff'" onmouseout="this.style.background='#DAF0F5',this.style.color='#0A6478'">แก้ไข</button>
+          <button onclick="confirmDeleteRound(${rowIdx},'${dateLabel} ${wardLabel}')" ${!rowIdx?'disabled title="Deploy GAS ใหม่ก่อน"':''} style="padding:4px 10px;background:#FDEAEA;color:#B82E2E;border:1.5px solid #f8c8c8;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;opacity:${rowIdx?1:.4}" onmouseover="if(${rowIdx})this.style.background='#B82E2E',this.style.color='#fff'" onmouseout="this.style.background='#FDEAEA',this.style.color='#B82E2E'">ลบ</button>
         </td>
       </tr>`;
     }).join('')}</tbody></table>`;
