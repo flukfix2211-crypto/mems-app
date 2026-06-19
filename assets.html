@@ -348,7 +348,8 @@
       document.getElementById('modalTitle').textContent = `แก้ไข No.${a['No.']}`;
       document.getElementById('editRowIndex').value = rowIndex;
       document.getElementById('fNo').value     = a['No.'] || '';
-      document.getElementById('fType').value   = a.ประเภท || 'Infusion Pump';
+      const typeVal = (a.ประเภท || '').replace('Infusion Pump C2', 'Infusion Pump');
+      document.getElementById('fType').value   = typeVal || 'Infusion Pump';
       document.getElementById('fAsset').value  = a.เลขครุภัณฑ์ || '';
       document.getElementById('fSN').value     = a['S/N'] || '';
       document.getElementById('fID').value     = a.ID || '';
