@@ -20,7 +20,7 @@
       --green: #1A7B4A; --red: #B82E2E;
       --r: 16px; --sh: 0 2px 12px rgba(10,100,120,0.10);
     }
-    body { font-family: 'Sarabun', sans-serif; background: var(--bg); color: var(--txt); min-height: 100vh; font-size: 15px; }
+    body { font-family: 'TH Sarabun PSK', 'Sarabun', sans-serif; background: var(--bg); color: var(--txt); min-height: 100vh; font-size: 15px; }
 
     /* HEADER */
     .header { background: linear-gradient(135deg, var(--a) 0%, var(--a2) 100%); color: #fff; padding: 18px 20px 20px; }
@@ -1161,7 +1161,7 @@ async function printC2Stats() {
   </tr>`).join('');
 
   area.innerHTML = `
-    <div style="font-family:'Sarabun',sans-serif;max-width:800px;margin:0 auto;padding:20px">
+    <div style="font-family:'TH Sarabun PSK', 'Sarabun',sans-serif;max-width:800px;margin:0 auto;padding:20px">
       <div style="text-align:center;margin-bottom:20px;border-bottom:2px solid #0A6478;padding-bottom:14px">
         <div style="font-size:22px;font-weight:800;color:#0A6478">💊 รายงานสถิติการใช้งาน C2</div>
         <div style="font-size:14px;color:#666;margin-top:4px">เดือน: ${d.month}${d.ward ? '  |  หน่วยงาน: '+d.ward : '  |  ทุกหน่วยงาน'}</div>
