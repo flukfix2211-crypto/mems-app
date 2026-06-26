@@ -760,7 +760,9 @@ function setShift(s) {
 
 /* ====== AUTO-RUN ON LOAD ====== */
 window.addEventListener('DOMContentLoaded', () => {
-  setShift(detectShift()); // auto-select shift based on current time
+  setShift(detectShift());
+  const mode = new URLSearchParams(location.search).get('mode');
+  if (mode === 'borrow' || mode === 'return') setAction(mode);
 });
 
 function pickEquip(btn, e) {

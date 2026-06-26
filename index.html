@@ -59,6 +59,8 @@
     <span class="hosp-badge">โรงพยาบาลพหลพลพยุหเสนา จ.กาญจนบุรี</span>
     <div style="display:flex;align-items:center;gap:8px">
       <span class="clock-badge" id="clock"></span>
+      <a href="dashboard.html" title="แดชบอร์ด" style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.4);color:#fff;font-size:15px;display:flex;align-items:center;justify-content:center;text-decoration:none;-webkit-tap-highlight-color:transparent">📊</a>
+      <a href="assets.html" title="ทะเบียนครุภัณฑ์" style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.4);color:#fff;font-size:15px;display:flex;align-items:center;justify-content:center;text-decoration:none;-webkit-tap-highlight-color:transparent">📋</a>
       <button onclick="document.getElementById('helpModal').style.display='flex'" style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.4);color:#fff;font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">?</button>
     </div>
   </div>
@@ -70,11 +72,19 @@
 </header>
 <div class="content">
   <div class="menu-label">เลือกรายการ</div>
-  <a class="menu-card" href="borrow.html">
-    <div class="menu-icon green">🔄</div>
+  <a class="menu-card" href="borrow.html?mode=borrow">
+    <div class="menu-icon green">📤</div>
     <div class="menu-text">
-      <div class="menu-title">ยืม-คืนเครื่องมือแพทย์</div>
-      <div class="menu-desc">บันทึกการยืมและคืนเครื่องมือระหว่างหน่วยงาน</div>
+      <div class="menu-title">ยืมเครื่องมือแพทย์</div>
+      <div class="menu-desc">บันทึกการยืมเครื่องมือออกจากศูนย์</div>
+    </div>
+    <span class="menu-arrow">›</span>
+  </a>
+  <a class="menu-card" href="borrow.html?mode=return">
+    <div class="menu-icon teal" style="background:#DAF0F5">📥</div>
+    <div class="menu-text">
+      <div class="menu-title">คืนเครื่องมือแพทย์</div>
+      <div class="menu-desc">บันทึกการคืนเครื่องมือกลับศูนย์</div>
     </div>
     <span class="menu-arrow">›</span>
   </a>
@@ -83,22 +93,6 @@
     <div class="menu-text">
       <div class="menu-title">บันทึกการ Round ward</div>
       <div class="menu-desc">ตรวจสอบสถานะเครื่องมือแพทย์ประจำหน่วยงาน</div>
-    </div>
-    <span class="menu-arrow">›</span>
-  </a>
-  <a class="menu-card" href="dashboard.html">
-    <div class="menu-icon purple">📊</div>
-    <div class="menu-text">
-      <div class="menu-title">แดชบอร์ดภาพรวมและสถิติการใช้งาน</div>
-      <div class="menu-desc">ดูรายงาน สถานะเครื่อง และบันทึกการ Round</div>
-    </div>
-    <span class="menu-arrow">›</span>
-  </a>
-  <a class="menu-card" href="assets.html">
-    <div class="menu-icon" style="background:linear-gradient(135deg,#E67E22,#F39C12);font-size:22px;width:52px;height:52px;border-radius:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0">📋</div>
-    <div class="menu-text">
-      <div class="menu-title">ทะเบียนครุภัณฑ์ศูนย์เครื่องมือแพทย์</div>
-      <div class="menu-desc">จัดการทะเบียนเครื่อง C2 เลขครุภัณฑ์ สถานะ และการจำหน่าย</div>
     </div>
     <span class="menu-arrow">›</span>
   </a>
