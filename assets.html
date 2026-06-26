@@ -21,15 +21,16 @@
       --yellow: #8B5000; --yellow-bg: #FFF3CD;
       --grey: #555; --grey-bg: #F0F0F0;
     }
-    body { font-family: 'Sarabun', sans-serif; background: var(--bg) url('img-hero-bg.jpeg?v=2') center/cover fixed; color: var(--txt); min-height: 100vh; font-size: 16px; -webkit-font-smoothing: antialiased; }
+    body { font-family: 'Sarabun', sans-serif; background: url('img-hero-bg.jpeg?v=2') center/cover fixed; color: var(--txt); min-height: 100vh; font-size: 16px; -webkit-font-smoothing: antialiased; }
 
-    .header { background-image: linear-gradient(145deg, rgba(10,100,120,0.82) 0%, rgba(14,125,148,0.78) 100%), url('img-hero-bg.jpeg?v=2'); background-size: cover; background-position: left center; color: #fff; padding: 22px 18px 60px; position: relative; overflow: hidden; }
+    .header { background: none; color: #fff; padding: 22px 18px 60px; position: relative; overflow: hidden; }
+    .header::before { content: ''; position: absolute; inset: 0; z-index: 0; background: linear-gradient(145deg, rgba(10,100,120,0.86) 0%, rgba(14,125,148,0.82) 100%); }
     .header::after { display: none; }
-    .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; position: relative; z-index: 1; }
     .hosp-badge { font-size: 10px; font-weight: 700; letter-spacing: 0.04em; background: rgba(255,255,255,0.18); padding: 4px 10px; border-radius: 20px; }
-    .header h1 { font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 44px; letter-spacing: 0.12em; background: linear-gradient(135deg,#fff 0%,rgba(255,255,255,.65) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; line-height: 1.1; margin-bottom: 4px; }
-    .header .sub { font-size: 11px; font-weight: 500; opacity: 0.6; letter-spacing: 0.18em; text-transform: uppercase; }
-    .header .page-title { font-size: 16px; font-weight: 700; opacity: 0.92; margin-top: 8px; display: flex; align-items: center; gap: 8px; }
+    .header h1 { font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 44px; letter-spacing: 0.12em; background: linear-gradient(135deg,#fff 0%,rgba(255,255,255,.65) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; line-height: 1.1; margin-bottom: 4px; position: relative; z-index: 1; }
+    .header .sub { font-size: 11px; font-weight: 500; opacity: 0.6; letter-spacing: 0.18em; text-transform: uppercase; position: relative; z-index: 1; }
+    .header .page-title { font-size: 16px; font-weight: 700; opacity: 0.92; margin-top: 8px; display: flex; align-items: center; gap: 8px; position: relative; z-index: 1; }
 
     .content { max-width: 800px; margin: -22px auto 0; padding: 0 14px 100px; position: relative; z-index: 1; }
     .card { background: var(--card); border-radius: var(--r); box-shadow: var(--sh); padding: 18px; margin-bottom: 12px; }

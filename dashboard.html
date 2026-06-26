@@ -21,11 +21,12 @@
       --green: #1A7B4A; --red: #B82E2E;
       --r: 16px; --sh: 0 2px 12px rgba(10,100,120,0.10);
     }
-    body { font-family: 'Sarabun', sans-serif; background: var(--bg) url('img-hero-bg.jpeg?v=2') center/cover fixed; color: var(--txt); min-height: 100vh; font-size: 15px; }
+    body { font-family: 'Sarabun', sans-serif; background: url('img-hero-bg.jpeg?v=2') center/cover fixed; color: var(--txt); min-height: 100vh; font-size: 15px; }
 
     /* HEADER */
-    .header { background-image: linear-gradient(135deg, rgba(10,100,120,0.82) 0%, rgba(14,125,148,0.78) 100%), url('img-hero-bg.jpeg?v=2'); background-size: cover; background-position: left center; color: #fff; padding: 18px 20px 20px; }
-    .header-inner { max-width: 700px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+    .header { background: none; color: #fff; padding: 18px 20px 20px; position: relative; overflow: hidden; }
+    .header::before { content: ''; position: absolute; inset: 0; z-index: 0; background: linear-gradient(135deg, rgba(10,100,120,0.86) 0%, rgba(14,125,148,0.82) 100%); }
+    .header-inner { max-width: 700px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; position: relative; z-index: 1; }
     .header h1 { font-size: 20px; font-weight: 800; }
     .header .sub { font-size: 12px; opacity: .7; margin-top: 2px; }
     .header-right { display: flex; align-items: center; gap: 12px; }

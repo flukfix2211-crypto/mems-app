@@ -33,7 +33,7 @@
 
     body {
       font-family: 'Sarabun', -apple-system, sans-serif;
-      background: var(--bg) url('img-hero-bg.jpeg?v=2') center/cover fixed;
+      background: url('img-hero-bg.jpeg?v=2') center/cover fixed;
       color: var(--txt);
       min-height: 100vh;
       font-size: 16px;
@@ -51,21 +51,21 @@
 
     /* ====== HEADER ====== */
     .header {
-      background-image: linear-gradient(145deg, rgba(10,100,120,0.82) 0%, rgba(14,125,148,0.78) 100%), url('img-hero-bg.jpeg?v=2');
-      background-size: cover; background-position: left center;
+      background: none;
       color: #fff;
       padding: 22px 18px 60px;
-      transition: background var(--tr);
       position: relative;
       overflow: hidden;
       z-index: 1;
     }
+    .header::before { content: ''; position: absolute; inset: 0; z-index: 0; background: linear-gradient(145deg, rgba(10,100,120,0.86) 0%, rgba(14,125,148,0.82) 100%); }
     .header::after { display: none; }
     .header-top {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 14px;
+      position: relative; z-index: 1;
     }
     .hosp-badge {
       font-size: 10px;
@@ -88,6 +88,7 @@
       font-weight: 800;
       letter-spacing: -0.01em;
       line-height: 1.2;
+      position: relative; z-index: 1;
     }
     .header .sub {
       font-size: 13px;
