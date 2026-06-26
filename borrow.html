@@ -60,15 +60,7 @@
       overflow: hidden;
       z-index: 1;
     }
-    .header::after {
-      content: '';
-      position: absolute;
-      bottom: -30px; left: -10px; right: -10px;
-      height: 60px;
-      background: var(--bg);
-      border-radius: 50% 50% 0 0 / 100% 100% 0 0;
-      transition: background var(--tr);
-    }
+    .header::after { display: none; }
     .header-top {
       display: flex;
       justify-content: space-between;

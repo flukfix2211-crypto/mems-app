@@ -22,7 +22,7 @@
 
     /* HEADER */
     .header { background-image: linear-gradient(145deg, rgba(10,100,120,0.82) 0%, rgba(14,125,148,0.78) 100%), url('img-hero-bg.jpeg?v=2'); background-size: cover; background-position: left center; color: #fff; padding: 22px 18px 60px; position: relative; overflow: hidden; z-index: 1; }
-    .header::after { content: ''; position: absolute; bottom: -30px; left: -10px; right: -10px; height: 60px; background: var(--bg); border-radius: 50% 50% 0 0 / 100% 100% 0 0; }
+    .header::after { display: none; }
     .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
     .hosp-badge { font-size: 10px; font-weight: 700; letter-spacing: 0.04em; background: rgba(255,255,255,0.18); padding: 4px 10px; border-radius: 20px; white-space: nowrap; }
     .clock { font-size: 13px; font-weight: 600; opacity: 0.85; font-variant-numeric: tabular-nums; }
@@ -31,7 +31,7 @@
     .header .page-title { font-size: 16px; font-weight: 700; opacity: 0.92; margin-top: 8px; display: flex; align-items: center; gap: 8px; }
 
     /* CONTENT */
-    .content { max-width: 540px; margin: -22px auto 0; padding: 0 14px 120px; position: relative; z-index: 1; }
+    .content { max-width: 540px; margin: 0 auto; padding: 0 14px 120px; position: relative; z-index: 1; }
     .card { background: var(--card); border-radius: var(--r); box-shadow: var(--sh); padding: 18px; margin-bottom: 12px; }
     .sec-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin-bottom: 13px; display: flex; align-items: center; gap: 5px; }
     .req-dot { width: 6px; height: 6px; background: #E53935; border-radius: 50%; flex-shrink: 0; }
@@ -57,7 +57,7 @@
     #wardPickCard { transition: all 0.3s; }
     .ward-confirm-btn { width: 100%; padding: 14px; background: linear-gradient(135deg, var(--a), var(--a2)); color: #fff; border: none; border-radius: var(--rs); font-family: 'Sarabun', sans-serif; font-size: 17px; font-weight: 700; cursor: pointer; margin-top: 10px; box-shadow: 0 4px 18px rgba(10,100,120,0.25); transition: all var(--tr); -webkit-tap-highlight-color: transparent; }
     .ward-confirm-btn:active { transform: scale(0.98); }
-    .ward-confirm-btn:disabled { opacity: 0.4; cursor: default; box-shadow: none; }
+    .ward-confirm-btn:disabled { opacity: 0.65; cursor: default; box-shadow: none; }
 
     /* LOADING */
     .loading-box { text-align: center; padding: 30px; color: var(--muted); }

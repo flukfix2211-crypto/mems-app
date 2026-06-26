@@ -27,7 +27,7 @@
       background-size: cover; background-position: left center;
       color: #fff; padding: 22px 20px 72px; position: relative; overflow: hidden; z-index: 1;
     }
-    .header::after { content: ''; position: absolute; bottom: -30px; left: -10px; right: -10px; height: 60px; background: var(--bg); border-radius: 50% 50% 0 0 / 100% 100% 0 0; }
+    .header::after { display: none; }
     .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
     .hosp-badge { font-size: 10px; font-weight: 700; letter-spacing: 0.04em; background: rgba(255,255,255,0.18); padding: 4px 10px; border-radius: 20px; }
     .clock-badge { font-size: 13px; font-weight: 600; opacity: 0.85; font-variant-numeric: tabular-nums; }
@@ -35,7 +35,7 @@
     .mems-logo { font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: clamp(48px, 14vw, 72px); letter-spacing: 0.12em; background: linear-gradient(135deg, #ffffff 0%, rgba(255,255,255,0.65) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; filter: drop-shadow(0 2px 12px rgba(255,255,255,0.25)); line-height: 1.05; }
     .mems-sub { font-size: 11px; font-weight: 500; opacity: 0.6; letter-spacing: 0.18em; text-transform: uppercase; margin-top: 4px; }
     .mems-th { font-size: 14px; font-weight: 600; opacity: 0.85; margin-top: 6px; }
-    .content { max-width: 500px; margin: -28px auto 0; padding: 0 16px 60px; position: relative; z-index: 2; }
+    .content { max-width: 500px; margin: 0 auto; padding: 0 16px 60px; position: relative; z-index: 2; }
     .menu-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 24px 0 12px; }
     .menu-card { background: var(--card); border-radius: var(--r); box-shadow: var(--sh); padding: 22px 20px; margin-bottom: 14px; display: flex; align-items: center; gap: 18px; text-decoration: none; color: var(--txt); border: 2px solid transparent; transition: all 0.22s ease; cursor: pointer; position: relative; overflow: hidden; -webkit-tap-highlight-color: transparent; }
     .menu-card::before { content: ''; position: absolute; inset: 0; background: var(--al); opacity: 0; transition: opacity 0.2s; }
