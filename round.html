@@ -18,10 +18,10 @@
       --sh: 0 2px 10px rgba(10,100,120,0.08), 0 1px 3px rgba(0,0,0,0.05);
       --r: 18px; --rs: 12px; --tr: 0.3s cubic-bezier(.4,0,.2,1);
     }
-    body { font-family: 'Sarabun', -apple-system, sans-serif; background: var(--bg); color: var(--txt); min-height: 100vh; font-size: 16px; -webkit-font-smoothing: antialiased; }
+    body { font-family: 'Sarabun', -apple-system, sans-serif; background: var(--bg) url('img-hero-bg.jpeg?v=2') center/cover fixed; color: var(--txt); min-height: 100vh; font-size: 16px; -webkit-font-smoothing: antialiased; }
 
     /* HEADER */
-    .header { background-image: linear-gradient(145deg, rgba(10,100,120,0.82) 0%, rgba(14,125,148,0.78) 100%), url('img-hero-bg.jpeg'); background-size: cover; background-position: left center; color: #fff; padding: 22px 18px 60px; position: relative; overflow: hidden; z-index: 1; }
+    .header { background-image: linear-gradient(145deg, rgba(10,100,120,0.82) 0%, rgba(14,125,148,0.78) 100%), url('img-hero-bg.jpeg?v=2'); background-size: cover; background-position: left center; color: #fff; padding: 22px 18px 60px; position: relative; overflow: hidden; z-index: 1; }
     .header::after { content: ''; position: absolute; bottom: -30px; left: -10px; right: -10px; height: 60px; background: var(--bg); border-radius: 50% 50% 0 0 / 100% 100% 0 0; }
     .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
     .hosp-badge { font-size: 10px; font-weight: 700; letter-spacing: 0.04em; background: rgba(255,255,255,0.18); padding: 4px 10px; border-radius: 20px; white-space: nowrap; }
