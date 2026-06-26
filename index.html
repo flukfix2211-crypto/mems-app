@@ -29,13 +29,12 @@
     }
     @media (min-width: 700px) {
       .header {
-        background-image: linear-gradient(90deg, rgba(10,100,120,0.62) 0%, rgba(10,100,120,0.18) 65%), url('img-hero-banner.jpeg');
+        background-image: url('img-hero-banner.jpeg');
         background-position: center center;
         min-height: 280px;
         padding-bottom: 90px;
       }
-      .header-body { max-width: 860px; margin: 0 auto; text-align: left; padding-top: 8px; }
-      .mems-logo { font-size: clamp(56px, 7vw, 96px); }
+      .header-body { display: none; }
     }
     .header::after { content: ''; position: absolute; bottom: -30px; left: -10px; right: -10px; height: 60px; background: var(--bg); border-radius: 50% 50% 0 0 / 100% 100% 0 0; }
     .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
