@@ -21,7 +21,7 @@
       --sh: 0 2px 10px rgba(10,100,120,0.08), 0 1px 3px rgba(0,0,0,0.05);
       --r: 20px; --rs: 14px; --tr: 0.3s cubic-bezier(.4,0,.2,1);
     }
-    body { font-family: 'Sarabun', -apple-system, sans-serif; background: url('img-hero-bg.jpeg?v=2') center/cover fixed; color: var(--txt); min-height: 100vh; -webkit-font-smoothing: antialiased; }
+    body { font-family: 'Sarabun', -apple-system, sans-serif; background: #0A6478; color: var(--txt); min-height: 100vh; -webkit-font-smoothing: antialiased; }
     .header { background: none; color: #fff; padding: 22px 20px 60px; position: relative; overflow: hidden; z-index: 1; }
     .header::before { content: ''; position: absolute; inset: 0; z-index: 0; background: linear-gradient(145deg, rgba(10,100,120,0.86) 0%, rgba(14,125,148,0.82) 100%); }
     .header::after { display: none; }
@@ -33,7 +33,7 @@
     .mems-sub { font-size: 11px; font-weight: 500; opacity: 0.6; letter-spacing: 0.18em; text-transform: uppercase; margin-top: 4px; }
     .mems-th { font-size: 14px; font-weight: 600; opacity: 0.85; margin-top: 6px; }
     .content { max-width: 500px; margin: 0 auto; padding: 0 16px 60px; position: relative; z-index: 2; }
-    .menu-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 24px 0 12px; }
+    .menu-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: rgba(255,255,255,0.75); margin: 24px 0 12px; }
     .menu-card { background: var(--card); border-radius: var(--r); box-shadow: var(--sh); padding: 22px 20px; margin-bottom: 14px; display: flex; align-items: center; gap: 18px; text-decoration: none; color: var(--txt); border: 2px solid transparent; transition: all 0.22s ease; cursor: pointer; position: relative; overflow: hidden; -webkit-tap-highlight-color: transparent; }
     .menu-card::before { content: ''; position: absolute; inset: 0; background: var(--al); opacity: 0; transition: opacity 0.2s; }
     .menu-card:active::before { opacity: 1; }
