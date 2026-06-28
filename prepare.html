@@ -34,6 +34,12 @@
     .field:focus { border-color: var(--a); background: #fff; }
     select.field { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%236A8A96' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 13px center; padding-right: 40px; cursor: pointer; }
 
+    .mode-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .mode-btn { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; padding: 14px; border: 2.5px solid var(--border); border-radius: var(--rs); background: #FAFCFD; font-family: 'Sarabun', sans-serif; font-size: 15px; font-weight: 800; color: var(--muted); cursor: pointer; transition: all .18s; text-align: left; -webkit-tap-highlight-color: transparent; }
+    .mode-btn .mode-desc { font-size: 11px; font-weight: 500; opacity: .85; }
+    .mode-btn.active { border-color: var(--a); background: var(--al); color: var(--a); box-shadow: 0 0 0 1px var(--a); }
+    .mode-btn#modeDeliver.active { border-color: #1A7B4A; background: #E6F5EC; color: #14612D; box-shadow: 0 0 0 1px #1A7B4A; }
+
     .equip-grid { display: flex; flex-wrap: wrap; gap: 8px; }
     .equip-chip { padding: 11px 16px; border: 2px solid var(--border); border-radius: 14px; font-family: 'Sarabun', sans-serif; font-size: 15px; font-weight: 700; background: var(--card); color: var(--muted); cursor: pointer; transition: all .18s; -webkit-tap-highlight-color: transparent; }
     .equip-chip.active { background: var(--a); border-color: var(--a); color: #fff; box-shadow: 0 3px 10px rgba(10,100,120,.3); }
@@ -65,6 +71,21 @@
 </header>
 
 <div class="content">
+  <!-- โหมดการเตรียม -->
+  <div class="card">
+    <div class="sec-label"><span class="req-dot"></span>รูปแบบการเตรียม</div>
+    <div class="mode-toggle">
+      <button class="mode-btn active" id="modePrepare" onclick="setMode('prepare')">
+        🧰 เตรียมเครื่องมือ
+        <span class="mode-desc">รอให้หน่วยงานมากดยืมเอง</span>
+      </button>
+      <button class="mode-btn" id="modeDeliver" onclick="setMode('deliver')">
+        🚚 เตรียมพร้อมส่ง
+        <span class="mode-desc">แอดมินนำส่ง = ยืมแทนหน่วยงานเลย</span>
+      </button>
+    </div>
+  </div>
+
   <!-- ประเภทเครื่อง -->
   <div class="card">
     <div class="sec-label"><span class="req-dot"></span>ประเภทเครื่อง</div>
@@ -91,7 +112,7 @@
 
   <!-- ผู้เตรียม -->
   <div class="card">
-    <div class="sec-label"><span class="req-dot"></span>ผู้เตรียม</div>
+    <div class="sec-label"><span class="req-dot"></span><span id="byLabel">ผู้เตรียม</span></div>
     <input type="text" class="field" id="preparedBy" placeholder="ชื่อผู้เตรียม">
   </div>
 
@@ -119,6 +140,25 @@
     'NICU','SNB','กจ.4','AIIR','สธ.7','สธ.6','ศูนย์เปล','เคมีบำบัด','อื่นๆ โปรดระบุชื่อตึก'];
 
   let selectedEquip = null;
+  let prepareMode = 'prepare';
+
+  function setMode(m) {
+    prepareMode = m;
+    document.getElementById('modePrepare').classList.toggle('active', m === 'prepare');
+    document.getElementById('modeDeliver').classList.toggle('active', m === 'deliver');
+    document.getElementById('byLabel').textContent = m === 'deliver' ? 'ผู้นำส่ง (แอดมิน)' : 'ผู้เตรียม';
+    const btn = document.getElementById('saveBtn');
+    btn.textContent = m === 'deliver' ? '🚚 บันทึก + ส่งให้หน่วยงาน (ยืมเลย)' : '💾 บันทึกการเตรียม';
+  }
+
+  // เวรตามเวลา (ตรงกับ borrow.html)
+  function detectShiftTH() {
+    const d = new Date();
+    const t = d.getHours() * 60 + d.getMinutes();
+    if (t >= 510 && t < 990) return 'เวรเช้า';
+    if (t >= 990 || t < 30)  return 'เวรบ่าย';
+    return 'เวรดึก';
+  }
 
   // build equip chips
   const grid = document.getElementById('equipGrid');
@@ -155,19 +195,37 @@
     }
 
     const btn = document.getElementById('saveBtn');
+    const origText = btn.textContent;
     btn.disabled = true; btn.textContent = 'กำลังบันทึก…';
     try {
-      await fetch(SCRIPT_URL, {
-        method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({ action: 'savePrepare', fields: { equipment: selectedEquip, numbers, ward, preparedBy: by } })
-      });
-      toast('✅ เตรียม ' + selectedEquip + ' No.' + numbers.join(', ') + ' ให้ ' + ward + ' แล้ว');
+      if (prepareMode === 'deliver') {
+        // โหมดพร้อมส่ง = ยืมแทนหน่วยงานทันที (1 record ต่อ 1 หมายเลข)
+        const shift = detectShiftTH();
+        const ts = new Date().toISOString();
+        for (const num of numbers) {
+          await fetch(SCRIPT_URL, {
+            method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify({
+              shift, action: '🟩 ยืม', equipment: selectedEquip, equipmentNumber: num,
+              ward, name: by, timestamp: ts, note: 'เตรียมพร้อมส่ง (แอดมินนำส่ง)'
+            })
+          });
+        }
+        toast('🚚 ส่ง ' + selectedEquip + ' No.' + numbers.join(', ') + ' ให้ ' + ward + ' (ยืมแล้ว)');
+      } else {
+        // โหมดเตรียม = บันทึกเป็นรายการเตรียม
+        await fetch(SCRIPT_URL, {
+          method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({ action: 'savePrepare', fields: { equipment: selectedEquip, numbers, ward, preparedBy: by } })
+        });
+        toast('✅ เตรียม ' + selectedEquip + ' No.' + numbers.join(', ') + ' ให้ ' + ward + ' แล้ว');
+        setTimeout(loadList, 800);
+      }
       document.getElementById('numbersInput').value = '';
-      setTimeout(loadList, 800);
     } catch (e) {
       toast('❌ บันทึกไม่สำเร็จ');
     }
-    btn.disabled = false; btn.textContent = '💾 บันทึกการเตรียม';
+    btn.disabled = false; btn.textContent = origText;
   }
 
   async function loadList() {
