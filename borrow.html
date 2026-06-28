@@ -742,6 +742,7 @@ function setAction(a) {
     if (S.equip === 'C2' && c2Status) renderC2Grid();
     else if (S.equip !== 'C2' && S.action === 'return') renderEquipReturnGrid();
   }
+  filterEquipButtons();
 }
 
 function setShift(s) {
@@ -790,6 +791,7 @@ function onWardChange(sel) {
     else renderEquipReturnGrid();
   }
   renderPreparedBanner();
+  filterEquipButtons();
 }
 
 /* ====== เครื่องที่เตรียมไว้ (จากฝั่งแอดมิน) ====== */
@@ -803,6 +805,7 @@ async function loadPreparedList() {
     const data = await fetch(u.toString(), { mode: 'cors' }).then(r => r.json());
     preparedList = data.prepared || [];
     renderPreparedBanner();
+    filterEquipButtons();
   } catch (e) { /* เงียบไว้ ไม่บล็อค */ }
 }
 
@@ -826,6 +829,60 @@ function renderPreparedBanner() {
       <div style="display:flex;flex-wrap:wrap;gap:8px">${chips}</div>
     </div>`;
   el.style.display = '';
+}
+
+/* โหมดยืม: แสดงเฉพาะประเภทเครื่องที่เตรียมไว้สำหรับ ward นั้น */
+function filterEquipButtons() {
+  const grid = document.querySelector('.equip-grid');
+  if (!grid) return;
+  const card = grid.closest('.card');
+  const btns = document.querySelectorAll('.equip-btn');
+
+  let hint = document.getElementById('equipHint');
+  if (!hint && card) {
+    hint = document.createElement('div');
+    hint.id = 'equipHint';
+    hint.style.cssText = 'font-size:13px;color:var(--muted);text-align:center;padding:10px 4px';
+    card.appendChild(hint);
+  }
+
+  // โหมดคืน หรือยังไม่ได้เลือกโหมด -> แสดงทุกปุ่มตามปกติ
+  if (S.action !== 'borrow') {
+    btns.forEach(b => b.style.display = '');
+    grid.style.display = '';
+    if (hint) hint.style.display = 'none';
+    return;
+  }
+
+  const ward = document.getElementById('wardSel').value;
+  const types = new Set(preparedList.filter(p => p.ward === ward).map(p => p.equipment));
+
+  // ถ้าเครื่องที่เลือกอยู่ไม่ได้ถูกเตรียมไว้ -> ยกเลิกการเลือก
+  if (S.equip && !types.has(S.equip)) {
+    S.equip = null;
+    btns.forEach(b => b.classList.remove('active'));
+    document.getElementById('normalNumCard').style.display = 'none';
+    document.getElementById('c2BorrowCard').style.display = 'none';
+    document.getElementById('c2GridCard').style.display = 'none';
+  }
+
+  let visible = 0;
+  btns.forEach(b => {
+    const show = types.has(b.getAttribute('data-e'));
+    b.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+
+  if (hint) {
+    if (visible === 0) {
+      grid.style.display = 'none';
+      hint.textContent = ward ? '⚠️ หน่วยงานนี้ยังไม่มีการเตรียมเครื่อง' : 'เลือกตึกที่มีการเตรียมเครื่องก่อน';
+      hint.style.display = '';
+    } else {
+      grid.style.display = '';
+      hint.style.display = 'none';
+    }
+  }
 }
 
 function applyPrepared(equip, number) {
