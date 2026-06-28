@@ -1017,6 +1017,28 @@ async function handleSubmit() {
     return;
   }
 
+  // กันยืมซ้ำ: ถ้าเครื่อง No. นั้นถูกยืมอยู่และยังไม่คืน ห้ามยืมซ้ำ
+  if (S.action === 'borrow' && SCRIPT_URL) {
+    try {
+      const u = new URL(SCRIPT_URL);
+      u.searchParams.set('action', 'equipment');
+      const data = await fetch(u.toString(), { mode: 'cors' }).then(r => r.json());
+      const statusMap = {};
+      (data.equipment || []).forEach(e => {
+        statusMap[String(e.equipment) + '__' + String(e.number)] = e.isBorrowed;
+      });
+      const dup = nums.filter(n => statusMap[S.equip + '__' + String(n)] === true);
+      if (dup.length) {
+        alert('⚠️ เครื่อง ' + S.equip + ' No. ' + dup.join(', ') +
+              ' ถูกยืมอยู่แล้ว\nต้องคืนเครื่องนั้นก่อน จึงจะยืมซ้ำได้');
+        return;
+      }
+    } catch (e) {
+      // โหลดสถานะไม่ได้ -> ปล่อยผ่าน ไม่บล็อคการบันทึก
+      console.warn('ตรวจสอบสถานะยืมซ้ำไม่ได้:', e);
+    }
+  }
+
   const btn = document.getElementById('submitBtn');
   btn.disabled = true;
   btn.textContent = `กำลังบันทึก… (0/${nums.length})`;
