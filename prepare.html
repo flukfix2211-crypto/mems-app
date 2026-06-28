@@ -64,6 +64,36 @@
   </style>
 </head>
 <body>
+
+<!-- LOGIN เตรียมเครื่อง (รหัส 6077, แป้นตัวเลข) -->
+<div id="loginOverlay" style="position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#0A6478 0%,#0E7D94 100%);display:flex;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:20px;padding:36px 32px;width:90%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,0.25);text-align:center;">
+    <div style="font-size:40px;margin-bottom:12px">🔒</div>
+    <div style="font-size:18px;font-weight:800;color:#192D35;margin-bottom:4px">เตรียมเครื่องมือ</div>
+    <div style="font-size:13px;color:#6A8A96;margin-bottom:24px">กรุณาใส่รหัสผ่าน (ตัวเลข)</div>
+    <input id="pwInput" type="password" inputmode="numeric" pattern="[0-9]*" placeholder="• • • •" autofocus
+      oninput="this.value=this.value.replace(/[^0-9]/g,'');document.getElementById('pwErr').style.display='none'"
+      onkeydown="if(event.key==='Enter')checkPw()"
+      style="width:100%;border:2px solid #C5E3ED;border-radius:12px;padding:12px 16px;font-size:20px;font-family:inherit;outline:none;text-align:center;letter-spacing:.3em;margin-bottom:8px;">
+    <div id="pwErr" style="color:#B82E2E;font-size:13px;margin-bottom:10px;display:none">รหัสผ่านไม่ถูกต้อง</div>
+    <button onclick="checkPw()" style="width:100%;background:#0A6478;color:#fff;border:none;border-radius:12px;padding:13px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;">เข้าสู่ระบบ</button>
+  </div>
+</div>
+<script>
+  const PREP_CODE = '6077';
+  function checkPw() {
+    if (document.getElementById('pwInput').value === PREP_CODE) {
+      sessionStorage.setItem('mems_prep_auth', '1');
+      document.getElementById('loginOverlay').style.display = 'none';
+    } else {
+      document.getElementById('pwErr').style.display = 'block';
+      document.getElementById('pwInput').value = '';
+      document.getElementById('pwInput').focus();
+    }
+  }
+  if (sessionStorage.getItem('mems_prep_auth') === '1') document.getElementById('loginOverlay').style.display = 'none';
+</script>
+
 <header class="header">
   <div class="header-top">
     <span class="hosp-badge">โรงพยาบาลพหลพลพยุหเสนา จ.กาญจนบุรี</span>
