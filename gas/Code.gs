@@ -627,6 +627,18 @@ function migrateAssetTypes() {
 const SHEET_PREPARE   = 'เตรียมเครื่อง';
 const PREPARE_COLS = ['ลำดับ', 'วันที่', 'เวลา', 'ประเภท', 'หมายเลข', 'ตึก/Ward', 'ผู้เตรียม', 'Timestamp', 'สถานะ'];
 
+/** แปลง timestamp -> { date: 'd ม.ค. 2569', time: 'HH:mm:ss' } (เวลาไทย) */
+function _fmtThaiDateTime(cellTs) {
+  let d = (cellTs instanceof Date) ? cellTs : new Date(String(cellTs));
+  if (isNaN(d)) return { date: '', time: '' };
+  const months = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  const day  = Utilities.formatDate(d, 'Asia/Bangkok', 'd');
+  const mon  = parseInt(Utilities.formatDate(d, 'Asia/Bangkok', 'M'), 10) - 1;
+  const year = parseInt(Utilities.formatDate(d, 'Asia/Bangkok', 'yyyy'), 10) + 543;
+  const time = Utilities.formatDate(d, 'Asia/Bangkok', 'HH:mm:ss');
+  return { date: day + ' ' + months[mon] + ' ' + year, time: time };
+}
+
 function getOrCreatePrepareSheet(ss) {
   let sheet = ss.getSheetByName(SHEET_PREPARE);
   if (!sheet) {
@@ -670,10 +682,11 @@ function getPrepareList() {
   const prepared = [];
   rows.forEach((r, i) => {
     if (String(r[8]) !== 'เตรียม') return; // เฉพาะที่ยังเตรียมอยู่
+    const dt = _fmtThaiDateTime(r[7] || r[1]);
     prepared.push({
       _rowIndex: i + 2,
-      date:      String(r[1]),
-      time:      String(r[2]),
+      date:      dt.date,
+      time:      dt.time,
       equipment: String(r[3]),
       number:    String(r[4]),
       ward:      String(r[5]),
@@ -690,17 +703,20 @@ function getPrepareHistory() {
   if (sheet.getLastRow() <= 1) return { ok: true, history: [] };
 
   const rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, PREPARE_COLS.length).getValues();
-  const history = rows.map((r, i) => ({
-    _rowIndex: i + 2,
-    date:      String(r[1]),
-    time:      String(r[2]),
-    equipment: String(r[3]),
-    number:    String(r[4]),
-    ward:      String(r[5]),
-    preparedBy: String(r[6]),
-    timestamp: String(r[7]),
-    status:    String(r[8])
-  }));
+  const history = rows.map((r, i) => {
+    const dt = _fmtThaiDateTime(r[7] || r[1]);
+    return {
+      _rowIndex: i + 2,
+      date:      dt.date,
+      time:      dt.time,
+      equipment: String(r[3]),
+      number:    String(r[4]),
+      ward:      String(r[5]),
+      preparedBy: String(r[6]),
+      timestamp: String(r[7]),
+      status:    String(r[8])
+    };
+  });
   history.reverse(); // ใหม่ไปเก่า
   return { ok: true, history };
 }
