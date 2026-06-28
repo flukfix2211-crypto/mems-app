@@ -729,6 +729,13 @@ function setAction(a) {
   document.querySelectorAll('.action-btn').forEach(b => b.classList.remove('active'));
   document.querySelector('.action-btn.' + a).classList.add('active');
   document.body.className = 'mode-' + a;
+  // โหมดยืม: ซ่อนช่องกรอกเลขเอง (ยืมได้เฉพาะเครื่องที่เตรียมไว้)
+  if (a === 'borrow') {
+    document.getElementById('normalNumCard').style.display = 'none';
+    document.getElementById('c2BorrowCard').style.display = 'none';
+  } else if (S.equip && !GRID_EQUIPS.has(S.equip)) {
+    document.getElementById('normalNumCard').style.display = '';
+  }
   if (GRID_EQUIPS.has(S.equip)) {
     c2SelectedNums.clear();
     showC2Cards();
@@ -762,7 +769,8 @@ function pickEquip(btn, e) {
   document.querySelectorAll('.equip-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   const isGrid = GRID_EQUIPS.has(e);
-  document.getElementById('normalNumCard').style.display = isGrid ? 'none' : '';
+  // โหมดยืม: ซ่อนช่องกรอกเลขเอง (ยืมเฉพาะเครื่องที่เตรียมไว้)
+  document.getElementById('normalNumCard').style.display = (isGrid || S.action === 'borrow') ? 'none' : '';
   if (isGrid) {
     c2SelectedNums.clear();
     showC2Cards();
@@ -916,7 +924,8 @@ async function loadC2Status() {
 
 function showC2Cards() {
   const isReturn = (S.action === 'return');
-  document.getElementById('c2BorrowCard').style.display = isReturn ? 'none' : '';
+  // โหมดยืม: ไม่ให้กรอกเลขเอง — ยืมได้เฉพาะเครื่องที่แอดมินเตรียมไว้ (กดจากแบนเนอร์)
+  document.getElementById('c2BorrowCard').style.display = 'none';
   document.getElementById('c2GridCard').style.display   = isReturn ? '' : 'none';
   if (!isReturn) {
     document.getElementById('c2BorrowInput').value = '';
@@ -1068,6 +1077,22 @@ async function handleSubmit() {
   const name   = document.getElementById('staffName').value.trim();
   const finalWard = (ward === 'อื่นๆ โปรดระบุชื่อตึก') ? (other || 'อื่นๆ') : ward;
   const shiftTH = { morning: 'เวรเช้า', afternoon: 'เวรบ่าย', night: 'เวรดึก' };
+
+  // โหมดยืม: ต้องมีการเตรียมเครื่องสำหรับหน่วยงานนี้ก่อนจึงจะยืมได้
+  if (S.action === 'borrow' && ward && SCRIPT_URL) {
+    try {
+      const u = new URL(SCRIPT_URL);
+      u.searchParams.set('action', 'prepareList');
+      const data = await fetch(u.toString(), { mode: 'cors' }).then(r => r.json());
+      preparedList = data.prepared || [];
+      renderPreparedBanner();
+      if (preparedList.filter(p => p.ward === ward).length === 0) {
+        alert('⚠️ หน่วยงาน "' + ward + '" ยังไม่มีการเตรียมเครื่อง\n' +
+              'ต้องให้เจ้าหน้าที่ศูนย์เครื่องมือแพทย์เตรียมก่อน จึงจะยืมได้');
+        return;
+      }
+    } catch (e) { /* โหลดไม่ได้ -> ไม่บล็อค กันระบบล่ม */ }
+  }
 
   if (!S.action || !S.shift || !S.equip || nums.length === 0 || !ward || !name || (ward === 'อื่นๆ โปรดระบุชื่อตึก' && !other)) {
     alert('⚠️  กรุณากรอกข้อมูลให้ครบทุกช่อง');
