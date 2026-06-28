@@ -163,6 +163,10 @@ function doGet(e) {
       return jsonResponse(generateExecutiveSummary());
     }
 
+    if (action === 'c2Report') {
+      return jsonResponse(generateC2Report());
+    }
+
     if (action === 'assets') {
       return jsonResponse(getAssets());
     }

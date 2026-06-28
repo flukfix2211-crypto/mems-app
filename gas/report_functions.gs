@@ -125,11 +125,7 @@ function exportReportToPDF(sheetName) {
   const sheet = ss.getSheetByName(sheetName);
   if (!sheet) return { ok: false, error: 'ไม่พบ Sheet: ' + sheetName };
 
-  const gid = sheet.getSheetId();
-  const pdfUrl = 'https://docs.google.com/spreadsheets/d/' + ss.getId() +
-    '/export?format=pdf&size=A4&portrait=true&fitw=true' +
-    '&sheetnames=false&printtitle=false&pagenumbers=false&gridlines=false&fzr=false' +
-    '&gid=' + gid;
+  const pdfUrl = _pdfExportUrl(ss, sheet);
 
   return {
     ok: true,
@@ -448,4 +444,261 @@ function _calcAvgBorrowDays(borrowRows, returnRows) {
 function _getOrCreateFolder(name) {
   const folders = DriveApp.getFoldersByName(name);
   return folders.hasNext() ? folders.next() : DriveApp.createFolder(name);
+}
+
+/** สร้าง export URL (PDF) ของชีต - ไม่ใช้ scope พิเศษ */
+function _pdfExportUrl(ss, sheet) {
+  return 'https://docs.google.com/spreadsheets/d/' + ss.getId() +
+    '/export?format=pdf&size=A4&portrait=true&fitw=true' +
+    '&sheetnames=false&printtitle=false&pagenumbers=true&gridlines=false&fzr=false' +
+    '&gid=' + sheet.getSheetId();
+}
+
+/** แปลง millisec -> "X วัน Y ชม." */
+function _fmtDur(ms) {
+  if (!ms || ms <= 0) return '0 ชม.';
+  const totalHours = ms / (1000 * 60 * 60);
+  const days  = Math.floor(totalHours / 24);
+  const hours = Math.round(totalHours - days * 24);
+  // ปัดเศษชั่วโมงครบ 24 -> บวกวัน
+  let dd = days, hh = hours;
+  if (hh >= 24) { dd += Math.floor(hh / 24); hh = hh % 24; }
+  if (dd > 0 && hh > 0) return dd + ' วัน ' + hh + ' ชม.';
+  if (dd > 0)           return dd + ' วัน';
+  return hh + ' ชม.';
+}
+
+// ============================================================
+// 4. generateC2Report()
+//    สถิติเชิงลึกรายเครื่อง C2 (No. 1-58) ตั้งแต่ต้นจนปัจจุบัน
+//    - แต่ละเครื่องไปวอร์ดไหน กี่ครั้ง รวมกี่วัน/ชม.
+//    - เวลาว่างพร้อมใช้รวมกี่วัน/ชม. กี่ครั้ง
+//    - เครื่องที่ใช้บ่อยสุด / ใช้นานสุด
+// ============================================================
+function generateC2Report() {
+  const ss  = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const src = ss.getSheetByName(SHEET_BORROW);
+  if (!src || src.getLastRow() <= 1) {
+    return { ok: false, error: 'ไม่มีข้อมูลใน Sheet ยืม-คืน' };
+  }
+
+  const now = new Date();
+  const raw = src.getRange(2, 1, src.getLastRow() - 1, 12).getValues();
+
+  // เก็บ event ของแต่ละ No. (เฉพาะ C2, ไม่รวม Round)
+  const events = {}; // { no: [ {ts, isBorrow, ward} ] }
+  raw.forEach(r => {
+    const equip  = String(r[5]);
+    const action = String(r[4]);
+    if (!equip.includes('C2')) return;
+    if (action.includes('Round')) return;
+    const isBorrow = action.includes('ยืม');
+    const isReturn = action.includes('คืน');
+    if (!isBorrow && !isReturn) return;
+    const no = parseInt(String(r[6]), 10);
+    if (isNaN(no) || no < 1 || no > 58) return;
+    const ts = _parseRowTimestamp(r);
+    if (!ts || ts.getTime() <= 0) return;
+    if (!events[no]) events[no] = [];
+    events[no].push({ ts: ts, isBorrow: isBorrow, ward: String(r[7]) || 'ไม่ระบุ' });
+  });
+
+  // คำนวณต่อเครื่อง
+  const units = {}; // no -> stat
+  Object.keys(events).forEach(noKey => {
+    const list = events[noKey].slice().sort((a, b) => a.ts - b.ts);
+    const stat = {
+      no: parseInt(noKey, 10),
+      borrowCount: 0,
+      borrowedMs: 0,
+      availableMs: 0,
+      availableCount: 0,
+      perWard: {},            // ward -> { count, ms }
+      currentStatus: 'ว่าง',  // 'ว่าง' หรือ 'อยู่ <ward>'
+      lastWard: ''
+    };
+
+    let openBorrow = null; // {ts, ward}
+    let lastReturnTs = null;
+
+    list.forEach(ev => {
+      if (ev.isBorrow) {
+        // ถ้ามีช่วงว่างก่อนหน้า (ตั้งแต่คืนล่าสุด -> ยืมนี้)
+        if (lastReturnTs && ev.ts > lastReturnTs) {
+          stat.availableMs += (ev.ts - lastReturnTs);
+          stat.availableCount++;
+          lastReturnTs = null;
+        }
+        // เปิดช่วงยืมใหม่ (ถ้ามีช่วงยืมค้างอยู่ ให้ปิดด้วย ts นี้ก่อน - กันข้อมูลซ้ำ)
+        if (openBorrow) {
+          const dur = ev.ts - openBorrow.ts;
+          if (dur > 0) { stat.borrowedMs += dur; _addWard(stat, openBorrow.ward, dur, false); }
+        }
+        openBorrow = { ts: ev.ts, ward: ev.ward };
+        stat.borrowCount++;
+        _addWard(stat, ev.ward, 0, true); // นับครั้ง
+      } else {
+        // คืน: ปิดช่วงยืมที่เปิดอยู่
+        if (openBorrow) {
+          const dur = ev.ts - openBorrow.ts;
+          if (dur > 0) { stat.borrowedMs += dur; _addWard(stat, openBorrow.ward, dur, false); }
+          openBorrow = null;
+        }
+        lastReturnTs = ev.ts;
+      }
+    });
+
+    // ยังยืมค้างอยู่ -> นับถึงปัจจุบัน
+    if (openBorrow) {
+      const dur = now - openBorrow.ts;
+      if (dur > 0) { stat.borrowedMs += dur; _addWard(stat, openBorrow.ward, dur, false); }
+      stat.currentStatus = 'อยู่ ' + openBorrow.ward;
+      stat.lastWard = openBorrow.ward;
+    } else if (lastReturnTs) {
+      // ว่างอยู่ -> นับช่วงว่างถึงปัจจุบัน
+      const dur = now - lastReturnTs;
+      if (dur > 0) { stat.availableMs += dur; stat.availableCount++; }
+      stat.currentStatus = 'ว่าง (พร้อมใช้)';
+    }
+
+    units[noKey] = stat;
+  });
+
+  const statList = Object.values(units);
+  if (statList.length === 0) {
+    return { ok: false, error: 'ไม่พบข้อมูลการยืม-คืนของเครื่อง C2' };
+  }
+
+  // เครื่องที่ใช้บ่อยสุด / ใช้นานสุด
+  const mostUsed = statList.slice().sort((a, b) => b.borrowCount - a.borrowCount)[0];
+  const longest  = statList.slice().sort((a, b) => b.borrowedMs - a.borrowedMs)[0];
+  const activeNow = statList.filter(s => s.currentStatus.indexOf('อยู่') === 0).length;
+
+  // สร้างชีต
+  const stamp = Utilities.formatDate(now, 'Asia/Bangkok', 'yyyy_MM_dd');
+  const sheetName = 'C2_Report_' + stamp;
+  const existing = ss.getSheetByName(sheetName);
+  if (existing) ss.deleteSheet(existing);
+  const sht = ss.insertSheet(sheetName);
+
+  _writeC2Sheet(sht, {
+    generatedAt: Utilities.formatDate(now, 'Asia/Bangkok', 'dd/MM/yyyy HH:mm'),
+    statList: statList.slice().sort((a, b) => a.no - b.no),
+    mostUsed, longest, activeNow,
+    usedUnits: statList.length
+  });
+  _formatC2Sheet(sht);
+
+  return {
+    ok: true,
+    sheetName: sheetName,
+    mostUsedNo: mostUsed.no,
+    mostUsedCount: mostUsed.borrowCount,
+    longestNo: longest.no,
+    longestDur: _fmtDur(longest.borrowedMs),
+    pdfUrl: _pdfExportUrl(ss, sht),
+    viewUrl: _pdfExportUrl(ss, sht),
+    message: 'สร้างรายงาน C2 รายเครื่อง เรียบร้อยแล้ว'
+  };
+}
+
+/** เพิ่มสถิติต่อวอร์ด */
+function _addWard(stat, ward, ms, countOnly) {
+  if (!stat.perWard[ward]) stat.perWard[ward] = { count: 0, ms: 0 };
+  if (countOnly) stat.perWard[ward].count++;
+  else           stat.perWard[ward].ms += ms;
+}
+
+/** เขียนชีตรายงาน C2 */
+function _writeC2Sheet(sht, d) {
+  const rows = [];
+  const W = 6; // จำนวนคอลัมน์
+
+  const pad = (arr) => { const a = arr.slice(); while (a.length < W) a.push(''); return a; };
+
+  rows.push(pad([HOSPITAL_NAME]));
+  rows.push(pad(['รายงานสถิติเครื่อง C2 รายเครื่อง (ตั้งแต่เริ่มใช้งาน)']));
+  rows.push(pad(['วันที่พิมพ์: ' + d.generatedAt]));
+  rows.push(pad(['']));
+
+  // ภาพรวม
+  rows.push(pad(['ภาพรวม']));
+  rows.push(pad(['เครื่องที่ถูกยืมบ่อยที่สุด', 'No. ' + d.mostUsed.no + '  (' + d.mostUsed.borrowCount + ' ครั้ง)']));
+  rows.push(pad(['เครื่องที่ถูกใช้งานนานที่สุด', 'No. ' + d.longest.no + '  (' + _fmtDur(d.longest.borrowedMs) + ')']));
+  rows.push(pad(['จำนวนเครื่องที่เคยถูกใช้', d.usedUnits + ' เครื่อง']));
+  rows.push(pad(['เครื่องที่กำลังถูกยืมอยู่', d.activeNow + ' เครื่อง']));
+  rows.push(pad(['']));
+
+  // ตารางสรุปรายเครื่อง
+  rows.push(pad(['ก) สรุปรายเครื่อง']));
+  rows.push(pad(['No.', 'จำนวนครั้งที่ยืม', 'เวลาถูกยืมรวม', 'เวลาว่างรวม', 'ครั้งที่ว่าง', 'สถานะปัจจุบัน']));
+  d.statList.forEach(s => {
+    rows.push([
+      s.no, s.borrowCount + ' ครั้ง', _fmtDur(s.borrowedMs),
+      _fmtDur(s.availableMs), s.availableCount + ' ครั้ง', s.currentStatus
+    ]);
+  });
+  rows.push(pad(['']));
+
+  // รายละเอียดต่อวอร์ด
+  rows.push(pad(['ข) รายละเอียดการใช้งานต่อวอร์ด']));
+  rows.push(pad(['No.', 'วอร์ด', 'จำนวนครั้ง', 'เวลารวม', '', '']));
+  d.statList.forEach(s => {
+    const wards = Object.keys(s.perWard);
+    if (wards.length === 0) return;
+    wards.sort((a, b) => s.perWard[b].count - s.perWard[a].count);
+    wards.forEach((w, i) => {
+      const pw = s.perWard[w];
+      rows.push([ i === 0 ? s.no : '', w, pw.count + ' ครั้ง', _fmtDur(pw.ms), '', '' ]);
+    });
+  });
+
+  sht.getRange(1, 1, rows.length, W).setValues(rows);
+}
+
+/** จัดรูปแบบชีต C2 */
+function _formatC2Sheet(sht) {
+  const last = sht.getLastRow();
+  const W = 6;
+
+  // หัวรายงาน 3 แถว
+  sht.getRange(1, 1, 1, W).merge()
+     .setFontSize(14).setFontWeight('bold').setHorizontalAlignment('center')
+     .setBackground('#0A6478').setFontColor('#FFFFFF');
+  sht.getRange(2, 1, 1, W).merge()
+     .setFontSize(12).setFontWeight('bold').setHorizontalAlignment('center')
+     .setBackground('#0E7D94').setFontColor('#FFFFFF');
+  sht.getRange(3, 1, 1, W).merge()
+     .setFontSize(10).setHorizontalAlignment('center').setFontColor('#6A8A96');
+
+  // ฟอนต์ทั้งชีต
+  sht.getRange(1, 1, last, W)
+     .setFontFamily('Sarabun, Arial')
+     .setVerticalAlignment('middle');
+
+  // ไฮไลต์แถวหัวข้อ section + หัวตาราง (หาโดยอ่านค่า col A)
+  const colA = sht.getRange(1, 1, last, 1).getValues();
+  for (let i = 0; i < colA.length; i++) {
+    const v = String(colA[i][0]);
+    const row = i + 1;
+    if (v === 'ภาพรวม' || v.indexOf('ก) ') === 0 || v.indexOf('ข) ') === 0) {
+      sht.getRange(row, 1, 1, W).merge()
+         .setFontWeight('bold').setFontSize(12).setBackground('#DAF0F5').setFontColor('#0A6478');
+    }
+    if (v === 'No.') {
+      sht.getRange(row, 1, 1, W)
+         .setFontWeight('bold').setBackground('#0A6478').setFontColor('#FFFFFF')
+         .setHorizontalAlignment('center');
+    }
+  }
+
+  // ความกว้างคอลัมน์
+  sht.setColumnWidth(1, 60);
+  sht.setColumnWidth(2, 170);
+  sht.setColumnWidth(3, 130);
+  sht.setColumnWidth(4, 130);
+  sht.setColumnWidth(5, 90);
+  sht.setColumnWidth(6, 170);
+
+  sht.setFrozenRows(3);
 }

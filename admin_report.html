@@ -241,6 +241,21 @@
       </button>
     </div>
 
+    <!-- การ์ด 4: รายงาน C2 รายเครื่อง -->
+    <div class="action-card">
+      <div class="action-card-icon teal">🔧</div>
+      <div class="action-card-title">รายงาน C2 รายเครื่อง</div>
+      <div class="action-card-desc">
+        สถิติเชิงลึกแต่ละเครื่อง No. 1-58 ตั้งแต่เริ่มใช้งาน:
+        ไปวอร์ดไหน กี่ครั้ง รวมกี่วัน/ชม. เวลาว่างพร้อมใช้
+        และเครื่องที่ใช้บ่อยที่สุด พร้อม PDF หลายหน้า
+      </div>
+      <button class="btn-action teal" id="btnC2" onclick="runAction('c2')">
+        <span id="iconC2">🔧</span>
+        <span id="labelC2">สร้างรายงาน C2</span>
+      </button>
+    </div>
+
   </div>
 
   <!-- ── RESULT BOX ── -->
@@ -291,6 +306,11 @@
         btn: 'btnExec', icon: 'iconExec', label: 'labelExec',
         action: 'execSummary', loadingText: 'กำลังสร้างสรุปผู้บริหาร...',
         tagClass: 'exec', tagLabel: 'สรุปผู้บริหาร'
+      },
+      c2: {
+        btn: 'btnC2', icon: 'iconC2', label: 'labelC2',
+        action: 'c2Report', loadingText: 'กำลังประมวลผลรายเครื่อง...',
+        tagClass: 'report', tagLabel: 'รายงาน C2'
       }
     };
     const cfg = configs[type];
@@ -361,6 +381,16 @@
         <div class="result-row"><span class="result-key">หน่วยงานยืมมากสุด</span><span class="result-val">${res.topWard}</span></div>`;
       showResult('success', '✅ สร้างสรุปผู้บริหารสำเร็จ', html);
     }
+    else if (type === 'c2') {
+      const html = `
+        <div class="result-row"><span class="result-key">ชื่อ Sheet</span><span class="result-val">${res.sheetName}</span></div>
+        <div class="result-row"><span class="result-key">เครื่องที่ยืมบ่อยสุด</span><span class="result-val">No. ${res.mostUsedNo} (${res.mostUsedCount} ครั้ง)</span></div>
+        <div class="result-row"><span class="result-key">เครื่องที่ใช้นานสุด</span><span class="result-val">No. ${res.longestNo} (${res.longestDur})</span></div>
+        <a href="${res.pdfUrl}" target="_blank" class="drive-link">
+          📄 เปิด / ดาวน์โหลด PDF (หลายหน้า) →
+        </a>`;
+      showResult('success', '✅ สร้างรายงาน C2 รายเครื่องสำเร็จ', html);
+    }
   }
 
   // ── HELPERS ────────────────────────────────────────────────
@@ -386,6 +416,7 @@
       document.getElementById(cfg.label).textContent =
         cfg.action === 'monthlyReport' ? 'สร้างรายงานประจำเดือน' :
         cfg.action === 'exportPDF'     ? 'Export PDF' :
+        cfg.action === 'c2Report'      ? 'สร้างรายงาน C2' :
                                          'สรุปผู้บริหาร';
     }
   }
