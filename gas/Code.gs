@@ -63,6 +63,16 @@ function doPost(e) {
       return jsonResponse({ ok: true });
     }
 
+    if (data.action === 'savePrepare') {
+      savePrepare(data.fields || {});
+      return jsonResponse({ ok: true });
+    }
+
+    if (data.action === 'deletePrepare') {
+      deletePrepare(parseInt(data.rowIndex, 10));
+      return jsonResponse({ ok: true });
+    }
+
     const result = saveRecord(data);
     return jsonResponse({ ok: true, id: result.row, timestamp: result.timestamp });
   } catch (err) {
@@ -167,6 +177,10 @@ function doGet(e) {
       return jsonResponse(generateC2Report());
     }
 
+    if (action === 'prepareList') {
+      return jsonResponse(getPrepareList());
+    }
+
     if (action === 'assets') {
       return jsonResponse(getAssets());
     }
@@ -222,6 +236,11 @@ function saveRecord(data) {
   const isBorrow = (data.action || '').includes('ยืม');
   const bg = isRound ? '#DAF0F5' : isBorrow ? '#DCF2E5' : '#FDEAEA';
   sheet.getRange(lastRow, 1, 1, 12).setBackground(bg);
+
+  // ถ้าเป็นการยืม -> เครื่องที่ถูกเตรียมไว้ให้หายจากรายการเตรียม
+  if (isBorrow) {
+    try { markPreparedUsed(data.equipment || '', data.equipmentNumber || ''); } catch (e) {}
+  }
 
   return { row: rowNumber, timestamp: now.toISOString() };
 }
@@ -592,4 +611,92 @@ function migrateAssetTypes() {
     }
   });
   Logger.log('เปลี่ยนประเภทเสร็จแล้ว');
+}
+
+// ============================================================
+// PREPARE — เตรียมเครื่องมือ (ฝั่งแอดมิน)
+// ============================================================
+const SHEET_PREPARE   = 'เตรียมเครื่อง';
+const PREPARE_COLS = ['ลำดับ', 'วันที่', 'เวลา', 'ประเภท', 'หมายเลข', 'ตึก/Ward', 'ผู้เตรียม', 'Timestamp', 'สถานะ'];
+
+function getOrCreatePrepareSheet(ss) {
+  let sheet = ss.getSheetByName(SHEET_PREPARE);
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEET_PREPARE);
+    sheet.appendRow(PREPARE_COLS);
+    sheet.setFrozenRows(1);
+    const h = sheet.getRange(1, 1, 1, PREPARE_COLS.length);
+    h.setBackground('#0A6478').setFontColor('#fff').setFontWeight('bold').setHorizontalAlignment('center');
+    sheet.setColumnWidths(1, PREPARE_COLS.length, 120);
+  }
+  return sheet;
+}
+
+function savePrepare(fields) {
+  const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = getOrCreatePrepareSheet(ss);
+  const now   = new Date();
+  const dateStr = Utilities.formatDate(now, 'Asia/Bangkok', 'dd/MM/yyyy');
+  const timeStr = Utilities.formatDate(now, 'Asia/Bangkok', 'HH:mm:ss');
+  const equip   = fields.equipment || '';
+  const ward    = fields.ward || '';
+  const by      = fields.preparedBy || '';
+  const numbers = Array.isArray(fields.numbers) ? fields.numbers : [fields.numbers];
+
+  numbers.filter(n => String(n).trim() !== '').forEach(num => {
+    const rowNumber = sheet.getLastRow();
+    sheet.appendRow([
+      rowNumber, dateStr, timeStr, equip, String(num).trim(),
+      ward, by, now.toISOString(), 'เตรียม'
+    ]);
+    sheet.getRange(sheet.getLastRow(), 1, 1, PREPARE_COLS.length).setBackground('#FFF3CD');
+  });
+}
+
+function getPrepareList() {
+  const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = getOrCreatePrepareSheet(ss);
+  if (sheet.getLastRow() <= 1) return { ok: true, prepared: [] };
+
+  const rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, PREPARE_COLS.length).getValues();
+  const prepared = [];
+  rows.forEach((r, i) => {
+    if (String(r[8]) !== 'เตรียม') return; // เฉพาะที่ยังเตรียมอยู่
+    prepared.push({
+      _rowIndex: i + 2,
+      equipment: String(r[3]),
+      number:    String(r[4]),
+      ward:      String(r[5]),
+      preparedBy: String(r[6])
+    });
+  });
+  return { ok: true, prepared };
+}
+
+function deletePrepare(sheetRow) {
+  if (!sheetRow || sheetRow < 2) throw new Error('rowIndex ไม่ถูกต้อง');
+  const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(SHEET_PREPARE);
+  if (!sheet) throw new Error('ไม่พบ Sheet: ' + SHEET_PREPARE);
+  sheet.deleteRow(sheetRow);
+}
+
+/** ทำเครื่องหมายว่าเครื่องที่เตรียมไว้ถูกยืมแล้ว (หายจากรายการเตรียม) */
+function markPreparedUsed(equipment, number) {
+  const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(SHEET_PREPARE);
+  if (!sheet || sheet.getLastRow() <= 1) return;
+  const equip = String(equipment).trim();
+  const num   = String(number).trim();
+  if (!equip || !num) return;
+
+  const rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, PREPARE_COLS.length).getValues();
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    if (String(r[8]) === 'เตรียม' && String(r[3]).trim() === equip && String(r[4]).trim() === num) {
+      const row = i + 2;
+      sheet.getRange(row, 9).setValue('ยืมแล้ว');
+      sheet.getRange(row, 1, 1, PREPARE_COLS.length).setBackground('#DCF2E5');
+    }
+  }
 }

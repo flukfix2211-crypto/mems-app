@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>MEMs — เตรียมเครื่องมือ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --a: #0A6478; --a2: #0E7D94; --al: #DAF0F5;
+      --bg: #EBF5F8; --card: #FFFFFF; --txt: #192D35;
+      --muted: #6A8A96; --border: #C5E3ED;
+      --sh: 0 2px 10px rgba(10,100,120,0.08), 0 1px 3px rgba(0,0,0,0.05);
+      --r: 18px; --rs: 12px; --tr: 0.3s cubic-bezier(.4,0,.2,1);
+    }
+    body { font-family: 'Sarabun', -apple-system, sans-serif; background: #0A6478; color: var(--txt); min-height: 100vh; font-size: 16px; -webkit-font-smoothing: antialiased; }
+    .header { background: none; color: #fff; padding: 22px 18px 60px; position: relative; overflow: hidden; z-index: 1; }
+    .header::before { content: ''; position: absolute; inset: 0; z-index: 0; background: linear-gradient(145deg, #0A6478 0%, #0E7D94 100%); }
+    .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; position: relative; z-index: 1; }
+    .hosp-badge { font-size: 10px; font-weight: 700; letter-spacing: 0.04em; background: rgba(255,255,255,0.18); padding: 4px 10px; border-radius: 20px; white-space: nowrap; }
+    .btn-back { font-size: 11px; font-weight: 700; background: rgba(255,255,255,0.18); color: #fff; padding: 4px 10px; border-radius: 20px; text-decoration: none; border: 1px solid rgba(255,255,255,0.3); }
+    .header h1 { font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 40px; letter-spacing: 0.1em; background: linear-gradient(135deg,#fff 0%,rgba(255,255,255,0.65) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; line-height: 1.1; position: relative; z-index: 1; }
+    .header .page-title { font-size: 16px; font-weight: 700; opacity: 0.92; margin-top: 6px; position: relative; z-index: 1; }
+
+    .content { max-width: 560px; margin: 0 auto; padding: 0 14px 100px; position: relative; z-index: 1; }
+    .card { background: var(--card); border-radius: var(--r); box-shadow: var(--sh); padding: 18px; margin-bottom: 12px; }
+    .sec-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin-bottom: 12px; display: flex; align-items: center; gap: 5px; }
+    .req-dot { width: 6px; height: 6px; background: #E53935; border-radius: 50%; }
+    .field { width: 100%; padding: 13px 15px; border: 2px solid var(--border); border-radius: var(--rs); font-family: 'Sarabun', sans-serif; font-size: 16px; color: var(--txt); background: #FAFCFD; outline: none; transition: border-color 0.2s; -webkit-appearance: none; appearance: none; }
+    .field:focus { border-color: var(--a); background: #fff; }
+    select.field { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%236A8A96' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 13px center; padding-right: 40px; cursor: pointer; }
+
+    .equip-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+    .equip-chip { padding: 11px 16px; border: 2px solid var(--border); border-radius: 14px; font-family: 'Sarabun', sans-serif; font-size: 15px; font-weight: 700; background: var(--card); color: var(--muted); cursor: pointer; transition: all .18s; -webkit-tap-highlight-color: transparent; }
+    .equip-chip.active { background: var(--a); border-color: var(--a); color: #fff; box-shadow: 0 3px 10px rgba(10,100,120,.3); }
+
+    .save-btn { width: 100%; padding: 16px; background: linear-gradient(135deg, var(--a), var(--a2)); color: #fff; border: none; border-radius: var(--rs); font-family: 'Sarabun', sans-serif; font-size: 17px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 18px rgba(10,100,120,.25); transition: all .2s; -webkit-tap-highlight-color: transparent; }
+    .save-btn:disabled { opacity: .55; cursor: default; }
+
+    .prep-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 0; border-bottom: 1px solid #ECF4F7; }
+    .prep-item:last-child { border-bottom: none; }
+    .prep-info { font-size: 14px; }
+    .prep-eq { font-weight: 800; color: var(--a); }
+    .prep-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .del-btn { padding: 6px 12px; background: #FDEAEA; color: #B82E2E; border: none; border-radius: 9px; font-family: 'Sarabun', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+    .empty { text-align: center; color: var(--muted); font-size: 14px; padding: 22px 0; }
+    .group-ward { font-size: 13px; font-weight: 800; color: var(--txt); background: var(--al); padding: 6px 12px; border-radius: 8px; margin: 10px 0 4px; }
+
+    #toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px); background: #192D35; color: #fff; padding: 12px 22px; border-radius: 40px; font-size: 14px; font-weight: 600; opacity: 0; transition: all .3s ease; z-index: 999; pointer-events: none; white-space: nowrap; }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+<header class="header">
+  <div class="header-top">
+    <span class="hosp-badge">โรงพยาบาลพหลพลพยุหเสนา จ.กาญจนบุรี</span>
+    <a href="index.html" class="btn-back">🏠 หน้าหลัก</a>
+  </div>
+  <a href="index.html" style="text-decoration:none"><h1>MEMs</h1></a>
+  <div class="page-title">🧰 เตรียมเครื่องมือ (สำหรับแอดมิน)</div>
+</header>
+
+<div class="content">
+  <!-- ประเภทเครื่อง -->
+  <div class="card">
+    <div class="sec-label"><span class="req-dot"></span>ประเภทเครื่อง</div>
+    <div class="equip-grid" id="equipGrid"></div>
+  </div>
+
+  <!-- หมายเลข -->
+  <div class="card">
+    <div class="sec-label"><span class="req-dot"></span>หมายเลขเครื่อง <span style="font-weight:500;color:var(--muted);text-transform:none;letter-spacing:0">(คั่นหลายเครื่องด้วย , )</span></div>
+    <input type="text" class="field" id="numbersInput" placeholder="เช่น 5, 6, 7"
+           inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9,\s]/g,'')">
+  </div>
+
+  <!-- ward -->
+  <div class="card">
+    <div class="sec-label"><span class="req-dot"></span>ตึก/หน่วยงานที่เตรียมให้</div>
+    <select class="field" id="wardSel">
+      <option value="">— เลือกตึก —</option>
+    </select>
+    <div id="otherWrap" style="display:none;margin-top:10px">
+      <input type="text" class="field" id="otherWard" placeholder="ระบุชื่อตึก...">
+    </div>
+  </div>
+
+  <!-- ผู้เตรียม -->
+  <div class="card">
+    <div class="sec-label"><span class="req-dot"></span>ผู้เตรียม</div>
+    <input type="text" class="field" id="preparedBy" placeholder="ชื่อผู้เตรียม">
+  </div>
+
+  <button class="save-btn" id="saveBtn" onclick="savePrepare()">💾 บันทึกการเตรียม</button>
+
+  <!-- รายการที่เตรียมไว้ -->
+  <div class="card" style="margin-top:16px">
+    <div class="sec-label" style="justify-content:space-between">
+      <span>📋 รายการที่เตรียมไว้</span>
+      <span style="cursor:pointer;color:var(--a)" onclick="loadList()">🔄 รีเฟรช</span>
+    </div>
+    <div id="listBody"><div class="empty">กำลังโหลด...</div></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz7_Q0Wtl7hDovuZga1q42xRTxVC6GXfuph4JU-C-aQ_zNLssdRVUsfde4a1vF15cIYtQ/exec';
+
+  const EQUIPS = ['C2', 'Infusion Pump', 'Syringe pump', 'High Flow', 'Brid เขียว', 'T1', 'Monnal t60'];
+  const WARDS = ['ER','อายุรกรรมหญิง (M.ญ)','EENT','ศัลยกรรมหญิง','ศัลยกรรมกระดูก','ศัลยกรรมชาย',
+    'อายุรกรรมชาย (M.ช)','Semi ICU','ICU 100 ปี','กจ.3','กจ.2','TM','เด็กล่าง','PICU','เด็กบน',
+    'ICU ญสส.','ห้องคลอด LR','หลังคลอด PP','ญสส.9','Premium ญสส.8','ญสส.7','ICU.S','ICU Nuero',
+    'NICU','SNB','กจ.4','AIIR','สธ.7','สธ.6','ศูนย์เปล','เคมีบำบัด','อื่นๆ โปรดระบุชื่อตึก'];
+
+  let selectedEquip = null;
+
+  // build equip chips
+  const grid = document.getElementById('equipGrid');
+  EQUIPS.forEach(e => {
+    const b = document.createElement('button');
+    b.className = 'equip-chip';
+    b.textContent = e;
+    b.onclick = () => { selectedEquip = e; document.querySelectorAll('.equip-chip').forEach(x => x.classList.remove('active')); b.classList.add('active'); };
+    grid.appendChild(b);
+  });
+
+  // build ward options
+  const wardSel = document.getElementById('wardSel');
+  WARDS.forEach(w => { const o = document.createElement('option'); o.value = w; o.textContent = w; wardSel.appendChild(o); });
+  wardSel.onchange = () => { document.getElementById('otherWrap').style.display = wardSel.value === 'อื่นๆ โปรดระบุชื่อตึก' ? '' : 'none'; };
+
+  function toast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg; el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 3000);
+  }
+
+  async function savePrepare() {
+    const ward0 = wardSel.value;
+    const other = document.getElementById('otherWard').value.trim();
+    const ward = ward0 === 'อื่นๆ โปรดระบุชื่อตึก' ? (other || 'อื่นๆ') : ward0;
+    const by = document.getElementById('preparedBy').value.trim();
+    const numbers = document.getElementById('numbersInput').value
+      .split(',').map(s => s.trim()).filter(s => s !== '');
+
+    if (!selectedEquip || numbers.length === 0 || !ward0 || !by || (ward0 === 'อื่นๆ โปรดระบุชื่อตึก' && !other)) {
+      alert('⚠️ กรุณากรอกข้อมูลให้ครบ (ประเภท, หมายเลข, ตึก, ผู้เตรียม)');
+      return;
+    }
+
+    const btn = document.getElementById('saveBtn');
+    btn.disabled = true; btn.textContent = 'กำลังบันทึก…';
+    try {
+      await fetch(SCRIPT_URL, {
+        method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ action: 'savePrepare', fields: { equipment: selectedEquip, numbers, ward, preparedBy: by } })
+      });
+      toast('✅ เตรียม ' + selectedEquip + ' No.' + numbers.join(', ') + ' ให้ ' + ward + ' แล้ว');
+      document.getElementById('numbersInput').value = '';
+      setTimeout(loadList, 800);
+    } catch (e) {
+      toast('❌ บันทึกไม่สำเร็จ');
+    }
+    btn.disabled = false; btn.textContent = '💾 บันทึกการเตรียม';
+  }
+
+  async function loadList() {
+    const body = document.getElementById('listBody');
+    body.innerHTML = '<div class="empty">กำลังโหลด...</div>';
+    try {
+      const u = new URL(SCRIPT_URL); u.searchParams.set('action', 'prepareList');
+      const data = await fetch(u.toString(), { mode: 'cors' }).then(r => r.json());
+      const items = data.prepared || [];
+      if (!items.length) { body.innerHTML = '<div class="empty">ยังไม่มีรายการที่เตรียมไว้</div>'; return; }
+      // group by ward
+      const byWard = {};
+      items.forEach(it => { (byWard[it.ward] = byWard[it.ward] || []).push(it); });
+      let html = '';
+      Object.keys(byWard).sort().forEach(w => {
+        html += `<div class="group-ward">📍 ${w}</div>`;
+        byWard[w].forEach(it => {
+          html += `<div class="prep-item">
+            <div class="prep-info"><span class="prep-eq">${it.equipment} No.${it.number}</span><div class="prep-sub">โดย ${it.preparedBy}</div></div>
+            <button class="del-btn" onclick="delPrep(${it._rowIndex})">ลบ</button>
+          </div>`;
+        });
+      });
+      body.innerHTML = html;
+    } catch (e) {
+      body.innerHTML = '<div class="empty">โหลดรายการไม่ได้</div>';
+    }
+  }
+
+  async function delPrep(rowIndex) {
+    if (!confirm('ลบรายการเตรียมนี้?')) return;
+    try {
+      await fetch(SCRIPT_URL, {
+        method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ action: 'deletePrepare', rowIndex })
+      });
+      toast('🗑️ ลบแล้ว');
+      setTimeout(loadList, 800);
+    } catch (e) { toast('❌ ลบไม่สำเร็จ'); }
+  }
+
+  loadList();
+</script>
+</body>
+</html>
