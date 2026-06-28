@@ -1251,11 +1251,16 @@ function resetForm() {
   document.getElementById('wardSel').value = '';
   document.getElementById('otherWrap').classList.add('hidden');
   document.getElementById('successScreen').classList.remove('show');
+  // เคลียร์แบนเนอร์เครื่องที่เตรียม + ข้อความยืนยัน
+  const pb = document.getElementById('preparedBanner');
+  if (pb) { pb.style.display = 'none'; pb.innerHTML = ''; }
   setShift(detectShift()); // re-detect shift after reset
   document.body.className = '';
   const btn = document.getElementById('submitBtn');
   btn.disabled   = false;
   btn.textContent = 'บันทึกรายการ';
+  loadPreparedList();        // โหลดรายการเตรียมล่าสุดใหม่
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 </script>
 <div style="text-align:center;padding:18px 16px 28px;font-size:12px;color:#6A8A96;line-height:1.7">
