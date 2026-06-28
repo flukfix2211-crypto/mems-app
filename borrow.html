@@ -748,13 +748,17 @@ function setAction(a) {
 function setShift(s) {
   S.shift = s;
   const map = {
-    morning:   { icon: '🌅', label: 'เวรเช้า',  range: '08:30 – 16:30' },
-    afternoon: { icon: '☀️', label: 'เวรบ่าย', range: '16:30 – 00:30' },
-    night:     { icon: '🌙', label: 'เวรดึก',  range: '00:30 – 08:30' },
+    morning:   { icon: '🌅', label: 'เวรเช้า', range: '08:30 - 16:30' },
+    afternoon: { icon: '🌤', label: 'เวรบ่าย', range: '16:30 - 00:30' },
+    night:     { icon: '🌙', label: 'เวรดึก',  range: '00:30 - 08:30' },
   };
-  const m = map[s];
+  const m = map[s] || map.morning;
   const badge = document.getElementById('shiftBadge');
-  if (badge && m) badge.innerHTML = `${m.icon} ${m.label} <span style="opacity:.7;font-weight:500;font-size:12px">(${m.range})</span>`;
+  if (badge) {
+    badge.innerHTML = '<span style="font-size:15px">' + m.icon + '</span> ' +
+      '<b style="font-weight:800">' + m.label + '</b> ' +
+      '<span style="opacity:.8;font-weight:500;font-size:12px">(' + m.range + ')</span>';
+  }
 }
 
 /* ====== AUTO-RUN ON LOAD ====== */
