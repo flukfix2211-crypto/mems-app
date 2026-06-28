@@ -76,16 +76,19 @@ function generateMonthlyReport() {
     return [equip, cnt, daysInMonth, rate];
   });
 
-  //  d) ระยะเวลายืมเฉลี่ย (วัน) 
+  //  d) ระยะเวลายืมเฉลี่ย (วัน)
   const avgDays = _calcAvgBorrowDays(borrowRows, returnRows);
 
-  //  เขียนลง Sheet 
+  //  จ) สถิติการเตรียมเครื่องของเดือนที่แล้ว
+  const prep = _gatherPrepareStats(ss, firstOfLastMonth, firstOfThisMonth);
+
+  //  เขียนลง Sheet
   _writeReportSheet(rpt, {
     monthTH, sheetName, monthLabel,
     total: borrowRows.length,
     totalReturn: returnRows.length,
     equipRanked, wardTop5, utilization, avgDays,
-    daysInMonth,
+    daysInMonth, prep,
     generatedAt: Utilities.formatDate(now, 'Asia/Bangkok', 'dd/MM/yyyy HH:mm')
   });
 
@@ -277,6 +280,23 @@ function _writeReportSheet(sht, d) {
       rows.push([equip, avg, count + ' คู่', '', '']);
     });
   }
+  rows.push(['', '', '', '', '']);
+
+  //  จ) การเตรียมเครื่อง (ศูนย์เครื่องมือแพทย์)
+  const p = d.prep || { total: 0, used: 0, waiting: 0, cancelled: 0, byEquip: [], byPreparer: [] };
+  rows.push(['จ) การเตรียมเครื่อง (โดยศูนย์เครื่องมือแพทย์)', '', '', '', '']);
+  rows.push(['เตรียมทั้งหมด', p.total + ' ครั้ง', '', '', '']);
+  rows.push(['ส่งมอบ/ถูกยืมแล้ว', p.used + ' ครั้ง', '', '', '']);
+  rows.push(['ยังรอรับ', p.waiting + ' ครั้ง', '', '', '']);
+  rows.push(['ยกเลิก', p.cancelled + ' ครั้ง', '', '', '']);
+  if (p.byEquip && p.byEquip.length) {
+    rows.push(['แยกตามประเภทเครื่อง', 'จำนวนครั้ง', '', '', '']);
+    p.byEquip.forEach(([eq, c]) => rows.push([eq, c, '', '', '']));
+  }
+  if (p.byPreparer && p.byPreparer.length) {
+    rows.push(['แยกตามผู้เตรียม', 'จำนวนครั้ง', '', '', '']);
+    p.byPreparer.forEach(([nm, c]) => rows.push([nm, c, '', '', '']));
+  }
 
   // เขียนลง Sheet
   sht.getRange(1, 1, rows.length, 5).setValues(rows);
@@ -444,6 +464,40 @@ function _calcAvgBorrowDays(borrowRows, returnRows) {
 function _getOrCreateFolder(name) {
   const folders = DriveApp.getFoldersByName(name);
   return folders.hasNext() ? folders.next() : DriveApp.createFolder(name);
+}
+
+/** สถิติการเตรียมเครื่องในช่วง [start, end) */
+function _gatherPrepareStats(ss, start, end) {
+  const res = { total: 0, used: 0, waiting: 0, cancelled: 0, byEquip: [], byPreparer: [] };
+  const sheet = ss.getSheetByName(SHEET_PREPARE);
+  if (!sheet || sheet.getLastRow() <= 1) return res;
+
+  const rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, 9).getValues();
+  const equipCount = {}, prepCount = {};
+  rows.forEach(r => {
+    // timestamp อยู่คอลัมน์ 8 (index 7); fallback วันที่ dd/MM/yyyy คอลัมน์ 2 (index 1)
+    let ts = (r[7] instanceof Date) ? r[7] : new Date(String(r[7]));
+    if (isNaN(ts)) {
+      const ds = String(r[1]).split('/');
+      if (ds.length === 3) ts = new Date(ds[2] + '-' + ds[1] + '-' + ds[0] + 'T00:00:00');
+    }
+    if (isNaN(ts) || ts < start || ts >= end) return;
+
+    res.total++;
+    const st = String(r[8]);
+    if (st === 'ยืมแล้ว')            res.used++;
+    else if (st.indexOf('ยกเลิก') === 0) res.cancelled++;
+    else                            res.waiting++;
+
+    const eq = String(r[3]) || 'ไม่ระบุ';
+    equipCount[eq] = (equipCount[eq] || 0) + 1;
+    const by = String(r[6]) || 'ไม่ระบุ';
+    prepCount[by] = (prepCount[by] || 0) + 1;
+  });
+
+  res.byEquip    = Object.entries(equipCount).sort((a, b) => b[1] - a[1]);
+  res.byPreparer = Object.entries(prepCount).sort((a, b) => b[1] - a[1]);
+  return res;
 }
 
 /** สร้าง export URL (PDF) ของชีต - ไม่ใช้ scope พิเศษ */
