@@ -817,7 +817,7 @@ function renderPreparedBanner() {
   if (!items.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
 
   const chips = items.map(p =>
-    `<button type="button" onclick="applyPrepared(${JSON.stringify(p.equipment)},${JSON.stringify(p.number)})"
+    `<button type="button" onclick="applyPrepared('${p.equipment}','${p.number}')"
       style="padding:9px 14px;border:2px solid #1A7B4A;border-radius:12px;background:#fff;color:#14612D;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;-webkit-tap-highlight-color:transparent">
       ${p.equipment} No.${p.number} <span style="opacity:.6;font-weight:500">›</span></button>`
   ).join('');
@@ -827,6 +827,7 @@ function renderPreparedBanner() {
       <div style="font-size:13px;font-weight:800;color:#14612D;margin-bottom:4px">🔧 เครื่องที่เตรียมไว้สำหรับ ${ward}</div>
       <div style="font-size:11px;color:#1A7B4A;margin-bottom:10px">กดเพื่อเติมประเภทและหมายเลขให้อัตโนมัติ</div>
       <div style="display:flex;flex-wrap:wrap;gap:8px">${chips}</div>
+      <div id="prepSelInfo" style="display:none;margin-top:10px;font-size:14px;font-weight:800;color:#14612D"></div>
     </div>`;
   el.style.display = '';
 }
@@ -896,9 +897,9 @@ function applyPrepared(equip, number) {
     const inp = document.getElementById('equipNum1');
     if (inp) inp.value = number;
   }
-  // เลื่อนขึ้นไปให้เห็นประเภทที่เลือก
-  const eg = document.querySelector('.equip-grid');
-  if (eg) eg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  // ยืนยันว่าเลือกแล้ว (เพราะช่องกรอกเลขถูกซ่อนในโหมดยืม)
+  const info = document.getElementById('prepSelInfo');
+  if (info) { info.textContent = '✓ เลือกแล้ว: ' + equip + ' No.' + number; info.style.display = ''; }
 }
 
 /* ====== GRID EQUIPS ====== */
