@@ -16,7 +16,7 @@
 // ============================================================
 // CONFIG — ใส่ Spreadsheet ID ของคุณ
 // ============================================================
-const SPREADSHEET_ID = '19gQq3hsJfi6gEgYeTguOl3-RkEzGmbRhFDJrwHgeCKI';
+const SPREADSHEET_ID = '1Ju2STRjjFaC4ZjuTNAjsrDEyvW6cBM42Yt5NsXALgtg';
 const SHEET_BORROW   = 'ยืม-คืน';
 const SHEET_SUMMARY  = 'สรุปรายวัน';
 const SHEET_ASSETS   = 'ครุภัณฑ์_C2';
