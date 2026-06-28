@@ -126,7 +126,7 @@
     <div id="byOtherWrap" style="display:none;margin-top:10px">
       <input type="text" class="field" id="preparedByOther" placeholder="ระบุชื่อผู้เตรียม...">
     </div>
-    <div style="font-size:11px;color:var(--muted);margin-top:6px">บันทึกลงท้ายว่า "เจ้าหน้าศูนย์เครื่องมือ" อัตโนมัติ</div>
+    <div style="font-size:11px;color:var(--muted);margin-top:6px">บันทึกลงท้ายว่า "เจ้าหน้าที่ศูนย์เครื่องมือแพทย์" อัตโนมัติ</div>
   </div>
 
   <button class="save-btn" id="saveBtn" onclick="savePrepare()">💾 บันทึกการเตรียม</button>
@@ -213,7 +213,7 @@
       alert('⚠️ กรุณากรอกข้อมูลให้ครบ (ประเภท, หมายเลข, ตึก, ผู้เตรียม)');
       return;
     }
-    const by = byName + ' เจ้าหน้าศูนย์เครื่องมือ';
+    const by = byName + ' เจ้าหน้าที่ศูนย์เครื่องมือแพทย์';
 
     const btn = document.getElementById('saveBtn');
     const origText = btn.textContent;
