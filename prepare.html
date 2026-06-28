@@ -255,13 +255,24 @@
           body: JSON.stringify({ action: 'savePrepare', fields: { equipment: selectedEquip, numbers, ward, preparedBy: by } })
         });
         toast('✅ เตรียม ' + selectedEquip + ' No.' + numbers.join(', ') + ' ให้ ' + ward + ' แล้ว');
-        setTimeout(loadList, 800);
       }
-      document.getElementById('numbersInput').value = '';
+      // รีเซ็ตฟอร์มพร้อมกรอกรายการใหม่ (เก็บผู้เตรียม + โหมดไว้)
+      resetPrepareForm();
+      setTimeout(loadList, 800);
     } catch (e) {
       toast('❌ บันทึกไม่สำเร็จ');
     }
     btn.disabled = false; btn.textContent = origText;
+  }
+
+  function resetPrepareForm() {
+    selectedEquip = null;
+    document.querySelectorAll('.equip-chip').forEach(x => x.classList.remove('active'));
+    document.getElementById('numbersInput').value = '';
+    wardSel.value = '';
+    document.getElementById('otherWard').value = '';
+    document.getElementById('otherWrap').style.display = 'none';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   async function loadList() {
