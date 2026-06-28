@@ -480,6 +480,52 @@
     </div>
   </div>
 
+  <!-- ตึก/หน่วยงาน (เลือกก่อนเป็นอันดับแรก) -->
+  <div class="card">
+    <div class="sec-label"><span class="req-dot"></span>ตึก/หน่วยงาน</div>
+    <select class="field" id="wardSel" onchange="onWardChange(this)">
+      <option value="">— เลือกตึก —</option>
+      <option>ER</option>
+      <option>อายุรกรรมหญิง (M.ญ)</option>
+      <option>EENT</option>
+      <option>ศัลยกรรมหญิง</option>
+      <option>ศัลยกรรมกระดูก</option>
+      <option>ศัลยกรรมชาย</option>
+      <option>อายุรกรรมชาย (M.ช)</option>
+      <option>Semi ICU</option>
+      <option>ICU 100 ปี</option>
+      <option>กจ.3</option>
+      <option>กจ.2</option>
+      <option>TM</option>
+      <option>เด็กล่าง</option>
+      <option>PICU</option>
+      <option>เด็กบน</option>
+      <option>ICU ญสส.</option>
+      <option>ห้องคลอด LR</option>
+      <option>หลังคลอด PP</option>
+      <option>ญสส.9</option>
+      <option>Premium ญสส.8</option>
+      <option>ญสส.7</option>
+      <option>ICU.S</option>
+      <option>ICU Nuero</option>
+      <option>NICU</option>
+      <option>SNB</option>
+      <option>กจ.4</option>
+      <option>AIIR</option>
+      <option>สธ.7</option>
+      <option>สธ.6</option>
+      <option>ศูนย์เปล</option>
+      <option>เคมีบำบัด</option>
+      <option>อื่นๆ โปรดระบุชื่อตึก</option>
+    </select>
+    <div class="other-wrap hidden" id="otherWrap">
+      <input type="text" class="field" id="otherWard" placeholder="ระบุชื่อตึก...">
+    </div>
+  </div>
+
+  <!-- แบนเนอร์เครื่องที่เตรียมไว้ (โหมดยืม) -->
+  <div id="preparedBanner" style="display:none"></div>
+
   <!-- เครื่องมือ -->
   <div class="card">
     <div class="sec-label"><span class="req-dot"></span>เครื่องมือ</div>
@@ -537,52 +583,6 @@
     <div class="c2-sel-info" id="c2SelInfo"></div>
   </div>
   </div>
-
-  <!-- ตึกที่ยืม -->
-  <div class="card">
-    <div class="sec-label"><span class="req-dot"></span>ตึกที่ยืม</div>
-    <select class="field" id="wardSel" onchange="onWardChange(this)">
-      <option value="">— เลือกตึก —</option>
-      <option>ER</option>
-      <option>อายุรกรรมหญิง (M.ญ)</option>
-      <option>EENT</option>
-      <option>ศัลยกรรมหญิง</option>
-      <option>ศัลยกรรมกระดูก</option>
-      <option>ศัลยกรรมชาย</option>
-      <option>อายุรกรรมชาย (M.ช)</option>
-      <option>Semi ICU</option>
-      <option>ICU 100 ปี</option>
-      <option>กจ.3</option>
-      <option>กจ.2</option>
-      <option>TM</option>
-      <option>เด็กล่าง</option>
-      <option>PICU</option>
-      <option>เด็กบน</option>
-      <option>ICU ญสส.</option>
-      <option>ห้องคลอด LR</option>
-      <option>หลังคลอด PP</option>
-      <option>ญสส.9</option>
-      <option>Premium ญสส.8</option>
-      <option>ญสส.7</option>
-      <option>ICU.S</option>
-      <option>ICU Nuero</option>
-      <option>NICU</option>
-      <option>SNB</option>
-      <option>กจ.4</option>
-      <option>AIIR</option>
-      <option>สธ.7</option>
-      <option>สธ.6</option>
-      <option>ศูนย์เปล</option>
-      <option>เคมีบำบัด</option>
-      <option>อื่นๆ โปรดระบุชื่อตึก</option>
-    </select>
-    <div class="other-wrap hidden" id="otherWrap">
-      <input type="text" class="field" id="otherWard" placeholder="ระบุชื่อตึก...">
-    </div>
-  </div>
-
-  <!-- แบนเนอร์เครื่องที่เตรียมไว้ -->
-  <div id="preparedBanner" style="display:none"></div>
 
   <!-- ผู้ยืม/ผู้คืน -->
   <div class="card">
@@ -742,7 +742,11 @@ function setAction(a) {
     if (S.equip === 'C2' && c2Status) renderC2Grid();
     else if (S.equip !== 'C2' && S.action === 'return') renderEquipReturnGrid();
   }
-  filterEquipButtons();
+  renderPreparedBanner();
+  // โหมดคืน + เลือกตึกแล้ว -> หาประเภทเครื่องที่ยืมไปก่อนกรองปุ่ม
+  const w = document.getElementById('wardSel').value;
+  if (a === 'return' && w) computeWardReturnTypes(w).then(filterEquipButtons);
+  else filterEquipButtons();
 }
 
 function setShift(s) {
@@ -787,7 +791,7 @@ function pickEquip(btn, e) {
   }
 }
 
-function onWardChange(sel) {
+async function onWardChange(sel) {
   document.getElementById('otherWrap').classList.toggle('hidden', sel.value !== 'อื่นๆ โปรดระบุชื่อตึก');
   if (GRID_EQUIPS.has(S.equip) && S.action === 'return') {
     c2SelectedNums.clear();
@@ -795,7 +799,24 @@ function onWardChange(sel) {
     else renderEquipReturnGrid();
   }
   renderPreparedBanner();
+  // โหมดคืน: หาว่าหน่วยงานนี้ยืมเครื่องประเภทไหนไปบ้าง
+  if (S.action === 'return') await computeWardReturnTypes(sel.value);
   filterEquipButtons();
+}
+
+/* โหมดคืน: ดึงประเภทเครื่องที่หน่วยงานนั้นยืมไป (ยังไม่คืน) */
+let wardReturnTypes = new Set();
+async function computeWardReturnTypes(ward) {
+  wardReturnTypes = new Set();
+  if (!ward || !SCRIPT_URL) return;
+  try {
+    const u = new URL(SCRIPT_URL);
+    u.searchParams.set('action', 'equipment');
+    const data = await fetch(u.toString(), { mode: 'cors' }).then(r => r.json());
+    (data.equipment || []).forEach(e => {
+      if (e.isBorrowed && String(e.ward) === ward) wardReturnTypes.add(String(e.equipment));
+    });
+  } catch (e) { /* โหลดไม่ได้ -> ไม่กรอง */ }
 }
 
 /* ====== เครื่องที่เตรียมไว้ (จากฝั่งแอดมิน) ====== */
@@ -816,6 +837,8 @@ async function loadPreparedList() {
 function renderPreparedBanner() {
   const el = document.getElementById('preparedBanner');
   if (!el) return;
+  // แบนเนอร์เครื่องที่เตรียมไว้ แสดงเฉพาะโหมดยืม
+  if (S.action !== 'borrow') { el.style.display = 'none'; el.innerHTML = ''; return; }
   const ward = document.getElementById('wardSel').value;
   const items = ward ? preparedList.filter(p => p.ward === ward) : [];
   if (!items.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
@@ -836,7 +859,7 @@ function renderPreparedBanner() {
   el.style.display = '';
 }
 
-/* โหมดยืม: แสดงเฉพาะประเภทเครื่องที่เตรียมไว้สำหรับ ward นั้น */
+/* แสดงเฉพาะประเภทเครื่องที่เกี่ยวข้องกับ ward (ยืม=ที่เตรียมไว้, คืน=ที่ยืมไป) */
 function filterEquipButtons() {
   const grid = document.querySelector('.equip-grid');
   if (!grid) return;
@@ -851,8 +874,8 @@ function filterEquipButtons() {
     card.appendChild(hint);
   }
 
-  // โหมดคืน หรือยังไม่ได้เลือกโหมด -> แสดงทุกปุ่มตามปกติ
-  if (S.action !== 'borrow') {
+  // ยังไม่เลือกโหมด -> แสดงทุกปุ่ม
+  if (!S.action) {
     btns.forEach(b => b.style.display = '');
     grid.style.display = '';
     if (hint) hint.style.display = 'none';
@@ -860,9 +883,11 @@ function filterEquipButtons() {
   }
 
   const ward = document.getElementById('wardSel').value;
-  const types = new Set(preparedList.filter(p => p.ward === ward).map(p => p.equipment));
+  const types = (S.action === 'borrow')
+    ? new Set(preparedList.filter(p => p.ward === ward).map(p => p.equipment))
+    : wardReturnTypes;
 
-  // ถ้าเครื่องที่เลือกอยู่ไม่ได้ถูกเตรียมไว้ -> ยกเลิกการเลือก
+  // ถ้าเครื่องที่เลือกอยู่ไม่อยู่ในรายการ -> ยกเลิกการเลือก
   if (S.equip && !types.has(S.equip)) {
     S.equip = null;
     btns.forEach(b => b.classList.remove('active'));
@@ -881,7 +906,9 @@ function filterEquipButtons() {
   if (hint) {
     if (visible === 0) {
       grid.style.display = 'none';
-      hint.textContent = ward ? '⚠️ หน่วยงานนี้ยังไม่มีการเตรียมเครื่อง' : 'เลือกตึกที่มีการเตรียมเครื่องก่อน';
+      if (!ward)                        hint.textContent = 'เลือกตึก/หน่วยงานก่อน';
+      else if (S.action === 'borrow')   hint.textContent = '⚠️ หน่วยงานนี้ยังไม่มีการเตรียมเครื่อง';
+      else                              hint.textContent = '⚠️ หน่วยงานนี้ไม่มีเครื่องที่ยืมไป';
       hint.style.display = '';
     } else {
       grid.style.display = '';
