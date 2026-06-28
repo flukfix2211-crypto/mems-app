@@ -1,11 +1,6 @@
 /**
- * MEMs — ฟังก์ชันสร้างรายงานประจำเดือน
- * เพิ่มเติมลงใน Code.gs เดิม (หรือ deploy เป็น script ใหม่ในโปรเจกต์เดียวกัน)
- *
- * วิธีใช้:
- *   - วางไฟล์นี้ใน Apps Script project เดียวกับ Code.gs
- *   - ตั้ง Trigger: generateMonthlyReport() → Time-driven → Month timer → วันที่ 1 ของเดือน
- *   - หรือเรียกด้วยมือจาก Admin Interface ผ่าน admin_report.html
+ * MEMs - ฟังก์ชันสร้างรายงานประจำเดือน
+ * เพิ่มเติมลงใน Code.gs เดิม (อยู่ในโปรเจกต์เดียวกัน)
  */
 
 // ============================================================
@@ -38,7 +33,7 @@ function generateMonthlyReport() {
   const monthTH    = _thaiMonthYear(firstOfLastMonth);
   const sheetName  = 'Monthly_Report_' + monthLabel;
 
-  // ถ้า Sheet นี้มีอยู่แล้ว → ลบทิ้งแล้วสร้างใหม่
+  // ถ้า Sheet นี้มีอยู่แล้ว -> ลบทิ้งแล้วสร้างใหม่
   const existing = ss.getSheetByName(sheetName);
   if (existing) ss.deleteSheet(existing);
   const rpt = ss.insertSheet(sheetName);
@@ -57,7 +52,7 @@ function generateMonthlyReport() {
   const borrowRows = rows.filter(r => String(r[4]).includes('ยืม'));
   const returnRows = rows.filter(r => String(r[4]).includes('คืน'));
 
-  // ── a) จำนวนการยืมแต่ละประเภทเครื่อง ──────────────────────
+  //  a) จำนวนการยืมแต่ละประเภทเครื่อง 
   const equipCount = {};
   borrowRows.forEach(r => {
     const e = String(r[5]) || 'ไม่ระบุ';
@@ -65,7 +60,7 @@ function generateMonthlyReport() {
   });
   const equipRanked = Object.entries(equipCount).sort((a, b) => b[1] - a[1]);
 
-  // ── b) Top 5 หอผู้ป่วยที่ยืมมากสุด ────────────────────────
+  //  b) Top 5 หอผู้ป่วยที่ยืมมากสุด 
   const wardCount = {};
   borrowRows.forEach(r => {
     const w = String(r[7]) || 'ไม่ระบุ';
@@ -73,7 +68,7 @@ function generateMonthlyReport() {
   });
   const wardTop5 = Object.entries(wardCount).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
-  // ── c) อัตราการใช้งาน (Utilization Rate) ──────────────────
+  //  c) อัตราการใช้งาน (Utilization Rate) 
   // นิยาม: (จำนวนครั้งที่ยืม / จำนวนวันในเดือน) ต่อหน่วยเครื่อง
   const daysInMonth = lastOfLastMonth.getDate();
   const utilization = equipRanked.map(([equip, cnt]) => {
@@ -81,10 +76,10 @@ function generateMonthlyReport() {
     return [equip, cnt, daysInMonth, rate];
   });
 
-  // ── d) ระยะเวลายืมเฉลี่ย (วัน) ────────────────────────────
+  //  d) ระยะเวลายืมเฉลี่ย (วัน) 
   const avgDays = _calcAvgBorrowDays(borrowRows, returnRows);
 
-  // ── เขียนลง Sheet ──────────────────────────────────────────
+  //  เขียนลง Sheet 
   _writeReportSheet(rpt, {
     monthTH, sheetName, monthLabel,
     total: borrowRows.length,
@@ -109,12 +104,12 @@ function generateMonthlyReport() {
 
 // ============================================================
 // 2. exportReportToPDF()
-//    แปลง Sheet รายงานเป็น PDF → บันทึกใน Google Drive
+//    แปลง Sheet รายงานเป็น PDF -> บันทึกใน Google Drive
 // ============================================================
 function exportReportToPDF(sheetName) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
 
-  // ถ้าไม่ระบุ sheetName → ใช้รายงานล่าสุดที่พบ
+  // ถ้าไม่ระบุ sheetName -> ใช้รายงานล่าสุดที่พบ
   if (!sheetName) {
     const sheets = ss.getSheets();
     const rptSheets = sheets
@@ -129,7 +124,7 @@ function exportReportToPDF(sheetName) {
   const sheet = ss.getSheetByName(sheetName);
   if (!sheet) return { ok: false, error: 'ไม่พบ Sheet: ' + sheetName };
 
-  // สร้าง spreadsheet ชั่วคราว → ก๊อปเฉพาะ sheet รายงานเข้าไป → export PDF ผ่าน DriveApp
+  // สร้าง spreadsheet ชั่วคราว -> ก๊อปเฉพาะ sheet รายงานเข้าไป -> export PDF ผ่าน DriveApp
   // (เลี่ยง UrlFetchApp ที่ต้องใช้ scope script.external_request)
   const tempSS = SpreadsheetApp.create('temp_' + sheetName);
   sheet.copyTo(tempSS).setName(sheetName);
@@ -251,20 +246,20 @@ function generateExecutiveSummary() {
 function _writeReportSheet(sht, d) {
   const rows = [];
 
-  // ── หัวรายงาน ──────────────────────────────────────────────
+  //  หัวรายงาน 
   rows.push([HOSPITAL_NAME, '', '', '', '']);
   rows.push(['รายงานประจำเดือน ' + d.monthTH, '', '', '', '']);
   rows.push(['วันที่พิมพ์: ' + d.generatedAt, '', '', '', '']);
   rows.push(['', '', '', '', '']);
 
-  // ── สรุปภาพรวม ─────────────────────────────────────────────
+  //  สรุปภาพรวม 
   rows.push(['ภาพรวมการยืม-คืน', '', '', '', '']);
   rows.push(['รายการยืมทั้งหมด', d.total + ' ครั้ง', '', '', '']);
   rows.push(['รายการคืนทั้งหมด', d.totalReturn + ' ครั้ง', '', '', '']);
   rows.push(['จำนวนวันในเดือน', d.daysInMonth + ' วัน', '', '', '']);
   rows.push(['', '', '', '', '']);
 
-  // ── a) จำนวนการยืมตามประเภทเครื่อง ────────────────────────
+  //  a) จำนวนการยืมตามประเภทเครื่อง 
   rows.push(['ก) อุปกรณ์ที่ถูกยืม (จัดอันดับมากไปน้อย)', '', '', '', '']);
   rows.push(['อันดับ', 'ประเภทเครื่อง', 'จำนวนครั้ง', 'สัดส่วน (%)', '']);
   d.equipRanked.forEach(([equip, cnt], i) => {
@@ -273,7 +268,7 @@ function _writeReportSheet(sht, d) {
   });
   rows.push(['', '', '', '', '']);
 
-  // ── b) Top 5 หอผู้ป่วย ─────────────────────────────────────
+  //  b) Top 5 หอผู้ป่วย 
   rows.push(['ข) หน่วยงานที่ยืมมากที่สุด 5 อันดับแรก', '', '', '', '']);
   rows.push(['อันดับ', 'หน่วยงาน', 'จำนวนครั้ง', '', '']);
   d.wardTop5.forEach(([ward, cnt], i) => {
@@ -281,7 +276,7 @@ function _writeReportSheet(sht, d) {
   });
   rows.push(['', '', '', '', '']);
 
-  // ── c) Utilization Rate ─────────────────────────────────────
+  //  c) Utilization Rate 
   rows.push(['ค) อัตราการใช้งานเฉลี่ยต่อวัน (Utilization Rate)', '', '', '', '']);
   rows.push(['ประเภทเครื่อง', 'ยืมทั้งเดือน (ครั้ง)', 'จำนวนวัน', 'เฉลี่ย (ครั้ง/วัน)', '']);
   d.utilization.forEach(([equip, cnt, days, rate]) => {
@@ -289,7 +284,7 @@ function _writeReportSheet(sht, d) {
   });
   rows.push(['', '', '', '', '']);
 
-  // ── d) ระยะเวลายืมเฉลี่ย ────────────────────────────────────
+  //  d) ระยะเวลายืมเฉลี่ย 
   rows.push(['ง) ระยะเวลายืมเฉลี่ย', '', '', '', '']);
   if (d.avgDays.length === 0) {
     rows.push(['ไม่สามารถคำนวณได้ (ต้องการข้อมูลคืนที่ตรงกัน)', '', '', '', '']);
@@ -337,25 +332,25 @@ function _formatReportSheet(sht) {
 function _writeExecSheet(sht, d) {
   const rows = [
     [HOSPITAL_NAME],
-    ['สรุปผู้บริหาร — ' + d.monthTH],
+    ['สรุปผู้บริหาร - ' + d.monthTH],
     ['จัดทำ: ' + d.generatedAt],
     [''],
-    ['━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'],
-    ['📊  ภาพรวมเดือนที่ผ่านมา'],
-    ['━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'],
+    ['=================================='],
+    ['ภาพรวมเดือนที่ผ่านมา'],
+    ['=================================='],
     [''],
     ['จำนวนการยืมทั้งหมด', d.totalBorrowLastMonth + ' ครั้ง'],
     ['จำนวนการคืนทั้งหมด', d.totalReturnLastMonth + ' ครั้ง'],
     ['เครื่องที่ยังค้างอยู่ ณ ปัจจุบัน', d.stillBorrowed + ' เครื่อง'],
     [''],
-    ['🏆  ข้อมูลที่น่าสนใจ'],
+    ['ข้อมูลที่น่าสนใจ'],
     [''],
     ['อุปกรณ์ที่ถูกยืมมากที่สุด', d.topEquipName + '  (' + d.topEquipCount + ' ครั้ง)'],
     ['หน่วยงานที่ยืมมากที่สุด', d.topWardName + '  (' + d.topWardCount + ' ครั้ง)'],
     ['การยืมเดือนนี้ (ถึงปัจจุบัน)', d.borrowThisMonthMTD + ' ครั้ง'],
     [''],
-    ['━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'],
-    ['MEMs — งานศูนย์เครื่องมือแพทย์', HOSPITAL_NAME],
+    ['=================================='],
+    ['MEMs - งานศูนย์เครื่องมือแพทย์', HOSPITAL_NAME],
   ];
 
   sht.getRange(1, 1, rows.length, 2).setValues(rows);
@@ -400,7 +395,7 @@ function _thaiMonthYear(date) {
   return months[date.getMonth()] + ' ' + buddhistYear;
 }
 
-/** แปลงแถว raw → Date (รองรับทั้ง Timestamp ISO string และ Date object) */
+/** แปลงแถว raw -> Date (รองรับทั้ง Timestamp ISO string และ Date object) */
 function _parseRowTimestamp(row) {
   const tsCell = row[9]; // col 10: Timestamp (ISO)
   if (tsCell instanceof Date && !isNaN(tsCell)) return tsCell;
@@ -424,7 +419,7 @@ function _parseRowTimestamp(row) {
 
 /** คำนวณระยะเวลายืมเฉลี่ยต่อประเภทเครื่อง (จับคู่ยืม-คืนจาก equipmentNumber) */
 function _calcAvgBorrowDays(borrowRows, returnRows) {
-  // จับคู่โดย equipment + number + ward → หา return ที่ใกล้ที่สุดหลังจากยืม
+  // จับคู่โดย equipment + number + ward -> หา return ที่ใกล้ที่สุดหลังจากยืม
   const equipSet = {};
   borrowRows.forEach(r => {
     const key = String(r[5]) + '__' + String(r[6]) + '__' + String(r[7]);
