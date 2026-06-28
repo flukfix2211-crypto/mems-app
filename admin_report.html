@@ -345,12 +345,11 @@
     }
     else if (type === 'pdf') {
       const html = `
-        <div class="result-row"><span class="result-key">ชื่อไฟล์</span><span class="result-val">${res.fileName}</span></div>
-        <div class="result-row"><span class="result-key">บันทึกใน</span><span class="result-val">MEMs_Reports (Google Drive)</span></div>
+        <div class="result-row"><span class="result-key">ไฟล์</span><span class="result-val">${res.fileName}</span></div>
         <a href="${res.viewUrl}" target="_blank" class="drive-link">
-          📄 เปิด PDF ใน Google Drive →
+          📄 เปิด / ดาวน์โหลด PDF →
         </a>`;
-      showResult('success', '✅ Export PDF สำเร็จ', html);
+      showResult('success', '✅ พร้อมดาวน์โหลด PDF', html);
     }
     else if (type === 'exec') {
       const html = `

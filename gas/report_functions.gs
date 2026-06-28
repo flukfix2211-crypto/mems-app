@@ -104,7 +104,8 @@ function generateMonthlyReport() {
 
 // ============================================================
 // 2. exportReportToPDF()
-//    แปลง Sheet รายงานเป็น PDF -> บันทึกใน Google Drive
+//    สร้าง export URL ของ Sheet (ไม่ใช้ DriveApp / UrlFetchApp)
+//    เบราว์เซอร์ผู้ใช้เปิด/ดาวน์โหลด PDF เอง -> ไม่ต้องขอ scope พิเศษ
 // ============================================================
 function exportReportToPDF(sheetName) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
@@ -124,33 +125,19 @@ function exportReportToPDF(sheetName) {
   const sheet = ss.getSheetByName(sheetName);
   if (!sheet) return { ok: false, error: 'ไม่พบ Sheet: ' + sheetName };
 
-  // สร้าง spreadsheet ชั่วคราว -> ก๊อปเฉพาะ sheet รายงานเข้าไป -> export PDF ผ่าน DriveApp
-  // (เลี่ยง UrlFetchApp ที่ต้องใช้ scope script.external_request)
-  const tempSS = SpreadsheetApp.create('temp_' + sheetName);
-  sheet.copyTo(tempSS).setName(sheetName);
-  const firstSheet = tempSS.getSheets()[0];
-  if (firstSheet.getName() !== sheetName) tempSS.deleteSheet(firstSheet);
-  SpreadsheetApp.flush();
-
-  const pdfBlob = DriveApp.getFileById(tempSS.getId())
-                          .getAs('application/pdf')
-                          .setName(sheetName + '.pdf');
-
-  // หา/สร้าง Folder แล้วบันทึก PDF
-  const folder = _getOrCreateFolder(DRIVE_FOLDER_NAME);
-  const file   = folder.createFile(pdfBlob);
-  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-
-  // ลบ spreadsheet ชั่วคราว
-  DriveApp.getFileById(tempSS.getId()).setTrashed(true);
+  const gid = sheet.getSheetId();
+  const pdfUrl = 'https://docs.google.com/spreadsheets/d/' + ss.getId() +
+    '/export?format=pdf&size=A4&portrait=true&fitw=true' +
+    '&sheetnames=false&printtitle=false&pagenumbers=false&gridlines=false&fzr=false' +
+    '&gid=' + gid;
 
   return {
     ok: true,
     fileName: sheetName + '.pdf',
-    fileId: file.getId(),
-    fileUrl: file.getUrl(),
-    viewUrl: 'https://drive.google.com/file/d/' + file.getId() + '/view',
-    message: 'Export PDF เรียบร้อยแล้ว'
+    sheetName: sheetName,
+    viewUrl: pdfUrl,
+    fileUrl: pdfUrl,
+    message: 'เปิด / ดาวน์โหลด PDF ได้เลย'
   };
 }
 
