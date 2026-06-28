@@ -264,8 +264,9 @@
       Object.keys(byWard).sort().forEach(w => {
         html += `<div class="group-ward">📍 ${w}</div>`;
         byWard[w].forEach(it => {
+          const when = (it.date || '') + (it.time ? ' ' + it.time.slice(0,5) : '');
           html += `<div class="prep-item">
-            <div class="prep-info"><span class="prep-eq">${it.equipment} No.${it.number}</span><div class="prep-sub">โดย ${it.preparedBy}</div></div>
+            <div class="prep-info"><span class="prep-eq">${it.equipment} No.${it.number}</span><div class="prep-sub">โดย ${it.preparedBy}${when ? ' · 🕒 ' + when : ''}</div></div>
             <button class="del-btn" onclick="delPrep(${it._rowIndex})">ลบ</button>
           </div>`;
         });

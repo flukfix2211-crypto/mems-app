@@ -232,6 +232,15 @@
       <span class="nav-arrow">›</span>
     </div>
 
+    <div class="nav-card" onclick="showView('prepare')">
+      <div class="nav-icon" style="background:#DAF0F5;font-size:26px;width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;z-index:1;">🧰</div>
+      <div class="nav-text">
+        <div class="nav-title">บันทึกการเตรียมเครื่องมือ</div>
+        <div class="nav-desc">ดูประวัติการเตรียมเครื่องย้อนหลัง</div>
+      </div>
+      <span class="nav-arrow">›</span>
+    </div>
+
     <div class="nav-card" onclick="location.href='admin_report.html'">
       <div class="nav-icon" style="background:#FEF3C7;font-size:26px;width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0">📋</div>
       <div class="nav-text">
@@ -421,6 +430,25 @@
     </div>
   </div>
 
+  <!-- PREPARE HISTORY VIEW -->
+  <div id="viewPrepare" class="view">
+    <div class="view-header">
+      <button class="btn-view-back" onclick="showView('home')">← กลับ</button>
+      <div class="view-title">🧰 บันทึกการเตรียมเครื่องมือ</div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div style="font-size:12px;color:var(--muted)" id="prepHistCount"></div>
+          <button onclick="renderPrepareHistory()" style="padding:6px 14px;background:var(--al);border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:12px;font-weight:700;color:var(--a);cursor:pointer">🔄 รีเฟรช</button>
+        </div>
+        <div class="table-wrap" id="prepHistBody">
+          <div class="state-loading"><div class="spinner"></div>กำลังโหลด…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <!-- KPI DISPLAY VIEW -->
@@ -604,6 +632,45 @@ function showView(name) {
   if (name === 'kpi')     startKpiView();
   if (name === 'records') renderTable();
   if (name === 'c2') renderC2Dashboard();
+  if (name === 'prepare') renderPrepareHistory();
+}
+
+async function renderPrepareHistory() {
+  const body = document.getElementById('prepHistBody');
+  const cnt  = document.getElementById('prepHistCount');
+  body.innerHTML = '<div class="state-loading"><div class="spinner"></div>กำลังโหลด…</div>';
+  try {
+    const data = await fetchGAS('prepareHistory');
+    const items = data.history || [];
+    if (cnt) cnt.textContent = 'ทั้งหมด ' + items.length + ' รายการ';
+    if (!items.length) { body.innerHTML = '<div style="text-align:center;color:var(--muted);padding:30px">ยังไม่มีประวัติการเตรียม</div>'; return; }
+    const rows = items.map(it => {
+      const used = it.status === 'ยืมแล้ว';
+      const badge = used
+        ? '<span style="background:#DCF2E5;color:#14612D;font-size:11px;font-weight:700;border-radius:20px;padding:2px 9px">ยืมแล้ว</span>'
+        : '<span style="background:#FFF3CD;color:#8B5000;font-size:11px;font-weight:700;border-radius:20px;padding:2px 9px">เตรียม</span>';
+      const when = (it.date || '') + (it.time ? ' ' + String(it.time).slice(0,5) : '');
+      return `<tr>
+        <td style="font-weight:800;color:var(--a)">${it.equipment} No.${it.number}</td>
+        <td>${it.ward}</td>
+        <td style="font-size:12px">${it.preparedBy}</td>
+        <td style="white-space:nowrap;font-size:12px">${when}</td>
+        <td>${badge}</td>
+      </tr>`;
+    }).join('');
+    body.innerHTML = `<table style="width:100%;border-collapse:collapse;min-width:560px">
+      <thead><tr>
+        <th style="text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:2px solid var(--border)">เครื่อง</th>
+        <th style="text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:2px solid var(--border)">หน่วยงาน</th>
+        <th style="text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:2px solid var(--border)">ผู้เตรียม</th>
+        <th style="text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:2px solid var(--border)">เวลา</th>
+        <th style="text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:2px solid var(--border)">สถานะ</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  } catch (e) {
+    body.innerHTML = '<div style="text-align:center;color:#B82E2E;padding:30px">โหลดประวัติไม่ได้</div>';
+  }
 }
 
 /* ============================================================ INIT ============================================================ */

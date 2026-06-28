@@ -181,6 +181,10 @@ function doGet(e) {
       return jsonResponse(getPrepareList());
     }
 
+    if (action === 'prepareHistory') {
+      return jsonResponse(getPrepareHistory());
+    }
+
     if (action === 'assets') {
       return jsonResponse(getAssets());
     }
@@ -664,6 +668,8 @@ function getPrepareList() {
     if (String(r[8]) !== 'เตรียม') return; // เฉพาะที่ยังเตรียมอยู่
     prepared.push({
       _rowIndex: i + 2,
+      date:      String(r[1]),
+      time:      String(r[2]),
       equipment: String(r[3]),
       number:    String(r[4]),
       ward:      String(r[5]),
@@ -671,6 +677,28 @@ function getPrepareList() {
     });
   });
   return { ok: true, prepared };
+}
+
+/** ประวัติการเตรียมทั้งหมด (รวมที่ยืมแล้ว) — ใหม่ไปเก่า */
+function getPrepareHistory() {
+  const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = getOrCreatePrepareSheet(ss);
+  if (sheet.getLastRow() <= 1) return { ok: true, history: [] };
+
+  const rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, PREPARE_COLS.length).getValues();
+  const history = rows.map((r, i) => ({
+    _rowIndex: i + 2,
+    date:      String(r[1]),
+    time:      String(r[2]),
+    equipment: String(r[3]),
+    number:    String(r[4]),
+    ward:      String(r[5]),
+    preparedBy: String(r[6]),
+    timestamp: String(r[7]),
+    status:    String(r[8])
+  }));
+  history.reverse(); // ใหม่ไปเก่า
+  return { ok: true, history };
 }
 
 function deletePrepare(sheetRow) {
