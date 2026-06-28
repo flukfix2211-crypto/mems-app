@@ -645,10 +645,15 @@ async function renderPrepareHistory() {
     if (cnt) cnt.textContent = 'ทั้งหมด ' + items.length + ' รายการ';
     if (!items.length) { body.innerHTML = '<div style="text-align:center;color:var(--muted);padding:30px">ยังไม่มีประวัติการเตรียม</div>'; return; }
     const rows = items.map(it => {
-      const used = it.status === 'ยืมแล้ว';
-      const badge = used
-        ? '<span style="background:#DCF2E5;color:#14612D;font-size:11px;font-weight:700;border-radius:20px;padding:2px 9px">ยืมแล้ว</span>'
-        : '<span style="background:#FFF3CD;color:#8B5000;font-size:11px;font-weight:700;border-radius:20px;padding:2px 9px">เตรียม</span>';
+      const st = String(it.status || '');
+      let badge;
+      if (st === 'ยืมแล้ว') {
+        badge = '<span style="background:#DCF2E5;color:#14612D;font-size:11px;font-weight:700;border-radius:20px;padding:2px 9px">ยืมแล้ว</span>';
+      } else if (st.indexOf('ยกเลิก') === 0) {
+        badge = '<span style="background:#FDEAEA;color:#B82E2E;font-size:11px;font-weight:700;border-radius:20px;padding:2px 9px">' + st + '</span>';
+      } else {
+        badge = '<span style="background:#FFF3CD;color:#8B5000;font-size:11px;font-weight:700;border-radius:20px;padding:2px 9px">เตรียม</span>';
+      }
       const when = (it.date || '') + (it.time ? ' ' + String(it.time).slice(0,5) : '');
       return `<tr>
         <td style="font-weight:800;color:var(--a)">${it.equipment} No.${it.number}</td>

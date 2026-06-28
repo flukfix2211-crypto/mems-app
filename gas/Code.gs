@@ -72,6 +72,10 @@ function doPost(e) {
       deletePrepare(parseInt(data.rowIndex, 10));
       return jsonResponse({ ok: true });
     }
+    if (data.action === 'cancelPrepare') {
+      cancelPrepare(parseInt(data.rowIndex, 10), data.reason || '');
+      return jsonResponse({ ok: true });
+    }
 
     const result = saveRecord(data);
     return jsonResponse({ ok: true, id: result.row, timestamp: result.timestamp });
@@ -707,6 +711,17 @@ function deletePrepare(sheetRow) {
   const sheet = ss.getSheetByName(SHEET_PREPARE);
   if (!sheet) throw new Error('ไม่พบ Sheet: ' + SHEET_PREPARE);
   sheet.deleteRow(sheetRow);
+}
+
+/** ยกเลิกรายการเตรียม พร้อมหมายเหตุ (เก็บไว้ในประวัติ ไม่ลบทิ้ง) */
+function cancelPrepare(sheetRow, reason) {
+  if (!sheetRow || sheetRow < 2) throw new Error('rowIndex ไม่ถูกต้อง');
+  const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(SHEET_PREPARE);
+  if (!sheet) throw new Error('ไม่พบ Sheet: ' + SHEET_PREPARE);
+  const r = String(reason || '').trim();
+  sheet.getRange(sheetRow, 9).setValue('ยกเลิก' + (r ? ': ' + r : ''));
+  sheet.getRange(sheetRow, 1, 1, PREPARE_COLS.length).setBackground('#FDEAEA');
 }
 
 /** ทำเครื่องหมายว่าเครื่องที่เตรียมไว้ถูกยืมแล้ว (หายจากรายการเตรียม) */

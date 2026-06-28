@@ -56,6 +56,9 @@
     .empty { text-align: center; color: var(--muted); font-size: 14px; padding: 22px 0; }
     .group-ward { font-size: 13px; font-weight: 800; color: var(--txt); background: var(--al); padding: 6px 12px; border-radius: 8px; margin: 10px 0 4px; }
 
+    .reason-btn { display: block; width: 100%; text-align: left; padding: 13px 15px; margin-bottom: 8px; border: 2px solid var(--border); border-radius: 12px; background: #FAFCFD; font-family: 'Sarabun', sans-serif; font-size: 14px; font-weight: 700; color: var(--txt); cursor: pointer; transition: all .15s; -webkit-tap-highlight-color: transparent; }
+    .reason-btn:active { background: #FDEAEA; border-color: #B82E2E; color: #B82E2E; }
+
     #toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px); background: #192D35; color: #fff; padding: 12px 22px; border-radius: 40px; font-size: 14px; font-weight: 600; opacity: 0; transition: all .3s ease; z-index: 999; pointer-events: none; white-space: nowrap; }
     #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   </style>
@@ -138,6 +141,18 @@
       <span style="cursor:pointer;color:var(--a)" onclick="loadList()">🔄 รีเฟรช</span>
     </div>
     <div id="listBody"><div class="empty">กำลังโหลด...</div></div>
+  </div>
+</div>
+
+<!-- modal เลือกหมายเหตุยกเลิก -->
+<div id="cancelModal" style="display:none;position:fixed;inset:0;background:rgba(10,30,40,.6);z-index:9999;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#fff;border-radius:18px;max-width:420px;width:100%;padding:22px;box-shadow:0 10px 40px rgba(0,0,0,.25)">
+    <div style="font-size:16px;font-weight:800;color:#B82E2E;margin-bottom:4px">ยกเลิกรายการเตรียม</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:16px">กรุณาเลือกเหตุผลในการยกเลิก</div>
+    <button class="reason-btn" onclick="doCancel('หน่วยงานยกเลิกไม่เอาเครื่องแล้ว')">1. หน่วยงานยกเลิกไม่เอาเครื่องแล้ว</button>
+    <button class="reason-btn" onclick="doCancel('หน่วยงานไม่มารับเครื่อง')">2. หน่วยงานไม่มารับเครื่อง</button>
+    <button class="reason-btn" onclick="doCancel('ผู้เตรียมบันทึกผิดพลาด')">3. ผู้เตรียมบันทึกผิดพลาด</button>
+    <button class="reason-btn" style="border:none;background:none;color:var(--muted);font-weight:600;margin-top:4px" onclick="closeCancelModal()">ปิด</button>
   </div>
 </div>
 
@@ -267,7 +282,7 @@
           const when = (it.date || '') + (it.time ? ' ' + it.time.slice(0,5) : '');
           html += `<div class="prep-item">
             <div class="prep-info"><span class="prep-eq">${it.equipment} No.${it.number}</span><div class="prep-sub">โดย ${it.preparedBy}${when ? ' · 🕒 ' + when : ''}</div></div>
-            <button class="del-btn" onclick="delPrep(${it._rowIndex})">ลบ</button>
+            <button class="del-btn" onclick="openCancelModal(${it._rowIndex})">ลบ</button>
           </div>`;
         });
       });
@@ -277,16 +292,27 @@
     }
   }
 
-  async function delPrep(rowIndex) {
-    if (!confirm('ลบรายการเตรียมนี้?')) return;
+  let cancelRowIndex = null;
+  function openCancelModal(rowIndex) {
+    cancelRowIndex = rowIndex;
+    document.getElementById('cancelModal').style.display = 'flex';
+  }
+  function closeCancelModal() {
+    cancelRowIndex = null;
+    document.getElementById('cancelModal').style.display = 'none';
+  }
+  async function doCancel(reason) {
+    const rowIndex = cancelRowIndex;
+    closeCancelModal();
+    if (!rowIndex) return;
     try {
       await fetch(SCRIPT_URL, {
         method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({ action: 'deletePrepare', rowIndex })
+        body: JSON.stringify({ action: 'cancelPrepare', rowIndex, reason })
       });
-      toast('🗑️ ลบแล้ว');
+      toast('🗑️ ยกเลิกแล้ว (' + reason + ')');
       setTimeout(loadList, 800);
-    } catch (e) { toast('❌ ลบไม่สำเร็จ'); }
+    } catch (e) { toast('❌ ยกเลิกไม่สำเร็จ'); }
   }
 
   loadList();
