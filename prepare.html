@@ -113,7 +113,20 @@
   <!-- ผู้เตรียม -->
   <div class="card">
     <div class="sec-label"><span class="req-dot"></span><span id="byLabel">ผู้เตรียม</span></div>
-    <input type="text" class="field" id="preparedBy" placeholder="ชื่อผู้เตรียม">
+    <select class="field" id="preparedBySel" onchange="onByChange()">
+      <option value="">— เลือกผู้เตรียม —</option>
+      <option>นัฐวัติ</option>
+      <option>ปวริศ</option>
+      <option>นวพงษ์</option>
+      <option>เนตรดาว</option>
+      <option>สิริอาภา</option>
+      <option>สุกัญญา</option>
+      <option value="อื่นๆ">อื่นๆ</option>
+    </select>
+    <div id="byOtherWrap" style="display:none;margin-top:10px">
+      <input type="text" class="field" id="preparedByOther" placeholder="ระบุชื่อผู้เตรียม...">
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-top:6px">บันทึกลงท้ายว่า "เจ้าหน้าศูนย์เครื่องมือ" อัตโนมัติ</div>
   </div>
 
   <button class="save-btn" id="saveBtn" onclick="savePrepare()">💾 บันทึกการเตรียม</button>
@@ -175,6 +188,11 @@
   WARDS.forEach(w => { const o = document.createElement('option'); o.value = w; o.textContent = w; wardSel.appendChild(o); });
   wardSel.onchange = () => { document.getElementById('otherWrap').style.display = wardSel.value === 'อื่นๆ โปรดระบุชื่อตึก' ? '' : 'none'; };
 
+  function onByChange() {
+    document.getElementById('byOtherWrap').style.display =
+      document.getElementById('preparedBySel').value === 'อื่นๆ' ? '' : 'none';
+  }
+
   function toast(msg) {
     const el = document.getElementById('toast');
     el.textContent = msg; el.classList.add('show');
@@ -185,14 +203,17 @@
     const ward0 = wardSel.value;
     const other = document.getElementById('otherWard').value.trim();
     const ward = ward0 === 'อื่นๆ โปรดระบุชื่อตึก' ? (other || 'อื่นๆ') : ward0;
-    const by = document.getElementById('preparedBy').value.trim();
+    const bySel   = document.getElementById('preparedBySel').value;
+    const byOther = document.getElementById('preparedByOther').value.trim();
+    const byName  = bySel === 'อื่นๆ' ? byOther : bySel;
     const numbers = document.getElementById('numbersInput').value
       .split(',').map(s => s.trim()).filter(s => s !== '');
 
-    if (!selectedEquip || numbers.length === 0 || !ward0 || !by || (ward0 === 'อื่นๆ โปรดระบุชื่อตึก' && !other)) {
+    if (!selectedEquip || numbers.length === 0 || !ward0 || !byName || (ward0 === 'อื่นๆ โปรดระบุชื่อตึก' && !other)) {
       alert('⚠️ กรุณากรอกข้อมูลให้ครบ (ประเภท, หมายเลข, ตึก, ผู้เตรียม)');
       return;
     }
+    const by = byName + ' เจ้าหน้าศูนย์เครื่องมือ';
 
     const btn = document.getElementById('saveBtn');
     const origText = btn.textContent;
