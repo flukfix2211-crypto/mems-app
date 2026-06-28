@@ -129,31 +129,25 @@ function exportReportToPDF(sheetName) {
   const sheet = ss.getSheetByName(sheetName);
   if (!sheet) return { ok: false, error: 'ไม่พบ Sheet: ' + sheetName };
 
-  // URL สำหรับ export PDF ผ่าน Drive API
-  const ssId   = ss.getId();
-  const gid    = sheet.getSheetId();
-  const pdfUrl = 'https://docs.google.com/spreadsheets/d/' + ssId +
-    '/export?format=pdf' +
-    '&size=A4' +
-    '&portrait=true' +
-    '&fitw=true' +
-    '&sheetnames=false' +
-    '&printtitle=false' +
-    '&pagenumbers=false' +
-    '&gridlines=false' +
-    '&fzr=false' +
-    '&gid=' + gid;
+  // สร้าง spreadsheet ชั่วคราว → ก๊อปเฉพาะ sheet รายงานเข้าไป → export PDF ผ่าน DriveApp
+  // (เลี่ยง UrlFetchApp ที่ต้องใช้ scope script.external_request)
+  const tempSS = SpreadsheetApp.create('temp_' + sheetName);
+  sheet.copyTo(tempSS).setName(sheetName);
+  const firstSheet = tempSS.getSheets()[0];
+  if (firstSheet.getName() !== sheetName) tempSS.deleteSheet(firstSheet);
+  SpreadsheetApp.flush();
 
-  const token    = ScriptApp.getOAuthToken();
-  const response = UrlFetchApp.fetch(pdfUrl, {
-    headers: { Authorization: 'Bearer ' + token }
-  });
-  const pdfBlob = response.getBlob().setName(sheetName + '.pdf');
+  const pdfBlob = DriveApp.getFileById(tempSS.getId())
+                          .getAs('application/pdf')
+                          .setName(sheetName + '.pdf');
 
-  // หา/สร้าง Folder
+  // หา/สร้าง Folder แล้วบันทึก PDF
   const folder = _getOrCreateFolder(DRIVE_FOLDER_NAME);
   const file   = folder.createFile(pdfBlob);
   file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+  // ลบ spreadsheet ชั่วคราว
+  DriveApp.getFileById(tempSS.getId()).setTrashed(true);
 
   return {
     ok: true,
