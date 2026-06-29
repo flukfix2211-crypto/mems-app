@@ -551,7 +551,7 @@
   <!-- หมายเลขเครื่อง (normal) -->
   <div id="normalNumCard">
   <div class="card">
-    <div class="sec-label"><span class="req-dot"></span>หมายเลขเครื่อง <span style="font-size:10px;font-weight:500;color:var(--muted);text-transform:none;letter-spacing:0">(สูงสุด 5 เครื่อง)</span></div>
+    <div class="sec-label"><span class="req-dot"></span>หมายเลขเครื่อง <span id="numMaxLabel" style="font-size:10px;font-weight:500;color:var(--muted);text-transform:none;letter-spacing:0">(สูงสุด 5 เครื่อง)</span></div>
     <div id="enumRows">
       <input type="text" class="field enum-input" id="equipNum1"
              inputmode="numeric" pattern="[0-9]*"
@@ -777,6 +777,8 @@ function pickEquip(btn, e) {
   S.equip = e;
   document.querySelectorAll('.equip-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
+  const lbl = document.getElementById('numMaxLabel');
+  if (lbl) lbl.textContent = '(สูงสุด ' + maxUnits() + ' เครื่อง)';
   const isGrid = GRID_EQUIPS.has(e);
   // โหมดยืม: ซ่อนช่องกรอกเลขเอง (ยืมเฉพาะเครื่องที่เตรียมไว้)
   document.getElementById('normalNumCard').style.display = (isGrid || S.action === 'borrow') ? 'none' : '';
@@ -940,8 +942,11 @@ let equipFields = 1;
 let c2Status = null;
 let c2SelectedNums = new Set();
 
+// จำนวนสูงสุดต่อครั้ง: ทุกเครื่อง 5, ยกเว้น Infusion Pump 10
+function maxUnits() { return S.equip === 'Infusion Pump' ? 10 : 5; }
+
 function addEquipField() {
-  if (equipFields >= 5) return;
+  if (equipFields >= maxUnits()) return;
   equipFields++;
   const row = document.createElement('div');
   row.className = 'enum-extra-row';
@@ -967,7 +972,7 @@ function removeEquipRow(btn) {
 
 function updateAddBtn() {
   const btn = document.getElementById('addEquipBtn');
-  if (equipFields >= 5) {
+  if (equipFields >= maxUnits()) {
     btn.style.display = 'none';
   } else {
     btn.style.display = 'flex';
@@ -1058,8 +1063,8 @@ function renderC2Grid() {
       btn.className = 'c2-btn ret-able';
       btn.innerHTML = `<div>No.${i}</div>`;
       btn.onclick = () => {
-        if (!c2SelectedNums.has(num) && c2SelectedNums.size >= 10) {
-          alert('คืนได้สูงสุด 10 หมายเลขพร้อมกัน'); return;
+        if (!c2SelectedNums.has(num) && c2SelectedNums.size >= maxUnits()) {
+          alert('เลือกได้สูงสุด ' + maxUnits() + ' หมายเลขพร้อมกัน'); return;
         }
         toggleC2Num(num, btn);
       };
@@ -1142,8 +1147,8 @@ function renderEquipReturnGrid() {
     btn.className = 'c2-btn ret-able';
     btn.innerHTML = `<div>No.${num}</div>${isErIcu(e.ward) && S.equip === 'High Flow' ? `<div style="font-size:9px">${e.ward}</div>` : ''}`;
     btn.onclick = () => {
-      if (!c2SelectedNums.has(num) && c2SelectedNums.size >= 10) {
-        alert('คืนได้สูงสุด 10 หมายเลขพร้อมกัน'); return;
+      if (!c2SelectedNums.has(num) && c2SelectedNums.size >= maxUnits()) {
+        alert('เลือกได้สูงสุด ' + maxUnits() + ' หมายเลขพร้อมกัน'); return;
       }
       toggleC2Num(num, btn);
     };
@@ -1319,7 +1324,7 @@ function resetForm() {
           1. เลือก <b>คืน</b> → เลือกประเภทเครื่อง<br>
           2. เลือก <b>หน่วยงาน</b> ที่คืน<br>
           3. กรอก <b>ชื่อผู้คืน</b><br>
-          4. สำหรับเครื่องข้างต้น → <b>กดเลือกหมายเลขเครื่อง</b> (คืนได้สูงสุด 10 เครื่องพร้อมกัน)<br>
+          4. สำหรับเครื่องข้างต้น → <b>กดเลือกหมายเลขเครื่อง</b> (สูงสุด 5 เครื่อง/ครั้ง · Infusion Pump 10 เครื่อง)<br>
           5. กด <b>บันทึก</b>
         </div>
       </div>
