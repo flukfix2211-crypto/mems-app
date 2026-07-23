@@ -839,7 +839,8 @@ async function computeWardReturnTypes(ward) {
     u.searchParams.set('action', 'equipment');
     const data = await fetch(u.toString(), { mode: 'cors' }).then(r => r.json());
     (data.equipment || []).forEach(e => {
-      if (e.isBorrowed && String(e.ward) === ward) wardReturnTypes.add(String(e.equipment));
+      // วอร์ดไหนยืม วอร์ดนั้นคืน — ยกเว้น ER (หรือ ICU) ยืม วอร์ดอื่นคืนได้ด้วย
+      if (e.isBorrowed && (String(e.ward) === ward || isErIcu(e.ward))) wardReturnTypes.add(String(e.equipment));
     });
   } catch (e) { /* โหลดไม่ได้ -> ไม่กรอง */ }
 }
@@ -1152,16 +1153,11 @@ function renderEquipReturnGrid() {
   }
   if (!allEquipStatus) { loadEquipStatus(); return; }
 
-  let borrowed;
-  if (S.equip === 'High Flow') {
-    // ER/ICU ที่ยืม → ทุก ward คืนได้, ward อื่นๆ → เห็นเฉพาะของตัวเอง
-    borrowed = allEquipStatus.filter(e =>
-      e.isBorrowed && e.equipment === 'High Flow' &&
-      (isErIcu(e.ward) || e.ward === ward)
-    );
-  } else {
-    borrowed = allEquipStatus.filter(e => e.isBorrowed && e.ward === ward && e.equipment === S.equip);
-  }
+  // กติกา: วอร์ดไหนยืม วอร์ดนั้นคืน — ยกเว้นถ้า ER (หรือ ICU) เป็นผู้ยืม วอร์ดอื่นคืนได้ด้วย
+  const borrowed = allEquipStatus.filter(e =>
+    e.isBorrowed && e.equipment === S.equip &&
+    (e.ward === ward || isErIcu(e.ward))
+  );
 
   if (!borrowed.length) {
     grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:14px 0;font-size:13px;color:var(--muted)">ไม่มีเครื่องที่ยืมโดยหน่วยงานนี้</div>';
@@ -1169,17 +1165,26 @@ function renderEquipReturnGrid() {
   }
   borrowed.forEach(e => {
     const num = String(e.number);
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'display:flex;flex-direction:column;gap:3px';
     const btn = document.createElement('button');
     btn.type = 'button'; btn.dataset.num = num;
     btn.className = 'c2-btn ret-able';
-    btn.innerHTML = `<div>No.${num}</div>${isErIcu(e.ward) && S.equip === 'High Flow' ? `<div style="font-size:9px">${e.ward}</div>` : ''}`;
+    btn.innerHTML = `<div>No.${num}</div>${isErIcu(e.ward) && e.ward !== ward ? `<div style="font-size:9px">${e.ward}</div>` : ''}`;
     btn.onclick = () => {
       if (!c2SelectedNums.has(num) && c2SelectedNums.size >= maxUnits()) {
         alert('เลือกได้สูงสุด ' + maxUnits() + ' หมายเลขพร้อมกัน'); return;
       }
       toggleC2Num(num, btn);
     };
-    grid.appendChild(btn);
+    wrap.appendChild(btn);
+    const tfBtn = document.createElement('button');
+    tfBtn.type = 'button';
+    tfBtn.textContent = '🔁 ย้ายวอร์ด';
+    tfBtn.style.cssText = 'font-size:9px;padding:3px 2px;border-radius:6px;border:1px solid #C5E3ED;background:#fff;color:#0A6478;cursor:pointer;font-weight:700;line-height:1.3';
+    tfBtn.onclick = (ev) => { ev.stopPropagation(); openTransferModal(S.equip, num, e.ward); };
+    wrap.appendChild(tfBtn);
+    grid.appendChild(wrap);
   });
   updateC2SelInfo();
 }
@@ -1189,6 +1194,75 @@ function updateC2SelInfo() {
   if (c2SelectedNums.size === 0) { el.textContent = ''; return; }
   const sorted = [...c2SelectedNums].sort((a,b) => +a - +b);
   el.innerHTML = `เลือกแล้ว ${c2SelectedNums.size} เครื่อง: ${sorted.map(n => `<strong>No.${n}</strong>`).join(', ')}`;
+}
+
+/* ====== ย้ายวอร์ด (Transfer) ====== */
+let tfCtx = null; // { equip, num, fromWard }
+
+function getWardList() {
+  return Array.from(document.getElementById('wardSel').options)
+    .map(o => o.value)
+    .filter(v => v && v !== 'อื่นๆ โปรดระบุชื่อตึก');
+}
+
+function openTransferModal(equip, num, fromWard) {
+  tfCtx = { equip, num, fromWard };
+  document.getElementById('tfInfo').innerHTML =
+    `<strong>${equip}</strong> No.${num}<br><span style="font-weight:500;color:var(--muted);font-size:12px">ปัจจุบันอยู่ที่วอร์ด ${fromWard}</span>`;
+  const sel = document.getElementById('tfWardSel');
+  sel.innerHTML = '<option value="">— เลือกวอร์ดปลายทาง —</option>' +
+    getWardList().filter(w => w !== fromWard).map(w => `<option>${w}</option>`).join('');
+  const staffVal = document.getElementById('staffName').value.trim();
+  document.getElementById('tfStaffName').value = staffVal;
+  document.getElementById('transferModal').style.display = 'flex';
+}
+
+function closeTransferModal() {
+  document.getElementById('transferModal').style.display = 'none';
+  tfCtx = null;
+}
+
+async function submitTransfer() {
+  if (!tfCtx) return;
+  const toWard = document.getElementById('tfWardSel').value;
+  const name   = document.getElementById('tfStaffName').value.trim();
+  if (!toWard) { alert('⚠️ กรุณาเลือกวอร์ดปลายทาง'); return; }
+  if (!name)   { alert('⚠️ กรุณากรอกชื่อผู้ย้าย'); return; }
+
+  const btn = document.getElementById('tfSubmitBtn');
+  btn.disabled = true; btn.textContent = 'กำลังบันทึก...';
+
+  const shiftTH = { morning: 'เวรเช้า', afternoon: 'เวรบ่าย', night: 'เวรดึก' };
+  const payload = {
+    action          : '🔁 ย้ายวอร์ด',
+    shift           : shiftTH[detectShift()],
+    equipment       : tfCtx.equip,
+    equipmentNumber : tfCtx.num,
+    ward            : toWard,
+    name            : name,
+    note            : 'ย้ายจาก ' + tfCtx.fromWard,
+    timestamp       : new Date().toISOString()
+  };
+
+  try {
+    if (SCRIPT_URL) {
+      await fetch(SCRIPT_URL, {
+        method : 'POST',
+        mode   : 'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
+        body   : JSON.stringify(payload)
+      });
+    }
+    const movedEquip = tfCtx.equip, movedNum = tfCtx.num;
+    closeTransferModal();
+    allEquipStatus = null;
+    await loadEquipStatus();
+    alert('✅ ย้าย ' + movedEquip + ' No.' + movedNum + ' ไปวอร์ด ' + toWard + ' สำเร็จ');
+  } catch (e2) {
+    alert('⚠️ ย้ายวอร์ดไม่สำเร็จ กรุณาลองใหม่');
+  } finally {
+    btn.disabled = false; btn.textContent = 'ยืนยันย้ายวอร์ด';
+  }
 }
 
 async function handleSubmit() {
@@ -1332,6 +1406,27 @@ function resetForm() {
   งานศูนย์เครื่องมือแพทย์ โรงพยาบาลพหลพลพยุหเสนา จ.กาญจนบุรี<br>
   พัฒนาโดย Pawarit Somchipeng
 </div>
+<!-- TRANSFER WARD MODAL -->
+<div id="transferModal" style="display:none;position:fixed;inset:0;background:rgba(10,30,40,0.65);z-index:9999;align-items:center;justify-content:center;padding:16px">
+  <div style="background:#fff;border-radius:20px;width:100%;max-width:420px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+    <div style="background:linear-gradient(135deg,#0A6478,#0E7D94);padding:16px 20px;display:flex;align-items:center;justify-content:space-between">
+      <div style="color:#fff;font-size:16px;font-weight:800">🔁 ย้ายวอร์ด</div>
+      <button onclick="closeTransferModal()" style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.2);border:none;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">×</button>
+    </div>
+    <div style="padding:18px 20px;display:flex;flex-direction:column;gap:14px">
+      <div id="tfInfo" style="font-size:14px;font-weight:700;color:#192D35"></div>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px">ย้ายไปวอร์ด</div>
+        <select class="field" id="tfWardSel"><option value="">— เลือกวอร์ดปลายทาง —</option></select>
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px">ชื่อผู้ย้าย</div>
+        <input type="text" class="field" id="tfStaffName" placeholder="กรุณาใส่ชื่อจริง">
+      </div>
+      <button id="tfSubmitBtn" onclick="submitTransfer()" style="margin-top:2px;padding:13px;border:none;border-radius:12px;background:#0A6478;color:#fff;font-weight:800;font-size:15px;cursor:pointer">ยืนยันย้ายวอร์ด</button>
+    </div>
+  </div>
+</div>
 <!-- HELP MODAL -->
 <div id="helpModal" style="display:none;position:fixed;inset:0;background:rgba(10,30,40,0.65);z-index:9999;align-items:center;justify-content:center;padding:16px">
   <div style="background:#fff;border-radius:20px;width:100%;max-width:480px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
@@ -1384,7 +1479,8 @@ function resetForm() {
       <div style="background:#EBF5F8;border-radius:14px;padding:16px">
         <div style="font-size:15px;font-weight:800;color:#0A6478;margin-bottom:10px">💡 เคล็ดลับ</div>
         <div style="font-size:13px;color:#192D35;line-height:1.8">
-          • High Flow: ถ้า <b>ER หรือ ICU</b> เป็นผู้ยืม หน่วยงานใดก็สามารถคืนได้<br>
+          • กติกาคืนเครื่อง: <b>วอร์ดไหนยืม วอร์ดนั้นคืน</b> ยกเว้นถ้า <b>ER หรือ ICU</b> เป็นผู้ยืม วอร์ดใดก็คืนได้ (ทุกประเภทเครื่อง)<br>
+          • ในโหมด <b>คืน</b> ที่มีปุ่มเลือกหมายเลข จะมีปุ่ม <b>🔁 ย้ายวอร์ด</b> ให้ย้ายเครื่องที่ยืมอยู่ไปวอร์ดอื่นได้โดยไม่ต้องคืน<br>
           • <b>เครื่องมืออื่นๆ</b>: ใช้สำหรับเครื่องที่ไม่มีในรายการ กรอกชื่อเครื่องและเลขครุภัณฑ์เอง<br>
           • บันทึกหน้าเว็บเป็น Shortcut บน iPhone หรือ Desktop เพื่อใช้งานเหมือนแอป<br>
           • ข้อมูลบันทึกลง Google Sheets อัตโนมัติ

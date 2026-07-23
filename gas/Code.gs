@@ -240,9 +240,10 @@ function saveRecord(data) {
 
   // color row by action
   const lastRow = sheet.getLastRow();
-  const isRound  = (data.action || '').includes('Round');
-  const isBorrow = (data.action || '').includes('ยืม');
-  const bg = isRound ? '#DAF0F5' : isBorrow ? '#DCF2E5' : '#FDEAEA';
+  const isRound    = (data.action || '').includes('Round');
+  const isTransfer = (data.action || '').includes('ย้าย');
+  const isBorrow   = (data.action || '').includes('ยืม');
+  const bg = isRound ? '#DAF0F5' : isTransfer ? '#FFF3D6' : isBorrow ? '#DCF2E5' : '#FDEAEA';
   sheet.getRange(lastRow, 1, 1, 12).setBackground(bg);
 
   // ถ้าเป็นการยืม -> เครื่องที่ถูกเตรียมไว้ให้หายจากรายการเตรียม
@@ -326,8 +327,8 @@ function getSummary() {
     const equip  = String(r[5]);
     const ward   = String(r[7]);
     if (!byDate[date]) byDate[date] = { date, borrow: 0, return: 0, wards: {}, equipments: {} };
-    if (action.includes('ยืม')) byDate[date].borrow++;
-    else                        byDate[date].return++;
+    if (action.includes('ยืม'))       byDate[date].borrow++;
+    else if (action.includes('คืน'))  byDate[date].return++;
     byDate[date].wards[ward]  = (byDate[date].wards[ward]  || 0) + 1;
     byDate[date].equipments[equip] = (byDate[date].equipments[equip] || 0) + 1;
   });
@@ -364,7 +365,7 @@ function getEquipmentStatus() {
       ward,
       borrowedBy: name,
       lastUpdate: ts,
-      isBorrowed: action.includes('ยืม')
+      isBorrowed: action.includes('ยืม') || action.includes('ย้าย')
     };
   });
 
@@ -446,11 +447,12 @@ function getC2Status() {
     if (!equip.includes('C2')) return;
     const n = parseInt(num, 10);
     if (isNaN(n) || n < 1 || n > 58) return;
+    const stillBorrowed = action.includes('ยืม') || action.includes('ย้าย');
     statusMap[num] = {
       number:     num,
-      isBorrowed: action.includes('ยืม'),
-      ward:       action.includes('ยืม') ? ward : '',
-      borrowedBy: action.includes('ยืม') ? name : '',
+      isBorrowed: stillBorrowed,
+      ward:       stillBorrowed ? ward : '',
+      borrowedBy: stillBorrowed ? name : '',
       lastUpdate: ts instanceof Date
         ? Utilities.formatDate(ts, 'Asia/Bangkok', 'dd/MM/yyyy HH:mm')
         : String(ts)
