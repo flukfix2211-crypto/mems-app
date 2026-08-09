@@ -827,3 +827,25 @@ function markPreparedUsed(equipment, number) {
     }
   }
 }
+
+/** ฟังก์ชันทดสอบ Telegram — รันเองจาก Apps Script editor เพื่อตรวจสอบว่าตั้งค่าถูกต้องไหม */
+function testTelegramNotify() {
+  const cfg = getTelegramConfig_();
+  Logger.log('TOKEN ที่อ่านได้: ' + (cfg.token ? cfg.token.substring(0, 10) + '...(มีค่า)' : 'ว่างเปล่า/ไม่มี'));
+  Logger.log('CHAT_ID ที่อ่านได้: ' + (cfg.chatId || 'ว่างเปล่า/ไม่มี'));
+
+  if (!cfg.token || !cfg.chatId) {
+    Logger.log('❌ ยังไม่ได้ตั้งค่า Script Properties ถูกต้อง กรุณาเช็คชื่อ property ให้ตรง TELEGRAM_TOKEN และ TELEGRAM_CHAT_ID');
+    return;
+  }
+
+  const url = 'https://api.telegram.org/bot' + cfg.token + '/sendMessage';
+  const payload = { chat_id: cfg.chatId, text: 'ทดสอบระบบแจ้งเตือน MEMs ✅', parse_mode: 'HTML' };
+  const res = UrlFetchApp.fetch(url, {
+    method: 'post',
+    contentType: 'application/json',
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  });
+  Logger.log('Telegram ตอบกลับ: ' + res.getResponseCode() + ' ' + res.getContentText());
+}
