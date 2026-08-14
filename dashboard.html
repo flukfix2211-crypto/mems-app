@@ -75,6 +75,16 @@
     .nav-arrow { font-size: 22px; color: var(--a); opacity: .4; position: relative; z-index: 1; transition: opacity .2s, transform .2s; }
     .nav-card:hover .nav-arrow { opacity: 1; transform: translateX(4px); }
 
+    /* GRID LAYOUT — ช่องกด 4 เหลี่ยม */
+    .nav-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .nav-grid .nav-card { flex-direction: column; text-align: center; gap: 10px; padding: 22px 12px; margin-bottom: 0; }
+    .nav-grid .nav-arrow { display: none; }
+    .nav-grid .nav-title { font-size: 14px; margin-bottom: 2px; }
+    .nav-grid .nav-desc { font-size: 11.5px; line-height: 1.35; }
+    .nav-grid .nav-card-wide { grid-column: 1 / -1; flex-direction: row; text-align: left; }
+    .nav-grid .nav-card-wide .nav-arrow { display: block; }
+    @media (min-width: 640px) { .nav-grid { grid-template-columns: repeat(3, 1fr); } }
+
     /* SECTION VIEWS */
     .view { display: none; }
     .view.active { display: block; }
@@ -195,6 +205,8 @@
   <div id="viewHome" class="view active">
     <div class="section-label">รายงาน &amp; ข้อมูล</div>
 
+    <div class="nav-grid">
+
     <div class="nav-card" onclick="showView('ward')">
       <div class="nav-icon teal">🏥</div>
       <div class="nav-text">
@@ -250,13 +262,15 @@
       <span class="nav-arrow">›</span>
     </div>
 
-    <div class="nav-card" onclick="showView('kpi')" style="background:linear-gradient(135deg,#0f172a,#1e293b);border-color:#334155">
+    <div class="nav-card nav-card-wide" onclick="showView('kpi')" style="background:linear-gradient(135deg,#0f172a,#1e293b);border-color:#334155">
       <div class="nav-icon" style="background:#1e3a5f;font-size:26px;width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0">📺</div>
       <div class="nav-text">
         <div class="nav-title" style="color:#e2e8f0">KPI Display</div>
         <div class="nav-desc" style="color:#94a3b8">แดชบอร์ดรวม เรียลไทม์ ไว้โชว์บนจอ</div>
       </div>
       <span class="nav-arrow" style="color:#38bdf8">›</span>
+    </div>
+
     </div>
   </div>
 

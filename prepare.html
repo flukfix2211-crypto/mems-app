@@ -262,7 +262,32 @@
 
     const btn = document.getElementById('saveBtn');
     const origText = btn.textContent;
-    btn.disabled = true; btn.textContent = 'กำลังบันทึก…';
+    btn.disabled = true; btn.textContent = 'กำลังตรวจสอบ…';
+
+    // กันทำซ้ำ: เครื่องที่ถูกเตรียมไว้แล้ว หรือถูกยืมอยู่ ทำซ้ำไม่ได้
+    try {
+      const u1 = new URL(SCRIPT_URL); u1.searchParams.set('action', 'prepareList');
+      const u2 = new URL(SCRIPT_URL); u2.searchParams.set('action', 'equipment');
+      const [pd, eqd] = await Promise.all([
+        fetch(u1.toString(), { mode: 'cors' }).then(r => r.json()).catch(() => ({})),
+        fetch(u2.toString(), { mode: 'cors' }).then(r => r.json()).catch(() => ({}))
+      ]);
+      const activePrep = new Set((pd.prepared || []).map(p => p.equipment + '__' + p.number));
+      const borrowed = new Set((eqd.equipment || []).filter(e => e.isBorrowed).map(e => e.equipment + '__' + e.number));
+      const dups = [];
+      numbers.forEach(num => {
+        const key = selectedEquip + '__' + num;
+        if (borrowed.has(key)) dups.push(num + ' (ถูกยืมอยู่)');
+        else if (prepareMode === 'prepare' && activePrep.has(key)) dups.push(num + ' (เตรียมไว้แล้ว)');
+      });
+      if (dups.length) {
+        alert('⚠️ เครื่อง ' + selectedEquip + ' No. ' + dups.join(', ') + '\nไม่สามารถทำซ้ำได้');
+        btn.disabled = false; btn.textContent = origText;
+        return;
+      }
+    } catch (e) { /* เช็คไม่ได้ -> ปล่อยผ่าน ไม่บล็อค */ }
+
+    btn.textContent = 'กำลังบันทึก…';
     try {
       if (prepareMode === 'deliver') {
         // โหมดพร้อมส่ง = ยืมแทนหน่วยงานทันที (1 record ต่อ 1 หมายเลข)

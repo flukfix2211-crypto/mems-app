@@ -22,6 +22,72 @@ const SHEET_SUMMARY  = 'สรุปรายวัน';
 const SHEET_ASSETS   = 'ครุภัณฑ์_C2';
 
 // ============================================================
+// Telegram — แจ้งเตือนยืม/คืน
+// ตั้งค่า token/chat id ผ่าน Script Properties (ปลอดภัยกว่าเขียนในโค้ด):
+//   Apps Script editor -> ⚙️ Project Settings -> Script Properties -> Add property
+//   TELEGRAM_TOKEN   = โทเคนบอทจาก @BotFather
+//   TELEGRAM_CHAT_ID = chat id ของกลุ่ม/แชท
+// หรือรันฟังก์ชัน setupTelegram('โทเคน','chatId') หนึ่งครั้งจาก Apps Script editor
+// ============================================================
+const THAI_TZ = 'Asia/Bangkok';
+
+function setupTelegram(token, chatId) {
+  PropertiesService.getScriptProperties().setProperties({
+    TELEGRAM_TOKEN: token,
+    TELEGRAM_CHAT_ID: chatId
+  });
+}
+
+function getTelegramConfig_() {
+  const p = PropertiesService.getScriptProperties();
+  return { token: p.getProperty('TELEGRAM_TOKEN'), chatId: p.getProperty('TELEGRAM_CHAT_ID') };
+}
+
+function sendTelegramMessage_(text) {
+  const { token, chatId } = getTelegramConfig_();
+  if (!token || !chatId) return; // ยังไม่ได้ตั้งค่า -> ข้าม ไม่ทำให้การบันทึกล้มเหลว
+  const url = 'https://api.telegram.org/bot' + token + '/sendMessage';
+  const payload = { chat_id: chatId, text: text, parse_mode: 'HTML', disable_web_page_preview: true };
+  UrlFetchApp.fetch(url, {
+    method: 'post',
+    contentType: 'application/json',
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  });
+}
+
+function escHTML_(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function notifyBorrowReturn_(data, now) {
+  const action = data.action || '';
+  const isBorrow = action.includes('ยืม');
+  const isReturn = action.includes('คืน');
+  if (!isBorrow && !isReturn) return; // แจ้งเฉพาะยืม/คืน ไม่แจ้ง Round
+
+  const statusLabel = isBorrow ? 'ยืม' : 'คืน';
+  const dateStr = Utilities.formatDate(now, THAI_TZ, 'dd/MM/yyyy');
+  const timeStr = Utilities.formatDate(now, THAI_TZ, 'HH:mm:ss');
+
+  let msg = '📢 มีการ <b>' + escHTML_(statusLabel) + '</b> เครื่องมือ: <b>' + escHTML_(data.equipment || '') + '</b>\n';
+  msg += '📅 วันที่: ' + escHTML_(dateStr + '  เวลา ' + timeStr) + '\n\n';
+  msg += '🔹 <b>หมายเลขเครื่อง</b>: ' + escHTML_(data.equipmentNumber || '') + '\n';
+  msg += '🔹 <b>ตึก/Ward</b>: ' + escHTML_(data.ward || '') + '\n';
+  msg += '🔹 <b>ผู้บันทึก</b>: ' + escHTML_(data.name || '') + '\n';
+  msg += '🔹 <b>เวร</b>: ' + escHTML_(data.shift || '') + '\n';
+  if (data.note) msg += '🔹 <b>หมายเหตุ</b>: ' + escHTML_(data.note) + '\n';
+
+  if ((data.equipment || '').toUpperCase().trim() === 'C2' && isBorrow) {
+    const changeDate = new Date(now);
+    changeDate.setDate(changeDate.getDate() + 14);
+    msg += '\n⚡️ <b>วันที่เปลี่ยน Circuit:</b> ' + escHTML_(Utilities.formatDate(changeDate, THAI_TZ, 'dd/MM/yyyy'));
+  }
+
+  try { sendTelegramMessage_(msg); } catch (e) { /* ไม่ให้กระทบการบันทึกหลัก */ }
+}
+
+// ============================================================
 // doPost — รับข้อมูลจาก frontend
 // ============================================================
 function doPost(e) {
@@ -250,6 +316,8 @@ function saveRecord(data) {
   if (isBorrow) {
     try { markPreparedUsed(data.equipment || '', data.equipmentNumber || ''); } catch (e) {}
   }
+
+  notifyBorrowReturn_(data, now);
 
   return { row: rowNumber, timestamp: now.toISOString() };
 }
@@ -760,4 +828,26 @@ function markPreparedUsed(equipment, number) {
       sheet.getRange(row, 1, 1, PREPARE_COLS.length).setBackground('#DCF2E5');
     }
   }
+}
+
+/** ฟังก์ชันทดสอบ Telegram — รันเองจาก Apps Script editor เพื่อตรวจสอบว่าตั้งค่าถูกต้องไหม */
+function testTelegramNotify() {
+  const cfg = getTelegramConfig_();
+  Logger.log('TOKEN ที่อ่านได้: ' + (cfg.token ? cfg.token.substring(0, 10) + '...(มีค่า)' : 'ว่างเปล่า/ไม่มี'));
+  Logger.log('CHAT_ID ที่อ่านได้: ' + (cfg.chatId || 'ว่างเปล่า/ไม่มี'));
+
+  if (!cfg.token || !cfg.chatId) {
+    Logger.log('❌ ยังไม่ได้ตั้งค่า Script Properties ถูกต้อง กรุณาเช็คชื่อ property ให้ตรง TELEGRAM_TOKEN และ TELEGRAM_CHAT_ID');
+    return;
+  }
+
+  const url = 'https://api.telegram.org/bot' + cfg.token + '/sendMessage';
+  const payload = { chat_id: cfg.chatId, text: 'ทดสอบระบบแจ้งเตือน MEMs ✅', parse_mode: 'HTML' };
+  const res = UrlFetchApp.fetch(url, {
+    method: 'post',
+    contentType: 'application/json',
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  });
+  Logger.log('Telegram ตอบกลับ: ' + res.getResponseCode() + ' ' + res.getContentText());
 }
