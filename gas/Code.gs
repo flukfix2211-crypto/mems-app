@@ -18,7 +18,6 @@
 // ============================================================
 const SPREADSHEET_ID = '1Ju2STRjjFaC4ZjuTNAjsrDEyvW6cBM42Yt5NsXALgtg';
 const SHEET_BORROW   = 'ยืม-คืน';
-const SHEET_SUMMARY  = 'สรุปรายวัน';
 const SHEET_ASSETS   = 'ครุภัณฑ์_C2';
 
 // ============================================================
@@ -423,7 +422,7 @@ function getEquipmentStatus() {
     const action = String(r[4]);
     const ward   = String(r[7]);
     const name   = String(r[8]);
-    const ts     = String(r[9]);
+    const ts     = r[9] instanceof Date ? Utilities.formatDate(r[9], THAI_TZ, 'dd/MM/yyyy HH:mm:ss') : String(r[9]);
     const key    = `${equip}__${num}`;
     // เก็บแถวล่าสุด (rows เรียงจากเก่าไปใหม่)
     statusMap[key] = {
@@ -471,6 +470,84 @@ function getRoundHistory(ward, equipmentType) {
 
   const machines = Object.values(map).filter(m => m.number && m.number !== '');
   return { ok: true, ward, equipment: equipmentType, machines };
+}
+
+// ============================================================
+// Daily Alert Digest — สรุปยืมเกินกำหนด (C2) + ใกล้หมด ส่ง Telegram ทุกเช้า
+// เงื่อนไขเดียวกับ computeAlerts() ฝั่ง dashboard.html
+// ============================================================
+const DIGEST_OVERDUE_C2_DAYS = 14;
+const DIGEST_SHORTAGE_MAX = 2;
+
+function parseThaiTimestamp_(s) {
+  const m = String(s || '').match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})(?::(\d{2}))?/);
+  if (!m) return null;
+  return new Date(+m[3], +m[2] - 1, +m[1], +m[4], +m[5], +(m[6] || 0));
+}
+
+function computeDailyAlerts_() {
+  const status = getEquipmentStatus().equipment || [];
+  const now = new Date();
+
+  const overdue = status
+    .filter(e => e.isBorrowed && e.equipment.includes('C2'))
+    .map(e => {
+      const dt = parseThaiTimestamp_(e.lastUpdate);
+      const days = dt ? Math.floor((now - dt) / 86400000) : null;
+      return { number: e.number, ward: e.ward, days };
+    })
+    .filter(e => e.days !== null && e.days >= DIGEST_OVERDUE_C2_DAYS)
+    .sort((a, b) => b.days - a.days);
+
+  const availByType = {};
+  status.forEach(e => {
+    if (!(e.equipment in availByType)) availByType[e.equipment] = 0;
+    if (!e.isBorrowed) availByType[e.equipment]++;
+  });
+  const shortage = Object.keys(availByType)
+    .filter(eq => availByType[eq] <= DIGEST_SHORTAGE_MAX)
+    .map(eq => ({ equipment: eq, available: availByType[eq] }))
+    .sort((a, b) => a.available - b.available);
+
+  return { overdue, shortage };
+}
+
+function sendDailyAlertDigest_() {
+  const { overdue, shortage } = computeDailyAlerts_();
+  if (!overdue.length && !shortage.length) return; // ไม่มีอะไรผิดปกติ -> ไม่ส่ง กันสแปมทุกเช้า
+
+  const dateStr = Utilities.formatDate(new Date(), THAI_TZ, 'dd/MM/yyyy');
+  let msg = '📋 <b>สรุปแจ้งเตือนประจำวัน ' + escHTML_(dateStr) + '</b>\n';
+
+  if (overdue.length) {
+    msg += '\n⏰ <b>ยืมเกินกำหนด (C2 ≥' + DIGEST_OVERDUE_C2_DAYS + ' วัน)</b>\n';
+    overdue.forEach(o => {
+      msg += '• C2 No.' + escHTML_(o.number) + ' ตึก ' + escHTML_(o.ward || '—') + ' — ยืมมาแล้ว ' + o.days + ' วัน\n';
+    });
+  }
+
+  if (shortage.length) {
+    msg += '\n⚠️ <b>ใกล้หมด (เหลือ ≤' + DIGEST_SHORTAGE_MAX + ' เครื่อง)</b>\n';
+    shortage.forEach(s => {
+      msg += '• ' + escHTML_(s.equipment) + ' — เหลือว่าง ' + s.available + ' เครื่อง\n';
+    });
+  }
+
+  try { sendTelegramMessage_(msg); } catch (e) { /* ไม่ให้กระทบ trigger รอบถัดไป */ }
+}
+
+// รันฟังก์ชันนี้ "ครั้งเดียว" จาก Apps Script editor เพื่อผูก time-driven trigger (ทุกวัน 08:00 น.)
+// ต้องตั้งค่า Telegram ด้วย setupTelegram('โทเคน','chatId') ก่อน ไม่งั้นจะไม่มีอะไรถูกส่ง
+function setupDailyDigestTrigger() {
+  ScriptApp.getProjectTriggers()
+    .filter(t => t.getHandlerFunction() === 'sendDailyAlertDigest_')
+    .forEach(t => ScriptApp.deleteTrigger(t));
+  ScriptApp.newTrigger('sendDailyAlertDigest_')
+    .timeBased()
+    .atHour(8)
+    .everyDays(1)
+    .inTimezone(THAI_TZ)
+    .create();
 }
 
 // ============================================================
