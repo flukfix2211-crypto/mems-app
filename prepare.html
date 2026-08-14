@@ -125,9 +125,15 @@
     <div class="equip-grid" id="equipGrid"></div>
   </div>
 
+  <!-- ชื่อเครื่องมือ (เฉพาะ เครื่องมืออื่นๆ) -->
+  <div class="card" id="otherEquipNameCard" style="display:none">
+    <div class="sec-label"><span class="req-dot"></span>ชื่อเครื่องมือ</div>
+    <input type="text" class="field" id="otherEquipName" placeholder="ระบุชื่อเครื่องมือ...">
+  </div>
+
   <!-- หมายเลข -->
   <div class="card">
-    <div class="sec-label"><span class="req-dot"></span>หมายเลขเครื่อง <span style="font-weight:500;color:var(--muted);text-transform:none;letter-spacing:0">(คั่นหลายเครื่องด้วย , )</span></div>
+    <div class="sec-label"><span class="req-dot"></span><span id="numbersLabelText">หมายเลขเครื่อง</span> <span style="font-weight:500;color:var(--muted);text-transform:none;letter-spacing:0">(คั่นหลายเครื่องด้วย , )</span></div>
     <input type="text" class="field" id="numbersInput" placeholder="เช่น 5, 6, 7"
            inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9,\s]/g,'')">
   </div>
@@ -191,7 +197,8 @@
 <script>
   const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz7_Q0Wtl7hDovuZga1q42xRTxVC6GXfuph4JU-C-aQ_zNLssdRVUsfde4a1vF15cIYtQ/exec';
 
-  const EQUIPS = ['C2', 'Infusion Pump', 'Syringe pump', 'High Flow', 'Brid เขียว', 'T1', 'Monnal t60'];
+  const EQUIPS = ['C2', 'Infusion Pump', 'Syringe pump', 'High Flow', 'Brid เขียว', 'T1', 'Monnal t60',
+    'Patient Monitor', 'NIBP', 'Defibrillator', 'เครื่องมืออื่นๆ'];
   const WARDS = ['ER','อายุรกรรมหญิง (M.ญ)','EENT','ศัลยกรรมหญิง','ศัลยกรรมกระดูก','ศัลยกรรมชาย',
     'อายุรกรรมชาย (M.ช)','Semi ICU','ICU 100 ปี','กจ.3','กจ.2','TM','เด็กล่าง','PICU','เด็กบน',
     'ICU ญสส.','ห้องคลอด LR','หลังคลอด PP','ญสส.9','Premium ญสส.8','ญสส.7','ICU.S','ICU Nuero',
@@ -224,7 +231,13 @@
     const b = document.createElement('button');
     b.className = 'equip-chip';
     b.textContent = e;
-    b.onclick = () => { selectedEquip = e; document.querySelectorAll('.equip-chip').forEach(x => x.classList.remove('active')); b.classList.add('active'); };
+    b.onclick = () => {
+      selectedEquip = e;
+      document.querySelectorAll('.equip-chip').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      document.getElementById('otherEquipNameCard').style.display = e === 'เครื่องมืออื่นๆ' ? '' : 'none';
+      document.getElementById('numbersLabelText').textContent = e === 'Defibrillator' ? 'เลขครุภัณฑ์' : 'หมายเลขเครื่อง';
+    };
     grid.appendChild(b);
   });
 
@@ -253,8 +266,11 @@
     const byName  = bySel === 'อื่นๆ' ? byOther : bySel;
     const numbers = document.getElementById('numbersInput').value
       .split(',').map(s => s.trim()).filter(s => s !== '');
+    const otherEquipName = document.getElementById('otherEquipName').value.trim();
+    const equipName = selectedEquip === 'เครื่องมืออื่นๆ' ? otherEquipName : selectedEquip;
 
-    if (!selectedEquip || numbers.length === 0 || !ward0 || !byName || (ward0 === 'อื่นๆ โปรดระบุชื่อตึก' && !other)) {
+    if (!selectedEquip || numbers.length === 0 || !ward0 || !byName || (ward0 === 'อื่นๆ โปรดระบุชื่อตึก' && !other)
+        || (selectedEquip === 'เครื่องมืออื่นๆ' && !otherEquipName)) {
       alert('⚠️ กรุณากรอกข้อมูลให้ครบ (ประเภท, หมายเลข, ตึก, ผู้เตรียม)');
       return;
     }
@@ -276,12 +292,12 @@
       const borrowed = new Set((eqd.equipment || []).filter(e => e.isBorrowed).map(e => e.equipment + '__' + e.number));
       const dups = [];
       numbers.forEach(num => {
-        const key = selectedEquip + '__' + num;
+        const key = equipName + '__' + num;
         if (borrowed.has(key)) dups.push(num + ' (ถูกยืมอยู่)');
         else if (prepareMode === 'prepare' && activePrep.has(key)) dups.push(num + ' (เตรียมไว้แล้ว)');
       });
       if (dups.length) {
-        alert('⚠️ เครื่อง ' + selectedEquip + ' No. ' + dups.join(', ') + '\nไม่สามารถทำซ้ำได้');
+        alert('⚠️ เครื่อง ' + equipName + ' No. ' + dups.join(', ') + '\nไม่สามารถทำซ้ำได้');
         btn.disabled = false; btn.textContent = origText;
         return;
       }
@@ -297,19 +313,19 @@
           await fetch(SCRIPT_URL, {
             method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
             body: JSON.stringify({
-              shift, action: '🟩 ยืม', equipment: selectedEquip, equipmentNumber: num,
+              shift, action: '🟩 ยืม', equipment: equipName, equipmentNumber: num,
               ward, name: by, timestamp: ts, note: 'เตรียมพร้อมส่ง (แอดมินนำส่ง)'
             })
           });
         }
-        toast('🚚 ส่ง ' + selectedEquip + ' No.' + numbers.join(', ') + ' ให้ ' + ward + ' (ยืมแล้ว)');
+        toast('🚚 ส่ง ' + equipName + ' No.' + numbers.join(', ') + ' ให้ ' + ward + ' (ยืมแล้ว)');
       } else {
         // โหมดเตรียม = บันทึกเป็นรายการเตรียม
         await fetch(SCRIPT_URL, {
           method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify({ action: 'savePrepare', fields: { equipment: selectedEquip, numbers, ward, preparedBy: by } })
+          body: JSON.stringify({ action: 'savePrepare', fields: { equipment: equipName, numbers, ward, preparedBy: by } })
         });
-        toast('✅ เตรียม ' + selectedEquip + ' No.' + numbers.join(', ') + ' ให้ ' + ward + ' แล้ว');
+        toast('✅ เตรียม ' + equipName + ' No.' + numbers.join(', ') + ' ให้ ' + ward + ' แล้ว');
       }
       // รีเซ็ตฟอร์มพร้อมกรอกรายการใหม่ (เก็บผู้เตรียม + โหมดไว้)
       resetPrepareForm();
@@ -324,6 +340,9 @@
     selectedEquip = null;
     document.querySelectorAll('.equip-chip').forEach(x => x.classList.remove('active'));
     document.getElementById('numbersInput').value = '';
+    document.getElementById('otherEquipName').value = '';
+    document.getElementById('otherEquipNameCard').style.display = 'none';
+    document.getElementById('numbersLabelText').textContent = 'หมายเลขเครื่อง';
     wardSel.value = '';
     document.getElementById('otherWard').value = '';
     document.getElementById('otherWrap').style.display = 'none';
