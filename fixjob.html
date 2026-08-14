@@ -154,15 +154,12 @@
 <div id="toast"></div>
 
 <script>
-  // ===== mockup เฟส 1: ยังไม่ต่อ backend จริง — ใช้ข้อมูลตัวอย่างไว้ก่อน =====
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz7_Q0Wtl7hDovuZga1q42xRTxVC6GXfuph4JU-C-aQ_zNLssdRVUsfde4a1vF15cIYtQ/exec';
+
   const WARDS = ['ER','อายุรกรรมหญิง (M.ญ)','EENT','ศัลยกรรมหญิง','ศัลยกรรมกระดูก','ศัลยกรรมชาย',
     'อายุรกรรมชาย (M.ช)','Semi ICU','ICU 100 ปี','กจ.3','กจ.2','TM','เด็กล่าง','PICU','เด็กบน',
     'ICU ญสส.','ห้องคลอด LR','หลังคลอด PP','ญสส.9','Premium ญสส.8','ญสส.7','ICU.S','ICU Nuero',
     'NICU','SNB','กจ.4','AIIR','สธ.7','สธ.6','ศูนย์เปล','เคมีบำบัด','อื่นๆ โปรดระบุชื่อตึก'];
-
-  // ตัวอย่างหัวข้อที่เคยบันทึกไว้ (เฟส 2 จะดึงจาก backend แบบ dynamic แทน)
-  const SAMPLE_TOPICS = ['เครื่อง Infusion Pump แจ้งเตือน Error', 'สาย NIBP ชำรุด', 'แบตเตอรี่เสื่อม/ไม่เก็บไฟ',
-    'จอแสดงผลไม่ติด', 'ปั๊มลมทำงานผิดปกติ'];
 
   let selectedPhotos = []; // [{file, url}]
 
@@ -171,11 +168,17 @@
   wardSel.onchange = () => { document.getElementById('otherWardWrap').style.display = wardSel.value === 'อื่นๆ โปรดระบุชื่อตึก' ? '' : 'none'; };
 
   const topicSel = document.getElementById('topicSel');
-  SAMPLE_TOPICS.forEach(t => {
-    const o = document.createElement('option');
-    o.value = t; o.textContent = t;
-    topicSel.insertBefore(o, topicSel.querySelector('option[value="__new"]'));
-  });
+  async function loadTopics() {
+    try {
+      const u = new URL(SCRIPT_URL); u.searchParams.set('action', 'fixJobTopics');
+      const data = await fetch(u.toString(), { mode: 'cors' }).then(r => r.json());
+      (data.topics || []).forEach(t => {
+        const o = document.createElement('option');
+        o.value = t; o.textContent = t;
+        topicSel.insertBefore(o, topicSel.querySelector('option[value="__new"]'));
+      });
+    } catch (e) { /* โหลดหัวข้อไม่ได้ -> ยังพิมพ์หัวข้อใหม่เองได้ */ }
+  }
   topicSel.onchange = () => { document.getElementById('otherTopicWrap').style.display = topicSel.value === '__new' ? '' : 'none'; };
 
   function onStaffChange() {
@@ -183,12 +186,34 @@
       document.getElementById('staffSel').value === 'อื่นๆ' ? '' : 'none';
   }
 
-  document.getElementById('photoInput').addEventListener('change', (e) => {
-    Array.from(e.target.files).forEach(file => {
-      const url = URL.createObjectURL(file);
-      selectedPhotos.push({ file, url });
+  /** ย่อขนาดรูปก่อนแปลงเป็น base64 กัน payload ใหญ่เกินไป */
+  function compressImage(file, maxW = 1024, quality = 0.7) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      const reader = new FileReader();
+      reader.onload = () => {
+        img.onload = () => {
+          const scale = Math.min(1, maxW / img.width);
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width * scale;
+          canvas.height = img.height * scale;
+          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+          const dataUrl = canvas.toDataURL('image/jpeg', quality);
+          resolve({ dataUrl, base64: dataUrl.split(',')[1] });
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
     });
+  }
+
+  document.getElementById('photoInput').addEventListener('change', async (e) => {
+    const files = Array.from(e.target.files);
     e.target.value = '';
+    for (const file of files) {
+      const { dataUrl, base64 } = await compressImage(file);
+      selectedPhotos.push({ name: file.name, mimeType: 'image/jpeg', data: base64, url: dataUrl });
+    }
     renderPhotos();
   });
 
@@ -210,7 +235,24 @@
     setTimeout(() => el.classList.remove('show'), 3000);
   }
 
-  function saveFixJob() {
+  function resetForm() {
+    wardSel.value = '';
+    document.getElementById('otherWard').value = '';
+    document.getElementById('otherWardWrap').style.display = 'none';
+    topicSel.value = '';
+    document.getElementById('otherTopic').value = '';
+    document.getElementById('otherTopicWrap').style.display = 'none';
+    document.getElementById('detailText').value = '';
+    document.getElementById('solutionText').value = '';
+    document.getElementById('staffSel').value = '';
+    document.getElementById('staffOther').value = '';
+    document.getElementById('staffOtherWrap').style.display = 'none';
+    selectedPhotos = [];
+    renderPhotos();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  async function saveFixJob() {
     const ward0 = wardSel.value;
     const wardOther = document.getElementById('otherWard').value.trim();
     const ward = ward0 === 'อื่นๆ โปรดระบุชื่อตึก' ? (wardOther || 'อื่นๆ') : ward0;
@@ -233,41 +275,75 @@
       return;
     }
 
-    // mockup เฟส 1: ยังไม่ยิงไป backend จริง — พรีวิวสิ่งที่จะถูกบันทึก
-    console.log('[mockup] จะบันทึก:', {
-      ward, topic, detail, solution,
-      staff: staffName + ' เจ้าหน้าที่ศูนย์เครื่องมือแพทย์',
-      photos: selectedPhotos.length
-    });
-    toast('✅ (mockup) ข้อมูลครบถ้วน พร้อมบันทึกเมื่อเชื่อมต่อระบบจริง');
+    const btn = document.getElementById('saveBtn');
+    const origText = btn.textContent;
+    btn.disabled = true; btn.textContent = 'กำลังบันทึก…';
+
+    try {
+      await fetch(SCRIPT_URL, {
+        method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({
+          action: 'saveFixJob',
+          fields: {
+            ward, topic, detail, solution,
+            staff: staffName + ' เจ้าหน้าที่ศูนย์เครื่องมือแพทย์',
+            images: selectedPhotos.map(p => ({ name: p.name, mimeType: p.mimeType, data: p.data }))
+          }
+        })
+      });
+      toast('✅ บันทึกการแก้ไข "' + topic + '" ที่ ' + ward + ' แล้ว');
+      resetForm();
+      loadTopics();
+      setTimeout(loadList, 800);
+    } catch (e) {
+      toast('❌ บันทึกไม่สำเร็จ');
+    }
+    btn.disabled = false; btn.textContent = origText;
   }
 
-  function loadList() {
-    // mockup เฟส 1: แสดงตัวอย่างรายการไว้ให้เห็นภาพรวมของหน้า
+  async function loadList() {
     const body = document.getElementById('listBody');
-    body.innerHTML = `
-      <div class="fix-item">
-        <div class="fix-top">
-          <div>
-            <div class="fix-ward">📍 ICU 100 ปี</div>
-            <div class="fix-topic">เครื่อง Infusion Pump แจ้งเตือน Error</div>
-            <div class="fix-sub">ตรวจสอบสายและรีเซ็ตเครื่อง ทดสอบใช้งานปกติ · โดย นัฐวัติ เจ้าหน้าที่ศูนย์เครื่องมือแพทย์ · 🕒 14 ส.ค. 2569 09:20</div>
+    body.innerHTML = '<div class="empty">กำลังโหลด...</div>';
+    try {
+      const u = new URL(SCRIPT_URL); u.searchParams.set('action', 'fixJobList');
+      const data = await fetch(u.toString(), { mode: 'cors' }).then(r => r.json());
+      const items = (data.items || []).slice(0, 30);
+      if (!items.length) { body.innerHTML = '<div class="empty">ยังไม่มีรายการที่บันทึกไว้</div>'; return; }
+      body.innerHTML = items.map(it => {
+        const when = (it.date || '') + (it.time ? ' ' + it.time : '');
+        const photos = it.photos && it.photos.length
+          ? `<div class="fix-photos">${it.photos.map(u => `<a href="${u}" target="_blank" rel="noopener"><img src="${u}"></a>`).join('')}</div>`
+          : '';
+        return `<div class="fix-item">
+          <div class="fix-top">
+            <div>
+              <div class="fix-ward">📍 ${it.ward}</div>
+              <div class="fix-topic">${it.topic}</div>
+              <div class="fix-sub">${it.solution} · โดย ${it.staff}${when ? ' · 🕒 ' + when : ''}</div>
+              ${photos}
+            </div>
+            <button class="del-btn" onclick="doDelete(${it._rowIndex})">ลบ</button>
           </div>
-          <button class="del-btn" onclick="alert('mockup เฟส 1 — ยังลบไม่ได้จริง')">ลบ</button>
-        </div>
-      </div>
-      <div class="fix-item">
-        <div class="fix-top">
-          <div>
-            <div class="fix-ward">📍 ER</div>
-            <div class="fix-topic">สาย NIBP ชำรุด</div>
-            <div class="fix-sub">เปลี่ยนสาย NIBP ชุดใหม่ · โดย ปวริศ เจ้าหน้าที่ศูนย์เครื่องมือแพทย์ · 🕒 13 ส.ค. 2569 15:05</div>
-          </div>
-          <button class="del-btn" onclick="alert('mockup เฟส 1 — ยังลบไม่ได้จริง')">ลบ</button>
-        </div>
-      </div>`;
+        </div>`;
+      }).join('');
+    } catch (e) {
+      body.innerHTML = '<div class="empty">โหลดรายการไม่ได้</div>';
+    }
   }
 
+  async function doDelete(rowIndex) {
+    if (!confirm('ยืนยันลบรายการนี้?')) return;
+    try {
+      await fetch(SCRIPT_URL, {
+        method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ action: 'deleteFixJob', rowIndex })
+      });
+      toast('🗑️ ลบแล้ว');
+      setTimeout(loadList, 800);
+    } catch (e) { toast('❌ ลบไม่สำเร็จ'); }
+  }
+
+  loadTopics();
   loadList();
 </script>
 </body>

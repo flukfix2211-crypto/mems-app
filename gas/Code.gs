@@ -19,6 +19,8 @@
 const SPREADSHEET_ID = '1Ju2STRjjFaC4ZjuTNAjsrDEyvW6cBM42Yt5NsXALgtg';
 const SHEET_BORROW   = 'ยืม-คืน';
 const SHEET_ASSETS   = 'ครุภัณฑ์_C2';
+const SHEET_FIXJOB   = 'แก้ไขหน้างาน';
+const FIXJOB_PHOTO_FOLDER = 'MEMs - แก้ไขหน้างาน';
 
 // ============================================================
 // Telegram — แจ้งเตือนยืม/คืน
@@ -144,6 +146,16 @@ function doPost(e) {
       return jsonResponse({ ok: true });
     }
 
+    if (data.action === 'saveFixJob') {
+      saveFixJob(data.fields || {});
+      return jsonResponse({ ok: true });
+    }
+
+    if (data.action === 'deleteFixJob') {
+      deleteFixJob(parseInt(data.rowIndex, 10));
+      return jsonResponse({ ok: true });
+    }
+
     const result = saveRecord(data);
     return jsonResponse({ ok: true, id: result.row, timestamp: result.timestamp });
   } catch (err) {
@@ -262,6 +274,14 @@ function doGet(e) {
 
     if (action === 'assets') {
       return jsonResponse(getAssets());
+    }
+
+    if (action === 'fixJobTopics') {
+      return jsonResponse(getFixJobTopics());
+    }
+
+    if (action === 'fixJobList') {
+      return jsonResponse(getFixJobList());
     }
 
     return jsonResponse({ ok: false, error: 'unknown action' }, 400);
@@ -955,6 +975,104 @@ function markPreparedUsed(equipment, number) {
       sheet.getRange(row, 1, 1, PREPARE_COLS.length).setBackground('#DCF2E5');
     }
   }
+}
+
+// ============================================================
+// FIXJOB — แก้ไขหน้างาน (บันทึกการออกไปแก้ไขปัญหาที่หน่วยงาน)
+// ============================================================
+const FIXJOB_COLS = ['ลำดับ', 'วันที่', 'เวลา', 'หน่วยงาน', 'เรื่องที่แก้ไข', 'รายละเอียดงาน',
+  'วิธีแก้ไข', 'ผู้ปฏิบัติ', 'รูปภาพ', 'Timestamp'];
+
+function getOrCreateFixJobSheet(ss) {
+  let sheet = ss.getSheetByName(SHEET_FIXJOB);
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEET_FIXJOB);
+    sheet.appendRow(FIXJOB_COLS);
+    sheet.setFrozenRows(1);
+    const h = sheet.getRange(1, 1, 1, FIXJOB_COLS.length);
+    h.setBackground('#0A6478').setFontColor('#fff').setFontWeight('bold').setHorizontalAlignment('center');
+    sheet.setColumnWidths(1, FIXJOB_COLS.length, 120);
+  }
+  return sheet;
+}
+
+/** อัปโหลดรูปภาพ (base64) ขึ้น Drive แล้วคืน array ของ URL */
+function _uploadFixJobPhotos(images) {
+  if (!images || !images.length) return [];
+  const folder = _getOrCreateFolder(FIXJOB_PHOTO_FOLDER);
+  const urls = [];
+  images.forEach((img, i) => {
+    if (!img || !img.data) return;
+    try {
+      const blob = Utilities.newBlob(Utilities.base64Decode(img.data), img.mimeType || 'image/jpeg',
+        img.name || ('fixjob_' + Date.now() + '_' + i + '.jpg'));
+      const file = folder.createFile(blob);
+      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      urls.push(file.getUrl());
+    } catch (e) { /* รูปเสีย/อัปโหลดไม่สำเร็จ -> ข้ามรูปนี้ ไม่ให้กระทบการบันทึกหลัก */ }
+  });
+  return urls;
+}
+
+function saveFixJob(fields) {
+  const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = getOrCreateFixJobSheet(ss);
+  const now   = new Date();
+  const dateStr = Utilities.formatDate(now, 'Asia/Bangkok', 'dd/MM/yyyy');
+  const timeStr = Utilities.formatDate(now, 'Asia/Bangkok', 'HH:mm:ss');
+
+  const photoUrls = _uploadFixJobPhotos(fields.images);
+
+  sheet.appendRow([
+    sheet.getLastRow(), dateStr, timeStr,
+    fields.ward || '', fields.topic || '', fields.detail || '', fields.solution || '',
+    fields.staff || '', photoUrls.join(', '), now.toISOString()
+  ]);
+}
+
+/** รายการหัวข้อ "เรื่องที่แก้ไข" ที่เคยบันทึกไว้ (distinct, เรียงตามตัวอักษร) */
+function getFixJobTopics() {
+  const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = getOrCreateFixJobSheet(ss);
+  if (sheet.getLastRow() <= 1) return { ok: true, topics: [] };
+
+  const rows = sheet.getRange(2, 5, sheet.getLastRow() - 1, 1).getValues();
+  const set = new Set();
+  rows.forEach(r => { const t = String(r[0]).trim(); if (t) set.add(t); });
+  return { ok: true, topics: Array.from(set).sort((a, b) => a.localeCompare(b, 'th')) };
+}
+
+/** ประวัติการแก้ไขหน้างานล่าสุด — ใหม่ไปเก่า */
+function getFixJobList() {
+  const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = getOrCreateFixJobSheet(ss);
+  if (sheet.getLastRow() <= 1) return { ok: true, items: [] };
+
+  const rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, FIXJOB_COLS.length).getValues();
+  const items = rows.map((r, i) => {
+    const dt = _fmtThaiDateTime(r[9] || r[1]);
+    return {
+      _rowIndex: i + 2,
+      date:     dt.date,
+      time:     dt.time,
+      ward:     String(r[3]),
+      topic:    String(r[4]),
+      detail:   String(r[5]),
+      solution: String(r[6]),
+      staff:    String(r[7]),
+      photos:   String(r[8] || '').split(',').map(s => s.trim()).filter(Boolean)
+    };
+  });
+  items.reverse();
+  return { ok: true, items };
+}
+
+function deleteFixJob(sheetRow) {
+  if (!sheetRow || sheetRow < 2) throw new Error('rowIndex ไม่ถูกต้อง');
+  const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(SHEET_FIXJOB);
+  if (!sheet) throw new Error('ไม่พบ Sheet: ' + SHEET_FIXJOB);
+  sheet.deleteRow(sheetRow);
 }
 
 /** ฟังก์ชันทดสอบ Telegram — รันเองจาก Apps Script editor เพื่อตรวจสอบว่าตั้งค่าถูกต้องไหม */
