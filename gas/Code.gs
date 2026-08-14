@@ -232,8 +232,8 @@ function doGet(e) {
       return jsonResponse(getC2Status());
     }
 
-    if (action === 'testDigest') {
-      return jsonResponse(testAlertDigest());
+    if (action === 'sendDigestNow') {
+      return jsonResponse(sendAlertDigestManual());
     }
 
     if (action === 'monthlyReport') {
@@ -551,13 +551,23 @@ function sendDailyAlertDigest_() {
   try { sendTelegramMessage_(msg); } catch (e) { /* ไม่ให้กระทบ trigger รอบถัดไป */ }
 }
 
-// เรียกจาก doGet action=testDigest — ส่งข้อความทดสอบทันที (ส่งแม้ไม่มี alert จริง เพื่อพิสูจน์ว่า
-// การเชื่อมต่อ Telegram ใช้ได้) แล้วรายงานผลกลับเป็น JSON ให้หน้า admin_report.html แสดง
-function testAlertDigest() {
+// เรียกจาก doGet action=sendDigestNow — ปุ่ม "ส่งแจ้งเตือนตอนนี้" ใน admin_report.html
+// ส่งข้อความสรุปจริง (รูปแบบเดียวกับที่ trigger 08:00 ส่งอัตโนมัติ) ทันทีตามคำสั่งผู้ใช้
+// ถ้าไม่มี alert อะไรเลยจะไม่ส่ง (เหมือน sendDailyAlertDigest_) แต่รายงานกลับให้รู้ว่าไม่ได้ส่งเพราะอะไร
+function sendAlertDigestManual() {
   const { overdue, shortage } = computeDailyAlerts_();
-  const message = buildAlertDigestMessage_(overdue, shortage, { test: true });
   const { token, chatId } = getTelegramConfig_();
   const configured = !!(token && chatId);
+
+  if (!overdue.length && !shortage.length) {
+    return {
+      ok: true, configured, sent: false, skipped: true,
+      statusCode: null, errorDetail: '',
+      overdueCount: 0, shortageCount: 0, message: ''
+    };
+  }
+
+  const message = buildAlertDigestMessage_(overdue, shortage);
   let sendResult = { ok: false, statusCode: null, body: 'ยังไม่ได้ตั้งค่า Telegram' };
   if (configured) {
     try { sendResult = sendTelegramMessage_(message); }
@@ -567,6 +577,7 @@ function testAlertDigest() {
     ok: true,
     configured,
     sent: sendResult.ok,
+    skipped: false,
     statusCode: sendResult.statusCode,
     errorDetail: sendResult.ok ? '' : sendResult.body,
     overdueCount: overdue.length,

@@ -256,17 +256,17 @@
       </button>
     </div>
 
-    <!-- การ์ด 5: ทดสอบแจ้งเตือน Telegram -->
+    <!-- การ์ด 5: ส่งแจ้งเตือน Telegram ตอนนี้ -->
     <div class="action-card">
       <div class="action-card-icon orange">🔔</div>
-      <div class="action-card-title">ทดสอบแจ้งเตือน Telegram</div>
+      <div class="action-card-title">ส่งแจ้งเตือน Telegram ตอนนี้</div>
       <div class="action-card-desc">
-        ส่งข้อความทดสอบเข้า Telegram ทันที (สรุปยืม C2 เกินกำหนด + ครุภัณฑ์ใกล้หมด
-        แบบเดียวกับที่ระบบส่งอัตโนมัติทุกเช้า 08:00) เพื่อเช็คว่าตั้งค่า Telegram ไว้ถูกต้องหรือไม่
+        สั่งส่งสรุปยืม C2 เกินกำหนด + ครุภัณฑ์ใกล้หมด เข้า Telegram ทันที
+        (แบบเดียวกับที่ระบบส่งอัตโนมัติทุกเช้า 08:00) โดยไม่ต้องรอถึงพรุ่งนี้
       </div>
       <button class="btn-action orange" id="btnDigest" onclick="runAction('digest')">
         <span id="iconDigest">🔔</span>
-        <span id="labelDigest">ทดสอบส่งแจ้งเตือน</span>
+        <span id="labelDigest">ส่งแจ้งเตือนตอนนี้</span>
       </button>
     </div>
 
@@ -328,8 +328,8 @@
       },
       digest: {
         btn: 'btnDigest', icon: 'iconDigest', label: 'labelDigest',
-        action: 'testDigest', loadingText: 'กำลังทดสอบส่งแจ้งเตือน...',
-        tagClass: 'exec', tagLabel: 'ทดสอบแจ้งเตือน', skipHistory: true
+        action: 'sendDigestNow', loadingText: 'กำลังส่งแจ้งเตือน...',
+        tagClass: 'exec', tagLabel: 'ส่งแจ้งเตือน', skipHistory: true
       }
     };
     const cfg = configs[type];
@@ -351,7 +351,7 @@
       // แสดงผลลัพธ์
       showResultByType(type, res);
 
-      // บันทึก history (ข้ามสำหรับ action ที่ไม่ได้สร้าง "ไฟล์รายงาน" เช่นทดสอบแจ้งเตือน)
+      // บันทึก history (ข้ามสำหรับ action ที่ไม่ได้สร้าง "ไฟล์รายงาน" เช่นส่งแจ้งเตือน)
       if (!cfg.skipHistory) {
         const entry = {
           type: cfg.tagLabel, tagClass: cfg.tagClass,
@@ -366,7 +366,9 @@
       }
 
       if (type === 'digest') {
-        toast(res.sent ? '✅ ส่งข้อความทดสอบสำเร็จ' : (res.configured ? '❌ ส่งไม่สำเร็จ' : '⚠️ ยังไม่ได้ตั้งค่า Telegram'));
+        toast(res.skipped ? 'ℹ️ ไม่มีรายการแจ้งเตือนตอนนี้'
+          : res.sent ? '✅ ส่งแจ้งเตือนสำเร็จ'
+          : (res.configured ? '❌ ส่งไม่สำเร็จ' : '⚠️ ยังไม่ได้ตั้งค่า Telegram'));
       } else {
         toast('✅ ' + (res.message || 'สำเร็จ'));
       }
@@ -418,6 +420,11 @@
       showResult('success', '✅ สร้างรายงาน C2 รายเครื่องสำเร็จ', html);
     }
     else if (type === 'digest') {
+      if (res.skipped) {
+        const html = `<p style="font-size:14px;color:var(--muted)">ตอนนี้ไม่มีรายการ "ยืมเกินกำหนด" หรือ "ใกล้หมด" เลย จึงไม่ได้ส่งข้อความเข้า Telegram</p>`;
+        showResult('success', 'ℹ️ ไม่มีรายการแจ้งเตือน', html);
+        return;
+      }
       const html = `
         <div class="result-row"><span class="result-key">ตั้งค่า Telegram</span><span class="result-val">${res.configured ? '✅ ตั้งค่าแล้ว' : '❌ ยังไม่ได้ตั้งค่า'}</span></div>
         <div class="result-row"><span class="result-key">ผลการส่ง</span><span class="result-val">${res.sent ? '✅ สำเร็จ' : '❌ ไม่สำเร็จ' + (res.statusCode ? ' (HTTP ' + res.statusCode + ')' : '')}</span></div>
@@ -426,9 +433,9 @@
         ${!res.configured
           ? `<p style="margin-top:8px;font-size:13px;color:var(--muted)">ยังไม่ได้ตั้งค่า Telegram — เปิด Apps Script editor แล้วรัน <code>setupTelegram('โทเคน','chatId')</code> หนึ่งครั้งก่อน</p>`
           : (!res.sent ? `<p style="margin-top:8px;font-size:13px;color:var(--red)">${res.errorDetail || 'ส่งไม่สำเร็จ ไม่ทราบสาเหตุ'}</p>` : '')}
-        <div style="margin-top:10px;font-size:12px;color:var(--muted)">ตัวอย่างข้อความที่ส่ง:</div>
+        <div style="margin-top:10px;font-size:12px;color:var(--muted)">ข้อความที่ส่ง:</div>
         <pre style="white-space:pre-wrap;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;font-family:inherit;font-size:13px;margin-top:4px">${res.message}</pre>`;
-      showResult(res.sent ? 'success' : 'error', res.sent ? '✅ ส่งข้อความทดสอบสำเร็จ' : '⚠️ ทดสอบแจ้งเตือน', html);
+      showResult(res.sent ? 'success' : 'error', res.sent ? '✅ ส่งแจ้งเตือนสำเร็จ' : '⚠️ ส่งแจ้งเตือนไม่สำเร็จ', html);
     }
   }
 
