@@ -43,21 +43,6 @@
     .btn-refresh { margin-left: auto; padding: 8px 16px; background: var(--a); color: #fff; border: none; border-radius: 10px; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
     .btn-refresh:disabled { opacity: .6; cursor: default; }
 
-    /* KPI */
-    .kpi-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; }
-    .kpi { background: var(--card); border-radius: var(--r); box-shadow: var(--sh); padding: 18px 16px; border-left: 4px solid; }
-    .kpi.green { border-color: var(--green); }
-    .kpi.red   { border-color: var(--red); }
-    .kpi.orange{ border-color: #D97706; }
-    .kpi.purple{ border-color: #7C3AED; }
-    .kpi-label { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
-    .kpi-value { font-size: 32px; font-weight: 800; line-height: 1.1; margin: 4px 0 2px; }
-    .kpi.green .kpi-value { color: var(--green); }
-    .kpi.red   .kpi-value { color: var(--red); }
-    .kpi.orange .kpi-value { color: #D97706; }
-    .kpi.purple .kpi-value { color: #7C3AED; }
-    .kpi-sub { font-size: 12px; color: var(--muted); }
-
     /* NAV CARDS */
     .section-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 4px 0 12px; }
     .nav-card { background: var(--card); border-radius: var(--r); box-shadow: var(--sh); padding: 20px 18px; margin-bottom: 12px; display: flex; align-items: center; gap: 16px; cursor: pointer; border: 2px solid transparent; transition: all .2s ease; -webkit-tap-highlight-color: transparent; position: relative; overflow: hidden; }
@@ -106,15 +91,22 @@
     .ward-bar { height: 100%; background: linear-gradient(90deg, var(--a), var(--a2)); border-radius: 20px; transition: width .4s ease; }
     .ward-count { width: 32px; text-align: right; font-size: 13px; font-weight: 700; color: var(--a); flex-shrink: 0; }
 
-    /* EQUIP GRID */
+    /* EQUIP GRID (ใช้กับการ์ดแจ้งเตือนหน้าแรกด้วย) */
     .equip-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
     .equip-card { border-radius: 12px; padding: 14px 12px; border: 2px solid; }
     .equip-card.borrowed { background: #FFF5F5; border-color: #FCA5A5; }
     .equip-card.returned { background: #F0FFF4; border-color: #86EFAC; }
+    .equip-card.warn { background: #FFFBEB; border-color: #FCD34D; }
     .equip-name { font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
     .equip-num  { font-size: 18px; font-weight: 800; color: var(--txt); margin-bottom: 6px; }
     .equip-badge { font-size: 12px; font-weight: 700; margin-bottom: 6px; }
     .equip-ward, .equip-who { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    /* ALERT BANNER (หน้าแรก) */
+    .alert-banner { background: var(--card); border-radius: var(--r); box-shadow: var(--sh); margin-bottom: 16px; overflow: hidden; }
+    .alert-banner .card-head { background: #FDEAEA; color: #B82E2E; }
+    .trend-bar-row { display: flex; align-items: flex-end; gap: 3px; height: 90px; }
+    .trend-bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 2px; height: 100%; }
 
     /* KPI DISPLAY */
     .kd { border-radius:18px;padding:20px 18px;color:#fff;display:flex;flex-direction:column;gap:4px;position:relative;overflow:hidden;backdrop-filter:blur(10px); }
@@ -203,6 +195,22 @@
 
   <!-- HOME VIEW: NAV CARDS -->
   <div id="viewHome" class="view active">
+    <div id="homeAlertBanner" class="alert-banner" style="display:none">
+      <div class="card-head">🔔 แจ้งเตือน</div>
+      <div class="card-body" id="homeAlertBody"></div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-head">📈 แนวโน้มยืม-คืน 30 วันล่าสุด</div>
+      <div class="card-body">
+        <div class="trend-bar-row" id="homeTrendBars"></div>
+        <div style="display:flex;gap:16px;justify-content:center;margin-top:10px;font-size:12px;color:var(--muted)">
+          <span><span style="display:inline-block;width:10px;height:10px;background:var(--a);border-radius:2px;margin-right:5px;vertical-align:middle"></span>ยืม</span>
+          <span><span style="display:inline-block;width:10px;height:10px;background:#1A7B4A;border-radius:2px;margin-right:5px;vertical-align:middle"></span>คืน</span>
+        </div>
+      </div>
+    </div>
+
     <div class="section-label">รายงาน &amp; ข้อมูล</div>
 
     <div class="nav-grid">
@@ -289,22 +297,6 @@
       </div>
     </div>
     <div id="wardDetailBody"></div>
-  </div>
-
-  <!-- STATUS VIEW -->
-  <div id="viewStatus" class="view">
-    <div class="view-header">
-      <button class="btn-view-back" onclick="showView('home')">← กลับ</button>
-      <div class="view-title">📋 สถานะเครื่องปัจจุบัน</div>
-    </div>
-    <div class="card">
-      <div class="card-head">
-        <span id="equipStatusCount" style="font-size:13px;font-weight:600;color:var(--muted)"></span>
-      </div>
-      <div class="card-body" id="equipStatusBody">
-        <div class="state-loading"><div class="spinner"></div>กำลังโหลด…</div>
-      </div>
-    </div>
   </div>
 
   <!-- ROUND VIEW -->
@@ -562,6 +554,18 @@
         <div id="kpiRecent" style="display:flex;flex-direction:column;gap:8px;flex:1;overflow:hidden"></div>
       </div>
 
+      <!-- SLIDE 6: ALERTS -->
+      <div class="kpi-slide">
+        <div class="slide-title">🔔 แจ้งเตือน</div>
+        <div id="kpiAlerts" style="display:flex;flex-direction:column;gap:8px;flex:1;overflow:hidden;justify-content:center"></div>
+      </div>
+
+      <!-- SLIDE 7: TREND -->
+      <div class="kpi-slide">
+        <div class="slide-title">📈 แนวโน้มยืม-คืน 30 วัน</div>
+        <div id="kpiTrend" style="flex:1;display:flex;align-items:flex-end;gap:3px;padding:0 4px 8px"></div>
+      </div>
+
     </div>
   </div>
 
@@ -641,7 +645,6 @@ function showView(name) {
   currentView = name;
   window.scrollTo({ top: 0, behavior: 'smooth' });
   if (name === 'ward')    initWardView();
-  if (name === 'status')  renderEquipStatus();
   if (name === 'round')   populateRoundFilters();
   if (name === 'kpi')     startKpiView();
   if (name === 'records') renderTable();
@@ -706,11 +709,108 @@ async function loadAll() {
     allRecords  = recRes.records  || [];
     equipStatus = eqRes.equipment || [];
     applyFilters();
+    renderAlertBanner();
+    renderHomeTrend();
     document.getElementById('lastUpdated').textContent =
       'อัพเดต ' + new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
   } catch (err) {
     console.error(err);
   }
+}
+
+/* ============================================================ HOME: แจ้งเตือน & แนวโน้ม ============================================================ */
+const OVERDUE_C2_DAYS = 14;
+const SHORTAGE_MAX = 2;
+const TREND_DAYS = 30;
+
+// รวมโค้ดคำนวณ alert ไว้จุดเดียว ใช้ทั้ง Home banner และ KPI Display slide
+function computeAlerts() {
+  const now = new Date();
+
+  const overdue = equipStatus
+    .filter(e => e.isBorrowed && String(e.equipment).includes('C2'))
+    .map(e => {
+      const dt = parseThaiTimestampStr(e.lastUpdate);
+      const days = dt ? Math.floor((now - dt) / 86400000) : null;
+      return { number: e.number, ward: e.ward, days };
+    })
+    .filter(e => e.days !== null && e.days >= OVERDUE_C2_DAYS)
+    .sort((a, b) => b.days - a.days);
+
+  const availByType = {};
+  equipStatus.forEach(e => {
+    if (!(e.equipment in availByType)) availByType[e.equipment] = 0;
+    if (!e.isBorrowed) availByType[e.equipment]++;
+  });
+  const shortage = Object.entries(availByType)
+    .filter(([, available]) => available <= SHORTAGE_MAX)
+    .map(([equipment, available]) => ({ equipment, available }))
+    .sort((a, b) => a.available - b.available);
+
+  return { overdue, shortage };
+}
+
+// นับจำนวนยืม/คืนรายวัน ย้อนหลัง `days` วัน (รวมวันนี้) — ใช้ทั้ง Home และ KPI Display
+function computeDailyTrend(days) {
+  const out = [];
+  const today = new Date();
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    out.push({ date: `${dd}/${mm}/${d.getFullYear()}`, label: `${dd}/${mm}`, borrow: 0, return: 0 });
+  }
+  const byDate = Object.fromEntries(out.map(o => [o.date, o]));
+  allRecords.forEach(r => {
+    const bucket = byDate[r['วันที่']];
+    if (!bucket) return;
+    const type = String(r['ประเภท (ยืม/คืน)']);
+    if (type.includes('ยืม')) bucket.borrow++;
+    else if (type.includes('คืน')) bucket.return++;
+  });
+  return out;
+}
+
+function renderAlertBanner() {
+  const banner = document.getElementById('homeAlertBanner');
+  const body = document.getElementById('homeAlertBody');
+  if (!banner || !body) return;
+  const { overdue, shortage } = computeAlerts();
+  if (!overdue.length && !shortage.length) { banner.style.display = 'none'; return; }
+  banner.style.display = 'block';
+  body.innerHTML = `<div class="equip-grid">${
+    overdue.map(o => `
+      <div class="equip-card borrowed">
+        <div class="equip-name">⏰ C2 ยืมเกินกำหนด</div>
+        <div class="equip-num" style="font-size:16px">No.${o.number}</div>
+        <div class="equip-ward">📍 ${o.ward || '—'}</div>
+        <div class="equip-who">ยืมมาแล้ว ${o.days} วัน</div>
+      </div>`).join('') +
+    shortage.map(s => `
+      <div class="equip-card warn">
+        <div class="equip-name">⚠️ ใกล้หมด</div>
+        <div class="equip-num" style="font-size:16px">${s.equipment}</div>
+        <div class="equip-who">เหลือว่าง ${s.available} เครื่อง</div>
+      </div>`).join('')
+  }</div>`;
+}
+
+function trendBarsHTML(data, borrowColor, returnColor, labelColor) {
+  const max = Math.max(1, ...data.map(d => Math.max(d.borrow, d.return)));
+  return data.map((d, i) => `
+    <div class="trend-bar-col">
+      <div style="display:flex;align-items:flex-end;gap:1px;height:100%;width:100%">
+        <div style="flex:1;border-radius:2px 2px 0 0;min-height:2px;background:${borrowColor};height:${Math.round(d.borrow / max * 100)}%"></div>
+        <div style="flex:1;border-radius:2px 2px 0 0;min-height:2px;background:${returnColor};height:${Math.round(d.return / max * 100)}%"></div>
+      </div>
+      ${(i % 5 === 0 || i === data.length - 1) ? `<div style="font-size:9px;color:${labelColor};margin-top:4px;white-space:nowrap">${d.label}</div>` : ''}
+    </div>`).join('');
+}
+
+function renderHomeTrend() {
+  const wrap = document.getElementById('homeTrendBars');
+  if (!wrap) return;
+  wrap.innerHTML = trendBarsHTML(computeDailyTrend(TREND_DAYS), 'var(--a)', '#1A7B4A', 'var(--muted)');
 }
 
 /* ============================================================ FETCH GAS ============================================================ */
@@ -727,33 +827,10 @@ function applyFilters() {
   filteredRecords = allRecords.slice();
   currentPage = 0;
   populateYearSelect();
-  renderKPI();
   if (currentView !== 'home') showView(currentView);
 }
 
 function onSearch() { currentPage = 0; renderTable(); }
-
-/* ============================================================ KPI ============================================================ */
-function renderKPI() {
-  const borrows = filteredRecords.filter(r => String(r['ประเภท (ยืม/คืน)']).includes('ยืม'));
-  const returns = filteredRecords.filter(r => String(r['ประเภท (ยืม/คืน)']).includes('คืน'));
-  const active  = equipStatus.filter(e => e.isBorrowed);
-  const wards   = new Set(filteredRecords.map(r => r['ตึก/Ward']).filter(Boolean));
-  const today = new Date();
-  const dd = String(today.getDate()).padStart(2,'0');
-  const mm = String(today.getMonth()+1).padStart(2,'0');
-  const todayStr = `${dd}/${mm}/${today.getFullYear()}`;
-  const bToday = borrows.filter(r => r['วันที่'] === todayStr).length;
-  const rToday = returns.filter(r => r['วันที่'] === todayStr).length;
-  document.getElementById('kpiBorrow') && (document.getElementById('kpiBorrow').textContent = borrows.length);
-  document.getElementById('kpiReturn') && (document.getElementById('kpiReturn').textContent = returns.length);
-  document.getElementById('kpiActive') && (document.getElementById('kpiActive').textContent = active.length);
-  document.getElementById('kpiWards')  && (document.getElementById('kpiWards').textContent  = wards.size);
-  document.getElementById('kpiBorrowToday') && (document.getElementById('kpiBorrowToday').textContent = bToday ? `วันนี้ ${bToday} รายการ` : '');
-  document.getElementById('kpiReturnToday') && (document.getElementById('kpiReturnToday').textContent = rToday ? `วันนี้ ${rToday} รายการ` : '');
-  document.getElementById('navStatusDesc') && (document.getElementById('navStatusDesc').textContent =
-    active.length ? `ยืมอยู่ ${active.length} เครื่อง · ว่าง ${equipStatus.length - active.length} เครื่อง` : 'เครื่องที่ยืมอยู่และว่าง');
-}
 
 /* ============================================================ WARD VIEW ============================================================ */
 async function initWardView() {
@@ -847,25 +924,6 @@ async function confirmDeleteWard(rowIndex, label) {
   } catch (err) {
     showToast('❌ เกิดข้อผิดพลาด: ' + err.message);
   }
-}
-
-/* ============================================================ EQUIPMENT STATUS ============================================================ */
-function renderEquipStatus() {
-  const body  = document.getElementById('equipStatusBody');
-  const count = document.getElementById('equipStatusCount');
-  if (!equipStatus.length) { body.innerHTML = '<div class="empty">ไม่มีข้อมูลสถานะเครื่อง</div>'; return; }
-  const borrowed = equipStatus.filter(e => e.isBorrowed);
-  const returned = equipStatus.filter(e => !e.isBorrowed);
-  count.textContent = `ยืมอยู่ ${borrowed.length} เครื่อง · ว่าง ${returned.length} เครื่อง`;
-  body.innerHTML = `<div class="equip-grid">${
-    [...borrowed, ...returned].map(e => `
-      <div class="equip-card ${e.isBorrowed ? 'borrowed' : 'returned'}">
-        <div class="equip-name">${e.equipment}</div>
-        <div class="equip-num">#${e.number}</div>
-        <div class="equip-badge">${e.isBorrowed ? '🔴 ยืมอยู่' : '🟢 ว่าง'}</div>
-        ${e.isBorrowed ? `<div class="equip-ward">📍 ${e.ward}</div><div class="equip-who">👤 ${e.borrowedBy}</div>` : ''}
-      </div>`).join('')
-  }</div>`;
 }
 
 /* ============================================================ TABLE ============================================================ */
@@ -1289,6 +1347,25 @@ async function printC2Stats() {
   window.print();
 }
 
+/* ============================================================ C2 STATUS (ใช้ร่วมกันระหว่าง #viewC2 และ KPI Display) ============================================================ */
+function classifyC2Status(assetStatus, isBorrowed) {
+  if (assetStatus === 'จำหน่าย') return 'sold';
+  if (assetStatus === 'ส่งซ่อม' || assetStatus === 'ชำรุด') return 'repair';
+  if (isBorrowed) return 'borrowed';
+  return 'avail';
+}
+
+function computeC2Summary(units, assetMap) {
+  const counts = { avail: 0, borrowed: 0, repair: 0, sold: 0 };
+  const items = units.map(u => {
+    const assetStatus = assetMap[String(u.number)] || 'ใช้งานได้';
+    const status = classifyC2Status(assetStatus, u.isBorrowed);
+    counts[status]++;
+    return { ...u, assetStatus, status };
+  });
+  return { items, counts };
+}
+
 async function renderC2Dashboard() {
   const msg  = document.getElementById('c2DashMsg');
   const grid = document.getElementById('c2DashGrid');
@@ -1305,30 +1382,31 @@ async function renderC2Dashboard() {
     (assetData.assets || []).forEach(a => { if (a['No.']) assetMap[String(a['No.'])] = a['สถานะ'] || 'ใช้งานได้'; });
     window._c2AssetMap = assetMap;
 
-    let cntBorrow = 0, cntAvail = 0, cntRepair = 0, cntSold = 0;
-    grid.innerHTML = units.map(u => {
-      const as = assetMap[String(u.number)] || 'ใช้งานได้';
-      let cls, sub;
-      if (as === 'จำหน่าย') {
-        cls = 'c2d-sold'; sub = '<div style="font-size:13px">❌</div>'; cntSold++;
-      } else if (as === 'ส่งซ่อม' || as === 'ชำรุด') {
-        cls = 'c2d-repair'; sub = '<div style="font-size:13px">🔧</div>'; cntRepair++;
-      } else if (u.isBorrowed) {
-        cls = 'c2d-borrowed'; sub = `<div style="font-size:9px">${u.ward||''}</div>`; cntBorrow++;
-      } else {
-        cls = 'c2d-avail'; sub = ''; cntAvail++;
-      }
-      const tip = as==='จำหน่าย'?'จำหน่ายแล้ว': as==='ส่งซ่อม'||as==='ชำรุด'?as: u.isBorrowed?(u.ward+' '+u.borrowedBy):'พร้อมใช้';
-      return `<div class="c2d-btn ${cls}" title="${tip}"><div>No.${u.number}</div>${sub}</div>`;
-    }).join('');
+    const { items, counts } = computeC2Summary(units, assetMap);
+    const CLS = { sold: 'c2d-sold', repair: 'c2d-repair', borrowed: 'c2d-borrowed', avail: 'c2d-avail' };
+    const SUB = {
+      sold: () => '<div style="font-size:13px">❌</div>',
+      repair: () => '<div style="font-size:13px">🔧</div>',
+      borrowed: u => `<div style="font-size:9px">${u.ward||''}</div>`,
+      avail: () => ''
+    };
+    const TIP = {
+      sold: () => 'จำหน่ายแล้ว',
+      repair: u => u.assetStatus,
+      borrowed: u => (u.ward||'') + ' ' + (u.borrowedBy||''),
+      avail: () => 'พร้อมใช้'
+    };
+    grid.innerHTML = items.map(u =>
+      `<div class="c2d-btn ${CLS[u.status]}" title="${TIP[u.status](u)}"><div>No.${u.number}</div>${SUB[u.status](u)}</div>`
+    ).join('');
 
     document.getElementById('c2DashSummary').innerHTML = `
-      <span class="rs-badge rs-use">🟢 พร้อมใช้ ${cntAvail}</span>
-      <span class="rs-badge rs-lost">🔴 ยืมอยู่ ${cntBorrow}</span>
-      <span class="rs-badge" style="background:#F0F0F0;color:#555;border-radius:20px;padding:4px 12px;font-size:13px;font-weight:700">🔧 ซ่อม ${cntRepair}</span>
-      <span class="rs-badge" style="background:#FDEAEA;color:#B82E2E;border-radius:20px;padding:4px 12px;font-size:13px;font-weight:700">❌ จำหน่าย ${cntSold}</span>`;
+      <span class="rs-badge rs-use">🟢 พร้อมใช้ ${counts.avail}</span>
+      <span class="rs-badge rs-lost">🔴 ยืมอยู่ ${counts.borrowed}</span>
+      <span class="rs-badge" style="background:#F0F0F0;color:#555;border-radius:20px;padding:4px 12px;font-size:13px;font-weight:700">🔧 ซ่อม ${counts.repair}</span>
+      <span class="rs-badge" style="background:#FDEAEA;color:#B82E2E;border-radius:20px;padding:4px 12px;font-size:13px;font-weight:700">❌ จำหน่าย ${counts.sold}</span>`;
     document.getElementById('navC2Desc').textContent =
-      `พร้อมใช้ ${cntAvail} · ยืมอยู่ ${cntBorrow} · ซ่อม ${cntRepair} · จำหน่าย ${cntSold}`;
+      `พร้อมใช้ ${counts.avail} · ยืมอยู่ ${counts.borrowed} · ซ่อม ${counts.repair} · จำหน่าย ${counts.sold}`;
   } catch (e) {
     msg.textContent = '⚠️ โหลดไม่ได้';
   }
@@ -1370,13 +1448,19 @@ function fmtDuration(hrs) {
   return s.trim() || (hrs > 0 ? '< 1 นาที' : '—');
 }
 
+// parse "dd/MM/yyyy HH:mm[:ss]" (หรือ ISO string ทั่วไป) เป็น Date — ใช้ร่วมกันหลายจุด
+function parseThaiTimestampStr(s) {
+  s = String(s || '');
+  const mt = s.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})(?::(\d{2}))?/);
+  if (mt) return new Date(+mt[3], +mt[2]-1, +mt[1], +mt[4], +mt[5], +(mt[6]||0));
+  const d = new Date(s);
+  return (s && !isNaN(d)) ? d : null;
+}
+
 function parseThaiDT(r) {
   // ลอง Timestamp (ISO) ก่อน: "dd/MM/yyyy HH:mm:ss"
-  const ts = String(r['Timestamp (ISO)'] || '');
-  const mt = ts.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})(?::(\d{2}))?/);
-  if (mt) return new Date(+mt[3], +mt[2]-1, +mt[1], +mt[4], +mt[5], +(mt[6]||0));
-  const dIso = new Date(ts);
-  if (!isNaN(dIso) && ts) return dIso;
+  const iso = parseThaiTimestampStr(r['Timestamp (ISO)']);
+  if (iso) return iso;
   // Fallback: วันที่ (dd/MM/yyyy) + เวลา (HH:mm[:ss])
   const ds = String(r['วันที่'] || '');
   const tm = String(r['เวลา'] || '');
@@ -1506,7 +1590,7 @@ function printRoundReport() {
 }
 
 /* ============================================================ KPI DISPLAY ============================================================ */
-const KPI_SLIDES = ['📊 ภาพรวมวันนี้','🔧 แยกตามประเภทเครื่อง','🏥 หน่วยงานที่ยืมมากสุด','💊 สถานะ C2','🕐 รายการล่าสุด'];
+const KPI_SLIDES = ['📊 ภาพรวมวันนี้','🔧 แยกตามประเภทเครื่อง','🏥 หน่วยงานที่ยืมมากสุด','💊 สถานะ C2','🕐 รายการล่าสุด','🔔 แจ้งเตือน','📈 แนวโน้ม 30 วัน'];
 let kpiSlideIdx = 0;
 let kpiSlideTimer = null;
 let kpiRefreshTimer = null;
@@ -1719,29 +1803,25 @@ async function renderKpiData() {
   // C2 grid
   const c2Borrowed = new Set(equipStatus.filter(e => e.isBorrowed && String(e.equipment).includes('C2')).map(e => String(e.number)));
   const assetMap = window._c2AssetMap || {};
-  let c2Html = '', c2Borrow = 0, c2Avail = 0, c2Repair = 0, c2Sold = 0;
-  for (let i = 1; i <= 58; i++) {
-    const as = assetMap[String(i)] || 'ใช้งานได้';
-    const b  = c2Borrowed.has(String(i));
-    let bg, border, shadow, color, inner;
-    if (as === 'จำหน่าย') {
-      bg='rgba(239,68,68,.18)'; border='rgba(239,68,68,.35)'; shadow=''; color='rgba(239,68,68,.5)'; inner=`${i}<br><span style="font-size:9px">✕</span>`; c2Sold++;
-    } else if (as === 'ส่งซ่อม' || as === 'ชำรุด') {
-      bg='rgba(160,160,160,.2)'; border='rgba(160,160,160,.35)'; shadow=''; color='rgba(255,255,255,.35)'; inner=`${i}<br><span style="font-size:9px">🔧</span>`; c2Repair++;
-    } else if (b) {
-      bg='#ef4444'; border='rgba(239,68,68,.6)'; shadow='0 0 8px rgba(239,68,68,.4)'; color='#fff'; inner=i; c2Borrow++;
-    } else {
-      bg='rgba(34,197,94,.3)'; border='rgba(34,197,94,.2)'; shadow=''; color='rgba(255,255,255,.4)'; inner=i; c2Avail++;
-    }
-    c2Html += `<div style="aspect-ratio:1;border-radius:6px;background:${bg};border:1px solid ${border};box-shadow:${shadow};display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:${color};line-height:1.1">${inner}</div>`;
-  }
-  document.getElementById('kpiC2Grid').innerHTML = c2Html;
+  const c2Units = [];
+  for (let i = 1; i <= 58; i++) c2Units.push({ number: String(i), isBorrowed: c2Borrowed.has(String(i)) });
+  const { items: c2Items, counts: c2Counts } = computeC2Summary(c2Units, assetMap);
+  const C2_STYLE = {
+    sold:     { bg:'rgba(239,68,68,.18)', border:'rgba(239,68,68,.35)', shadow:'', color:'rgba(239,68,68,.5)', inner:i=>`${i}<br><span style="font-size:9px">✕</span>` },
+    repair:   { bg:'rgba(160,160,160,.2)', border:'rgba(160,160,160,.35)', shadow:'', color:'rgba(255,255,255,.35)', inner:i=>`${i}<br><span style="font-size:9px">🔧</span>` },
+    borrowed: { bg:'#ef4444', border:'rgba(239,68,68,.6)', shadow:'0 0 8px rgba(239,68,68,.4)', color:'#fff', inner:i=>i },
+    avail:    { bg:'rgba(34,197,94,.3)', border:'rgba(34,197,94,.2)', shadow:'', color:'rgba(255,255,255,.4)', inner:i=>i }
+  };
+  document.getElementById('kpiC2Grid').innerHTML = c2Items.map(u => {
+    const s = C2_STYLE[u.status];
+    return `<div style="aspect-ratio:1;border-radius:6px;background:${s.bg};border:1px solid ${s.border};box-shadow:${s.shadow};display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:${s.color};line-height:1.1">${s.inner(u.number)}</div>`;
+  }).join('');
   const c2s = document.getElementById('kpiC2Summary');
   if (c2s) c2s.innerHTML =
-    `<span style="color:#4ade80;font-weight:800">🟢 ${c2Avail}</span> พร้อมใช้ &nbsp;` +
-    `<span style="color:#f87171;font-weight:800">🔴 ${c2Borrow}</span> ยืมอยู่ &nbsp;` +
-    `<span style="color:#94a3b8;font-weight:800">🔧 ${c2Repair}</span> ซ่อม &nbsp;` +
-    `<span style="color:rgba(239,68,68,.5);font-weight:800">✕ ${c2Sold}</span> จำหน่าย`;
+    `<span style="color:#4ade80;font-weight:800">🟢 ${c2Counts.avail}</span> พร้อมใช้ &nbsp;` +
+    `<span style="color:#f87171;font-weight:800">🔴 ${c2Counts.borrowed}</span> ยืมอยู่ &nbsp;` +
+    `<span style="color:#94a3b8;font-weight:800">🔧 ${c2Counts.repair}</span> ซ่อม &nbsp;` +
+    `<span style="color:rgba(239,68,68,.5);font-weight:800">✕ ${c2Counts.sold}</span> จำหน่าย`;
 
   // Recent
   const recent = [...allRecords].sort((a,b) => (parseThaiDT(b)||0) - (parseThaiDT(a)||0)).slice(0,6);
@@ -1761,6 +1841,45 @@ async function renderKpiData() {
       </div>
     </div>`;
   }).join('') : '<div style="color:#475569;font-size:13px">ไม่มีรายการ</div>';
+
+  renderKpiAlerts();
+  renderKpiTrend();
+}
+
+// SLIDE 6: แจ้งเตือน (ใช้ computeAlerts() เดียวกับ Home banner)
+function renderKpiAlerts() {
+  const wrap = document.getElementById('kpiAlerts');
+  if (!wrap) return;
+  const { overdue, shortage } = computeAlerts();
+  if (!overdue.length && !shortage.length) {
+    wrap.innerHTML = '<div style="color:#475569;font-size:14px;text-align:center;margin:auto">✅ ไม่มีรายการแจ้งเตือน</div>';
+    return;
+  }
+  wrap.innerHTML = [
+    ...overdue.map(o => `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#0f172a;border-radius:12px;border-left:3px solid #ef4444">
+        <div style="font-size:18px">⏰</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:700;color:#e2e8f0">C2 No.${o.number} · ${o.ward || '—'}</div>
+          <div style="font-size:11px;color:#64748b">ยืมมาแล้ว ${o.days} วัน (เกิน ${OVERDUE_C2_DAYS} วัน)</div>
+        </div>
+      </div>`),
+    ...shortage.map(s => `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#0f172a;border-radius:12px;border-left:3px solid #f59e0b">
+        <div style="font-size:18px">⚠️</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:700;color:#e2e8f0">${s.equipment}</div>
+          <div style="font-size:11px;color:#64748b">เหลือว่าง ${s.available} เครื่อง</div>
+        </div>
+      </div>`)
+  ].join('');
+}
+
+// SLIDE 7: แนวโน้มยืม-คืน 30 วัน (ใช้ computeDailyTrend() เดียวกับ Home)
+function renderKpiTrend() {
+  const wrap = document.getElementById('kpiTrend');
+  if (!wrap) return;
+  wrap.innerHTML = trendBarsHTML(computeDailyTrend(TREND_DAYS), '#38bdf8', '#34d399', '#475569');
 }
 
 // stop timers when leaving kpi view
