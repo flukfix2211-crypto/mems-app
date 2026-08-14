@@ -507,6 +507,7 @@ function computeDailyAlerts_() {
 
   const availByType = {};
   status.forEach(e => {
+    if (!e.equipment) return; // ข้ามแถวที่ไม่มีชื่อเครื่อง (ข้อมูลไม่สมบูรณ์)
     if (!(e.equipment in availByType)) availByType[e.equipment] = 0;
     if (!e.isBorrowed) availByType[e.equipment]++;
   });
