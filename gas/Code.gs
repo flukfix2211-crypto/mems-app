@@ -44,15 +44,17 @@ function getTelegramConfig_() {
 
 function sendTelegramMessage_(text) {
   const { token, chatId } = getTelegramConfig_();
-  if (!token || !chatId) return; // ยังไม่ได้ตั้งค่า -> ข้าม ไม่ทำให้การบันทึกล้มเหลว
+  if (!token || !chatId) return { ok: false, statusCode: null, body: 'ยังไม่ได้ตั้งค่า Telegram' }; // ยังไม่ได้ตั้งค่า -> ข้าม ไม่ทำให้การบันทึกล้มเหลว
   const url = 'https://api.telegram.org/bot' + token + '/sendMessage';
   const payload = { chat_id: chatId, text: text, parse_mode: 'HTML', disable_web_page_preview: true };
-  UrlFetchApp.fetch(url, {
+  const res = UrlFetchApp.fetch(url, {
     method: 'post',
     contentType: 'application/json',
     payload: JSON.stringify(payload),
     muteHttpExceptions: true
   });
+  const code = res.getResponseCode();
+  return { ok: code === 200, statusCode: code, body: code === 200 ? '' : res.getContentText() };
 }
 
 function escHTML_(s) {
@@ -228,6 +230,10 @@ function doGet(e) {
 
     if (action === 'c2status') {
       return jsonResponse(getC2Status());
+    }
+
+    if (action === 'testDigest') {
+      return jsonResponse(testAlertDigest());
     }
 
     if (action === 'monthlyReport') {
@@ -512,12 +518,11 @@ function computeDailyAlerts_() {
   return { overdue, shortage };
 }
 
-function sendDailyAlertDigest_() {
-  const { overdue, shortage } = computeDailyAlerts_();
-  if (!overdue.length && !shortage.length) return; // ไม่มีอะไรผิดปกติ -> ไม่ส่ง กันสแปมทุกเช้า
-
+function buildAlertDigestMessage_(overdue, shortage, opts) {
+  opts = opts || {};
   const dateStr = Utilities.formatDate(new Date(), THAI_TZ, 'dd/MM/yyyy');
-  let msg = '📋 <b>สรุปแจ้งเตือนประจำวัน ' + escHTML_(dateStr) + '</b>\n';
+  let msg = (opts.test ? '🧪 <b>ทดสอบระบบแจ้งเตือน</b>\n' : '') +
+    '📋 <b>สรุปแจ้งเตือนประจำวัน ' + escHTML_(dateStr) + '</b>\n';
 
   if (overdue.length) {
     msg += '\n⏰ <b>ยืมเกินกำหนด (C2 ≥' + DIGEST_OVERDUE_C2_DAYS + ' วัน)</b>\n';
@@ -533,7 +538,40 @@ function sendDailyAlertDigest_() {
     });
   }
 
+  if (!overdue.length && !shortage.length) msg += '\n✅ ไม่มีรายการยืมเกินกำหนดหรือใกล้หมด';
+
+  return msg;
+}
+
+function sendDailyAlertDigest_() {
+  const { overdue, shortage } = computeDailyAlerts_();
+  if (!overdue.length && !shortage.length) return; // ไม่มีอะไรผิดปกติ -> ไม่ส่ง กันสแปมทุกเช้า
+  const msg = buildAlertDigestMessage_(overdue, shortage);
   try { sendTelegramMessage_(msg); } catch (e) { /* ไม่ให้กระทบ trigger รอบถัดไป */ }
+}
+
+// เรียกจาก doGet action=testDigest — ส่งข้อความทดสอบทันที (ส่งแม้ไม่มี alert จริง เพื่อพิสูจน์ว่า
+// การเชื่อมต่อ Telegram ใช้ได้) แล้วรายงานผลกลับเป็น JSON ให้หน้า admin_report.html แสดง
+function testAlertDigest() {
+  const { overdue, shortage } = computeDailyAlerts_();
+  const message = buildAlertDigestMessage_(overdue, shortage, { test: true });
+  const { token, chatId } = getTelegramConfig_();
+  const configured = !!(token && chatId);
+  let sendResult = { ok: false, statusCode: null, body: 'ยังไม่ได้ตั้งค่า Telegram' };
+  if (configured) {
+    try { sendResult = sendTelegramMessage_(message); }
+    catch (e) { sendResult = { ok: false, statusCode: null, body: e.message }; }
+  }
+  return {
+    ok: true,
+    configured,
+    sent: sendResult.ok,
+    statusCode: sendResult.statusCode,
+    errorDetail: sendResult.ok ? '' : sendResult.body,
+    overdueCount: overdue.length,
+    shortageCount: shortage.length,
+    message
+  };
 }
 
 // รันฟังก์ชันนี้ "ครั้งเดียว" จาก Apps Script editor เพื่อผูก time-driven trigger (ทุกวัน 08:00 น.)
