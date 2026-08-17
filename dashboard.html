@@ -261,6 +261,15 @@
       <span class="nav-arrow">›</span>
     </div>
 
+    <div class="nav-card" onclick="showView('fixjob')">
+      <div class="nav-icon" style="background:#EDE9F8;font-size:26px;width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;z-index:1;">🛠️</div>
+      <div class="nav-text">
+        <div class="nav-title">แก้ไขหน้างาน</div>
+        <div class="nav-desc">ดูประวัติการแก้ไขปัญหาที่หน่วยงานย้อนหลัง</div>
+      </div>
+      <span class="nav-arrow">›</span>
+    </div>
+
     <div class="nav-card" onclick="location.href='admin_report.html'">
       <div class="nav-icon" style="background:#FEF3C7;font-size:26px;width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0">📋</div>
       <div class="nav-text">
@@ -449,6 +458,25 @@
           <button onclick="renderPrepareHistory()" style="padding:6px 14px;background:var(--al);border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:12px;font-weight:700;color:var(--a);cursor:pointer">🔄 รีเฟรช</button>
         </div>
         <div class="table-wrap" id="prepHistBody">
+          <div class="state-loading"><div class="spinner"></div>กำลังโหลด…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FIXJOB VIEW -->
+  <div id="viewFixjob" class="view">
+    <div class="view-header">
+      <button class="btn-view-back" onclick="showView('home')">← กลับ</button>
+      <div class="view-title">🛠️ แก้ไขหน้างาน</div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div style="font-size:12px;color:var(--muted)" id="fixJobCount"></div>
+          <button onclick="renderFixJobHistory()" style="padding:6px 14px;background:var(--al);border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:12px;font-weight:700;color:var(--a);cursor:pointer">🔄 รีเฟรช</button>
+        </div>
+        <div class="table-wrap" id="fixJobBody">
           <div class="state-loading"><div class="spinner"></div>กำลังโหลด…</div>
         </div>
       </div>
@@ -650,6 +678,7 @@ function showView(name) {
   if (name === 'records') renderTable();
   if (name === 'c2') renderC2Dashboard();
   if (name === 'prepare') renderPrepareHistory();
+  if (name === 'fixjob') renderFixJobHistory();
 }
 
 async function renderPrepareHistory() {
@@ -687,6 +716,47 @@ async function renderPrepareHistory() {
         <th style="text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:2px solid var(--border)">ผู้เตรียม</th>
         <th style="text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:2px solid var(--border)">เวลา</th>
         <th style="text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:2px solid var(--border)">สถานะ</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  } catch (e) {
+    body.innerHTML = '<div style="text-align:center;color:#B82E2E;padding:30px">โหลดประวัติไม่ได้</div>';
+  }
+}
+
+async function renderFixJobHistory() {
+  const body = document.getElementById('fixJobBody');
+  const cnt  = document.getElementById('fixJobCount');
+  body.innerHTML = '<div class="state-loading"><div class="spinner"></div>กำลังโหลด…</div>';
+  try {
+    const data = await fetchGAS('fixJobList');
+    const items = data.items || [];
+    if (cnt) cnt.textContent = 'ทั้งหมด ' + items.length + ' รายการ';
+    if (!items.length) { body.innerHTML = '<div style="text-align:center;color:var(--muted);padding:30px">ยังไม่มีประวัติการแก้ไขหน้างาน</div>'; return; }
+    const rows = items.map(it => {
+      const when = (it.date || '') + (it.time ? ' ' + it.time : '');
+      const photos = (it.photos || []).length
+        ? it.photos.map(u => `<a href="${u}" target="_blank" rel="noopener"><img src="${u}" style="width:36px;height:36px;object-fit:cover;border-radius:6px;border:1px solid var(--border);margin-right:4px"></a>`).join('')
+        : '<span style="color:var(--muted)">—</span>';
+      return `<tr>
+        <td style="white-space:nowrap;font-size:12px">${when}</td>
+        <td style="font-weight:800;color:var(--a)">${it.ward}</td>
+        <td>${it.topic}</td>
+        <td style="font-size:12px;max-width:220px;white-space:normal">${it.detail}</td>
+        <td style="font-size:12px;max-width:220px;white-space:normal">${it.solution}</td>
+        <td style="font-size:12px">${it.staff}</td>
+        <td>${photos}</td>
+      </tr>`;
+    }).join('');
+    body.innerHTML = `<table style="width:100%;border-collapse:collapse;min-width:820px">
+      <thead><tr>
+        <th style="text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:2px solid var(--border)">เวลา</th>
+        <th style="text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:2px solid var(--border)">หน่วยงาน</th>
+        <th style="text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:2px solid var(--border)">เรื่องที่แก้ไข</th>
+        <th style="text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:2px solid var(--border)">รายละเอียดงาน</th>
+        <th style="text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:2px solid var(--border)">วิธีแก้ไข</th>
+        <th style="text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:2px solid var(--border)">ผู้ปฏิบัติ</th>
+        <th style="text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:2px solid var(--border)">รูปภาพ</th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
