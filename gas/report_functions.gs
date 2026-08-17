@@ -502,8 +502,10 @@ function _gatherPrepareStats(ss, start, end) {
 
 /** สร้าง export URL (PDF) ของชีต - ไม่ใช้ scope พิเศษ */
 function _pdfExportUrl(ss, sheet) {
+  // รายงานภาระงาน (Workload_*) มีคอลัมน์วันที่เยอะ (สูงสุด 31 วัน) -> พิมพ์แนวนอนให้พอดีหน้า
+  const landscape = sheet.getName().indexOf('Workload_') === 0;
   return 'https://docs.google.com/spreadsheets/d/' + ss.getId() +
-    '/export?format=pdf&size=A4&portrait=true&fitw=true' +
+    '/export?format=pdf&size=A4&portrait=' + (landscape ? 'false' : 'true') + '&fitw=true' +
     '&sheetnames=false&printtitle=false&pagenumbers=true&gridlines=false&fzr=false' +
     '&gid=' + sheet.getSheetId();
 }

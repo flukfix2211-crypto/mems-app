@@ -256,6 +256,14 @@ function doGet(e) {
       return jsonResponse(exportReportToPDF(e.parameter.sheetName || ''));
     }
 
+    if (action === 'workloadCalendar') {
+      return jsonResponse(getWorkloadCalendar(e.parameter.month || ''));
+    }
+
+    if (action === 'workloadReport') {
+      return jsonResponse(generateWorkloadReport(e.parameter.month || ''));
+    }
+
     if (action === 'execSummary') {
       return jsonResponse(generateExecutiveSummary());
     }

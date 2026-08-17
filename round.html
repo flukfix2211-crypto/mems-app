@@ -156,6 +156,7 @@
   <a href="index.html" style="text-decoration:none"><h1>MEMs</h1></a>
   <div class="sub">Medical Equipment Management Systems</div>
   <div class="page-title"><span style="font-size:22px">💉</span> Round เครื่อง Infusion Pump</div>
+  <div id="shiftBadge" style="display:inline-flex;align-items:center;gap:6px;margin-top:10px;background:rgba(255,255,255,0.18);color:#fff;padding:6px 12px;border-radius:20px;font-size:13px;position:relative;z-index:1"></div>
 </header>
 
 <div class="content">
@@ -175,6 +176,9 @@
     <select class="field" id="wardSel" onchange="onWardChange()">
       <option value="">— เลือกตึก/หน่วยงาน —</option>
     </select>
+    <div class="other-wrap hidden" id="otherWrap" style="margin-top:10px">
+      <input class="field" id="otherWard" type="text" placeholder="ระบุชื่อตึก...">
+    </div>
     <input class="field" id="nameField" type="text" placeholder="ชื่อผู้บันทึก" autocomplete="name" style="margin-top:10px">
     <button class="ward-confirm-btn" id="confirmWardBtn" onclick="confirmWard()" disabled>
       ดึงข้อมูลเครื่อง →
@@ -245,7 +249,7 @@
     'อายุรกรรมชาย (M.ช)','Semi ICU','ICU 100 ปี','กจ.3','กจ.2','TM',
     'เด็กล่าง','PICU','เด็กบน','ICU ญสส.','ห้องคลอด LR','หลังคลอด PP',
     'ญสส.9','Premium ญสส.8','ญสส.7','ICU.S','ICU Nuero','NICU','SNB',
-    'กจ.4','AIIR','สธ.7','สธ.6','ศูนย์เปล','เคมีบำบัด','อื่นๆ'
+    'กจ.4','AIIR','สธ.7','สธ.6','ศูนย์เปล','เคมีบำบัด','อื่นๆ โปรดระบุชื่อตึก'
   ];
 
   const STATUS_DEF = [
@@ -270,8 +274,38 @@
     const now = new Date();
     document.getElementById('dateChip').textContent =
       now.toLocaleDateString('th-TH', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
-    const h = now.getHours();
+    setShift(detectShift());
   };
+
+  /* ====== AUTO SHIFT DETECTION ======
+     เวรเช้า  : 08:30 – 16:30
+     เวรบ่าย : 16:30 – 00:30
+     เวรดึก  : 00:30 – 08:30
+     ================================== */
+  function detectShift() {
+    const now = new Date();
+    const t = now.getHours() * 60 + now.getMinutes();
+    if (t >= 510 && t < 990) return 'morning';
+    if (t >= 990 || t < 30)  return 'afternoon';
+    return 'night';
+  }
+
+  let currentShift = 'morning';
+  function setShift(s) {
+    currentShift = s;
+    const map = {
+      morning:   { icon: '🌅', label: 'เวรเช้า', range: '08:30 - 16:30' },
+      afternoon: { icon: '🌤', label: 'เวรบ่าย', range: '16:30 - 00:30' },
+      night:     { icon: '🌙', label: 'เวรดึก',  range: '00:30 - 08:30' },
+    };
+    const m = map[s] || map.morning;
+    const badge = document.getElementById('shiftBadge');
+    if (badge) {
+      badge.innerHTML = '<span style="font-size:15px">' + m.icon + '</span> ' +
+        '<b style="font-weight:800">' + m.label + '</b> ' +
+        '<span style="opacity:.8;font-weight:500;font-size:12px">(' + m.range + ')</span>';
+    }
+  }
 
   (function tick() {
     const now = new Date();
@@ -281,17 +315,28 @@
   })();
 
   function onWardChange() {
-    const ward = document.getElementById('wardSel').value;
-    const name = document.getElementById('nameField').value.trim();
+    const sel = document.getElementById('wardSel');
+    const ward = sel.value;
+    document.getElementById('otherWrap').classList.toggle('hidden', ward !== 'อื่นๆ โปรดระบุชื่อตึก');
     document.getElementById('confirmWardBtn').disabled = !ward;
   }
 
   document.getElementById('nameField').addEventListener('input', onWardChange);
 
+  function resolveWard() {
+    const sel = document.getElementById('wardSel').value;
+    if (sel === 'อื่นๆ โปรดระบุชื่อตึก') {
+      return document.getElementById('otherWard').value.trim();
+    }
+    return sel;
+  }
+
   async function confirmWard() {
-    const ward = document.getElementById('wardSel').value;
+    const sel  = document.getElementById('wardSel').value;
+    const ward = resolveWard();
     const name = document.getElementById('nameField').value.trim();
-    if (!ward) return;
+    if (!sel) return;
+    if (sel === 'อื่นๆ โปรดระบุชื่อตึก' && !ward) { alert('กรุณาระบุชื่อตึก'); return; }
     if (!name) { alert('กรุณาระบุชื่อผู้บันทึก'); return; }
 
     // Update step indicators
@@ -435,7 +480,7 @@
   }
 
   async function submitForm() {
-    const ward = document.getElementById('wardSel').value;
+    const ward = resolveWard();
     const name = document.getElementById('nameField').value.trim();
     const rows = document.querySelectorAll('.pump-row');
     const items = [];
@@ -456,7 +501,7 @@
     btn.disabled = true; btn.textContent = '⏳ กำลังบันทึก...';
 
     const now = new Date();
-    const h = now.getHours();
+    const shiftTH = { morning: 'เวรเช้า', afternoon: 'เวรบ่าย', night: 'เวรดึก' };
     const note = document.getElementById('noteField').value.trim();
 
     await Promise.all(items.map(item =>
@@ -464,7 +509,7 @@
         method: 'POST', mode: 'no-cors',
         headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify({
-          action: '🔵 Round', shift: '', ward,
+          action: '🔵 Round', shift: shiftTH[currentShift], ward,
           equipment: 'Infusion Pump',
           equipmentNumber: item.no,
           roundStatus: item.stLabel,
@@ -492,9 +537,11 @@
     document.getElementById('successScreen').classList.remove('show');
     document.getElementById('noteField').value = '';
     document.getElementById('pumpList').innerHTML = '';
+    document.getElementById('otherWard').value = '';
     rowCount = 0;
     backToStep1();
     updateSummary();
+    setShift(detectShift());
   }
 
   // Particle BG
