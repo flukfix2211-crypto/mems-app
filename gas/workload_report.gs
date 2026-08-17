@@ -33,14 +33,15 @@ const TH_HOLIDAY_ICS_URL = 'https://calendar.google.com/calendar/ical/en.th%23ho
 
 function _thaiHolidayDatesSet_() {
   const cache = CacheService.getScriptCache();
-  const cacheKey = 'th_holiday_dates_v1';
+  const cacheKey = 'th_holiday_dates_v2';
   const cached = cache.get(cacheKey);
   if (cached) return new Set(JSON.parse(cached));
 
   const dates = new Set();
   try {
     const res = UrlFetchApp.fetch(TH_HOLIDAY_ICS_URL, { muteHttpExceptions: true });
-    if (res.getResponseCode() === 200) {
+    const code = res.getResponseCode();
+    if (code === 200) {
       const text = res.getContentText();
       const re = /DTSTART;VALUE=DATE:(\d{8})/g;
       let m;
@@ -48,11 +49,15 @@ function _thaiHolidayDatesSet_() {
         const s = m[1]; // YYYYMMDD
         dates.add(s.slice(0, 4) + '-' + s.slice(4, 6) + '-' + s.slice(6, 8));
       }
+      console.log('Thai holiday ICS: fetched OK, parsed ' + dates.size + ' dates');
+    } else {
+      console.log('Thai holiday ICS: fetch failed, HTTP ' + code);
     }
   } catch (e) {
-    // ดึงไม่ได้ -> คืน Set ว่าง (ปลอดภัยกว่าตัดข้อมูลทิ้งผิดวัน จะถือว่าไม่ใช่วันหยุด)
+    console.log('Thai holiday ICS: fetch threw ' + e);
   }
-  cache.put(cacheKey, JSON.stringify(Array.from(dates)), 21600); // cache 6 ชม. กันยิงซ้ำทุกครั้งที่เปิดหน้า
+  // cache เฉพาะตอนดึงสำเร็จและมีข้อมูลจริง กัน error ชั่วคราวไม่ให้ทำให้ไม่นับวันหยุดไปนานถึง 6 ชม.
+  if (dates.size > 0) cache.put(cacheKey, JSON.stringify(Array.from(dates)), 21600);
   return dates;
 }
 
