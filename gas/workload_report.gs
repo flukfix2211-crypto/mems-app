@@ -25,6 +25,27 @@ const WORKLOAD_SERVICE_ROWS = [
 const WORKLOAD_SHIFTS = ['เวรเช้า', 'เวรบ่าย', 'เวรดึก'];
 const WORKLOAD_SHIFT_ABBR = { 'เวรเช้า': 'ช', 'เวรบ่าย': 'บ', 'เวรดึก': 'ด' };
 
+// เวรเช้า (08:30-16:30) ตรงกับเวลาราชการปกติของวันธรรมดา จึงถือเป็น "ภาระงานนอกเวลาราชการ"
+// เฉพาะ เสาร์-อาทิตย์ หรือวันหยุดราชการไทยเท่านั้น — ใช้ปฏิทินวันหยุดสาธารณะของ Google (อัปเดตอัตโนมัติทุกปี)
+const TH_HOLIDAY_CALENDAR_ID = 'en.th#holiday@group.v.calendar.google.com';
+
+function _isThaiHoliday_(date) {
+  try {
+    const cal = CalendarApp.getCalendarById(TH_HOLIDAY_CALENDAR_ID);
+    if (!cal) return false;
+    return cal.getEventsForDay(date).length > 0;
+  } catch (e) {
+    return false; // เข้าถึงปฏิทินไม่ได้ -> ไม่ถือว่าเป็นวันหยุด (ปลอดภัยกว่าตัดข้อมูลทิ้งผิดวัน)
+  }
+}
+
+/** true = วันนี้เป็นวันที่เวรเช้านับเป็นภาระงานนอกเวลาราชการ (เสาร์/อาทิตย์/วันหยุดราชการ) */
+function _isOffHoursMorningDay_(year, monthIdx, day) {
+  const dow = new Date(year, monthIdx, day).getDay(); // 0=อาทิตย์ .. 6=เสาร์ (ไม่ขึ้นกับ timezone)
+  if (dow === 0 || dow === 6) return true;
+  return _isThaiHoliday_(new Date(year, monthIdx, day, 12, 0, 0));
+}
+
 function _emptyShiftCount_() { return { 'เวรเช้า': 0, 'เวรบ่าย': 0, 'เวรดึก': 0 }; }
 
 /** เวรจากเวลาไทย (ตรงกับ logic ฝั่งหน้าเว็บทุกหน้า: 08:30-16:30 / 16:30-00:30 / 00:30-08:30) */
@@ -102,8 +123,13 @@ function _computeWorkloadData_(monthLabel) {
     staffByDay[d] = { 'เวรเช้า': {}, 'เวรบ่าย': {}, 'เวรดึก': {} };
   }
 
+  // เวรเช้านับเป็นภาระงานนอกเวลาราชการเฉพาะเสาร์/อาทิตย์/วันหยุดราชการ (เวรบ่าย-ดึกนับทุกวัน)
+  const offHoursMorning = {};
+  for (let d = 1; d <= daysInMonth; d++) offHoursMorning[d] = _isOffHoursMorningDay_(year, monthIdx, d);
+
   function addCount(key, day, shift) {
     if (!rowMap[key] || day < 1 || day > daysInMonth) return;
+    if (shift === 'เวรเช้า' && !offHoursMorning[day]) return; // วันธรรมดา -> เวรเช้าเป็นเวลาราชการปกติ ไม่นับ
     rowMap[key].byDay[day][shift] += 1;
     rowMap[key].total += 1;
   }
@@ -111,6 +137,7 @@ function _computeWorkloadData_(monthLabel) {
   // (ไม่นับชื่อจากแถวคืนเครื่อง/แก้ไขหน้างาน) แล้วเลือกชื่อที่ทำมากที่สุดเป็น "ผู้ปฏิบัติงาน" ของเวรนั้น
   function addStaff(day, shift, name) {
     if (!name || day < 1 || day > daysInMonth) return;
+    if (shift === 'เวรเช้า' && !offHoursMorning[day]) return;
     staffByDay[day][shift][name] = (staffByDay[day][shift][name] || 0) + 1;
   }
   function resolveShift(storedShift, ts) {
@@ -208,6 +235,7 @@ function _computeWorkloadData_(monthLabel) {
     staffByDay: staffOut,
     grandByDay: grandByDay,
     grandTotal: grandTotal,
+    offHoursMorning: offHoursMorning, // { day: true/false } เวรเช้านับเฉพาะวันที่ true (เสาร์/อาทิตย์/วันหยุดราชการ)
     isCurrentMonth: monthLabel === Utilities.formatDate(now, 'Asia/Bangkok', 'yyyy-MM'),
     generatedAt: Utilities.formatDate(now, 'Asia/Bangkok', 'dd/MM/yyyy HH:mm')
   };
@@ -259,6 +287,12 @@ function _writeWorkloadSheet_(sht, d) {
   headerRow.push('ยอดรวม');
   rows.push(headerRow);
 
+  // เวรเช้าของวันธรรมดา (ไม่ใช่เสาร์/อาทิตย์/วันหยุดราชการ) ไม่ใช่ภาระงานนอกเวลาราชการ -> ใส่ "-" แทนเลข 0
+  function morningCell(shift, day, v) {
+    if (shift === 'เวรเช้า' && !d.offHoursMorning[day]) return '-';
+    return v || '';
+  }
+
   d.rows.forEach((row, idx) => {
     const label = row.label + (row.untracked ? ' (ยังไม่มีการบันทึกในระบบ)' : '');
     d.shifts.forEach((shift, si) => {
@@ -267,7 +301,7 @@ function _writeWorkloadSheet_(sht, d) {
       for (let day = 1; day <= N; day++) {
         const v = row.byDay[day][shift] || 0;
         rowTotal += v;
-        line.push(v || '');
+        line.push(morningCell(shift, day, v));
       }
       line.push(row.untracked ? '' : rowTotal);
       rows.push(line);
@@ -281,7 +315,7 @@ function _writeWorkloadSheet_(sht, d) {
     for (let day = 1; day <= N; day++) {
       const v = d.grandByDay[day][shift] || 0;
       rowTotal += v;
-      line.push(v || '');
+      line.push(morningCell(shift, day, v));
     }
     line.push(rowTotal);
     rows.push(line);
@@ -291,6 +325,7 @@ function _writeWorkloadSheet_(sht, d) {
   d.shifts.forEach((shift, si) => {
     const line = [si === 0 ? '' : '', si === 0 ? 'ชื่อผู้ปฏิบัติงาน' : '', WORKLOAD_SHIFT_ABBR[shift]];
     for (let day = 1; day <= N; day++) {
+      if (shift === 'เวรเช้า' && !d.offHoursMorning[day]) { line.push('-'); continue; }
       const name = (d.staffByDay[day] && d.staffByDay[day][shift]) || '';
       line.push(name);
     }

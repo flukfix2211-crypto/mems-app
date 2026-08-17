@@ -169,6 +169,7 @@
     .wkl-table tr.wkl-group-start td { border-top: 2px solid var(--border); }
     .wkl-table td.wkl-num { min-width: 24px; color: var(--txt); }
     .wkl-table td.wkl-num.wkl-zero { color: var(--border); }
+    .wkl-table td.wkl-num.wkl-na { color: transparent; background-image: repeating-linear-gradient(135deg, transparent, transparent 3px, var(--border) 3px, var(--border) 4px); cursor: help; }
     .wkl-table tr.wkl-total td { background: #FFF3CD; font-weight: 800; }
     .wkl-table tr.wkl-staff td { background: #F7F9FA; font-size: 10px; }
     .wkl-table td.wkl-rowtotal { font-weight: 800; color: var(--a); background: #F8FBFC; }
@@ -543,7 +544,8 @@
         <div class="wkl-note">
           ตารางนี้คำนวณสดจากข้อมูลยืม-คืน/เตรียมเครื่อง/แก้ไขหน้างานที่บันทึกไว้แล้ว — ดูของวันนี้ได้ทันทีโดยไม่ต้องรอสิ้นเดือน
           แถว <b>"เตรียมความพร้อมใช้งานเครื่องช่วยหายใจ"</b> นับจากการกด <b>คืน</b> เครื่อง C2 / Bird / High Flow / T1 / Monnal แต่ละครั้ง<br>
-          แถว <b>"จ่ายวัสดุสำรอง"</b> <span class="wkl-untracked-tag">ยังไม่มีการบันทึกในระบบ</span> — กรุณากรอกด้วยตนเองในแบบฟอร์มกระดาษไปก่อน
+          แถว <b>"จ่ายวัสดุสำรอง"</b> <span class="wkl-untracked-tag">ยังไม่มีการบันทึกในระบบ</span> — กรุณากรอกด้วยตนเองในแบบฟอร์มกระดาษไปก่อน<br>
+          ช่องลายทแยง = <b>เวรเช้าวันธรรมดา</b> ไม่นับเป็นภาระงานนอกเวลาราชการ (นับเฉพาะ เสาร์-อาทิตย์ และวันหยุดราชการไทย)
         </div>
       </div>
     </div>
@@ -785,6 +787,8 @@ async function loadWorkloadCalendar() {
 function renderWorkloadTable(d) {
   const wrap = document.getElementById('wklTableWrap');
   const N = d.daysInMonth;
+  const offHoursMorning = d.offHoursMorning || {};
+  const NA_TITLE = 'เวรเช้าวันธรรมดาเป็นเวลาราชการปกติ ไม่นับเป็นภาระงานนอกเวลาราชการ';
 
   let head = '<thead><tr><th class="wkl-lbl">ภาระงาน</th><th>เวร</th>';
   for (let day = 1; day <= N; day++) head += `<th>${day}</th>`;
@@ -800,6 +804,7 @@ function renderWorkloadTable(d) {
       }
       body += `<td class="wkl-shift">${WKL_SHIFT_ABBR[shift]}</td>`;
       for (let day = 1; day <= N; day++) {
+        if (shift === 'เวรเช้า' && !offHoursMorning[day]) { body += `<td class="wkl-num wkl-na" title="${NA_TITLE}"></td>`; continue; }
         const v = row.byDay[day][shift] || 0;
         body += `<td class="wkl-num${v === 0 ? ' wkl-zero' : ''}">${v || '·'}</td>`;
       }
@@ -817,6 +822,7 @@ function renderWorkloadTable(d) {
     body += `<td class="wkl-shift">${WKL_SHIFT_ABBR[shift]}</td>`;
     let rowTotal = 0;
     for (let day = 1; day <= N; day++) {
+      if (shift === 'เวรเช้า' && !offHoursMorning[day]) { body += `<td class="wkl-num wkl-na" title="${NA_TITLE}"></td>`; continue; }
       const v = d.grandByDay[day][shift] || 0;
       rowTotal += v;
       body += `<td class="wkl-num">${v || '·'}</td>`;
@@ -831,6 +837,7 @@ function renderWorkloadTable(d) {
     if (si === 0) body += '<td class="wkl-lbl" rowspan="3">ชื่อผู้ปฏิบัติงาน</td>';
     body += `<td class="wkl-shift">${WKL_SHIFT_ABBR[shift]}</td>`;
     for (let day = 1; day <= N; day++) {
+      if (shift === 'เวรเช้า' && !offHoursMorning[day]) { body += `<td class="wkl-num wkl-na" title="${NA_TITLE}"></td>`; continue; }
       const name = (d.staffByDay[day] && d.staffByDay[day][shift]) || '';
       body += `<td class="wkl-num">${name || '·'}</td>`;
     }
