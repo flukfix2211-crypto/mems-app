@@ -831,8 +831,8 @@ function renderWorkloadTable(d) {
     if (si === 0) body += '<td class="wkl-lbl" rowspan="3">ชื่อผู้ปฏิบัติงาน</td>';
     body += `<td class="wkl-shift">${WKL_SHIFT_ABBR[shift]}</td>`;
     for (let day = 1; day <= N; day++) {
-      const names = (d.staffByDay[day] && d.staffByDay[day][shift]) || [];
-      body += `<td class="wkl-num" title="${names.join(', ')}">${names.length ? names.join('/') : '·'}</td>`;
+      const name = (d.staffByDay[day] && d.staffByDay[day][shift]) || '';
+      body += `<td class="wkl-num">${name || '·'}</td>`;
     }
     if (si === 0) body += '<td class="wkl-rowtotal" rowspan="3"></td>';
     body += '</tr>';

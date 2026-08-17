@@ -107,9 +107,11 @@ function _computeWorkloadData_(monthLabel) {
     rowMap[key].byDay[day][shift] += 1;
     rowMap[key].total += 1;
   }
+  // นับจำนวนครั้งที่แต่ละชื่อ "เตรียมเครื่อง" หรือ "ส่งเครื่อง" ต่อวัน/เวร
+  // (ไม่นับชื่อจากแถวคืนเครื่อง/แก้ไขหน้างาน) แล้วเลือกชื่อที่ทำมากที่สุดเป็น "ผู้ปฏิบัติงาน" ของเวรนั้น
   function addStaff(day, shift, name) {
     if (!name || day < 1 || day > daysInMonth) return;
-    staffByDay[day][shift][name] = true;
+    staffByDay[day][shift][name] = (staffByDay[day][shift][name] || 0) + 1;
   }
   function resolveShift(storedShift, ts) {
     return WORKLOAD_SHIFTS.indexOf(storedShift) !== -1 ? storedShift : _shiftFromDate_(ts);
@@ -135,7 +137,6 @@ function _computeWorkloadData_(monthLabel) {
         addStaff(day, shift, name);
       } else if (action.indexOf('คืน') !== -1 && VENTILATOR_EQUIPS.indexOf(equip) !== -1) {
         addCount('ventprep', day, shift);
-        addStaff(day, shift, name);
       }
     });
   }
@@ -163,21 +164,26 @@ function _computeWorkloadData_(monthLabel) {
   if (fSheet && fSheet.getLastRow() > 1) {
     const rows = fSheet.getRange(2, 1, fSheet.getLastRow() - 1, FIXJOB_COLS.length).getValues();
     rows.forEach(r => {
-      const staff = String(r[7] || '');
       const ts = _parseTsGeneric_(r[9], r[1], r[2]);
       if (!ts || !_inMonth_(ts, monthLabel)) return;
       const day   = _dayOfMonth_(ts);
       const shift = _shiftFromDate_(ts);
       addCount('fixjob', day, shift);
-      addStaff(day, shift, staff);
     });
   }
 
-  // สรุปรายชื่อผู้ปฏิบัติงานต่อวัน/เวร
+  // ผู้ปฏิบัติงานต่อวัน/เวร = ชื่อที่เตรียม/ส่งเครื่องมากที่สุดในเวรนั้น (ตรงกับแบบฟอร์มกระดาษ 1 เวร = 1 ชื่อ)
   const staffOut = {};
   for (let d = 1; d <= daysInMonth; d++) {
     staffOut[d] = {};
-    WORKLOAD_SHIFTS.forEach(s => { staffOut[d][s] = Object.keys(staffByDay[d][s]).sort(); });
+    WORKLOAD_SHIFTS.forEach(s => {
+      const counts = staffByDay[d][s];
+      let topName = '', topCount = 0;
+      Object.keys(counts).forEach(name => {
+        if (counts[name] > topCount) { topName = name; topCount = counts[name]; }
+      });
+      staffOut[d][s] = topName;
+    });
   }
 
   // ยอดรวมทุกแถวต่อวัน/เวร
@@ -285,8 +291,8 @@ function _writeWorkloadSheet_(sht, d) {
   d.shifts.forEach((shift, si) => {
     const line = [si === 0 ? '' : '', si === 0 ? 'ชื่อผู้ปฏิบัติงาน' : '', WORKLOAD_SHIFT_ABBR[shift]];
     for (let day = 1; day <= N; day++) {
-      const names = (d.staffByDay[day] && d.staffByDay[day][shift]) || [];
-      line.push(names.join('/'));
+      const name = (d.staffByDay[day] && d.staffByDay[day][shift]) || '';
+      line.push(name);
     }
     line.push('');
     rows.push(line);
