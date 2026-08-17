@@ -502,12 +502,21 @@ function _gatherPrepareStats(ss, start, end) {
 
 /** สร้าง export URL (PDF) ของชีต - ไม่ใช้ scope พิเศษ */
 function _pdfExportUrl(ss, sheet) {
-  // รายงานภาระงาน (Workload_*) มีคอลัมน์วันที่เยอะ (สูงสุด 31 วัน) -> พิมพ์แนวนอนให้พอดีหน้า
+  // รายงานภาระงาน (Workload_*) มีคอลัมน์วันที่เยอะ (สูงสุด 31 วัน) -> พิมพ์แนวนอนให้พอดีหน้าเดียว
   const landscape = sheet.getName().indexOf('Workload_') === 0;
-  return 'https://docs.google.com/spreadsheets/d/' + ss.getId() +
-    '/export?format=pdf&size=A4&portrait=' + (landscape ? 'false' : 'true') + '&fitw=true' +
-    '&sheetnames=false&printtitle=false&pagenumbers=true&gridlines=true&fzr=false' +
-    '&gid=' + sheet.getSheetId();
+  const base = 'https://docs.google.com/spreadsheets/d/' + ss.getId() +
+    '/export?format=pdf&size=A4&portrait=' + (landscape ? 'false' : 'true') +
+    '&sheetnames=false&printtitle=false&pagenumbers=true&gridlines=true&fzr=false';
+
+  if (landscape) {
+    // scale=4 = Fit to page (ย่อทั้งตารางให้พอดี 1 หน้า A4 แนวนอนพอดี ไม่ตัดคอลัมน์/แถวออก)
+    // ตัด margin ให้แคบสุดเพื่อเหลือพื้นที่ให้ตารางมากที่สุด
+    return base + '&fitw=true&scale=4' +
+      '&top_margin=0.2&bottom_margin=0.2&left_margin=0.2&right_margin=0.2' +
+      '&horizontal_alignment=CENTER&vertical_alignment=TOP' +
+      '&gid=' + sheet.getSheetId();
+  }
+  return base + '&fitw=true&gid=' + sheet.getSheetId();
 }
 
 /** แปลง millisec -> "X วัน Y ชม." */
