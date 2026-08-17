@@ -48,6 +48,12 @@ function _isOffHoursMorningDay_(year, monthIdx, day) {
 
 function _emptyShiftCount_() { return { 'เวรเช้า': 0, 'เวรบ่าย': 0, 'เวรดึก': 0 }; }
 
+// prepare.html ต่อท้ายชื่อผู้เตรียม/ผู้นำส่งด้วย " เจ้าหน้าที่ศูนย์เครื่องมือแพทย์" เสมอ (เก็บไว้ตามเดิมใน
+// Sheet ยืม-คืน/เตรียมเครื่อง) — ตารางภาระงานต้องการแค่ชื่อล้วนๆ จึงตัดคำต่อท้ายนี้ออกตอนแสดงผลเท่านั้น
+function _stripStaffTitle_(name) {
+  return String(name || '').replace(/\s*เจ้าหน้าที่ศูนย์เครื่องมือแพทย์\s*$/, '').trim();
+}
+
 /** เวรจากเวลาไทย (ตรงกับ logic ฝั่งหน้าเว็บทุกหน้า: 08:30-16:30 / 16:30-00:30 / 00:30-08:30) */
 function _shiftFromDate_(d) {
   const hm = Utilities.formatDate(d, 'Asia/Bangkok', 'HH:mm').split(':');
@@ -135,7 +141,8 @@ function _computeWorkloadData_(monthLabel) {
   }
   // นับจำนวนครั้งที่แต่ละชื่อ "เตรียมเครื่อง" หรือ "ส่งเครื่อง" ต่อวัน/เวร
   // (ไม่นับชื่อจากแถวคืนเครื่อง/แก้ไขหน้างาน) แล้วเลือกชื่อที่ทำมากที่สุดเป็น "ผู้ปฏิบัติงาน" ของเวรนั้น
-  function addStaff(day, shift, name) {
+  function addStaff(day, shift, rawName) {
+    const name = _stripStaffTitle_(rawName);
     if (!name || day < 1 || day > daysInMonth) return;
     if (shift === 'เวรเช้า' && !offHoursMorning[day]) return;
     staffByDay[day][shift][name] = (staffByDay[day][shift][name] || 0) + 1;
