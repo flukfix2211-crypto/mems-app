@@ -346,14 +346,17 @@ function _formatWorkloadSheet_(sht, d) {
   const width = 3 + N + 1;
   const headerRowIdx = 5;
 
-  sht.getRange(1, 1, 1, width).merge()
-     .setFontSize(14).setFontWeight('bold').setHorizontalAlignment('center')
+  // หมายเหตุ: ห้าม merge ข้ามแนวที่ freeze คอลัมน์ไว้ (Sheets จะ error) — แถบหัวรายงาน 3 แถวนี้
+  // เลยใส่สีพื้นหลัง/ฟอนต์แบบไม่ merge เซลล์ ข้อความจะอยู่ชิดซ้ายในคอลัมน์ A แทนการจัดกึ่งกลางเต็มแถว
+  sht.getRange(1, 1, 1, width)
+     .setFontSize(14).setFontWeight('bold')
      .setBackground('#0A6478').setFontColor('#FFFFFF');
-  sht.getRange(2, 1, 1, width).merge()
-     .setFontSize(12).setFontWeight('bold').setHorizontalAlignment('center')
+  sht.getRange(2, 1, 1, width)
+     .setFontSize(12).setFontWeight('bold')
      .setBackground('#0E7D94').setFontColor('#FFFFFF');
-  sht.getRange(3, 1, 1, width).merge()
-     .setFontSize(10).setHorizontalAlignment('center').setFontColor('#6A8A96');
+  sht.getRange(3, 1, 1, width)
+     .setFontSize(10).setFontColor('#6A8A96');
+  sht.getRange(1, 1, 3, 1).setHorizontalAlignment('left');
 
   sht.getRange(headerRowIdx, 1, 1, width)
      .setFontWeight('bold').setBackground('#DAF0F5').setHorizontalAlignment('center');
@@ -365,16 +368,18 @@ function _formatWorkloadSheet_(sht, d) {
   sht.setColumnWidth(3 + N + 1, 60);
 
   const lastRow = sht.getLastRow();
-  sht.getRange(1, 1, lastRow, width)
+  sht.getRange(4, 1, lastRow - 3, width)
      .setFontFamily('Sarabun, Arial')
      .setVerticalAlignment('middle')
      .setHorizontalAlignment('center');
+  sht.getRange(1, 1, 3, width).setFontFamily('Sarabun, Arial').setVerticalAlignment('middle');
   sht.getRange(headerRowIdx + 1, 2, lastRow - headerRowIdx, 1).setHorizontalAlignment('left');
 
   sht.setFrozenRows(headerRowIdx);
   sht.setFrozenColumns(3);
 
-  // รวมช่องลำดับ+ภาระงาน ให้ครอบ 3 แถวเวร (ช/บ/ด) ของแต่ละกลุ่ม
+  // รวมช่องลำดับ+ภาระงาน ให้ครอบ 3 แถวเวร (ช/บ/ด) ของแต่ละกลุ่ม — merge นี้อยู่ในคอลัมน์ 1-2
+  // ซึ่งอยู่ในขอบเขต freeze คอลัมน์ (1-3) ทั้งหมด จึงไม่ชนกับ frozen columns
   const groupCount = d.rows.length + 2; // + ยอดรวม + ชื่อผู้ปฏิบัติงาน
   for (let g = 0; g < groupCount; g++) {
     const startRow = headerRowIdx + 1 + g * 3;
