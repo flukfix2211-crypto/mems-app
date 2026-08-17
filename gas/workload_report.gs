@@ -26,17 +26,39 @@ const WORKLOAD_SHIFTS = ['เวรเช้า', 'เวรบ่าย', 'เ�
 const WORKLOAD_SHIFT_ABBR = { 'เวรเช้า': 'ช', 'เวรบ่าย': 'บ', 'เวรดึก': 'ด' };
 
 // เวรเช้า (08:30-16:30) ตรงกับเวลาราชการปกติของวันธรรมดา จึงถือเป็น "ภาระงานนอกเวลาราชการ"
-// เฉพาะ เสาร์-อาทิตย์ หรือวันหยุดราชการไทยเท่านั้น — ใช้ปฏิทินวันหยุดสาธารณะของ Google (อัปเดตอัตโนมัติทุกปี)
-const TH_HOLIDAY_CALENDAR_ID = 'en.th#holiday@group.v.calendar.google.com';
+// เฉพาะ เสาร์-อาทิตย์ หรือวันหยุดราชการไทยเท่านั้น — ดึงจากปฏิทินวันหยุดสาธารณะของ Google (อัปเดตอัตโนมัติทุกปี)
+// ใช้ UrlFetchApp ดึงไฟล์ ICS สาธารณะโดยตรงแทน CalendarApp เพราะ CalendarApp ต้องขอสิทธิ์ Calendar
+// เพิ่มเติมซึ่ง deployment ปัจจุบันยังไม่เคย re-authorize จึงล้มเหลวเงียบๆ และไม่ถือว่าเป็นวันหยุดเสมอ
+const TH_HOLIDAY_ICS_URL = 'https://calendar.google.com/calendar/ical/en.th%23holiday%40group.v.calendar.google.com/public/basic.ics';
+
+function _thaiHolidayDatesSet_() {
+  const cache = CacheService.getScriptCache();
+  const cacheKey = 'th_holiday_dates_v1';
+  const cached = cache.get(cacheKey);
+  if (cached) return new Set(JSON.parse(cached));
+
+  const dates = new Set();
+  try {
+    const res = UrlFetchApp.fetch(TH_HOLIDAY_ICS_URL, { muteHttpExceptions: true });
+    if (res.getResponseCode() === 200) {
+      const text = res.getContentText();
+      const re = /DTSTART;VALUE=DATE:(\d{8})/g;
+      let m;
+      while ((m = re.exec(text))) {
+        const s = m[1]; // YYYYMMDD
+        dates.add(s.slice(0, 4) + '-' + s.slice(4, 6) + '-' + s.slice(6, 8));
+      }
+    }
+  } catch (e) {
+    // ดึงไม่ได้ -> คืน Set ว่าง (ปลอดภัยกว่าตัดข้อมูลทิ้งผิดวัน จะถือว่าไม่ใช่วันหยุด)
+  }
+  cache.put(cacheKey, JSON.stringify(Array.from(dates)), 21600); // cache 6 ชม. กันยิงซ้ำทุกครั้งที่เปิดหน้า
+  return dates;
+}
 
 function _isThaiHoliday_(date) {
-  try {
-    const cal = CalendarApp.getCalendarById(TH_HOLIDAY_CALENDAR_ID);
-    if (!cal) return false;
-    return cal.getEventsForDay(date).length > 0;
-  } catch (e) {
-    return false; // เข้าถึงปฏิทินไม่ได้ -> ไม่ถือว่าเป็นวันหยุด (ปลอดภัยกว่าตัดข้อมูลทิ้งผิดวัน)
-  }
+  const key = Utilities.formatDate(date, 'Asia/Bangkok', 'yyyy-MM-dd');
+  return _thaiHolidayDatesSet_().has(key);
 }
 
 /** true = วันนี้เป็นวันที่เวรเช้านับเป็นภาระงานนอกเวลาราชการ (เสาร์/อาทิตย์/วันหยุดราชการ) */
