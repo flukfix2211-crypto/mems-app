@@ -79,8 +79,15 @@
     <button onclick="checkPw()" style="width:100%;background:#0A6478;color:#fff;border:none;border-radius:12px;padding:13px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;">เข้าสู่ระบบ</button>
   </div>
 </div>
+
+<!-- HIDDEN PASSWORD TOGGLE (admin only) -->
+<div id="pwToggleBtn" onclick="togglePwProtection()"
+  style="position:fixed;bottom:6px;left:6px;z-index:10000;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:16px;opacity:.12;cursor:pointer;border-radius:50%;transition:opacity .2s;-webkit-tap-highlight-color:transparent;"
+  onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.12">🔑</div>
+
 <script>
   const PREP_CODE = '6077';
+  const PW_TOGGLE_KEY = 'mems_pw_toggle_prepare';
   function checkPw() {
     if (document.getElementById('pwInput').value === PREP_CODE) {
       sessionStorage.setItem('mems_prep_auth', '1');
@@ -91,7 +98,19 @@
       document.getElementById('pwInput').focus();
     }
   }
-  if (sessionStorage.getItem('mems_prep_auth') === '1') document.getElementById('loginOverlay').style.display = 'none';
+  function isPwProtectionEnabled() {
+    return localStorage.getItem(PW_TOGGLE_KEY) !== '0';
+  }
+  function togglePwProtection() {
+    const code = prompt('รหัสสำหรับเปิด/ปิดการใช้งานรหัสผ่าน:');
+    if (code === null) return;
+    if (code !== 'Mec60776078') { alert('รหัสไม่ถูกต้อง'); return; }
+    const enabling = !isPwProtectionEnabled();
+    localStorage.setItem(PW_TOGGLE_KEY, enabling ? '1' : '0');
+    alert(enabling ? '🔒 เปิดการใช้งานรหัสผ่านแล้ว' : '🔓 ปิดการใช้งานรหัสผ่านแล้ว');
+    location.reload();
+  }
+  if (!isPwProtectionEnabled() || sessionStorage.getItem('mems_prep_auth') === '1') document.getElementById('loginOverlay').style.display = 'none';
 </script>
 
 <header class="header">
