@@ -322,7 +322,7 @@ function _formatReportSheet(sht) {
 
   // ตั้งค่า font ทั้ง sheet
   sht.getRange(1, 1, sht.getLastRow(), 5)
-     .setFontFamily('Sarabun, Arial')
+     .setFontFamily('TH Sarabun New')
      .setVerticalAlignment('middle');
 
   // freeze header
@@ -378,7 +378,7 @@ function _formatExecSheet(sht) {
   sht.setColumnWidth(1, 260);
   sht.setColumnWidth(2, 240);
   sht.getRange(1, 1, sht.getLastRow(), 2)
-     .setFontFamily('Sarabun, Arial')
+     .setFontFamily('TH Sarabun New')
      .setVerticalAlignment('middle');
   sht.setRowHeights(1, sht.getLastRow(), 28);
 }
@@ -506,7 +506,7 @@ function _pdfExportUrl(ss, sheet) {
   const landscape = sheet.getName().indexOf('Workload_') === 0;
   return 'https://docs.google.com/spreadsheets/d/' + ss.getId() +
     '/export?format=pdf&size=A4&portrait=' + (landscape ? 'false' : 'true') + '&fitw=true' +
-    '&sheetnames=false&printtitle=false&pagenumbers=true&gridlines=false&fzr=false' +
+    '&sheetnames=false&printtitle=false&pagenumbers=true&gridlines=true&fzr=false' +
     '&gid=' + sheet.getSheetId();
 }
 
@@ -729,7 +729,7 @@ function _formatC2Sheet(sht) {
 
   // ฟอนต์ทั้งชีต
   sht.getRange(1, 1, last, W)
-     .setFontFamily('Sarabun, Arial')
+     .setFontFamily('TH Sarabun New')
      .setVerticalAlignment('middle');
 
   // ไฮไลต์แถวหัวข้อ section + หัวตาราง (หาโดยอ่านค่า col A)
