@@ -162,6 +162,7 @@
     .wkl-table { font-size: 11px; }
     .wkl-table th, .wkl-table td { padding: 5px 6px; text-align: center; white-space: nowrap; border-right: 1px solid var(--border); }
     .wkl-table thead th { border-right-color: rgba(255,255,255,.22); }
+    .wkl-table thead th.wkl-holiday { color: #FF6B6B; }
     .wkl-table th:last-child, .wkl-table td:last-child { border-right: none; }
     .wkl-table th.wkl-lbl, .wkl-table td.wkl-lbl { text-align: left; position: sticky; left: 0; background: #fff; z-index: 1; min-width: 168px; }
     .wkl-table thead th.wkl-lbl { background: var(--a); z-index: 2; }
@@ -810,7 +811,7 @@ function renderWorkloadTable(d) {
   const NA_TITLE = 'เวรเช้าวันธรรมดาเป็นเวลาราชการปกติ ไม่นับเป็นภาระงานนอกเวลาราชการ';
 
   let head = '<thead><tr><th class="wkl-lbl">ภาระงาน</th><th>เวร</th>';
-  for (let day = 1; day <= N; day++) head += `<th>${day}</th>`;
+  for (let day = 1; day <= N; day++) head += `<th${offHoursMorning[day] ? ' class="wkl-holiday"' : ''}>${day}</th>`;
   head += '<th>รวม</th></tr></thead>';
 
   let body = '<tbody>';
