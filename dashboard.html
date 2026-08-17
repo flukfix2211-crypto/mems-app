@@ -150,6 +150,28 @@
     .round-summary { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
     .btn-print { padding: 10px 20px; background: var(--a); color: #fff; border: none; border-radius: 10px; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; }
 
+    /* WORKLOAD CALENDAR */
+    .wkl-toolbar { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+    .wkl-toolbar label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; display: block; margin-bottom: 5px; }
+    .wkl-toolbar input[type="month"] { padding: 9px 12px; border: 2px solid var(--border); border-radius: 10px; font-family: inherit; font-size: 14px; background: #fff; color: var(--txt); outline: none; }
+    .wkl-toolbar button { padding: 9px 16px; border: none; border-radius: 10px; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .wkl-btn-refresh { background: var(--al); color: var(--a); }
+    .wkl-btn-pdf { background: var(--a); color: #fff; }
+    .wkl-btn-pdf:disabled, .wkl-btn-refresh:disabled { opacity: .55; cursor: default; }
+    .wkl-note { font-size: 12px; color: var(--muted); margin-top: 8px; line-height: 1.6; }
+    .wkl-table { font-size: 11px; }
+    .wkl-table th, .wkl-table td { padding: 5px 6px; text-align: center; white-space: nowrap; }
+    .wkl-table th.wkl-lbl, .wkl-table td.wkl-lbl { text-align: left; position: sticky; left: 0; background: #fff; z-index: 1; min-width: 168px; }
+    .wkl-table thead th.wkl-lbl { background: var(--a); z-index: 2; }
+    .wkl-table td.wkl-shift { font-weight: 800; color: var(--muted); min-width: 22px; }
+    .wkl-table tr.wkl-group-start td { border-top: 2px solid var(--border); }
+    .wkl-table td.wkl-num { min-width: 24px; color: var(--txt); }
+    .wkl-table td.wkl-num.wkl-zero { color: var(--border); }
+    .wkl-table tr.wkl-total td { background: #FFF3CD; font-weight: 800; }
+    .wkl-table tr.wkl-staff td { background: #F7F9FA; font-size: 10px; }
+    .wkl-table td.wkl-rowtotal { font-weight: 800; color: var(--a); background: #F8FBFC; }
+    .wkl-untracked-tag { font-size: 10px; color: #B87A00; background: #FFF3CD; padding: 1px 6px; border-radius: 8px; }
+
     /* STATES */
     .empty { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 14px; }
     .state-loading { text-align: center; padding: 30px; color: var(--muted); display: flex; align-items: center; justify-content: center; gap: 10px; }
@@ -266,6 +288,15 @@
       <div class="nav-text">
         <div class="nav-title">แก้ไขหน้างาน</div>
         <div class="nav-desc">ดูประวัติการแก้ไขปัญหาที่หน่วยงานย้อนหลัง</div>
+      </div>
+      <span class="nav-arrow">›</span>
+    </div>
+
+    <div class="nav-card" onclick="showView('workload')">
+      <div class="nav-icon" style="background:#FFE8CC;font-size:26px;width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;z-index:1;">🗓️</div>
+      <div class="nav-text">
+        <div class="nav-title">ภาระงานนอกเวลาราชการ</div>
+        <div class="nav-desc">สรุปภาระงานรายวัน/เวร ดูสดได้ทุกวัน Export PDF ได้ทันที</div>
       </div>
       <span class="nav-arrow">›</span>
     </div>
@@ -483,6 +514,39 @@
     </div>
   </div>
 
+  <!-- WORKLOAD CALENDAR VIEW -->
+  <div id="viewWorkload" class="view">
+    <div class="view-header">
+      <button class="btn-view-back" onclick="showView('home')">← กลับ</button>
+      <div class="view-title">🗓️ ภาระงานนอกเวลาราชการ</div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <div class="wkl-toolbar">
+          <div>
+            <label>เดือน</label>
+            <input type="month" id="wklMonthSel" onchange="loadWorkloadCalendar()">
+          </div>
+          <button class="wkl-btn-refresh" id="wklRefreshBtn" onclick="loadWorkloadCalendar()">🔄 รีเฟรช</button>
+          <button class="wkl-btn-pdf" id="wklPdfBtn" onclick="exportWorkloadPDF()">📄 Export PDF</button>
+        </div>
+        <div class="wkl-note" id="wklMeta"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <div class="table-wrap" id="wklTableWrap">
+          <div class="state-loading"><div class="spinner"></div>กำลังโหลด…</div>
+        </div>
+        <div class="wkl-note">
+          ตารางนี้คำนวณสดจากข้อมูลยืม-คืน/เตรียมเครื่อง/แก้ไขหน้างานที่บันทึกไว้แล้ว — ดูของวันนี้ได้ทันทีโดยไม่ต้องรอสิ้นเดือน
+          แถว <b>"เตรียมความพร้อมใช้งานเครื่องช่วยหายใจ"</b> นับจากการกด <b>คืน</b> เครื่อง C2 / Bird / High Flow / T1 / Monnal แต่ละครั้ง<br>
+          แถว <b>"จ่ายวัสดุสำรอง"</b> <span class="wkl-untracked-tag">ยังไม่มีการบันทึกในระบบ</span> — กรุณากรอกด้วยตนเองในแบบฟอร์มกระดาษไปก่อน
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <!-- KPI DISPLAY VIEW -->
@@ -679,6 +743,121 @@ function showView(name) {
   if (name === 'c2') renderC2Dashboard();
   if (name === 'prepare') renderPrepareHistory();
   if (name === 'fixjob') renderFixJobHistory();
+  if (name === 'workload') initWorkloadView();
+}
+
+/* ============================================================ WORKLOAD CALENDAR ============================================================ */
+let wklData = null;
+let wklInited = false;
+
+function initWorkloadView() {
+  const sel = document.getElementById('wklMonthSel');
+  if (!wklInited) {
+    const now = new Date();
+    sel.value = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+    wklInited = true;
+  }
+  loadWorkloadCalendar();
+}
+
+async function loadWorkloadCalendar() {
+  const wrap = document.getElementById('wklTableWrap');
+  const meta = document.getElementById('wklMeta');
+  const month = document.getElementById('wklMonthSel').value;
+  wrap.innerHTML = '<div class="state-loading"><div class="spinner"></div>กำลังโหลด…</div>';
+  try {
+    const data = await fetchGAS('workloadCalendar', month ? { month } : {});
+    if (!data.ok) throw new Error(data.error || 'โหลดไม่สำเร็จ');
+    wklData = data;
+    meta.innerHTML = `ประจำเดือน <b>${data.monthTH}</b> · ยอดรวมทั้งเดือน <b>${data.grandTotal}</b> ครั้ง` +
+      (data.isCurrentMonth ? ' · <span style="color:var(--a);font-weight:700">กำลังนับของเดือนนี้แบบสด</span>' : '') +
+      ` · คำนวณล่าสุด ${data.generatedAt}`;
+    renderWorkloadTable(data);
+  } catch (e) {
+    wklData = null;
+    meta.textContent = '';
+    wrap.innerHTML = '<div class="empty">โหลดข้อมูลภาระงานไม่ได้: ' + (e.message || '') + '</div>';
+  }
+}
+
+function renderWorkloadTable(d) {
+  const wrap = document.getElementById('wklTableWrap');
+  const N = d.daysInMonth;
+
+  let head = '<thead><tr><th class="wkl-lbl">ภาระงาน</th><th>เวร</th>';
+  for (let day = 1; day <= N; day++) head += `<th>${day}</th>`;
+  head += '<th>รวม</th></tr></thead>';
+
+  let body = '<tbody>';
+  d.rows.forEach(row => {
+    d.shifts.forEach((shift, si) => {
+      body += `<tr class="${si === 0 ? 'wkl-group-start' : ''}">`;
+      if (si === 0) {
+        const tag = row.untracked ? ' <span class="wkl-untracked-tag">ไม่มีในระบบ</span>' : '';
+        body += `<td class="wkl-lbl" rowspan="3">${row.label}${tag}</td>`;
+      }
+      body += `<td class="wkl-shift">${WKL_SHIFT_ABBR[shift]}</td>`;
+      for (let day = 1; day <= N; day++) {
+        const v = row.byDay[day][shift] || 0;
+        body += `<td class="wkl-num${v === 0 ? ' wkl-zero' : ''}">${v || '·'}</td>`;
+      }
+      if (si === 0) {
+        body += `<td class="wkl-rowtotal" rowspan="3">${row.untracked ? '—' : row.total}</td>`;
+      }
+      body += '</tr>';
+    });
+  });
+
+  // ยอดรวม
+  d.shifts.forEach((shift, si) => {
+    body += `<tr class="wkl-total ${si === 0 ? 'wkl-group-start' : ''}">`;
+    if (si === 0) body += '<td class="wkl-lbl" rowspan="3">ยอดรวม</td>';
+    body += `<td class="wkl-shift">${WKL_SHIFT_ABBR[shift]}</td>`;
+    let rowTotal = 0;
+    for (let day = 1; day <= N; day++) {
+      const v = d.grandByDay[day][shift] || 0;
+      rowTotal += v;
+      body += `<td class="wkl-num">${v || '·'}</td>`;
+    }
+    if (si === 0) body += `<td class="wkl-rowtotal" rowspan="3">${d.grandTotal}</td>`;
+    body += '</tr>';
+  });
+
+  // ชื่อผู้ปฏิบัติงาน
+  d.shifts.forEach((shift, si) => {
+    body += `<tr class="wkl-staff ${si === 0 ? 'wkl-group-start' : ''}">`;
+    if (si === 0) body += '<td class="wkl-lbl" rowspan="3">ชื่อผู้ปฏิบัติงาน</td>';
+    body += `<td class="wkl-shift">${WKL_SHIFT_ABBR[shift]}</td>`;
+    for (let day = 1; day <= N; day++) {
+      const names = (d.staffByDay[day] && d.staffByDay[day][shift]) || [];
+      body += `<td class="wkl-num" title="${names.join(', ')}">${names.length ? names.join('/') : '·'}</td>`;
+    }
+    if (si === 0) body += '<td class="wkl-rowtotal" rowspan="3"></td>';
+    body += '</tr>';
+  });
+  body += '</tbody>';
+
+  wrap.innerHTML = `<table class="wkl-table">${head}${body}</table>`;
+}
+
+const WKL_SHIFT_ABBR = { 'เวรเช้า': 'ช', 'เวรบ่าย': 'บ', 'เวรดึก': 'ด' };
+
+async function exportWorkloadPDF() {
+  const btn = document.getElementById('wklPdfBtn');
+  const month = document.getElementById('wklMonthSel').value;
+  const orig = btn.textContent;
+  btn.disabled = true; btn.textContent = '⏳ กำลังสร้าง PDF...';
+  try {
+    const rpt = await fetchGAS('workloadReport', month ? { month } : {});
+    if (!rpt.ok) throw new Error(rpt.error || 'สร้างรายงานไม่สำเร็จ');
+    const pdf = await fetchGAS('exportPDF', { sheetName: rpt.sheetName });
+    if (!pdf.ok) throw new Error(pdf.error || 'Export PDF ไม่สำเร็จ');
+    window.open(pdf.viewUrl, '_blank');
+  } catch (e) {
+    alert('⚠️ Export PDF ไม่สำเร็จ: ' + (e.message || ''));
+  } finally {
+    btn.disabled = false; btn.textContent = orig;
+  }
 }
 
 async function renderPrepareHistory() {
