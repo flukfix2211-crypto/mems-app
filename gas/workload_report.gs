@@ -369,10 +369,10 @@ function _formatWorkloadSheet_(sht, d) {
 
   const lastRow = sht.getLastRow();
   sht.getRange(4, 1, lastRow - 3, width)
-     .setFontFamily('Sarabun, Arial')
+     .setFontFamily('TH Sarabun New')
      .setVerticalAlignment('middle')
      .setHorizontalAlignment('center');
-  sht.getRange(1, 1, 3, width).setFontFamily('Sarabun, Arial').setVerticalAlignment('middle');
+  sht.getRange(1, 1, 3, width).setFontFamily('TH Sarabun New').setVerticalAlignment('middle');
   sht.getRange(headerRowIdx + 1, 2, lastRow - headerRowIdx, 1).setHorizontalAlignment('left');
 
   sht.setFrozenRows(headerRowIdx);
