@@ -20,6 +20,7 @@ const SPREADSHEET_ID = '1Ju2STRjjFaC4ZjuTNAjsrDEyvW6cBM42Yt5NsXALgtg';
 const SHEET_BORROW   = 'ยืม-คืน';
 const SHEET_ASSETS   = 'ครุภัณฑ์_C2';
 const SHEET_FIXJOB   = 'แก้ไขหน้างาน';
+const SHEET_SUPPLY   = 'จ่ายวัสดุ';
 const FIXJOB_PHOTO_FOLDER = 'MEMs - แก้ไขหน้างาน';
 
 // ============================================================
@@ -143,6 +144,15 @@ function doPost(e) {
     }
     if (data.action === 'cancelPrepare') {
       cancelPrepare(parseInt(data.rowIndex, 10), data.reason || '');
+      return jsonResponse({ ok: true });
+    }
+
+    if (data.action === 'saveSupply') {
+      saveSupply(data.fields || {});
+      return jsonResponse({ ok: true });
+    }
+    if (data.action === 'cancelSupply') {
+      cancelSupply(parseInt(data.rowIndex, 10), data.reason || '');
       return jsonResponse({ ok: true });
     }
 
@@ -278,6 +288,10 @@ function doGet(e) {
 
     if (action === 'prepareHistory') {
       return jsonResponse(getPrepareHistory());
+    }
+
+    if (action === 'supplyList') {
+      return jsonResponse(getSupplyList());
     }
 
     if (action === 'assets') {
@@ -983,6 +997,76 @@ function markPreparedUsed(equipment, number) {
       sheet.getRange(row, 1, 1, PREPARE_COLS.length).setBackground('#DCF2E5');
     }
   }
+}
+
+// ============================================================
+// SUPPLY — จ่ายวัสดุสำรอง (Cuff BP ผู้ใหญ่/เด็ก/คนอ้วน ฯลฯ — ไม่ผูกหมายเลขครุภัณฑ์)
+// ============================================================
+const SUPPLY_COLS = ['ลำดับ', 'วันที่', 'เวลา', 'รายการ', 'จำนวน', 'ตึก/Ward', 'ผู้จ่าย', 'Timestamp', 'สถานะ'];
+
+function getOrCreateSupplySheet(ss) {
+  let sheet = ss.getSheetByName(SHEET_SUPPLY);
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEET_SUPPLY);
+    sheet.appendRow(SUPPLY_COLS);
+    sheet.setFrozenRows(1);
+    const h = sheet.getRange(1, 1, 1, SUPPLY_COLS.length);
+    h.setBackground('#0A6478').setFontColor('#fff').setFontWeight('bold').setHorizontalAlignment('center');
+    sheet.setColumnWidths(1, SUPPLY_COLS.length, 120);
+  }
+  return sheet;
+}
+
+function saveSupply(fields) {
+  const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = getOrCreateSupplySheet(ss);
+  const now   = new Date();
+  const dateStr = Utilities.formatDate(now, 'Asia/Bangkok', 'dd/MM/yyyy');
+  const timeStr = Utilities.formatDate(now, 'Asia/Bangkok', 'HH:mm:ss');
+  const item  = fields.item || '';
+  const qty   = fields.qty || '';
+  const ward  = fields.ward || '';
+  const by    = fields.dispensedBy || '';
+
+  const rowNumber = sheet.getLastRow();
+  sheet.appendRow([rowNumber, dateStr, timeStr, item, String(qty).trim(), ward, by, now.toISOString(), 'จ่ายแล้ว']);
+  sheet.getRange(sheet.getLastRow(), 1, 1, SUPPLY_COLS.length).setBackground('#FFF3CD');
+}
+
+/** รายการจ่ายวัสดุล่าสุด (ไม่รวมที่ยกเลิก) — ใหม่ไปเก่า */
+function getSupplyList() {
+  const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = getOrCreateSupplySheet(ss);
+  if (sheet.getLastRow() <= 1) return { ok: true, supplied: [] };
+
+  const rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, SUPPLY_COLS.length).getValues();
+  const supplied = [];
+  rows.forEach((r, i) => {
+    if (String(r[8]).indexOf('ยกเลิก') === 0) return;
+    const dt = _fmtThaiDateTime(r[7] || r[1]);
+    supplied.push({
+      _rowIndex: i + 2,
+      date:        dt.date,
+      time:        dt.time,
+      item:        String(r[3]),
+      qty:         String(r[4]),
+      ward:        String(r[5]),
+      dispensedBy: String(r[6])
+    });
+  });
+  supplied.reverse();
+  return { ok: true, supplied: supplied.slice(0, 30) };
+}
+
+/** ยกเลิกรายการจ่ายวัสดุ พร้อมหมายเหตุ (เก็บไว้ในประวัติ ไม่ลบทิ้ง) */
+function cancelSupply(sheetRow, reason) {
+  if (!sheetRow || sheetRow < 2) throw new Error('rowIndex ไม่ถูกต้อง');
+  const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(SHEET_SUPPLY);
+  if (!sheet) throw new Error('ไม่พบ Sheet: ' + SHEET_SUPPLY);
+  const r = String(reason || '').trim();
+  sheet.getRange(sheetRow, 9).setValue('ยกเลิก' + (r ? ': ' + r : ''));
+  sheet.getRange(sheetRow, 1, 1, SUPPLY_COLS.length).setBackground('#FDEAEA');
 }
 
 // ============================================================

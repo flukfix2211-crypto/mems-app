@@ -39,6 +39,8 @@
     .mode-btn .mode-desc { font-size: 11px; font-weight: 500; opacity: .85; }
     .mode-btn.active { border-color: var(--a); background: var(--al); color: var(--a); box-shadow: 0 0 0 1px var(--a); }
     .mode-btn#modeDeliver.active { border-color: #1A7B4A; background: #E6F5EC; color: #14612D; box-shadow: 0 0 0 1px #1A7B4A; }
+    .mode-btn#modeSupply { grid-column: 1 / -1; }
+    .mode-btn#modeSupply.active { border-color: #B8860B; background: #FFF3CD; color: #8A6612; box-shadow: 0 0 0 1px #B8860B; }
 
     .equip-grid { display: flex; flex-wrap: wrap; gap: 8px; }
     .equip-chip { padding: 11px 16px; border: 2px solid var(--border); border-radius: 14px; font-family: 'Sarabun', sans-serif; font-size: 15px; font-weight: 700; background: var(--card); color: var(--muted); cursor: pointer; transition: all .18s; -webkit-tap-highlight-color: transparent; }
@@ -135,13 +137,23 @@
         🚚 เตรียมพร้อมส่ง
         <span class="mode-desc">แอดมินนำส่ง = ยืมแทนหน่วยงานเลย</span>
       </button>
+      <button class="mode-btn" id="modeSupply" onclick="setMode('supply')">
+        📦 จ่ายวัสดุสำรอง
+        <span class="mode-desc">Cuff BP ผู้ใหญ่ / เด็ก / คนอ้วน — ไม่ผูกหมายเลขครุภัณฑ์</span>
+      </button>
     </div>
   </div>
 
   <!-- ประเภทเครื่อง -->
-  <div class="card">
+  <div class="card" id="equipCard">
     <div class="sec-label"><span class="req-dot"></span>ประเภทเครื่อง</div>
     <div class="equip-grid" id="equipGrid"></div>
+  </div>
+
+  <!-- รายการวัสดุ (เฉพาะโหมดจ่ายวัสดุสำรอง) -->
+  <div class="card" id="supplyCard" style="display:none">
+    <div class="sec-label"><span class="req-dot"></span>รายการวัสดุ</div>
+    <div class="equip-grid" id="supplyGrid"></div>
   </div>
 
   <!-- ชื่อเครื่องมือ (เฉพาะ เครื่องมืออื่นๆ) -->
@@ -197,6 +209,15 @@
     </div>
     <div id="listBody"><div class="empty">กำลังโหลด...</div></div>
   </div>
+
+  <!-- ประวัติการจ่ายวัสดุสำรอง -->
+  <div class="card" style="margin-top:16px">
+    <div class="sec-label" style="justify-content:space-between">
+      <span>📦 ประวัติการจ่ายวัสดุสำรอง (ล่าสุด)</span>
+      <span style="cursor:pointer;color:var(--a)" onclick="loadSupplyList()">🔄 รีเฟรช</span>
+    </div>
+    <div id="supplyListBody"><div class="empty">กำลังโหลด...</div></div>
+  </div>
 </div>
 
 <!-- modal เลือกหมายเหตุยกเลิก -->
@@ -219,21 +240,32 @@
   const EQUIPS = ['C2', 'Infusion Pump', 'Syringe pump', 'High Flow', 'Brid เขียว', 'T1', 'Monnal t60',
     'Patient Monitor', 'NIBP', 'Defibrillator', 'เครื่องมืออื่นๆ'];
   const ASSET_LABEL_EQUIPS = new Set(['Defibrillator', 'เครื่องมืออื่นๆ']);
+  const SUPPLIES = ['Cuff BP ผู้ใหญ่ สายคู่', 'Cuff BP ผู้ใหญ่ สายเดี่ยว',
+    'Cuff BP เด็ก สายคู่', 'Cuff BP เด็ก สายเดี่ยว',
+    'Cuff BP คนอ้วน สายคู่', 'Cuff BP คนอ้วน สายเดี่ยว'];
   const WARDS = ['ER','อายุรกรรมหญิง (M.ญ)','EENT','ศัลยกรรมหญิง','ศัลยกรรมกระดูก','ศัลยกรรมชาย',
     'อายุรกรรมชาย (M.ช)','Semi ICU','ICU 100 ปี','กจ.3','กจ.2','TM','เด็กล่าง','PICU','เด็กบน',
     'ICU ญสส.','ห้องคลอด LR','หลังคลอด PP','ญสส.9','Premium ญสส.8','ญสส.7','ICU.S','ICU Nuero',
     'NICU','SNB','กจ.4','AIIR','สธ.7','สธ.6','ศูนย์เปล','เคมีบำบัด','อื่นๆ โปรดระบุชื่อตึก'];
 
   let selectedEquip = null;
+  let selectedSupply = null;
   let prepareMode = 'prepare';
 
   function setMode(m) {
     prepareMode = m;
     document.getElementById('modePrepare').classList.toggle('active', m === 'prepare');
     document.getElementById('modeDeliver').classList.toggle('active', m === 'deliver');
-    document.getElementById('byLabel').textContent = m === 'deliver' ? 'ผู้นำส่ง (แอดมิน)' : 'ผู้เตรียม';
+    document.getElementById('modeSupply').classList.toggle('active', m === 'supply');
+    document.getElementById('equipCard').style.display = m === 'supply' ? 'none' : '';
+    document.getElementById('supplyCard').style.display = m === 'supply' ? '' : 'none';
+    document.getElementById('otherEquipNameCard').style.display = 'none';
+    document.getElementById('numbersLabelText').textContent = m === 'supply' ? 'จำนวน (ชิ้น)' : 'หมายเลขเครื่อง';
+    document.getElementById('numbersInput').placeholder = m === 'supply' ? 'เช่น 2' : 'เช่น 5, 6, 7';
+    document.getElementById('numbersInput').value = '';
+    document.getElementById('byLabel').textContent = m === 'deliver' ? 'ผู้นำส่ง (แอดมิน)' : (m === 'supply' ? 'ผู้จ่ายวัสดุ' : 'ผู้เตรียม');
     const btn = document.getElementById('saveBtn');
-    btn.textContent = m === 'deliver' ? '🚚 บันทึก + ส่งให้หน่วยงาน (ยืมเลย)' : '💾 บันทึกการเตรียม';
+    btn.textContent = m === 'deliver' ? '🚚 บันทึก + ส่งให้หน่วยงาน (ยืมเลย)' : (m === 'supply' ? '📦 บันทึกการจ่ายวัสดุ' : '💾 บันทึกการเตรียม');
   }
 
   // เวรตามเวลา (ตรงกับ borrow.html)
@@ -261,6 +293,20 @@
     grid.appendChild(b);
   });
 
+  // build supply chips
+  const supplyGrid = document.getElementById('supplyGrid');
+  SUPPLIES.forEach(s => {
+    const b = document.createElement('button');
+    b.className = 'equip-chip';
+    b.textContent = s;
+    b.onclick = () => {
+      selectedSupply = s;
+      document.querySelectorAll('#supplyGrid .equip-chip').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+    };
+    supplyGrid.appendChild(b);
+  });
+
   // build ward options
   const wardSel = document.getElementById('wardSel');
   WARDS.forEach(w => { const o = document.createElement('option'); o.value = w; o.textContent = w; wardSel.appendChild(o); });
@@ -278,6 +324,7 @@
   }
 
   async function savePrepare() {
+    if (prepareMode === 'supply') return saveSupplyItem();
     const ward0 = wardSel.value;
     const other = document.getElementById('otherWard').value.trim();
     const ward = ward0 === 'อื่นๆ โปรดระบุชื่อตึก' ? (other || 'อื่นๆ') : ward0;
@@ -369,6 +416,48 @@
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
+  async function saveSupplyItem() {
+    const ward0 = wardSel.value;
+    const other = document.getElementById('otherWard').value.trim();
+    const ward = ward0 === 'อื่นๆ โปรดระบุชื่อตึก' ? (other || 'อื่นๆ') : ward0;
+    const bySel   = document.getElementById('preparedBySel').value;
+    const byOther = document.getElementById('preparedByOther').value.trim();
+    const byName  = bySel === 'อื่นๆ' ? byOther : bySel;
+    const qty = document.getElementById('numbersInput').value.trim();
+
+    if (!selectedSupply || !qty || !ward0 || !byName || (ward0 === 'อื่นๆ โปรดระบุชื่อตึก' && !other)) {
+      alert('⚠️ กรุณากรอกข้อมูลให้ครบ (รายการวัสดุ, จำนวน, ตึก, ผู้จ่าย)');
+      return;
+    }
+    const by = byName + ' เจ้าหน้าที่ศูนย์เครื่องมือแพทย์';
+
+    const btn = document.getElementById('saveBtn');
+    const origText = btn.textContent;
+    btn.disabled = true; btn.textContent = 'กำลังบันทึก…';
+    try {
+      await fetch(SCRIPT_URL, {
+        method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ action: 'saveSupply', fields: { item: selectedSupply, qty, ward, dispensedBy: by } })
+      });
+      toast('📦 จ่าย ' + selectedSupply + ' จำนวน ' + qty + ' ให้ ' + ward + ' แล้ว');
+      resetSupplyForm();
+      setTimeout(loadSupplyList, 800);
+    } catch (e) {
+      toast('❌ บันทึกไม่สำเร็จ');
+    }
+    btn.disabled = false; btn.textContent = origText;
+  }
+
+  function resetSupplyForm() {
+    selectedSupply = null;
+    document.querySelectorAll('#supplyGrid .equip-chip').forEach(x => x.classList.remove('active'));
+    document.getElementById('numbersInput').value = '';
+    wardSel.value = '';
+    document.getElementById('otherWard').value = '';
+    document.getElementById('otherWrap').style.display = 'none';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
   async function loadList() {
     const body = document.getElementById('listBody');
     body.innerHTML = '<div class="empty">กำลังโหลด...</div>';
@@ -397,8 +486,37 @@
     }
   }
 
+  async function loadSupplyList() {
+    const body = document.getElementById('supplyListBody');
+    body.innerHTML = '<div class="empty">กำลังโหลด...</div>';
+    try {
+      const u = new URL(SCRIPT_URL); u.searchParams.set('action', 'supplyList');
+      const data = await fetch(u.toString(), { mode: 'cors' }).then(r => r.json());
+      const items = data.supplied || [];
+      if (!items.length) { body.innerHTML = '<div class="empty">ยังไม่มีรายการจ่ายวัสดุ</div>'; return; }
+      let html = '';
+      items.forEach(it => {
+        const when = (it.date || '') + (it.time ? ' ' + it.time : '');
+        html += `<div class="prep-item">
+          <div class="prep-info"><span class="prep-eq">${it.item} × ${it.qty}</span><div class="prep-sub">ให้ ${it.ward} · โดย ${it.dispensedBy}${when ? ' · 🕒 ' + when : ''}</div></div>
+          <button class="del-btn" onclick="openCancelSupplyModal(${it._rowIndex})">ลบ</button>
+        </div>`;
+      });
+      body.innerHTML = html;
+    } catch (e) {
+      body.innerHTML = '<div class="empty">โหลดรายการไม่ได้</div>';
+    }
+  }
+
   let cancelRowIndex = null;
+  let cancelKind = 'prepare';
   function openCancelModal(rowIndex) {
+    cancelKind = 'prepare';
+    cancelRowIndex = rowIndex;
+    document.getElementById('cancelModal').style.display = 'flex';
+  }
+  function openCancelSupplyModal(rowIndex) {
+    cancelKind = 'supply';
     cancelRowIndex = rowIndex;
     document.getElementById('cancelModal').style.display = 'flex';
   }
@@ -408,19 +526,21 @@
   }
   async function doCancel(reason) {
     const rowIndex = cancelRowIndex;
+    const kind = cancelKind;
     closeCancelModal();
     if (!rowIndex) return;
     try {
       await fetch(SCRIPT_URL, {
         method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({ action: 'cancelPrepare', rowIndex, reason })
+        body: JSON.stringify({ action: kind === 'supply' ? 'cancelSupply' : 'cancelPrepare', rowIndex, reason })
       });
       toast('🗑️ ยกเลิกแล้ว (' + reason + ')');
-      setTimeout(loadList, 800);
+      setTimeout(kind === 'supply' ? loadSupplyList : loadList, 800);
     } catch (e) { toast('❌ ยกเลิกไม่สำเร็จ'); }
   }
 
   loadList();
+  loadSupplyList();
 </script>
 </body>
 </html>

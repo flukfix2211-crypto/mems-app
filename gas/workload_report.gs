@@ -124,7 +124,7 @@ function _workloadEquipRowKey_(equip) {
 function _workloadRowDefs_() {
   return WORKLOAD_SERVICE_ROWS.concat([
     { key: 'fixjob',   label: 'แก้ไขปัญหาหน้างาน' },
-    { key: 'supplies', label: 'จ่ายวัสดุสำรอง', untracked: true },
+    { key: 'supplies', label: 'จ่ายวัสดุสำรอง' },
     { key: 'ventprep', label: 'เตรียมความพร้อมใช้งานเครื่องช่วยหายใจ' }
   ]);
 }
@@ -230,6 +230,23 @@ function _computeWorkloadData_(monthLabel) {
       const day   = _dayOfMonth_(ts);
       const shift = _shiftFromDate_(ts);
       addCount('fixjob', day, shift);
+    });
+  }
+
+  // 4) Sheet จ่ายวัสดุ (ไม่นับรายการที่ยกเลิก) -> จ่ายวัสดุสำรอง
+  const supSheet = ss.getSheetByName(SHEET_SUPPLY);
+  if (supSheet && supSheet.getLastRow() > 1) {
+    const rows = supSheet.getRange(2, 1, supSheet.getLastRow() - 1, SUPPLY_COLS.length).getValues();
+    rows.forEach(r => {
+      const status = String(r[8] || '');
+      if (status.indexOf('ยกเลิก') === 0) return;
+      const by = String(r[6] || '');
+      const ts = _parseTsGeneric_(r[7], r[1], r[2]);
+      if (!ts || !_inMonth_(ts, monthLabel)) return;
+      const day   = _dayOfMonth_(ts);
+      const shift = _shiftFromDate_(ts); // Sheet จ่ายวัสดุไม่ได้เก็บเวรไว้ -> คำนวณจากเวลา
+      addCount('supplies', day, shift);
+      addStaff(day, shift, by);
     });
   }
 
