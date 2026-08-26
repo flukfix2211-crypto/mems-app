@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>MEMs — ทะเบียนครุภัณฑ์ C2</title>
+  <title>MEMs — ทะเบียนครุภัณฑ์เครื่องมือแพทย์</title>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   
   <style>
@@ -198,8 +198,15 @@
   <div class="type-chips">
     <button class="type-chip active" onclick="setTypeFilter('')">ทั้งหมด</button>
     <button class="type-chip" onclick="setTypeFilter('C2')">C2</button>
+    <button class="type-chip" onclick="setTypeFilter('High Flow')">High Flow</button>
+    <button class="type-chip" onclick="setTypeFilter('Brid เขียว')">Brid เขียว</button>
+    <button class="type-chip" onclick="setTypeFilter('Monnal t60')">Monnal t60</button>
+    <button class="type-chip" onclick="setTypeFilter('T1')">T1</button>
+    <button class="type-chip" onclick="setTypeFilter('Patient Monitor')">Patient Monitor</button>
+    <button class="type-chip" onclick="setTypeFilter('NIBP')">NIBP</button>
     <button class="type-chip" onclick="setTypeFilter('Infusion Pump')">Infusion Pump</button>
     <button class="type-chip" onclick="setTypeFilter('Syringe Pump')">Syringe Pump</button>
+    <button class="type-chip" onclick="setTypeFilter('Defibrillator')">Defibrillator</button>
     <button class="type-chip" onclick="setTypeFilter('อื่นๆ')">อื่นๆ</button>
   </div>
 
@@ -275,15 +282,22 @@
       <input type="hidden" id="editRowIndex">
       <div class="form-row">
         <div class="form-group">
-          <div class="form-label">No. เครื่อง C2</div>
+          <div class="form-label">No. เครื่อง</div>
           <input class="form-input" id="fNo" type="number" min="1" placeholder="1-100">
         </div>
         <div class="form-group">
           <div class="form-label">ประเภท</div>
           <select class="form-input" id="fType">
             <option>C2</option>
+            <option>High Flow</option>
+            <option>Brid เขียว</option>
+            <option>Monnal t60</option>
+            <option>T1</option>
+            <option>Patient Monitor</option>
+            <option>NIBP</option>
             <option>Infusion Pump</option>
             <option>Syringe Pump</option>
+            <option>Defibrillator</option>
             <option>อื่นๆ</option>
           </select>
         </div>
