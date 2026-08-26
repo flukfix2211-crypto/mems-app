@@ -51,21 +51,27 @@
     .footer-link a { font-size: 13px; font-weight: 600; color: var(--a); text-decoration: none; opacity: 0.7; }
     .footer-link a:hover { opacity: 1; }
     #bgCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+    .icon-btn { width: 32px; height: 32px; border-radius: 10px; background: rgba(255,255,255,.2); border: 1.5px solid rgba(255,255,255,.4); color: #fff; font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; text-decoration: none; -webkit-tap-highlight-color: transparent; flex-shrink: 0; }
+    .icon-btn:active { background: rgba(255,255,255,.35); }
+    .nav-menu { display: none; position: fixed; top: 64px; left: 16px; z-index: 50; background: var(--card); border-radius: var(--rs); box-shadow: 0 12px 32px rgba(0,0,0,0.25); min-width: 240px; overflow: hidden; }
+    .nav-menu.open { display: block; }
+    .nav-menu a { display: flex; align-items: center; gap: 12px; padding: 14px 16px; color: var(--txt); text-decoration: none; font-size: 14px; font-weight: 600; -webkit-tap-highlight-color: transparent; }
+    .nav-menu a:active { background: var(--al); }
+    .nav-menu a + a { border-top: 1px solid var(--border); }
+    .nav-menu .nm-icon { font-size: 18px; width: 22px; text-align: center; flex-shrink: 0; }
   </style>
 </head>
 <body>
 <canvas id="bgCanvas"></canvas>
 <header class="header">
   <div class="header-top" style="flex-wrap:wrap;gap:8px">
-    <span class="hosp-badge">โรงพยาบาลพหลพลพยุหเสนา จ.กาญจนบุรี</span>
+    <div style="display:flex;align-items:center;gap:8px;min-width:0">
+      <button id="menuBtn" class="icon-btn" aria-haspopup="true" aria-expanded="false" onclick="toggleNavMenu(event)" title="เมนู">☰</button>
+      <span class="hosp-badge" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">โรงพยาบาลพหลพลพยุหเสนา จ.กาญจนบุรี</span>
+    </div>
     <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;justify-content:flex-end;margin-left:auto">
       <span class="clock-badge" id="clock"></span>
-      <a href="dashboard.html" title="แดชบอร์ด" style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.4);color:#fff;font-size:15px;display:flex;align-items:center;justify-content:center;text-decoration:none;-webkit-tap-highlight-color:transparent">📊</a>
-      <a href="assets.html" title="ทะเบียนครุภัณฑ์" style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.4);color:#fff;font-size:15px;display:flex;align-items:center;justify-content:center;text-decoration:none;-webkit-tap-highlight-color:transparent">📋</a>
-      <a href="prepare.html" title="เตรียมเครื่องมือ" style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.4);color:#fff;font-size:15px;display:flex;align-items:center;justify-content:center;text-decoration:none;-webkit-tap-highlight-color:transparent">🧰</a>
-      <a href="round.html" title="บันทึกการ Round ward" style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.4);color:#fff;font-size:15px;display:flex;align-items:center;justify-content:center;text-decoration:none;-webkit-tap-highlight-color:transparent">🏥</a>
-      <a href="fixjob.html" title="แก้ไขหน้างาน" style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.4);color:#fff;font-size:15px;display:flex;align-items:center;justify-content:center;text-decoration:none;-webkit-tap-highlight-color:transparent">🛠️</a>
-      <button onclick="document.getElementById('helpModal').style.display='flex'" style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.4);color:#fff;font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">?</button>
+      <button class="icon-btn" style="width:28px;height:28px;font-size:13px;font-weight:800;border-radius:50%;line-height:1" onclick="document.getElementById('helpModal').style.display='flex'">?</button>
     </div>
   </div>
   <div class="header-body">
@@ -74,6 +80,11 @@
     <div class="mems-th">ระบบจัดการเครื่องมือแพทย์</div>
   </div>
 </header>
+<nav id="navMenu" class="nav-menu">
+  <a href="dashboard.html"><span class="nm-icon">📊</span> แดชบอร์ด</a>
+  <a href="prepare.html"><span class="nm-icon">🧰</span> เตรียมเครื่องมือ</a>
+  <a href="round.html"><span class="nm-icon">🏥</span> บันทึกการ Round ward</a>
+</nav>
 <div class="content">
   <div class="menu-label">เลือกรายการ</div>
   <a class="menu-card" href="borrow.html">
@@ -92,7 +103,7 @@
     </div>
     <span class="menu-arrow">›</span>
   </a>
-  <!-- บันทึกการ Round ward ย้ายไปเป็นไอคอน 🏥 มุมขวาบน -->
+  <!-- แดชบอร์ด, เตรียมเครื่องมือ, Round ward → เมนู ☰ มุมซ้ายบน -->
 
   <div style="text-align:center;padding:20px 0 8px;font-size:11px;color:#6A8A96;line-height:1.7">
     MEMs v1.0 — งานศูนย์เครื่องมือแพทย์<br>โรงพยาบาลพหลพลพยุหเสนา จ.กาญจนบุรี<br>พัฒนาโดย Pawarit Somchipeng
@@ -105,6 +116,23 @@
       now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   }
   tick(); setInterval(tick, 1000);
+
+  const navMenu = document.getElementById('navMenu');
+  const menuBtn = document.getElementById('menuBtn');
+  function toggleNavMenu(e) {
+    e.stopPropagation();
+    const open = navMenu.classList.toggle('open');
+    menuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+  document.addEventListener('click', (e) => {
+    if (navMenu.classList.contains('open') && !navMenu.contains(e.target) && e.target !== menuBtn) {
+      navMenu.classList.remove('open');
+      menuBtn.setAttribute('aria-expanded', 'false');
+    }
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { navMenu.classList.remove('open'); menuBtn.setAttribute('aria-expanded', 'false'); }
+  });
 
   (function() {
     const canvas = document.getElementById('bgCanvas');
