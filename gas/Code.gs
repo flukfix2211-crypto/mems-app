@@ -32,6 +32,38 @@ const FIXJOB_PHOTO_FOLDER = 'MEMs - แก้ไขหน้างาน';
 // ============================================================
 const THAI_TZ = 'Asia/Bangkok';
 
+// ============================================================
+// CACHE — ลดการอ่านทั้งชีตซ้ำๆ ในช่วงเวลาสั้นๆ
+// หน้ายืม/คืนเรียก action=equipment หลายครั้งภายในไม่กี่วินาที (ตอนเลือกตึก,
+// ตอนเลือกเครื่อง, ตอนกดบันทึก) การ cache ไว้สั้นๆ ช่วยตัดการสแกนชีตซ้ำออกไป
+// TTL สั้น + ล้าง cache ทุกครั้งที่มีการเขียน เพื่อไม่ให้ข้อมูลค้าง
+// ============================================================
+const CACHE_TTL_SEC = 30;
+const CACHE_KEY_EQUIP   = 'MEMS_EQUIP_V1';
+const CACHE_KEY_C2      = 'MEMS_C2_V1';
+const CACHE_KEY_PREPARE = 'MEMS_PREPARE_V1';
+const CACHE_ALL_KEYS = [CACHE_KEY_EQUIP, CACHE_KEY_C2, CACHE_KEY_PREPARE];
+
+function cacheGet_(key) {
+  try {
+    const v = CacheService.getScriptCache().get(key);
+    return v ? JSON.parse(v) : null;
+  } catch (e) { return null; }  // cache ใช้ไม่ได้ -> อ่านจากชีตตามปกติ
+}
+
+function cachePut_(key, obj) {
+  try {
+    const s = JSON.stringify(obj);
+    if (s.length > 90000) return; // เกินขนาดที่ CacheService รับได้ -> ข้ามการ cache
+    CacheService.getScriptCache().put(key, s, CACHE_TTL_SEC);
+  } catch (e) { /* cache ใช้ไม่ได้ -> ข้าม ไม่กระทบการทำงาน */ }
+}
+
+/** ล้าง cache ทั้งหมด — เรียกทุกครั้งหลังเขียนข้อมูล */
+function invalidateCaches_() {
+  try { CacheService.getScriptCache().removeAll(CACHE_ALL_KEYS); } catch (e) {}
+}
+
 function setupTelegram(token, chatId) {
   PropertiesService.getScriptProperties().setProperties({
     TELEGRAM_TOKEN: token,
@@ -63,11 +95,21 @@ function escHTML_(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-function notifyBorrowReturn_(data, now) {
+// items = [{ equipmentNumber, roundStatus, note }] จาก normalizeRecordItems_
+// ยืมหลายเครื่องในครั้งเดียว -> ส่ง Telegram ข้อความเดียว (เดิมยิงทีละเครื่อง ซึ่งทำให้การบันทึกช้า)
+function notifyBorrowReturn_(data, now, items) {
   const action = data.action || '';
   const isBorrow = action.includes('ยืม');
   const isReturn = action.includes('คืน');
   if (!isBorrow && !isReturn) return; // แจ้งเฉพาะยืม/คืน ไม่แจ้ง Round
+
+  const list = (items && items.length)
+    ? items
+    : [{ equipmentNumber: data.equipmentNumber || '' }];
+  const numberText = list
+    .map(it => String(it.equipmentNumber || '').trim())
+    .filter(n => n !== '')
+    .join(', ');
 
   const statusLabel = isBorrow ? 'ยืม' : 'คืน';
   const dateStr = Utilities.formatDate(now, THAI_TZ, 'dd/MM/yyyy');
@@ -75,7 +117,7 @@ function notifyBorrowReturn_(data, now) {
 
   let msg = '📢 มีการ <b>' + escHTML_(statusLabel) + '</b> เครื่องมือ: <b>' + escHTML_(data.equipment || '') + '</b>\n';
   msg += '📅 วันที่: ' + escHTML_(dateStr + '  เวลา ' + timeStr) + '\n\n';
-  msg += '🔹 <b>หมายเลขเครื่อง</b>: ' + escHTML_(data.equipmentNumber || '') + '\n';
+  msg += '🔹 <b>หมายเลขเครื่อง</b>: ' + escHTML_(numberText) + '\n';
   msg += '🔹 <b>ตึก/Ward</b>: ' + escHTML_(data.ward || '') + '\n';
   msg += '🔹 <b>ผู้บันทึก</b>: ' + escHTML_(data.name || '') + '\n';
   msg += '🔹 <b>เวร</b>: ' + escHTML_(data.shift || '') + '\n';
@@ -157,7 +199,7 @@ function doPost(e) {
     }
 
     const result = saveRecord(data);
-    return jsonResponse({ ok: true, id: result.row, timestamp: result.timestamp });
+    return jsonResponse({ ok: true, id: result.row, saved: result.saved, timestamp: result.timestamp });
   } catch (err) {
     return jsonResponse({ ok: false, error: err.message }, 500);
   }
@@ -180,6 +222,7 @@ function editRecord(sheetRow, fields) {
   if (fields.name        !== undefined && fields.name        !== null) sheet.getRange(sheetRow, 9).setValue(fields.name);
   if (fields.roundStatus !== undefined && fields.roundStatus !== null) sheet.getRange(sheetRow, 11).setValue(fields.roundStatus);
   if (fields.note        !== undefined && fields.note        !== null) sheet.getRange(sheetRow, 12).setValue(fields.note);
+  invalidateCaches_();
 }
 
 // ============================================================
@@ -191,6 +234,7 @@ function deleteRecord(sheetRow) {
   const sheet = ss.getSheetByName(SHEET_BORROW);
   if (!sheet) throw new Error('ไม่พบ Sheet: ' + SHEET_BORROW);
   sheet.deleteRow(sheetRow);
+  invalidateCaches_();
 }
 
 // ============================================================
@@ -210,6 +254,7 @@ function deleteBulkRecords(rowIndexes) {
     .sort((a, b) => b - a);
 
   sorted.forEach(row => sheet.deleteRow(row));
+  invalidateCaches_();
 }
 
 // ============================================================
@@ -220,8 +265,8 @@ function doGet(e) {
 
   try {
     if (action === 'records') {
-      const limit  = parseInt(e.parameter.limit  || '50');
-      const offset = parseInt(e.parameter.offset || '0');
+      const limit  = Math.max(1, parseInt(e.parameter.limit  || '50', 10) || 50);
+      const offset = Math.max(0, parseInt(e.parameter.offset || '0', 10) || 0);
       const filter = e.parameter.filter || '';
       return jsonResponse(getRecords(limit, offset, filter));
     }
@@ -301,58 +346,108 @@ function doGet(e) {
 // ============================================================
 // saveRecord — บันทึก 1 รายการลง Sheet
 // ============================================================
+/**
+ * แปลง payload ให้เป็นรายการเครื่องที่จะบันทึก — รองรับ 3 รูปแบบ
+ *   1) เครื่องเดียว (ของเดิม)   : { equipmentNumber: '5' }
+ *   2) หลายเครื่อง ค่าเหมือนกัน : { equipmentNumbers: ['5','6','7'] }
+ *   3) หลายเครื่อง ค่าต่างกัน   : { items: [{ equipmentNumber:'5', roundStatus:'ชำรุด' }, ...] }
+ * รูปแบบ 2 และ 3 ทำให้ยืม/คืน/Round หลายเครื่องจบใน request เดียว แทนที่จะยิงทีละเครื่อง
+ */
+function normalizeRecordItems_(data) {
+  const baseStatus = data.roundStatus || '';
+  const baseNote   = data.note        || '';
+  const str = v => String(v == null ? '' : v).trim();
+
+  if (Array.isArray(data.items) && data.items.length) {
+    return data.items.map(it => {
+      const o = it || {};
+      return {
+        equipmentNumber: str(o.equipmentNumber),
+        roundStatus: (o.roundStatus != null && o.roundStatus !== '') ? o.roundStatus : baseStatus,
+        note:        (o.note        != null && o.note        !== '') ? o.note        : baseNote
+      };
+    });
+  }
+
+  if (Array.isArray(data.equipmentNumbers) && data.equipmentNumbers.length) {
+    return data.equipmentNumbers.map(n => ({
+      equipmentNumber: str(n), roundStatus: baseStatus, note: baseNote
+    }));
+  }
+
+  return [{ equipmentNumber: str(data.equipmentNumber), roundStatus: baseStatus, note: baseNote }];
+}
+
 function saveRecord(data) {
   const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = getOrCreateSheet(ss, SHEET_BORROW);
 
-  // สร้าง header ถ้ายังไม่มี
-  if (sheet.getLastRow() === 0) {
-    sheet.appendRow([
-      'ลำดับ', 'วันที่', 'เวลา', 'เวร',
-      'ประเภท (ยืม/คืน/Round)', 'ชื่อเครื่อง', 'หมายเลขเครื่อง',
-      'ตึก/Ward', 'ชื่อผู้บันทึก', 'Timestamp (ISO)',
-      'สถานะ Round', 'หมายเหตุ'
-    ]);
-    sheet.setFrozenRows(1);
-    formatHeader(sheet);
-  }
+  const now     = new Date();
+  const dateStr = Utilities.formatDate(now, THAI_TZ, 'dd/MM/yyyy');
+  const timeStr = Utilities.formatDate(now, THAI_TZ, 'HH:mm:ss');
+  const items   = normalizeRecordItems_(data);
 
-  const now       = new Date();
-  const dateStr   = Utilities.formatDate(now, 'Asia/Bangkok', 'dd/MM/yyyy');
-  const timeStr   = Utilities.formatDate(now, 'Asia/Bangkok', 'HH:mm:ss');
-  const rowNumber = sheet.getLastRow(); // ลำดับ = แถวสุดท้าย (ไม่นับ header)
-
-  sheet.appendRow([
-    rowNumber,
-    dateStr,
-    timeStr,
-    data.shift           || '',
-    data.action          || '',
-    data.equipment       || '',
-    data.equipmentNumber || '',
-    data.ward            || '',
-    data.name            || '',
-    data.timestamp       || now.toISOString(),
-    data.roundStatus     || '',   // col 11: สถานะ Round (ปกติ/ชำรุด/สูญหาย)
-    data.note            || ''    // col 12: หมายเหตุ
-  ]);
-
-  // color row by action
-  const lastRow = sheet.getLastRow();
   const isRound    = (data.action || '').includes('Round');
   const isTransfer = (data.action || '').includes('ย้าย');
   const isBorrow   = (data.action || '').includes('ยืม');
   const bg = isRound ? '#DAF0F5' : isTransfer ? '#FFF3D6' : isBorrow ? '#DCF2E5' : '#FDEAEA';
-  sheet.getRange(lastRow, 1, 1, 12).setBackground(bg);
 
-  // ถ้าเป็นการยืม -> เครื่องที่ถูกเตรียมไว้ให้หายจากรายการเตรียม
-  if (isBorrow) {
-    try { markPreparedUsed(data.equipment || '', data.equipmentNumber || ''); } catch (e) {}
+  // ล็อกเฉพาะช่วงคำนวณแถวสุดท้าย + เขียน เพื่อกันสองคนกดพร้อมกันแล้วเขียนทับแถวเดียวกัน
+  // (ปล่อยล็อกก่อนยิง Telegram เพื่อไม่ให้คนอื่นต้องรอ)
+  const lock = LockService.getScriptLock();
+  let locked = false;
+  try { locked = lock.tryLock(20000); } catch (e) { locked = false; }
+
+  let firstSeq;
+  try {
+    // สร้าง header ถ้ายังไม่มี
+    if (sheet.getLastRow() === 0) {
+      sheet.appendRow([
+        'ลำดับ', 'วันที่', 'เวลา', 'เวร',
+        'ประเภท (ยืม/คืน/Round)', 'ชื่อเครื่อง', 'หมายเลขเครื่อง',
+        'ตึก/Ward', 'ชื่อผู้บันทึก', 'Timestamp (ISO)',
+        'สถานะ Round', 'หมายเหตุ'
+      ]);
+      sheet.setFrozenRows(1);
+      formatHeader(sheet);
+    }
+
+    const lastRow  = sheet.getLastRow();
+    const startRow = lastRow + 1;
+    firstSeq = lastRow; // ลำดับ = เลขแถว - 1 (แถว 1 เป็น header)
+
+    const rows = items.map((it, i) => ([
+      firstSeq + i,
+      dateStr,
+      timeStr,
+      data.shift     || '',
+      data.action    || '',
+      data.equipment || '',
+      it.equipmentNumber,
+      data.ward      || '',
+      data.name      || '',
+      data.timestamp || now.toISOString(),
+      it.roundStatus,               // col 11: สถานะ Round (ปกติ/ชำรุด/สูญหาย)
+      it.note                       // col 12: หมายเหตุ
+    ]));
+
+    // เขียนทุกแถว + ระบายสี ในครั้งเดียว (เดิม appendRow ทีละแถว แล้ว setBackground แยกอีกรอบ)
+    sheet.getRange(startRow, 1, rows.length, 12).setValues(rows).setBackground(bg);
+    SpreadsheetApp.flush();
+  } finally {
+    if (locked) { try { lock.releaseLock(); } catch (e) {} }
   }
 
-  notifyBorrowReturn_(data, now);
+  invalidateCaches_();
 
-  return { row: rowNumber, timestamp: now.toISOString() };
+  // ถ้าเป็นการยืม -> เครื่องที่ถูกเตรียมไว้ให้หายจากรายการเตรียม (สแกนชีตเตรียมรอบเดียวสำหรับทุกเครื่อง)
+  if (isBorrow) {
+    try { markPreparedUsed(data.equipment || '', items.map(it => it.equipmentNumber)); } catch (e) {}
+  }
+
+  notifyBorrowReturn_(data, now, items);
+
+  return { row: firstSeq, saved: items.length, timestamp: now.toISOString() };
 }
 
 // ============================================================
@@ -370,25 +465,30 @@ function getRecords(limit, offset, filter) {
     'ตึก/Ward','ชื่อผู้ยืม','Timestamp (ISO)',
     'สถานะ Round','หมายเหตุ'
   ];
-  const dataRange = sheet.getRange(2, 1, sheet.getLastRow() - 1, 12);
-  let rows = dataRange.getValues();
+  const lastRow = sheet.getLastRow();
+  let paged, total;
 
-  // แนบ rowIndex จริง (เลขแถวใน Sheet = index+2 เพราะ header อยู่แถว 1)
-  let indexed = rows.map((row, i) => ({ row, sheetRow: i + 2 }));
-
-  // กรองข้อมูล
   if (filter) {
+    // มีคำค้น -> ต้องอ่านทั้งชีตเพื่อกรอง
+    const rows = sheet.getRange(2, 1, lastRow - 1, 12).getValues();
     const f = filter.toLowerCase();
-    indexed = indexed.filter(({ row: r }) =>
-      r.some(cell => String(cell).toLowerCase().includes(f))
-    );
+    // แนบ rowIndex จริง (เลขแถวใน Sheet = index+2 เพราะ header อยู่แถว 1)
+    const indexed = rows
+      .map((row, i) => ({ row, sheetRow: i + 2 }))
+      .filter(({ row: r }) => r.some(cell => String(cell).toLowerCase().includes(f)));
+    indexed.reverse();               // เรียงจากใหม่ไปเก่า
+    total = indexed.length;
+    paged = indexed.slice(offset, offset + limit);
+  } else {
+    // ไม่มีคำค้น -> อ่านเฉพาะช่วงแถวของหน้านี้ แทนการดึงทั้งชีตมาเรียงแล้วตัดทิ้ง
+    // ลำดับที่ offset (นับใหม่ไปเก่า) = แถว lastRow - offset
+    total = lastRow - 1;
+    const endRow   = lastRow - offset;
+    if (endRow < 2) return { ok: true, total, limit, offset, records: [] };
+    const startRow = Math.max(2, endRow - limit + 1);
+    const rows = sheet.getRange(startRow, 1, endRow - startRow + 1, 12).getValues();
+    paged = rows.map((row, i) => ({ row, sheetRow: startRow + i })).reverse();
   }
-
-  // เรียงจากใหม่ไปเก่า
-  indexed.reverse();
-
-  const total = indexed.length;
-  const paged = indexed.slice(offset, offset + limit);
 
   const records = paged.map(({ row, sheetRow }) => {
     const obj = { _rowIndex: sheetRow };
@@ -442,21 +542,26 @@ function getSummary() {
 // getEquipmentStatus — สถานะเครื่องปัจจุบัน (ยืมอยู่/ว่าง)
 // ============================================================
 function getEquipmentStatus() {
+  const cached = cacheGet_(CACHE_KEY_EQUIP);
+  if (cached) return cached;
+
   const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = ss.getSheetByName(SHEET_BORROW);
   if (!sheet || sheet.getLastRow() <= 1) return { ok: true, equipment: {} };
 
-  const rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, 12).getValues();
+  // อ่านเฉพาะคอลัมน์ 5–10 ที่ใช้จริง แทนการดึงทั้ง 12 คอลัมน์
+  // index: 0=ประเภท 1=ชื่อเครื่อง 2=หมายเลขเครื่อง 3=ตึก/Ward 4=ชื่อผู้บันทึก 5=Timestamp
+  const rows = sheet.getRange(2, 5, sheet.getLastRow() - 1, 6).getValues();
 
   // คำนวณสถานะล่าสุดของแต่ละหมายเลขเครื่อง
   const statusMap = {};
   rows.forEach(r => {
-    const equip  = String(r[5]);
-    const num    = String(r[6]);
-    const action = String(r[4]);
-    const ward   = String(r[7]);
-    const name   = String(r[8]);
-    const ts     = r[9] instanceof Date ? Utilities.formatDate(r[9], THAI_TZ, 'dd/MM/yyyy HH:mm:ss') : String(r[9]);
+    const action = String(r[0]);
+    const equip  = String(r[1]);
+    const num    = String(r[2]);
+    const ward   = String(r[3]);
+    const name   = String(r[4]);
+    const ts     = r[5] instanceof Date ? Utilities.formatDate(r[5], THAI_TZ, 'dd/MM/yyyy HH:mm:ss') : String(r[5]);
     const key    = `${equip}__${num}`;
     // เก็บแถวล่าสุด (rows เรียงจากเก่าไปใหม่)
     statusMap[key] = {
@@ -470,7 +575,9 @@ function getEquipmentStatus() {
     };
   });
 
-  return { ok: true, equipment: Object.values(statusMap) };
+  const out = { ok: true, equipment: Object.values(statusMap) };
+  cachePut_(CACHE_KEY_EQUIP, out);
+  return out;
 }
 
 // ============================================================
@@ -653,20 +760,24 @@ function jsonResponse(obj) {
 }
 
 function getC2Status() {
+  const cached = cacheGet_(CACHE_KEY_C2);
+  if (cached) return cached;
+
   const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = ss.getSheetByName(SHEET_BORROW);
   if (!sheet || sheet.getLastRow() <= 1) return { ok: true, units: buildC2Units({}) };
 
-  const rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, 12).getValues();
+  // อ่านเฉพาะคอลัมน์ 5–10 ที่ใช้จริง (ดูคำอธิบาย index ที่ getEquipmentStatus)
+  const rows = sheet.getRange(2, 5, sheet.getLastRow() - 1, 6).getValues();
   const statusMap = {};
 
   rows.forEach(r => {
-    const equip  = String(r[5]);
-    const num    = String(r[6]);
-    const action = String(r[4]);
-    const ward   = String(r[7]);
-    const name   = String(r[8]);
-    let   ts     = r[9];
+    const action = String(r[0]);
+    const equip  = String(r[1]);
+    const num    = String(r[2]);
+    const ward   = String(r[3]);
+    const name   = String(r[4]);
+    let   ts     = r[5];
     if (!equip.includes('C2')) return;
     const n = parseInt(num, 10);
     if (isNaN(n) || n < 1 || n > 58) return;
@@ -682,7 +793,9 @@ function getC2Status() {
     };
   });
 
-  return { ok: true, units: buildC2Units(statusMap) };
+  const out = { ok: true, units: buildC2Units(statusMap) };
+  cachePut_(CACHE_KEY_C2, out);
+  return out;
 }
 
 function buildC2Units(statusMap) {
@@ -888,17 +1001,26 @@ function savePrepare(fields) {
   const by      = fields.preparedBy || '';
   const numbers = Array.isArray(fields.numbers) ? fields.numbers : [fields.numbers];
 
-  numbers.filter(n => String(n).trim() !== '').forEach(num => {
-    const rowNumber = sheet.getLastRow();
-    sheet.appendRow([
-      rowNumber, dateStr, timeStr, equip, String(num).trim(),
-      ward, by, now.toISOString(), 'เตรียม'
-    ]);
-    sheet.getRange(sheet.getLastRow(), 1, 1, PREPARE_COLS.length).setBackground('#FFF3CD');
-  });
+  const clean = numbers.filter(n => String(n).trim() !== '');
+  if (!clean.length) return;
+
+  // เขียนทุกหมายเลขในครั้งเดียว (เดิม appendRow + setBackground ทีละหมายเลข)
+  const lastRow  = sheet.getLastRow();
+  const startRow = lastRow + 1;
+  const rows = clean.map((num, i) => ([
+    lastRow + i, dateStr, timeStr, equip, String(num).trim(),
+    ward, by, now.toISOString(), 'เตรียม'
+  ]));
+  sheet.getRange(startRow, 1, rows.length, PREPARE_COLS.length)
+       .setValues(rows)
+       .setBackground('#FFF3CD');
+  invalidateCaches_();
 }
 
 function getPrepareList() {
+  const cached = cacheGet_(CACHE_KEY_PREPARE);
+  if (cached) return cached;
+
   const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = getOrCreatePrepareSheet(ss);
   if (sheet.getLastRow() <= 1) return { ok: true, prepared: [] };
@@ -918,7 +1040,9 @@ function getPrepareList() {
       preparedBy: String(r[6])
     });
   });
-  return { ok: true, prepared };
+  const out = { ok: true, prepared };
+  cachePut_(CACHE_KEY_PREPARE, out);
+  return out;
 }
 
 /** ประวัติการเตรียมทั้งหมด (รวมที่ยืมแล้ว) — ใหม่ไปเก่า */
@@ -952,6 +1076,7 @@ function deletePrepare(sheetRow) {
   const sheet = ss.getSheetByName(SHEET_PREPARE);
   if (!sheet) throw new Error('ไม่พบ Sheet: ' + SHEET_PREPARE);
   sheet.deleteRow(sheetRow);
+  invalidateCaches_();
 }
 
 /** ยกเลิกรายการเตรียม พร้อมหมายเหตุ (เก็บไว้ในประวัติ ไม่ลบทิ้ง) */
@@ -963,26 +1088,39 @@ function cancelPrepare(sheetRow, reason) {
   const r = String(reason || '').trim();
   sheet.getRange(sheetRow, 9).setValue('ยกเลิก' + (r ? ': ' + r : ''));
   sheet.getRange(sheetRow, 1, 1, PREPARE_COLS.length).setBackground('#FDEAEA');
+  invalidateCaches_();
 }
 
-/** ทำเครื่องหมายว่าเครื่องที่เตรียมไว้ถูกยืมแล้ว (หายจากรายการเตรียม) */
+/**
+ * ทำเครื่องหมายว่าเครื่องที่เตรียมไว้ถูกยืมแล้ว (หายจากรายการเตรียม)
+ * number รับได้ทั้งหมายเลขเดียวและ array — ยืมหลายเครื่องจะสแกนชีตเตรียมรอบเดียว
+ */
 function markPreparedUsed(equipment, number) {
   const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = ss.getSheetByName(SHEET_PREPARE);
   if (!sheet || sheet.getLastRow() <= 1) return;
   const equip = String(equipment).trim();
-  const num   = String(number).trim();
-  if (!equip || !num) return;
+  const wanted = Object.create(null); // ไม่มี prototype -> หมายเลขแปลกๆ ไม่ไปชน property ที่ติดมากับ object
+  (Array.isArray(number) ? number : [number]).forEach(n => {
+    const v = String(n == null ? '' : n).trim();
+    if (v) wanted[v] = true;
+  });
+  if (!equip || !Object.keys(wanted).length) return;
 
-  const rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, PREPARE_COLS.length).getValues();
+  // อ่านเฉพาะคอลัมน์ 4–9 ที่ใช้จริง
+  // index: 0=ประเภท 1=หมายเลข 2=ตึก/Ward 3=ผู้เตรียม 4=Timestamp 5=สถานะ
+  const rows = sheet.getRange(2, 4, sheet.getLastRow() - 1, 6).getValues();
+  let changed = false;
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
-    if (String(r[8]) === 'เตรียม' && String(r[3]).trim() === equip && String(r[4]).trim() === num) {
+    if (String(r[5]) === 'เตรียม' && String(r[0]).trim() === equip && wanted[String(r[1]).trim()]) {
       const row = i + 2;
       sheet.getRange(row, 9).setValue('ยืมแล้ว');
       sheet.getRange(row, 1, 1, PREPARE_COLS.length).setBackground('#DCF2E5');
+      changed = true;
     }
   }
+  if (changed) invalidateCaches_();
 }
 
 // ============================================================

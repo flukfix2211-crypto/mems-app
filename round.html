@@ -504,20 +504,21 @@
     const shiftTH = { morning: 'เวรเช้า', afternoon: 'เวรบ่าย', night: 'เวรดึก' };
     const note = document.getElementById('noteField').value.trim();
 
-    await Promise.all(items.map(item =>
-      fetch(SCRIPT_URL, {
-        method: 'POST', mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({
-          action: '🔵 Round', shift: shiftTH[currentShift], ward,
-          equipment: 'Infusion Pump',
-          equipmentNumber: item.no,
-          roundStatus: item.stLabel,
-          note, name,
-          timestamp: now.toISOString()
-        })
-      }).catch(() => {})
-    ));
+    // ส่งทุกเครื่องใน request เดียว — เดิมยิงพร้อมกันหลาย request ซึ่งนอกจากจะช้าแล้ว
+    // ยังเสี่ยงเขียนทับแถวเดียวกันเมื่อ Apps Script รันหลายชุดพร้อมกัน
+    await fetch(SCRIPT_URL, {
+      method: 'POST', mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({
+        action: '🔵 Round', shift: shiftTH[currentShift], ward,
+        equipment: 'Infusion Pump',
+        equipmentNumber: items[0].no,        // เผื่อ Apps Script เวอร์ชันเก่า
+        roundStatus: items[0].stLabel,
+        items: items.map(it => ({ equipmentNumber: it.no, roundStatus: it.stLabel })),
+        note, name,
+        timestamp: now.toISOString()
+      })
+    }).catch(() => {});
 
     const cnt = { use:0, idle:0, broken:0, lost:0 };
     items.forEach(i => cnt[i.stKey]++);

@@ -1265,7 +1265,53 @@ async function submitTransfer() {
   }
 }
 
+/* ส่งทุกเครื่องใน request เดียว — เดิมยิงทีละเครื่องแล้วรอทีละตัว ทำให้ยืม/คืนหลายเครื่องช้ามาก
+   คืนค่าจำนวนรายการที่บันทึกได้ */
+async function saveRecords(basePayload, nums) {
+  if (!SCRIPT_URL) return nums.length; // ไม่มี URL — demo mode
+
+  let result = null;
+  try {
+    // text/plain ไม่ trigger preflight → เป็น simple request ยิงตรงได้
+    const res = await fetch(SCRIPT_URL, {
+      method : 'POST',
+      mode   : 'cors',
+      headers: { 'Content-Type': 'text/plain' },
+      body   : JSON.stringify({
+        ...basePayload,
+        equipmentNumber : nums[0],  // เผื่อ Apps Script ยังเป็นเวอร์ชันเก่าที่รู้จักแค่เครื่องเดียว
+        equipmentNumbers: nums
+      })
+    });
+    result = await res.json();
+  } catch (e) {
+    // อ่านผลลัพธ์ไม่ได้ (CORS/เน็ต) — request ถูกส่งไปแล้ว จึงไม่ยิงซ้ำ กันบันทึกซ้ำซ้อน
+    console.warn('อ่านผลการบันทึกไม่ได้:', e);
+    return nums.length;
+  }
+
+  if (result && result.ok === false) return 0;
+  if (result && typeof result.saved === 'number') return result.saved;
+
+  // Apps Script เวอร์ชันเก่า (ไม่คืนค่า saved) บันทึกให้แค่เครื่องแรก -> ส่งที่เหลือตามไป
+  let saved = 1;
+  for (let i = 1; i < nums.length; i++) {
+    try {
+      await fetch(SCRIPT_URL, {
+        method : 'POST',
+        mode   : 'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
+        body   : JSON.stringify({ ...basePayload, equipmentNumber: nums[i] })
+      });
+      saved++;
+    } catch (e2) { console.error('บันทึกล้มเหลว:', e2); }
+  }
+  return saved;
+}
+
+let submitting = false;
 async function handleSubmit() {
+  if (submitting) return; // กันกดซ้ำระหว่างที่ยังบันทึกไม่เสร็จ
   const nums   = getEquipNumbers();
   const ward   = document.getElementById('wardSel').value;
   const other  = document.getElementById('otherWard').value.trim();
@@ -1275,86 +1321,72 @@ async function handleSubmit() {
   const finalEquip = (S.equip === 'เครื่องมืออื่นๆ' && otherEquipName) ? otherEquipName : S.equip;
   const shiftTH = { morning: 'เวรเช้า', afternoon: 'เวรบ่าย', night: 'เวรดึก' };
 
-  // โหมดยืม: ต้องมีการเตรียมเครื่องสำหรับหน่วยงานนี้ก่อนจึงจะยืมได้
-  if (S.action === 'borrow' && ward && SCRIPT_URL) {
-    try {
-      const u = new URL(SCRIPT_URL);
-      u.searchParams.set('action', 'prepareList');
-      const data = await fetch(u.toString(), { mode: 'cors' }).then(r => r.json());
-      preparedList = data.prepared || [];
-      renderPreparedBanner();
-      if (preparedList.filter(p => p.ward === ward).length === 0) {
-        alert('⚠️ หน่วยงาน "' + ward + '" ยังไม่มีการเตรียมเครื่อง\n' +
-              'ต้องให้เจ้าหน้าที่ศูนย์เครื่องมือแพทย์เตรียมก่อน จึงจะยืมได้');
-        return;
-      }
-    } catch (e) { /* โหลดไม่ได้ -> ไม่บล็อค กันระบบล่ม */ }
-  }
-
+  // ตรวจฟอร์มให้ครบก่อน จะได้ไม่ต้องรอ network ทิ้งเปล่าถ้ากรอกไม่ครบ
   if (!S.action || !S.shift || !S.equip || nums.length === 0 || !ward || !name || (ward === 'อื่นๆ โปรดระบุชื่อตึก' && !other) || (S.equip === 'เครื่องมืออื่นๆ' && !otherEquipName)) {
     alert('⚠️  กรุณากรอกข้อมูลให้ครบทุกช่อง');
     return;
   }
 
-  // กันยืมซ้ำ: ถ้าเครื่อง No. นั้นถูกยืมอยู่และยังไม่คืน ห้ามยืมซ้ำ
-  if (S.action === 'borrow' && SCRIPT_URL) {
-    try {
-      const u = new URL(SCRIPT_URL);
-      u.searchParams.set('action', 'equipment');
-      const data = await fetch(u.toString(), { mode: 'cors' }).then(r => r.json());
-      const statusMap = {};
-      (data.equipment || []).forEach(e => {
-        statusMap[String(e.equipment) + '__' + String(e.number)] = e.isBorrowed;
-      });
-      const dup = nums.filter(n => statusMap[finalEquip + '__' + String(n)] === true);
-      if (dup.length) {
-        alert('⚠️ เครื่อง ' + finalEquip + ' No. ' + dup.join(', ') +
-              ' ถูกยืมอยู่แล้ว\nต้องคืนเครื่องนั้นก่อน จึงจะยืมซ้ำได้');
-        return;
-      }
-    } catch (e) {
-      // โหลดสถานะไม่ได้ -> ปล่อยผ่าน ไม่บล็อคการบันทึก
-      console.warn('ตรวจสอบสถานะยืมซ้ำไม่ได้:', e);
-    }
-  }
-
   const btn = document.getElementById('submitBtn');
+  const origText = btn.textContent;
+  submitting = true;
   btn.disabled = true;
-  btn.textContent = `กำลังบันทึก… (0/${nums.length})`;
 
-  const basePayload = {
-    action   : S.action === 'borrow' ? '🟩 ยืม' : '🟥 คืน',
-    shift    : shiftTH[S.shift],
-    equipment: finalEquip,
-    ward     : finalWard,
-    name     : name,
-    timestamp: new Date().toISOString()
-  };
+  try {
+    // โหมดยืม: เช็ค "เตรียมเครื่องแล้วหรือยัง" + "ยืมซ้ำหรือเปล่า" พร้อมกันในรอบเดียว (เดิมรอทีละรอบ)
+    if (S.action === 'borrow' && SCRIPT_URL) {
+      btn.textContent = 'กำลังตรวจสอบ…';
+      const u1 = new URL(SCRIPT_URL); u1.searchParams.set('action', 'prepareList');
+      const u2 = new URL(SCRIPT_URL); u2.searchParams.set('action', 'equipment');
+      const [pd, eqd] = await Promise.all([
+        fetch(u1.toString(), { mode: 'cors' }).then(r => r.json()).catch(() => null),
+        fetch(u2.toString(), { mode: 'cors' }).then(r => r.json()).catch(() => null)
+      ]);
 
-  // submit one record per equipment number
-  let savedCount = 0;
-  for (let i = 0; i < nums.length; i++) {
-    btn.textContent = `กำลังบันทึก… (${i + 1}/${nums.length})`;
-    const payload = { ...basePayload, equipmentNumber: nums[i] };
-    if (SCRIPT_URL) {
-      try {
-        // text/plain ไม่ trigger preflight → ใช้ได้กับ GAS no-cors
-        await fetch(SCRIPT_URL, {
-          method : 'POST',
-          mode   : 'no-cors',
-          headers: { 'Content-Type': 'text/plain' },
-          body   : JSON.stringify(payload)
-        });
-        savedCount++;
-      } catch (e2) {
-        console.error('บันทึกล้มเหลว:', e2);
+      // โหลดไม่ได้ (pd/eqd เป็น null) -> ไม่บล็อค กันระบบล่ม
+      if (pd) {
+        preparedList = pd.prepared || [];
+        renderPreparedBanner();
+        // ต้องมีการเตรียมเครื่องสำหรับหน่วยงานนี้ก่อนจึงจะยืมได้
+        if (preparedList.filter(p => p.ward === ward).length === 0) {
+          alert('⚠️ หน่วยงาน "' + ward + '" ยังไม่มีการเตรียมเครื่อง\n' +
+                'ต้องให้เจ้าหน้าที่ศูนย์เครื่องมือแพทย์เตรียมก่อน จึงจะยืมได้');
+          return;
+        }
       }
-    } else {
-      savedCount++; // ไม่มี URL — นับว่าผ่าน (demo mode)
+      if (eqd) {
+        // กันยืมซ้ำ: ถ้าเครื่อง No. นั้นถูกยืมอยู่และยังไม่คืน ห้ามยืมซ้ำ
+        const statusMap = {};
+        (eqd.equipment || []).forEach(e => {
+          statusMap[String(e.equipment) + '__' + String(e.number)] = e.isBorrowed;
+        });
+        const dup = nums.filter(n => statusMap[finalEquip + '__' + String(n)] === true);
+        if (dup.length) {
+          alert('⚠️ เครื่อง ' + finalEquip + ' No. ' + dup.join(', ') +
+                ' ถูกยืมอยู่แล้ว\nต้องคืนเครื่องนั้นก่อน จึงจะยืมซ้ำได้');
+          return;
+        }
+      }
     }
-  }
 
-  showSuccess({ ...basePayload, equipmentNumbers: nums, savedCount });
+    btn.textContent = `กำลังบันทึก… (${nums.length} เครื่อง)`;
+
+    const basePayload = {
+      action   : S.action === 'borrow' ? '🟩 ยืม' : '🟥 คืน',
+      shift    : shiftTH[S.shift],
+      equipment: finalEquip,
+      ward     : finalWard,
+      name     : name,
+      timestamp: new Date().toISOString()
+    };
+
+    const savedCount = await saveRecords(basePayload, nums);
+    showSuccess({ ...basePayload, equipmentNumbers: nums, savedCount });
+  } finally {
+    submitting = false;
+    btn.disabled = false;
+    btn.textContent = origText;
+  }
 }
 
 function showSuccess(d) {

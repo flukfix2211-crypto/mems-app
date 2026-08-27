@@ -329,15 +329,16 @@
         // โหมดพร้อมส่ง = ยืมแทนหน่วยงานทันที (1 record ต่อ 1 หมายเลข)
         const shift = detectShiftTH();
         const ts = new Date().toISOString();
-        for (const num of numbers) {
-          await fetch(SCRIPT_URL, {
-            method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
-            body: JSON.stringify({
-              shift, action: '🟩 ยืม', equipment: equipName, equipmentNumber: num,
-              ward, name: by, timestamp: ts, note: 'เตรียมพร้อมส่ง (แอดมินนำส่ง)'
-            })
-          });
-        }
+        // ส่งทุกหมายเลขใน request เดียว (เดิมยิงทีละหมายเลขแล้วรอทีละตัว)
+        await fetch(SCRIPT_URL, {
+          method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({
+            shift, action: '🟩 ยืม', equipment: equipName,
+            equipmentNumber: numbers[0],   // เผื่อ Apps Script เวอร์ชันเก่า
+            equipmentNumbers: numbers,
+            ward, name: by, timestamp: ts, note: 'เตรียมพร้อมส่ง (แอดมินนำส่ง)'
+          })
+        });
         toast('🚚 ส่ง ' + equipName + ' No.' + numbers.join(', ') + ' ให้ ' + ward + ' (ยืมแล้ว)');
       } else {
         // โหมดเตรียม = บันทึกเป็นรายการเตรียม
