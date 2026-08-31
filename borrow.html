@@ -1266,9 +1266,9 @@ async function submitTransfer() {
 }
 
 /* ส่งทุกเครื่องใน request เดียว — เดิมยิงทีละเครื่องแล้วรอทีละตัว ทำให้ยืม/คืนหลายเครื่องช้ามาก
-   คืนค่าจำนวนรายการที่บันทึกได้ */
+   คืนค่า { saved, error } — error มีค่าเมื่อ server ปฏิเสธทั้งชุด (เช่น ยืมซ้ำ) */
 async function saveRecords(basePayload, nums) {
-  if (!SCRIPT_URL) return nums.length; // ไม่มี URL — demo mode
+  if (!SCRIPT_URL) return { saved: nums.length }; // ไม่มี URL — demo mode
 
   let result = null;
   try {
@@ -1285,13 +1285,14 @@ async function saveRecords(basePayload, nums) {
     });
     result = await res.json();
   } catch (e) {
-    // อ่านผลลัพธ์ไม่ได้ (CORS/เน็ต) — request ถูกส่งไปแล้ว จึงไม่ยิงซ้ำ กันบันทึกซ้ำซ้อน
+    // อ่านผลลัพธ์ไม่ได้ (เน็ตหลุด/CORS) — ไม่ยิงซ้ำเองกันบันทึกซ้ำซ้อน และไม่เดาว่าสำเร็จ
+    // (ถ้าจริงๆ บันทึกไปแล้ว การกดบันทึกซ้ำจะถูกฝั่ง server ตอบกลับว่า "ถูกยืมอยู่แล้ว")
     console.warn('อ่านผลการบันทึกไม่ได้:', e);
-    return nums.length;
+    return { saved: 0, error: 'ยืนยันผลการบันทึกไม่ได้ (สัญญาณอินเทอร์เน็ตมีปัญหา)\nกรุณาเช็คใน Dashboard ก่อนกดบันทึกซ้ำ' };
   }
 
-  if (result && result.ok === false) return 0;
-  if (result && typeof result.saved === 'number') return result.saved;
+  if (result && result.ok === false) return { saved: 0, error: result.error || 'บันทึกไม่สำเร็จ กรุณาลองใหม่' };
+  if (result && typeof result.saved === 'number') return { saved: result.saved };
 
   // Apps Script เวอร์ชันเก่า (ไม่คืนค่า saved) บันทึกให้แค่เครื่องแรก -> ส่งที่เหลือตามไป
   let saved = 1;
@@ -1306,7 +1307,7 @@ async function saveRecords(basePayload, nums) {
       saved++;
     } catch (e2) { console.error('บันทึกล้มเหลว:', e2); }
   }
-  return saved;
+  return { saved };
 }
 
 let submitting = false;
@@ -1380,8 +1381,17 @@ async function handleSubmit() {
       timestamp: new Date().toISOString()
     };
 
-    const savedCount = await saveRecords(basePayload, nums);
-    showSuccess({ ...basePayload, equipmentNumbers: nums, savedCount });
+    // โหมดยืม: ให้ server ตรวจซ้ำอีกชั้นภายใต้ lock — การเช็คฝั่งหน้าเว็บด้านบนเป็นแค่
+    // snapshot ณ ตอนกด ถ้าสองคนกดยืมเครื่องเดียวกันพร้อมกัน ฝั่ง server จะกันคนที่สองให้
+    const payload = S.action === 'borrow'
+      ? { ...basePayload, rejectBorrowed: true, requirePreparedWard: true }
+      : basePayload;
+    const result = await saveRecords(payload, nums);
+    if (result.error) {
+      alert('⚠️ ' + result.error);
+      return;
+    }
+    showSuccess({ ...basePayload, equipmentNumbers: nums, savedCount: result.saved });
   } finally {
     submitting = false;
     btn.disabled = false;

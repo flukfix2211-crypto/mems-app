@@ -43,25 +43,52 @@ const CACHE_KEY_EQUIP   = 'MEMS_EQUIP_V1';
 const CACHE_KEY_C2      = 'MEMS_C2_V1';
 const CACHE_KEY_PREPARE = 'MEMS_PREPARE_V1';
 const CACHE_ALL_KEYS = [CACHE_KEY_EQUIP, CACHE_KEY_C2, CACHE_KEY_PREPARE];
+const CACHE_VER_KEY = 'MEMS_VER';
+
+/**
+ * เลขเวอร์ชันของข้อมูล — เปลี่ยนทุกครั้งที่มีการเขียน
+ * ผู้อ่านต้อง "หยิบเวอร์ชันก่อนเริ่มอ่านชีต" แล้วแนบไปกับค่าที่ cache
+ * ถ้ามีการเขียนแทรกระหว่างอ่าน เวอร์ชันจะไม่ตรงและ cache ก้อนนั้นถูกทิ้ง
+ * (ปิดช่องที่ค่าเก่าค้างใน cache ทั้งที่เพิ่งมีการยืม/คืนไป)
+ */
+function cacheVer_() {
+  try {
+    const c = CacheService.getScriptCache();
+    let v = c.get(CACHE_VER_KEY);
+    if (!v) { v = Utilities.getUuid(); c.put(CACHE_VER_KEY, v, 21600); }
+    return v;
+  } catch (e) { return null; } // ไม่รู้เวอร์ชัน -> จะไม่ cache
+}
 
 function cacheGet_(key) {
   try {
-    const v = CacheService.getScriptCache().get(key);
-    return v ? JSON.parse(v) : null;
+    const c = CacheService.getScriptCache();
+    const raw = c.get(key);
+    if (!raw) return null;
+    const wrap = JSON.parse(raw);
+    const ver = c.get(CACHE_VER_KEY);
+    if (!ver || wrap.ver !== ver) return null; // มีการเขียนหลัง cache ก้อนนี้ -> ทิ้ง
+    return wrap.data;
   } catch (e) { return null; }  // cache ใช้ไม่ได้ -> อ่านจากชีตตามปกติ
 }
 
-function cachePut_(key, obj) {
+/** ver ต้องเป็นค่าที่หยิบมา "ก่อน" เริ่มอ่านชีต (จาก cacheVer_) */
+function cachePut_(key, obj, ver) {
   try {
-    const s = JSON.stringify(obj);
+    if (!ver) return;
+    const s = JSON.stringify({ ver: ver, data: obj });
     if (s.length > 90000) return; // เกินขนาดที่ CacheService รับได้ -> ข้ามการ cache
     CacheService.getScriptCache().put(key, s, CACHE_TTL_SEC);
   } catch (e) { /* cache ใช้ไม่ได้ -> ข้าม ไม่กระทบการทำงาน */ }
 }
 
-/** ล้าง cache ทั้งหมด — เรียกทุกครั้งหลังเขียนข้อมูล */
+/** ล้าง cache ทั้งหมด + เปลี่ยนเลขเวอร์ชัน — เรียกทุกครั้งหลังเขียนข้อมูล */
 function invalidateCaches_() {
-  try { CacheService.getScriptCache().removeAll(CACHE_ALL_KEYS); } catch (e) {}
+  try {
+    const c = CacheService.getScriptCache();
+    c.removeAll(CACHE_ALL_KEYS);
+    c.put(CACHE_VER_KEY, Utilities.getUuid(), 21600);
+  } catch (e) {}
 }
 
 function setupTelegram(token, chatId) {
@@ -378,6 +405,42 @@ function normalizeRecordItems_(data) {
   return [{ equipmentNumber: str(data.equipmentNumber), roundStatus: baseStatus, note: baseNote }];
 }
 
+/**
+ * หาว่าเครื่องหมายเลขไหนใน numbers "ถูกยืมอยู่ ณ ตอนนี้" (ยังไม่คืน)
+ * ดูจาก action ยืม/คืน/ย้าย ล่าสุดของแต่ละหมายเลข — แถว Round เป็นการตรวจเยี่ยม
+ * ไม่ใช่การเปลี่ยนมือเครื่อง จึงไม่ถูกนับ
+ * อ่านเฉพาะคอลัมน์ 5–7 (ประเภท, ชื่อเครื่อง, หมายเลข) เพื่อให้เร็ว
+ */
+function findBorrowedNow_(sheet, equipment, numbers) {
+  if (!sheet || sheet.getLastRow() <= 1) return [];
+  const equip = String(equipment);
+  const want = Object.create(null);
+  numbers.forEach(n => { const v = String(n == null ? '' : n).trim(); if (v) want[v] = true; });
+  if (!Object.keys(want).length) return [];
+
+  const rows = sheet.getRange(2, 5, sheet.getLastRow() - 1, 3).getValues();
+  const borrowed = Object.create(null); // สถานะล่าสุดของแต่ละหมายเลข (rows เรียงเก่า->ใหม่ เขียนทับได้เลย)
+  rows.forEach(r => {
+    const action = String(r[0]);
+    if (action.includes('Round')) return;
+    if (String(r[1]) !== equip) return;
+    const num = String(r[2]).trim();
+    if (!want[num]) return;
+    borrowed[num] = action.includes('ยืม') || action.includes('ย้าย');
+  });
+  return Object.keys(want).filter(n => borrowed[n]);
+}
+
+/** หน่วยงานนี้มีเครื่องที่สถานะยัง "เตรียม" ค้างอยู่หรือไม่ (กติกาเดียวกับที่หน้าเว็บเช็ค) */
+function hasPreparedForWard_(ss, ward) {
+  const sheet = ss.getSheetByName(SHEET_PREPARE);
+  if (!sheet || sheet.getLastRow() <= 1) return false;
+  // อ่านเฉพาะคอลัมน์ 6–9 (ตึก/Ward … สถานะ)
+  const rows = sheet.getRange(2, 6, sheet.getLastRow() - 1, 4).getValues();
+  const w = String(ward);
+  return rows.some(r => String(r[3]) === 'เตรียม' && String(r[0]) === w);
+}
+
 function saveRecord(data) {
   const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = getOrCreateSheet(ss, SHEET_BORROW);
@@ -392,7 +455,8 @@ function saveRecord(data) {
   const isBorrow   = (data.action || '').includes('ยืม');
   const bg = isRound ? '#DAF0F5' : isTransfer ? '#FFF3D6' : isBorrow ? '#DCF2E5' : '#FDEAEA';
 
-  // ล็อกเฉพาะช่วงคำนวณแถวสุดท้าย + เขียน เพื่อกันสองคนกดพร้อมกันแล้วเขียนทับแถวเดียวกัน
+  // ล็อกเฉพาะช่วงตรวจสอบ + คำนวณแถวสุดท้าย + เขียน เพื่อกันสองคนกดพร้อมกัน
+  // แล้วเขียนทับแถวเดียวกัน หรือยืมเครื่องเดียวกันซ้ำ
   // (ปล่อยล็อกก่อนยิง Telegram เพื่อไม่ให้คนอื่นต้องรอ)
   const lock = LockService.getScriptLock();
   let locked = false;
@@ -410,6 +474,21 @@ function saveRecord(data) {
       ]);
       sheet.setFrozenRows(1);
       formatHeader(sheet);
+    }
+
+    // ด่านตรวจฝั่ง server (ทำงานใต้ lock จึงกันเคสสองคนกดพร้อมกันได้จริง
+    // ต่างจากการเช็คฝั่งหน้าเว็บที่เป็นแค่ snapshot ณ ตอนกด)
+    // เปิดใช้เฉพาะเมื่อ frontend ส่ง flag มา — payload แบบเดิมทำงานเหมือนเดิมทุกอย่าง
+    if (isBorrow && data.rejectBorrowed) {
+      const dup = findBorrowedNow_(sheet, data.equipment || '', items.map(it => it.equipmentNumber));
+      if (dup.length) {
+        throw new Error('เครื่อง ' + (data.equipment || '') + ' No. ' + dup.join(', ') +
+                        ' ถูกยืมอยู่แล้ว ต้องคืนเครื่องนั้นก่อน จึงจะยืมซ้ำได้');
+      }
+    }
+    if (isBorrow && data.requirePreparedWard && !hasPreparedForWard_(ss, data.ward || '')) {
+      throw new Error('หน่วยงาน "' + (data.ward || '') + '" ยังไม่มีการเตรียมเครื่อง ' +
+                      'ต้องให้เจ้าหน้าที่ศูนย์เครื่องมือแพทย์เตรียมก่อน จึงจะยืมได้');
     }
 
     const lastRow  = sheet.getLastRow();
@@ -544,10 +623,11 @@ function getSummary() {
 function getEquipmentStatus() {
   const cached = cacheGet_(CACHE_KEY_EQUIP);
   if (cached) return cached;
+  const ver = cacheVer_(); // หยิบเวอร์ชันก่อนเริ่มอ่าน กันเขียนแทรกระหว่างอ่านแล้ว cache ค่าเก่า
 
   const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = ss.getSheetByName(SHEET_BORROW);
-  if (!sheet || sheet.getLastRow() <= 1) return { ok: true, equipment: {} };
+  if (!sheet || sheet.getLastRow() <= 1) return { ok: true, equipment: [] };
 
   // อ่านเฉพาะคอลัมน์ 5–10 ที่ใช้จริง แทนการดึงทั้ง 12 คอลัมน์
   // index: 0=ประเภท 1=ชื่อเครื่อง 2=หมายเลขเครื่อง 3=ตึก/Ward 4=ชื่อผู้บันทึก 5=Timestamp
@@ -557,6 +637,9 @@ function getEquipmentStatus() {
   const statusMap = {};
   rows.forEach(r => {
     const action = String(r[0]);
+    // Round เป็นการตรวจเยี่ยมเครื่องที่วอร์ด ไม่ใช่การยืม/คืน — ถ้านับ แถว Round
+    // จะไปทับสถานะ ทำให้เครื่องที่ถูกยืมอยู่ดูเหมือนว่าง (ยืมซ้ำได้/หายจากกริดคืน)
+    if (action.includes('Round')) return;
     const equip  = String(r[1]);
     const num    = String(r[2]);
     const ward   = String(r[3]);
@@ -576,7 +659,7 @@ function getEquipmentStatus() {
   });
 
   const out = { ok: true, equipment: Object.values(statusMap) };
-  cachePut_(CACHE_KEY_EQUIP, out);
+  cachePut_(CACHE_KEY_EQUIP, out, ver);
   return out;
 }
 
@@ -762,6 +845,7 @@ function jsonResponse(obj) {
 function getC2Status() {
   const cached = cacheGet_(CACHE_KEY_C2);
   if (cached) return cached;
+  const ver = cacheVer_();
 
   const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = ss.getSheetByName(SHEET_BORROW);
@@ -773,6 +857,7 @@ function getC2Status() {
 
   rows.forEach(r => {
     const action = String(r[0]);
+    if (action.includes('Round')) return; // Round ไม่เปลี่ยนมือเครื่อง (ดูคำอธิบายที่ getEquipmentStatus)
     const equip  = String(r[1]);
     const num    = String(r[2]);
     const ward   = String(r[3]);
@@ -794,7 +879,7 @@ function getC2Status() {
   });
 
   const out = { ok: true, units: buildC2Units(statusMap) };
-  cachePut_(CACHE_KEY_C2, out);
+  cachePut_(CACHE_KEY_C2, out, ver);
   return out;
 }
 
@@ -1020,6 +1105,7 @@ function savePrepare(fields) {
 function getPrepareList() {
   const cached = cacheGet_(CACHE_KEY_PREPARE);
   if (cached) return cached;
+  const ver = cacheVer_();
 
   const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = getOrCreatePrepareSheet(ss);
@@ -1041,7 +1127,7 @@ function getPrepareList() {
     });
   });
   const out = { ok: true, prepared };
-  cachePut_(CACHE_KEY_PREPARE, out);
+  cachePut_(CACHE_KEY_PREPARE, out, ver);
   return out;
 }
 

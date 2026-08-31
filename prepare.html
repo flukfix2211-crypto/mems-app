@@ -330,15 +330,23 @@
         const shift = detectShiftTH();
         const ts = new Date().toISOString();
         // ส่งทุกหมายเลขใน request เดียว (เดิมยิงทีละหมายเลขแล้วรอทีละตัว)
-        await fetch(SCRIPT_URL, {
-          method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+        // อ่านผลกลับด้วย เพื่อให้ server ช่วยกันยืมซ้ำภายใต้ lock (rejectBorrowed)
+        const dres = await fetch(SCRIPT_URL, {
+          method: 'POST', mode: 'cors', headers: { 'Content-Type': 'text/plain' },
           body: JSON.stringify({
             shift, action: '🟩 ยืม', equipment: equipName,
             equipmentNumber: numbers[0],   // เผื่อ Apps Script เวอร์ชันเก่า
             equipmentNumbers: numbers,
+            rejectBorrowed: true,
             ward, name: by, timestamp: ts, note: 'เตรียมพร้อมส่ง (แอดมินนำส่ง)'
           })
         });
+        const dout = await dres.json().catch(() => null);
+        if (dout && dout.ok === false) {
+          toast('❌ ' + (dout.error || 'บันทึกไม่สำเร็จ'));
+          btn.disabled = false; btn.textContent = origText;
+          return;
+        }
         toast('🚚 ส่ง ' + equipName + ' No.' + numbers.join(', ') + ' ให้ ' + ward + ' (ยืมแล้ว)');
       } else {
         // โหมดเตรียม = บันทึกเป็นรายการเตรียม
