@@ -744,6 +744,7 @@ if (!isPwProtectionEnabled() || sessionStorage.getItem('mems_auth') === '1') {
 
 /* ============================================================ CONFIG ============================================================ */
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz7_Q0Wtl7hDovuZga1q42xRTxVC6GXfuph4JU-C-aQ_zNLssdRVUsfde4a1vF15cIYtQ/exec';
+const API_TOKEN = ''; // ต้องตรงกับค่าที่ตั้งด้วย setupApiToken() ใน Apps Script (ปล่อยว่าง = ปิดการตรวจสอบ)
 
 /* ============================================================ STATE ============================================================ */
 let allRecords = [];
@@ -1096,6 +1097,7 @@ function renderHomeTrend() {
 async function fetchGAS(action, params = {}) {
   const url = new URL(SCRIPT_URL);
   url.searchParams.set('action', action);
+  url.searchParams.set('token', API_TOKEN);
   Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
   const res = await fetch(url.toString(), { mode: 'cors' });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -1193,7 +1195,7 @@ async function confirmDeleteWard(rowIndex, label) {
     await fetch(SCRIPT_URL, {
       method: 'POST', mode: 'no-cors',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'delete', rowIndex })
+      body: JSON.stringify({ action: 'delete', rowIndex, token: API_TOKEN })
     });
     allRecords      = allRecords.filter(r => r['_rowIndex'] !== rowIndex);
     filteredRecords = filteredRecords.filter(r => r['_rowIndex'] !== rowIndex);
@@ -1255,7 +1257,7 @@ async function confirmDelete(rowIndex, label) {
     const res = await fetch(SCRIPT_URL, {
       method: 'POST', mode: 'no-cors',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'delete', rowIndex })
+      body: JSON.stringify({ action: 'delete', rowIndex, token: API_TOKEN })
     });
     // no-cors → ไม่มี response body → รอแล้วรีโหลด
     allRecords = allRecords.filter(r => r['_rowIndex'] !== rowIndex);
@@ -1320,7 +1322,7 @@ async function saveEdit() {
     await fetch(SCRIPT_URL, {
       method: 'POST', mode: 'no-cors',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'edit', rowIndex: _editRowIndex, fields })
+      body: JSON.stringify({ action: 'edit', rowIndex: _editRowIndex, fields, token: API_TOKEN })
     });
 
     // Update local cache
@@ -1445,7 +1447,7 @@ async function bulkDelete(mode) {
     await fetch(SCRIPT_URL, {
       method: 'POST', mode: 'no-cors',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'deleteBulk', rowIndexes })
+      body: JSON.stringify({ action: 'deleteBulk', rowIndexes, token: API_TOKEN })
     });
 
     // ลบออกจาก local cache
@@ -1560,7 +1562,7 @@ async function confirmDeleteRound(rowIndex, label) {
     await fetch(SCRIPT_URL, {
       method: 'POST', mode: 'no-cors',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'delete', rowIndex })
+      body: JSON.stringify({ action: 'delete', rowIndex, token: API_TOKEN })
     });
     allRecords      = allRecords.filter(r => r['_rowIndex'] !== rowIndex);
     filteredRecords = filteredRecords.filter(r => r['_rowIndex'] !== rowIndex);
@@ -1652,8 +1654,8 @@ async function renderC2Dashboard() {
   grid.innerHTML  = '';
   try {
     const [c2Data, assetData] = await Promise.all([
-      fetch(`${SCRIPT_URL}?action=c2status&t=${Date.now()}`, { mode: 'cors' }).then(r => r.json()),
-      fetch(`${SCRIPT_URL}?action=assets&t=${Date.now()}`, { mode: 'cors' }).then(r => r.json()).catch(() => ({ assets: [] }))
+      fetch(`${SCRIPT_URL}?action=c2status&token=${encodeURIComponent(API_TOKEN)}&t=${Date.now()}`, { mode: 'cors' }).then(r => r.json()),
+      fetch(`${SCRIPT_URL}?action=assets&token=${encodeURIComponent(API_TOKEN)}&t=${Date.now()}`, { mode: 'cors' }).then(r => r.json()).catch(() => ({ assets: [] }))
     ]);
     msg.textContent = '';
     const units = c2Data.units || [];
@@ -2023,7 +2025,7 @@ function startKpiClock() {
 async function renderKpiData() {
   if (!window._c2AssetMap) {
     try {
-      const ad = await fetch(`${SCRIPT_URL}?action=assets&t=${Date.now()}`, { mode: 'cors' }).then(r => r.json());
+      const ad = await fetch(`${SCRIPT_URL}?action=assets&token=${encodeURIComponent(API_TOKEN)}&t=${Date.now()}`, { mode: 'cors' }).then(r => r.json());
       const m = {};
       (ad.assets || []).forEach(a => { if (a['No.']) m[String(a['No.'])] = a['สถานะ'] || 'ใช้งานได้'; });
       window._c2AssetMap = m;

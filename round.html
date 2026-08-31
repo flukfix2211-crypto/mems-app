@@ -243,6 +243,7 @@
 
 <script>
   const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz7_Q0Wtl7hDovuZga1q42xRTxVC6GXfuph4JU-C-aQ_zNLssdRVUsfde4a1vF15cIYtQ/exec';
+  const API_TOKEN = ''; // ต้องตรงกับค่าที่ตั้งด้วย setupApiToken() ใน Apps Script (ปล่อยว่าง = ปิดการตรวจสอบ)
 
   const WARDS = [
     'ER','อายุรกรรมหญิง (M.ญ)','EENT','ศัลยกรรมหญิง','ศัลยกรรมกระดูก','ศัลยกรรมชาย',
@@ -357,7 +358,7 @@
 
     // Fetch history
     try {
-      const url = `${SCRIPT_URL}?action=roundHistory&ward=${encodeURIComponent(ward)}&equipment=Infusion%20Pump`;
+      const url = `${SCRIPT_URL}?action=roundHistory&ward=${encodeURIComponent(ward)}&equipment=Infusion%20Pump&token=${encodeURIComponent(API_TOKEN)}`;
       const res = await fetch(url, { mode: 'cors' });
       const data = await res.json();
       renderMachines(data.machines || []);
@@ -510,6 +511,7 @@
       method: 'POST', mode: 'no-cors',
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({
+        token: API_TOKEN,
         action: '🔵 Round', shift: shiftTH[currentShift], ward,
         equipment: 'Infusion Pump',
         equipmentNumber: items[0].no,        // เผื่อ Apps Script เวอร์ชันเก่า

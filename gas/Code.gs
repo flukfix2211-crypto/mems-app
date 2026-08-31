@@ -33,6 +33,34 @@ const FIXJOB_PHOTO_FOLDER = 'MEMs - แก้ไขหน้างาน';
 const THAI_TZ = 'Asia/Bangkok';
 
 // ============================================================
+// API_TOKEN — กันบอท/สแกนเนอร์ที่รู้แค่ URL ของ Apps Script (Deploy แบบ "Anyone" ใครมี
+// URL ก็ยิงได้) โดยไม่เคยเห็นหน้าเว็บจริง
+//
+// วิธีเปิดใช้:
+//   1. รัน setupApiToken('สุ่มมาสักชุด-ยาวๆ') ครั้งเดียวจาก Apps Script editor
+//   2. ใส่ token เดียวกันในตัวแปร API_TOKEN ของทุกไฟล์ .html (บรรทัดถัดจาก SCRIPT_URL)
+// ถ้ายังไม่ได้ตั้งค่า (ค่าเริ่มต้น) จะไม่มีการบังคับ ทำงานเหมือนเดิมทุกประการ
+//
+// ข้อควรรู้: ซอร์สโค้ด .html ของโปรเจกต์นี้เป็นสาธารณะ (เผยแพร่ผ่าน GitHub Pages/GitHub repo)
+// ดังนั้น token ที่ฝังในหน้าเว็บ "ไม่ใช่ความลับที่แท้จริง" ต่อคนที่เปิดดูซอร์สโค้ดหรือ repo ได้
+// กลไกนี้ช่วยกันได้เฉพาะคนนอกที่สุ่ม/สแกนเจอ URL ของ Apps Script ตรงๆ โดยไม่ผ่านหน้าเว็บ
+// ============================================================
+function setupApiToken(token) {
+  PropertiesService.getScriptProperties().setProperty('API_TOKEN', String(token || ''));
+}
+
+function getApiToken_() {
+  return PropertiesService.getScriptProperties().getProperty('API_TOKEN') || '';
+}
+
+/** true ถ้าผ่านการตรวจ — ไม่ได้ตั้งค่า API_TOKEN ไว้ = ผ่านเสมอ (backward compatible) */
+function checkToken_(provided) {
+  const required = getApiToken_();
+  if (!required) return true;
+  return String(provided || '') === required;
+}
+
+// ============================================================
 // CACHE — ลดการอ่านทั้งชีตซ้ำๆ ในช่วงเวลาสั้นๆ
 // หน้ายืม/คืนเรียก action=equipment หลายครั้งภายในไม่กี่วินาที (ตอนเลือกตึก,
 // ตอนเลือกเครื่อง, ตอนกดบันทึก) การ cache ไว้สั้นๆ ช่วยตัดการสแกนชีตซ้ำออกไป
@@ -171,6 +199,10 @@ function doPost(e) {
       data = e.parameter || {};
     }
 
+    if (!checkToken_(data.token)) {
+      return jsonResponse({ ok: false, error: 'unauthorized' }, 401);
+    }
+
     if (data.action === 'delete') {
       deleteRecord(parseInt(data.rowIndex, 10));
       return jsonResponse({ ok: true });
@@ -291,6 +323,10 @@ function doGet(e) {
   const action = (e.parameter && e.parameter.action) || 'records';
 
   try {
+    if (!checkToken_(e.parameter && e.parameter.token)) {
+      return jsonResponse({ ok: false, error: 'unauthorized' }, 401);
+    }
+
     if (action === 'records') {
       const limit  = Math.max(1, parseInt(e.parameter.limit  || '50', 10) || 50);
       const offset = Math.max(0, parseInt(e.parameter.offset || '0', 10) || 0);

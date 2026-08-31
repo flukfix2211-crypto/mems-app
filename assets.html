@@ -338,6 +338,7 @@
 
 <script>
   const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz7_Q0Wtl7hDovuZga1q42xRTxVC6GXfuph4JU-C-aQ_zNLssdRVUsfde4a1vF15cIYtQ/exec';
+  const API_TOKEN = ''; // ต้องตรงกับค่าที่ตั้งด้วย setupApiToken() ใน Apps Script (ปล่อยว่าง = ปิดการตรวจสอบ)
 
   let allAssets = [];
 
@@ -356,7 +357,7 @@
 
   async function loadAssets() {
     try {
-      const res = await fetch(`${SCRIPT_URL}?action=assets&t=${Date.now()}`);
+      const res = await fetch(`${SCRIPT_URL}?action=assets&token=${encodeURIComponent(API_TOKEN)}&t=${Date.now()}`);
       const json = await res.json();
       if (!json.ok) throw new Error(json.error);
       allAssets = json.assets || [];
@@ -491,8 +492,8 @@
 
     try {
       const body = rowIndex
-        ? { action: 'editAsset', rowIndex: parseInt(rowIndex, 10), fields }
-        : { action: 'saveAsset', fields };
+        ? { action: 'editAsset', rowIndex: parseInt(rowIndex, 10), fields, token: API_TOKEN }
+        : { action: 'saveAsset', fields, token: API_TOKEN };
 
       await fetch(SCRIPT_URL, {
         method: 'POST', mode: 'no-cors',
@@ -516,7 +517,7 @@
       await fetch(SCRIPT_URL, {
         method: 'POST', mode: 'no-cors',
         headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({ action: 'deleteAsset', rowIndex })
+        body: JSON.stringify({ action: 'deleteAsset', rowIndex, token: API_TOKEN })
       });
       showToast('🗑️ ลบสำเร็จ');
       setTimeout(loadAssets, 1200);

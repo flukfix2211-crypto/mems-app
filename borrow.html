@@ -633,6 +633,14 @@
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz7_Q0Wtl7hDovuZga1q42xRTxVC6GXfuph4JU-C-aQ_zNLssdRVUsfde4a1vF15cIYtQ/exec';
 /* ใส่ URL ที่นี่ถ้าต้องการส่งข้อมูลไป Google Sheets
    ตัวอย่าง: 'https://script.google.com/macros/s/XXXXXX/exec' */
+const API_TOKEN = ''; // ต้องตรงกับค่าที่ตั้งด้วย setupApiToken() ใน Apps Script (ปล่อยว่าง = ปิดการตรวจสอบ)
+/* แนบ token ลงใน URL สำหรับ request แบบ GET (ใส่ค่าว่างก็ไม่มีผลถ้า backend ยังไม่ได้ตั้งค่า) */
+function gasUrl(action) {
+  const u = new URL(SCRIPT_URL);
+  u.searchParams.set('action', action);
+  u.searchParams.set('token', API_TOKEN);
+  return u;
+}
 
 /* ====== STATE ====== */
 let S = { action: null, shift: null, equip: null };
@@ -835,9 +843,7 @@ async function computeWardReturnTypes(ward) {
   wardReturnTypes = new Set();
   if (!ward || !SCRIPT_URL) return;
   try {
-    const u = new URL(SCRIPT_URL);
-    u.searchParams.set('action', 'equipment');
-    const data = await fetch(u.toString(), { mode: 'cors' }).then(r => r.json());
+    const data = await fetch(gasUrl('equipment').toString(), { mode: 'cors' }).then(r => r.json());
     (data.equipment || []).forEach(e => {
       // วอร์ดไหนยืม วอร์ดนั้นคืน — ยกเว้น ER (หรือ ICU) ยืม วอร์ดอื่นคืนได้ด้วย
       if (e.isBorrowed && (String(e.ward) === ward || isErIcu(e.ward))) wardReturnTypes.add(String(e.equipment));
@@ -851,9 +857,7 @@ let preparedList = [];
 async function loadPreparedList() {
   if (!SCRIPT_URL) return;
   try {
-    const u = new URL(SCRIPT_URL);
-    u.searchParams.set('action', 'prepareList');
-    const data = await fetch(u.toString(), { mode: 'cors' }).then(r => r.json());
+    const data = await fetch(gasUrl('prepareList').toString(), { mode: 'cors' }).then(r => r.json());
     preparedList = data.prepared || [];
     renderPreparedBanner();
     filterEquipButtons();
@@ -1030,9 +1034,7 @@ async function loadC2Status() {
   const msg = document.getElementById('c2StatusMsg');
   msg.textContent = 'กำลังโหลดสถานะ C2…';
   try {
-    const url = new URL(SCRIPT_URL);
-    url.searchParams.set('action', 'c2status');
-    const res  = await fetch(url.toString(), { mode: 'cors' });
+    const res  = await fetch(gasUrl('c2status').toString(), { mode: 'cors' });
     const data = await res.json();
     c2Status = {};
     (data.units || []).forEach(u => { c2Status[String(u.number)] = u; });
@@ -1126,9 +1128,7 @@ async function loadEquipStatus() {
   const msg = document.getElementById('c2StatusMsg');
   msg.textContent = 'กำลังโหลดสถานะเครื่อง…';
   try {
-    const url = new URL(SCRIPT_URL);
-    url.searchParams.set('action', 'equipment');
-    const res  = await fetch(url.toString(), { mode: 'cors' });
+    const res  = await fetch(gasUrl('equipment').toString(), { mode: 'cors' });
     const data = await res.json();
     allEquipStatus = data.equipment || [];
     msg.textContent = '';
@@ -1234,6 +1234,7 @@ async function submitTransfer() {
 
   const shiftTH = { morning: 'เวรเช้า', afternoon: 'เวรบ่าย', night: 'เวรดึก' };
   const payload = {
+    token           : API_TOKEN,
     action          : '🔁 ย้ายวอร์ด',
     shift           : shiftTH[detectShift()],
     equipment       : tfCtx.equip,
@@ -1279,6 +1280,7 @@ async function saveRecords(basePayload, nums) {
       headers: { 'Content-Type': 'text/plain' },
       body   : JSON.stringify({
         ...basePayload,
+        token           : API_TOKEN,
         equipmentNumber : nums[0],  // เผื่อ Apps Script ยังเป็นเวอร์ชันเก่าที่รู้จักแค่เครื่องเดียว
         equipmentNumbers: nums
       })
@@ -1302,7 +1304,7 @@ async function saveRecords(basePayload, nums) {
         method : 'POST',
         mode   : 'no-cors',
         headers: { 'Content-Type': 'text/plain' },
-        body   : JSON.stringify({ ...basePayload, equipmentNumber: nums[i] })
+        body   : JSON.stringify({ ...basePayload, token: API_TOKEN, equipmentNumber: nums[i] })
       });
       saved++;
     } catch (e2) { console.error('บันทึกล้มเหลว:', e2); }
@@ -1337,11 +1339,9 @@ async function handleSubmit() {
     // โหมดยืม: เช็ค "เตรียมเครื่องแล้วหรือยัง" + "ยืมซ้ำหรือเปล่า" พร้อมกันในรอบเดียว (เดิมรอทีละรอบ)
     if (S.action === 'borrow' && SCRIPT_URL) {
       btn.textContent = 'กำลังตรวจสอบ…';
-      const u1 = new URL(SCRIPT_URL); u1.searchParams.set('action', 'prepareList');
-      const u2 = new URL(SCRIPT_URL); u2.searchParams.set('action', 'equipment');
       const [pd, eqd] = await Promise.all([
-        fetch(u1.toString(), { mode: 'cors' }).then(r => r.json()).catch(() => null),
-        fetch(u2.toString(), { mode: 'cors' }).then(r => r.json()).catch(() => null)
+        fetch(gasUrl('prepareList').toString(), { mode: 'cors' }).then(r => r.json()).catch(() => null),
+        fetch(gasUrl('equipment').toString(), { mode: 'cors' }).then(r => r.json()).catch(() => null)
       ]);
 
       // โหลดไม่ได้ (pd/eqd เป็น null) -> ไม่บล็อค กันระบบล่ม

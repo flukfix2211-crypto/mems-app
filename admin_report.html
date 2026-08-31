@@ -299,6 +299,7 @@
   // ── CONFIG ──────────────────────────────────────────────────
   // เปลี่ยนเป็น URL ของ Google Apps Script Web App ของคุณ
   const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz7_Q0Wtl7hDovuZga1q42xRTxVC6GXfuph4JU-C-aQ_zNLssdRVUsfde4a1vF15cIYtQ/exec';
+  const API_TOKEN = ''; // ต้องตรงกับค่าที่ตั้งด้วย setupApiToken() ใน Apps Script (ปล่อยว่าง = ปิดการตรวจสอบ)
 
   // ── ประวัติในหน่วยความจำ (เซสชัน) ────────────────────────
   const localHistory = JSON.parse(sessionStorage.getItem('memsReportHistory') || '[]');
@@ -441,7 +442,7 @@
 
   // ── HELPERS ────────────────────────────────────────────────
   async function callGAS(action) {
-    const url = SCRIPT_URL + '?action=' + encodeURIComponent(action);
+    const url = SCRIPT_URL + '?action=' + encodeURIComponent(action) + '&token=' + encodeURIComponent(API_TOKEN);
     const res  = await fetch(url);
     if (!res.ok) throw new Error('HTTP ' + res.status);
     return res.json();
