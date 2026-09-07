@@ -5,7 +5,10 @@
  */
 const SUPABASE_URL = 'https://pxmhmgdbuhmubviuxcxp.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB4bWhtZ2RidWhtdWJ2aXV4Y3hwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5MzM1MDQsImV4cCI6MjEwMjUwOTUwNH0.MqQ660fj2ZnFRXXqeSVav0DVehRy3OAaXux69O6BJOY';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// ต้องใช้ `var` ไม่ใช่ `const`: ไลบรารี supabase-js (UMD) ประกาศ global ด้วย `var supabase = ...` ไว้แล้ว
+// การประกาศซ้ำด้วย const จะเกิด SyntaxError "Identifier 'supabase' has already been declared"
+// ทำให้ทั้งไฟล์นี้ไม่ทำงานเลย (ทุกหน้าโหลด/บันทึกข้อมูลไม่ได้) — var ประกาศซ้ำได้และแทนที่ namespace ด้วย client ที่สร้างแล้ว
+var supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 /** วันที่/เวลาปัจจุบันตามเขตเวลาไทย (Asia/Bangkok) โดยไม่ขึ้นกับ timezone ของอุปกรณ์ผู้ใช้ */
 function bkkDateStr(d) {
