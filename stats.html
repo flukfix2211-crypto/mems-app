@@ -9,218 +9,361 @@
 <link rel="apple-touch-icon" href="icon.png">
 <link rel="icon" type="image/png" href="icon.png">
 <title>MEMs — สถิติยืม-คืนเครื่องมือแพทย์</title>
+
+<!-- Google Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+<!-- Tailwind CSS CDN -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['Sarabun', 'Plus Jakarta Sans', 'sans-serif'],
+        },
+        colors: {
+          /* MEMs brand palette — must stay in sync with index.html / dashboard.html */
+          brand: {
+            50:  '#EBF5F8',
+            100: '#DAF0F5',
+            200: '#C5E3ED',
+            400: '#6A8A96',
+            500: '#0E7D94',
+            600: '#0A6478',
+            900: '#192D35',
+          },
+          mgreen: { DEFAULT: '#1A7B4A', light: '#DCF2E5', soft: '#34d399' },
+          mred:   { DEFAULT: '#B82E2E', light: '#FDEAEA', border: '#FCA5A5' },
+          mpurple:{ DEFAULT: '#7C3AED', light: '#EDE9F8' },
+        }
+      }
+    }
+  }
+</script>
 
 <style>
-  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-  :root {
-    --a: #0A6478; --a2: #0E7D94; --al: #DAF0F5;
-    --bg: #EBF5F8; --card: #FFFFFF; --txt: #192D35;
-    --muted: #6A8A96; --border: #C5E3ED;
-    --green: #1A7B4A; --red: #B82E2E;
-    --r: 16px; --sh: 0 2px 12px rgba(10,100,120,0.10);
+  /* Glassmorphism (light) & animations — same MEMs palette as the rest of the app */
+  body {
+    background: radial-gradient(circle at 20% 0%, #EBF5F8 0%, #DAF0F5 45%, #ffffff 100%);
+    min-height: 100vh;
   }
-  body { font-family: 'Sarabun', sans-serif; background: #0A6478; color: var(--txt); min-height: 100vh; font-size: 15px; }
+  .glass-card {
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(10, 100, 120, 0.10);
+    box-shadow: 0 2px 12px rgba(10, 100, 120, 0.08);
+  }
+  .glass-card-hover {
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .glass-card-hover:hover {
+    border-color: rgba(10, 100, 120, 0.25);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 30px -10px rgba(10, 100, 120, 0.25);
+  }
+  .glass-input {
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid #C5E3ED;
+  }
+  .glass-input:focus {
+    border-color: #0A6478;
+    box-shadow: 0 0 12px rgba(10, 100, 120, 0.20);
+  }
 
-  /* HEADER */
-  .header { background: none; color: #fff; padding: 18px 20px 20px; position: relative; overflow: hidden; }
-  .header::before { content: ''; position: absolute; inset: 0; z-index: 0; background: linear-gradient(135deg, #0A6478 0%, #0E7D94 100%); }
-  .header-inner { max-width: 900px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; position: relative; z-index: 1; }
-  .header h1 { font-size: 20px; font-weight: 800; }
-  .header .sub { font-size: 12px; opacity: .7; margin-top: 2px; }
-  .header-right { display: flex; align-items: center; gap: 12px; }
-  #lastUpdated { font-size: 12px; opacity: .75; }
-  .btn-back { font-size: 13px; font-weight: 700; color: #fff; text-decoration: none; background: rgba(255,255,255,.18); padding: 7px 14px; border-radius: 20px; white-space: nowrap; }
+  /* Custom scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: rgba(235, 245, 248, 0.6); }
+  ::-webkit-scrollbar-thumb { background: rgba(10, 100, 120, 0.25); border-radius: 999px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(10, 100, 120, 0.4); }
 
-  /* MAIN */
-  .main { max-width: 980px; margin: 0 auto; padding: 20px 16px 60px; }
-
-  /* FILTER BAR */
-  .filter-bar { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; background: var(--card); border-radius: var(--r); box-shadow: var(--sh); padding: 14px 16px; margin-bottom: 18px; }
-  .filter-field { display: flex; flex-direction: column; gap: 5px; }
-  .filter-field label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
-  .filter-field input, .filter-field select { padding: 8px 12px; border: 2px solid var(--border); border-radius: 10px; font-family: inherit; font-size: 13px; background: #fff; color: var(--txt); outline: none; cursor: pointer; min-width: 150px; }
-  .filter-field input:focus, .filter-field select:focus { border-color: var(--a); }
-  .btn-refresh { padding: 9px 16px; background: var(--a); color: #fff; border: none; border-radius: 10px; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
-  .btn-refresh:disabled { opacity: .6; cursor: default; }
-  .btn-print { padding: 9px 16px; background: var(--al); color: var(--a); border: 1.5px solid var(--border); border-radius: 10px; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; margin-left: auto; }
-
-  /* KPI CARDS */
-  .kpi-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 18px; }
-  @media (min-width: 640px) { .kpi-row { grid-template-columns: repeat(4, 1fr); } }
-  .kpi-card { background: var(--card); border-radius: var(--r); box-shadow: var(--sh); padding: 18px 16px; }
-  .kpi-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 8px; }
-  .kpi-val { font-size: 30px; font-weight: 800; line-height: 1; color: var(--a); }
-  .kpi-val.green { color: var(--green); }
-  .kpi-val.red { color: var(--red); }
-  .kpi-sub { font-size: 12px; color: var(--muted); margin-top: 6px; }
-
-  /* CARD */
-  .card { background: var(--card); border-radius: var(--r); box-shadow: var(--sh); margin-bottom: 16px; overflow: hidden; }
-  .card-head { padding: 16px 18px; font-size: 15px; font-weight: 700; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
-  .card-body { padding: 16px 18px; }
-
-  /* TREND CHART */
-  .trend-bar-row { display: flex; align-items: flex-end; gap: 3px; height: 140px; }
-  .trend-bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 2px; height: 100%; }
-  .legend-row { display: flex; gap: 16px; justify-content: center; margin-top: 10px; font-size: 12px; color: var(--muted); }
-  .legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
-
-  /* WARD / EQUIP BAR LIST */
-  .stat-list { display: flex; flex-direction: column; gap: 10px; }
-  .stat-row { display: flex; align-items: center; gap: 10px; }
-  .stat-name { width: 150px; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
-  .stat-bar-wrap { flex: 1; background: var(--al); border-radius: 20px; height: 10px; overflow: hidden; display: flex; }
-  .stat-bar-borrow { height: 100%; background: linear-gradient(90deg, var(--a), var(--a2)); }
-  .stat-bar-return { height: 100%; background: linear-gradient(90deg, #34d399, var(--green)); }
-  .stat-counts { width: 130px; text-align: right; font-size: 12px; font-weight: 700; flex-shrink: 0; }
-  .stat-counts b.b { color: var(--a); }
-  .stat-counts b.r { color: var(--green); }
-  .stat-counts b.n { color: var(--red); }
-
-  /* TABLE */
-  .table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid var(--border); }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  thead tr { background: var(--a); color: #fff; }
-  th { padding: 10px 12px; text-align: left; font-weight: 700; white-space: nowrap; }
-  td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
-  tr:last-child td { border-bottom: none; }
-  tr:hover td { background: var(--al); }
-  td.num { text-align: right; font-weight: 700; }
-
-  /* STATES */
-  .empty { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 14px; }
-  .state-loading { text-align: center; padding: 30px; color: var(--muted); display: flex; align-items: center; justify-content: center; gap: 10px; }
-  .spinner { width: 20px; height: 20px; border: 3px solid var(--border); border-top-color: var(--a); border-radius: 50%; animation: spin .7s linear infinite; }
+  /* Spinner */
   @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner { animation: spin .7s linear infinite; }
 
-  /* PRINT */
-  .print-title { font-size: 18px; font-weight: 800; margin-bottom: 6px; }
-  .print-meta  { font-size: 12px; color: #666; margin-bottom: 16px; }
+  /* Print Styles */
   @media print {
+    body { background: #ffffff !important; }
     body * { visibility: hidden; }
     #printArea, #printArea * { visibility: visible; }
-    #printArea { position: fixed; top: 0; left: 0; width: 100%; background: #fff; padding: 20px; }
-    .filter-bar, .header, .credit { display: none !important; }
+    #printArea { position: absolute; top: 0; left: 0; width: 100%; padding: 20px; background: #fff !important; }
+    .filter-bar-container, .header-container, .footer-container { display: none !important; }
     .print-title, .print-meta { display: block !important; }
+    .glass-card { background: #fff !important; border: 1px solid #C5E3ED !important; box-shadow: none !important; backdrop-filter: none !important; }
   }
-
-  /* CREDIT */
-  .credit { text-align: center; padding: 18px 16px 8px; font-size: 12px; color: var(--muted); line-height: 1.7; }
 </style>
 </head>
-<body>
+<body class="text-[#192D35] font-sans antialiased selection:bg-[#0A6478] selection:text-white">
+
+<!-- Ambient Glow Elements -->
+<div class="fixed top-0 left-1/4 w-96 h-96 bg-[#0A6478]/10 rounded-full blur-3xl pointer-events-none -z-10"></div>
+<div class="fixed top-1/3 right-10 w-96 h-96 bg-[#7C3AED]/10 rounded-full blur-3xl pointer-events-none -z-10"></div>
+<div class="fixed bottom-10 left-1/3 w-96 h-96 bg-[#1A7B4A]/10 rounded-full blur-3xl pointer-events-none -z-10"></div>
 
 <!-- HEADER -->
-<div class="header">
-  <div class="header-inner">
-    <div>
-      <a href="dashboard.html" style="text-decoration:none;color:inherit"><h1>📊 สถิติยืม-คืนเครื่องมือแพทย์</h1></a>
-      <div class="sub">MEMs — สรุปการยืม-คืนแยกตามหน่วยงานและประเภทเครื่องมือ</div>
+<header class="header-container sticky top-0 z-30 bg-gradient-to-r from-[#0A6478] to-[#0E7D94] border-b border-white/10 shadow-lg shadow-[#0A6478]/20">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <a href="dashboard.html" class="flex items-center gap-3 group">
+        <div class="w-11 h-11 rounded-xl bg-white/15 border border-white/25 flex items-center justify-center text-xl group-hover:scale-105 transition-transform">
+          📊
+        </div>
+        <div>
+          <h1 class="text-lg sm:text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
+            MEMs Analytics
+            <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-white/15 text-white border border-white/25">v1.0</span>
+          </h1>
+          <p class="text-xs text-white/70">สถิติการยืม-คืนเครื่องมือแพทย์ งานศูนย์เครื่องมือแพทย์</p>
+        </div>
+      </a>
     </div>
-    <div class="header-right">
-      <span id="lastUpdated"></span>
-      <a href="dashboard.html" class="btn-back">← แดชบอร์ด</a>
+
+    <div class="flex items-center gap-3">
+      <div id="lastUpdated" class="hidden sm:flex items-center gap-1.5 text-xs text-white/80 bg-white/10 px-3 py-1.5 rounded-full border border-white/20">
+        <span class="w-2 h-2 rounded-full bg-[#7CFFC4] animate-pulse"></span>
+        <span>รอการอัปเดต...</span>
+      </div>
+      <a href="dashboard.html" class="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-white/15 hover:bg-white/25 border border-white/25 transition-all shadow-sm hover:shadow">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+        <span>กลับหน้าหลัก</span>
+      </a>
     </div>
   </div>
-</div>
+</header>
 
-<!-- MAIN -->
-<div class="main">
+<!-- MAIN CONTAINER -->
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
 
-  <!-- FILTER BAR -->
-  <div class="filter-bar">
-    <div class="filter-field">
-      <label>เดือน</label>
-      <input type="month" id="monthSel" onchange="applyFilters()">
-    </div>
-    <div class="filter-field">
-      <label>หน่วยงาน</label>
-      <select id="wardSel" onchange="applyFilters()">
-        <option value="">— ทั้งหมด —</option>
-      </select>
-    </div>
-    <div class="filter-field">
-      <label>ประเภทเครื่องมือ</label>
-      <select id="equipSel" onchange="applyFilters()">
-        <option value="">— ทั้งหมด —</option>
-      </select>
-    </div>
-    <button class="btn-refresh" id="refreshBtn" onclick="loadAll()">🔄 รีเฟรช</button>
-    <button class="btn-print" onclick="window.print()">🖨️ พิมพ์รายงาน</button>
-  </div>
+  <!-- FILTER BAR CARD -->
+  <section class="filter-bar-container glass-card rounded-2xl p-5 shadow-xl">
+    <div class="flex flex-col lg:flex-row gap-4 items-stretch lg:items-end justify-between">
 
-  <div id="printArea">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 flex-1">
+        <!-- Month Filter -->
+        <div class="space-y-1.5">
+          <label class="text-xs font-bold text-[#0A6478] uppercase tracking-wider flex items-center gap-1">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            ประจำเดือน
+          </label>
+          <input type="month" id="monthSel" onchange="applyFilters()" class="glass-input w-full px-3.5 py-2.5 rounded-xl text-sm font-medium text-[#192D35] outline-none transition-all cursor-pointer">
+        </div>
 
-    <div class="print-title" style="display:none">รายงานสถิติยืม-คืนเครื่องมือแพทย์</div>
-    <div class="print-meta" id="printMeta" style="display:none"></div>
+        <!-- Ward Filter -->
+        <div class="space-y-1.5">
+          <label class="text-xs font-bold text-[#0A6478] uppercase tracking-wider flex items-center gap-1">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+            หน่วยงาน / Ward
+          </label>
+          <select id="wardSel" onchange="applyFilters()" class="glass-input w-full px-3.5 py-2.5 rounded-xl text-sm font-medium text-[#192D35] outline-none transition-all cursor-pointer">
+            <option value="">— ทั้งหมด —</option>
+          </select>
+        </div>
 
-    <!-- KPI CARDS -->
-    <div class="kpi-row">
-      <div class="kpi-card">
-        <div class="kpi-label">ยืมทั้งหมด</div>
-        <div class="kpi-val" id="kpiBorrow">—</div>
-        <div class="kpi-sub">ครั้ง</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">คืนทั้งหมด</div>
-        <div class="kpi-val green" id="kpiReturn">—</div>
-        <div class="kpi-sub">ครั้ง</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">คงค้าง (ยืม−คืน)</div>
-        <div class="kpi-val red" id="kpiNet">—</div>
-        <div class="kpi-sub">เครื่อง</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">หน่วยงานยืมมากสุด</div>
-        <div class="kpi-val" id="kpiTopWard" style="font-size:18px">—</div>
-        <div class="kpi-sub" id="kpiTopWardCount"></div>
-      </div>
-    </div>
-
-    <!-- TREND CHART -->
-    <div class="card">
-      <div class="card-head">📈 แนวโน้มยืม-คืนรายวัน</div>
-      <div class="card-body">
-        <div class="trend-bar-row" id="trendBars"></div>
-        <div class="legend-row">
-          <span><span class="legend-dot" style="background:var(--a)"></span>ยืม</span>
-          <span><span class="legend-dot" style="background:var(--green)"></span>คืน</span>
+        <!-- Equipment Filter -->
+        <div class="space-y-1.5">
+          <label class="text-xs font-bold text-[#0A6478] uppercase tracking-wider flex items-center gap-1">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m16-6h2m-2 6h2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/></svg>
+            ประเภทเครื่องมือ
+          </label>
+          <select id="equipSel" onchange="applyFilters()" class="glass-input w-full px-3.5 py-2.5 rounded-xl text-sm font-medium text-[#192D35] outline-none transition-all cursor-pointer">
+            <option value="">— ทั้งหมด —</option>
+          </select>
         </div>
       </div>
-    </div>
 
-    <!-- BY WARD -->
-    <div class="card">
-      <div class="card-head">🏥 สรุปตามหน่วยงาน</div>
-      <div class="card-body">
-        <div class="stat-list" id="wardStatList"></div>
+      <!-- Action Buttons -->
+      <div class="flex items-center gap-2.5 pt-2 lg:pt-0">
+        <button id="refreshBtn" onclick="loadAll()" class="flex-1 lg:flex-none px-5 py-2.5 rounded-xl font-bold text-sm bg-gradient-to-r from-[#0A6478] to-[#0E7D94] hover:from-[#0E7D94] hover:to-[#0A6478] text-white shadow-lg shadow-[#0A6478]/25 active:scale-95 transition-all flex items-center justify-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          <span>รีเฟรชข้อมูล</span>
+        </button>
+
+        <button onclick="window.print()" class="px-4 py-2.5 rounded-xl font-bold text-sm bg-[#DAF0F5] hover:bg-[#C5E3ED] text-[#0A6478] border border-[#C5E3ED] active:scale-95 transition-all flex items-center justify-center gap-2">
+          <svg class="w-4 h-4 text-[#0A6478]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+          <span class="hidden sm:inline">พิมพ์รายงาน</span>
+        </button>
       </div>
-    </div>
 
-    <!-- BY EQUIPMENT -->
-    <div class="card">
-      <div class="card-head">🔧 สรุปตามประเภทเครื่องมือ</div>
-      <div class="card-body">
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>ประเภทเครื่องมือ</th><th style="text-align:right">ยืม</th><th style="text-align:right">คืน</th><th style="text-align:right">คงค้าง</th></tr></thead>
-            <tbody id="equipStatBody"></tbody>
+    </div>
+  </section>
+
+  <!-- PRINT WRAPPER -->
+  <div id="printArea" class="space-y-6">
+    <div class="print-title text-2xl font-black text-[#192D35] mb-1 hidden">รายงานสถิติยืม-คืนเครื่องมือแพทย์</div>
+    <div class="print-meta text-xs text-[#6A8A96] mb-6 hidden" id="printMeta"></div>
+
+    <!-- KPI METRIC CARDS -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+      <!-- KPI 1: Borrow -->
+      <div class="glass-card glass-card-hover rounded-2xl p-5 relative overflow-hidden group border-t-2 border-t-[#0A6478]">
+        <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-[#0A6478]/10 rounded-full blur-xl group-hover:bg-[#0A6478]/20 transition-all"></div>
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-[#6A8A96] tracking-wider uppercase">ยืมทั้งหมด</span>
+          <span class="p-2 rounded-xl bg-[#0A6478]/10 text-[#0A6478] border border-[#0A6478]/20">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+          </span>
+        </div>
+        <div class="mt-3 flex items-baseline gap-2">
+          <div id="kpiBorrow" class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#0A6478] to-[#0E7D94]">—</div>
+          <span class="text-xs text-[#6A8A96] font-medium">ครั้ง</span>
+        </div>
+        <div class="mt-2 text-xs text-[#0A6478]/80 font-medium">ปริมาณรายการยืมออก</div>
+      </div>
+
+      <!-- KPI 2: Return -->
+      <div class="glass-card glass-card-hover rounded-2xl p-5 relative overflow-hidden group border-t-2 border-t-[#1A7B4A]">
+        <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-[#1A7B4A]/10 rounded-full blur-xl group-hover:bg-[#1A7B4A]/20 transition-all"></div>
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-[#6A8A96] tracking-wider uppercase">คืนทั้งหมด</span>
+          <span class="p-2 rounded-xl bg-[#1A7B4A]/10 text-[#1A7B4A] border border-[#1A7B4A]/20">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </span>
+        </div>
+        <div class="mt-3 flex items-baseline gap-2">
+          <div id="kpiReturn" class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#1A7B4A] to-[#34d399]">—</div>
+          <span class="text-xs text-[#6A8A96] font-medium">ครั้ง</span>
+        </div>
+        <div class="mt-2 text-xs text-[#1A7B4A]/80 font-medium">ปริมาณรายการรับคืน</div>
+      </div>
+
+      <!-- KPI 3: Net -->
+      <div class="glass-card glass-card-hover rounded-2xl p-5 relative overflow-hidden group border-t-2 border-t-[#B82E2E]">
+        <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-[#B82E2E]/10 rounded-full blur-xl group-hover:bg-[#B82E2E]/20 transition-all"></div>
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-[#6A8A96] tracking-wider uppercase">คงค้าง (ยืม − คืน)</span>
+          <span class="p-2 rounded-xl bg-[#B82E2E]/10 text-[#B82E2E] border border-[#B82E2E]/20">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </span>
+        </div>
+        <div class="mt-3 flex items-baseline gap-2">
+          <div id="kpiNet" class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#B82E2E] to-[#E07A5F]">—</div>
+          <span class="text-xs text-[#6A8A96] font-medium">เครื่อง</span>
+        </div>
+        <div class="mt-2 text-xs text-[#B82E2E]/80 font-medium">อุปกรณ์ที่ยังอยู่นอกศูนย์</div>
+      </div>
+
+      <!-- KPI 4: Top Ward -->
+      <div class="glass-card glass-card-hover rounded-2xl p-5 relative overflow-hidden group border-t-2 border-t-[#7C3AED]">
+        <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-[#7C3AED]/10 rounded-full blur-xl group-hover:bg-[#7C3AED]/20 transition-all"></div>
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-[#6A8A96] tracking-wider uppercase">หน่วยงานยืมสูงสุด</span>
+          <span class="p-2 rounded-xl bg-[#7C3AED]/10 text-[#7C3AED] border border-[#7C3AED]/20">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+          </span>
+        </div>
+        <div class="mt-3">
+          <div id="kpiTopWard" class="text-lg font-black text-[#7C3AED] truncate" title="—">—</div>
+          <div id="kpiTopWardCount" class="text-xs text-[#7C3AED]/80 font-semibold mt-1">—</div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- DAILY TREND BAR CHART -->
+    <section class="glass-card rounded-2xl p-6 shadow-xl relative">
+      <div class="flex items-center justify-between mb-6 pb-4 border-b border-[#C5E3ED]">
+        <div class="flex items-center gap-3">
+          <div class="p-2 rounded-xl bg-gradient-to-tr from-[#0A6478]/15 to-[#0E7D94]/15 border border-[#0A6478]/25 text-[#0A6478]">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/></svg>
+          </div>
+          <div>
+            <h2 class="text-base font-bold text-[#192D35]">แนวโน้มการยืม-คืนรายวัน</h2>
+            <p class="text-xs text-[#6A8A96]">เปรียบเทียบการยืมและคืนตามวันที่ในเดือนที่เลือก</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-4 text-xs font-semibold">
+          <div class="flex items-center gap-2 bg-[#EBF5F8] px-3 py-1.5 rounded-full border border-[#C5E3ED]">
+            <span class="w-2.5 h-2.5 rounded-sm bg-gradient-to-t from-[#0A6478] to-[#0E7D94]"></span>
+            <span class="text-[#192D35]">ยืม</span>
+          </div>
+          <div class="flex items-center gap-2 bg-[#EBF5F8] px-3 py-1.5 rounded-full border border-[#C5E3ED]">
+            <span class="w-2.5 h-2.5 rounded-sm bg-gradient-to-t from-[#1A7B4A] to-[#34d399]"></span>
+            <span class="text-[#192D35]">คืน</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Trend Chart Area -->
+      <div class="pt-4">
+        <div class="trend-bar-row flex items-end justify-between gap-1 sm:gap-2 h-44 px-2" id="trendBars">
+          <!-- Bars dynamically injected here -->
+        </div>
+      </div>
+    </section>
+
+    <!-- GRID: WARD BREAKDOWN & EQUIPMENT STATS -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+      <!-- WARD BREAKDOWN -->
+      <section class="glass-card rounded-2xl p-6 shadow-xl flex flex-col">
+        <div class="flex items-center justify-between mb-6 pb-4 border-b border-[#C5E3ED]">
+          <div class="flex items-center gap-3">
+            <div class="p-2 rounded-xl bg-[#7C3AED]/10 border border-[#7C3AED]/20 text-[#7C3AED]">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+            </div>
+            <div>
+              <h2 class="text-base font-bold text-[#192D35]">สรุปตามหน่วยงาน (Ward)</h2>
+              <p class="text-xs text-[#6A8A96]">เปรียบเทียบสัดส่วนการยืม-คืนของแต่ละหอผู้ป่วย</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto max-h-[420px] pr-1">
+          <div class="stat-list space-y-4" id="wardStatList">
+            <!-- Ward bars injected here -->
+          </div>
+        </div>
+      </section>
+
+      <!-- EQUIPMENT TYPE BREAKDOWN -->
+      <section class="glass-card rounded-2xl p-6 shadow-xl flex flex-col">
+        <div class="flex items-center justify-between mb-6 pb-4 border-b border-[#C5E3ED]">
+          <div class="flex items-center gap-3">
+            <div class="p-2 rounded-xl bg-[#1A7B4A]/10 border border-[#1A7B4A]/20 text-[#1A7B4A]">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m16-6h2m-2 6h2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/></svg>
+            </div>
+            <div>
+              <h2 class="text-base font-bold text-[#192D35]">สรุปตามประเภทเครื่องมือ</h2>
+              <p class="text-xs text-[#6A8A96]">รายการจำนวนการยืม คืน และคงค้างแยกตามอุปกรณ์</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto max-h-[420px] rounded-xl border border-[#C5E3ED]">
+          <table class="w-full text-left text-xs sm:text-sm">
+            <thead class="bg-[#0A6478] text-white font-bold uppercase tracking-wider sticky top-0">
+              <tr>
+                <th class="py-3 px-4">ชื่อเครื่องมือ</th>
+                <th class="py-3 px-4 text-right text-[#DAF0F5]">ยืม</th>
+                <th class="py-3 px-4 text-right text-[#DCF2E5]">คืน</th>
+                <th class="py-3 px-4 text-right text-[#FDEAEA]">คงค้าง</th>
+              </tr>
+            </thead>
+            <tbody id="equipStatBody" class="divide-y divide-[#C5E3ED] text-[#192D35] font-medium">
+              <!-- Equipment rows injected here -->
+            </tbody>
           </table>
         </div>
-      </div>
+      </section>
+
     </div>
 
   </div>
 
-</div>
+</main>
 
-<div class="credit">
-  MEMs — Medical Equipment Management Systems v1.0<br>
-  งานศูนย์เครื่องมือแพทย์ โรงพยาบาลพหลพลพยุหเสนา จ.กาญจนบุรี
-</div>
+<!-- FOOTER -->
+<footer class="footer-container border-t border-[#C5E3ED] mt-12 py-8 bg-[#EBF5F8]/60">
+  <div class="max-w-7xl mx-auto px-4 text-center text-xs text-[#6A8A96] space-y-1">
+    <p class="font-semibold text-[#192D35]">MEMs — Medical Equipment Management System v1.0</p>
+    <p>งานศูนย์เครื่องมือแพทย์ โรงพยาบาลพหลพลพยุหเสนา จ.กาญจนบุรี</p>
+  </div>
+</footer>
 
 <script>
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz7_Q0Wtl7hDovuZga1q42xRTxVC6GXfuph4JU-C-aQ_zNLssdRVUsfde4a1vF15cIYtQ/exec';
@@ -248,19 +391,32 @@ function fmtDate(val) {
 
 async function loadAll() {
   const btn = document.getElementById('refreshBtn');
-  btn.disabled = true; btn.textContent = '⏳ กำลังโหลด...';
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spinner w-4 h-4 border-2 border-white border-t-transparent rounded-full inline-block"></span> <span>กำลังโหลด...</span>`;
+
   try {
     const recRes = await fetchGAS('records', { limit: 1000 });
     allRecords = recRes.records || [];
     populateFilterOptions();
     applyFilters();
-    document.getElementById('lastUpdated').textContent =
-      'อัพเดต ' + new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+
+    document.getElementById('lastUpdated').innerHTML = `
+      <span class="w-2 h-2 rounded-full bg-[#7CFFC4]"></span>
+      <span>อัปเดต ${new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</span>
+    `;
   } catch (err) {
     console.error(err);
-    document.getElementById('wardStatList').innerHTML = '<div class="empty">โหลดข้อมูลไม่สำเร็จ: ' + (err.message || '') + '</div>';
+    document.getElementById('wardStatList').innerHTML = `
+      <div class="p-8 text-center text-[#B82E2E] font-medium bg-[#FDEAEA] rounded-xl border border-[#FCA5A5]">
+        ⚠️ โหลดข้อมูลไม่สำเร็จ: ${(err.message || 'โปรดตรวจสอบการเชื่อมต่อ')}
+      </div>
+    `;
   } finally {
-    btn.disabled = false; btn.textContent = '🔄 รีเฟรช';
+    btn.disabled = false;
+    btn.innerHTML = `
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+      <span>รีเฟรชข้อมูล</span>
+    `;
   }
 }
 
@@ -325,22 +481,24 @@ function renderKpis(records) {
   });
   const topWard = Object.entries(byWard).sort((a, b) => b[1] - a[1])[0];
 
-  document.getElementById('kpiBorrow').textContent = borrow;
-  document.getElementById('kpiReturn').textContent = ret;
-  document.getElementById('kpiNet').textContent = net;
+  document.getElementById('kpiBorrow').textContent = borrow.toLocaleString('th-TH');
+  document.getElementById('kpiReturn').textContent = ret.toLocaleString('th-TH');
+  document.getElementById('kpiNet').textContent = net.toLocaleString('th-TH');
   document.getElementById('kpiTopWard').textContent = topWard ? topWard[0] : '—';
-  document.getElementById('kpiTopWardCount').textContent = topWard ? `ยืม ${topWard[1]} ครั้ง` : '';
+  document.getElementById('kpiTopWardCount').textContent = topWard ? `ยืมไปทั้งหมด ${topWard[1]} ครั้ง` : 'ไม่มีข้อมูล';
 }
 
 function renderTrend(records) {
   const wrap = document.getElementById('trendBars');
   const month = document.getElementById('monthSel').value;
-  if (!month) { wrap.innerHTML = ''; return; }
+  if (!month) { wrap.innerHTML = '<div class="w-full text-center text-[#6A8A96] py-10">โปรดเลือกเดือนเพื่อดูแนวโน้ม</div>'; return; }
+
   const [yy, mm] = month.split('-').map(Number);
   const daysInMonth = new Date(yy, mm, 0).getDate();
 
   const byDay = {};
   for (let d = 1; d <= daysInMonth; d++) byDay[d] = { borrow: 0, return: 0 };
+
   records.forEach(r => {
     const d = String(r['วันที่'] || '');
     const m = d.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
@@ -352,62 +510,108 @@ function renderTrend(records) {
   });
 
   const max = Math.max(1, ...Object.values(byDay).map(v => Math.max(v.borrow, v.return)));
-  wrap.innerHTML = Object.entries(byDay).map(([day, v]) => `
-    <div class="trend-bar-col">
-      <div style="display:flex;align-items:flex-end;gap:1px;height:100%;width:100%">
-        <div style="flex:1;border-radius:2px 2px 0 0;min-height:2px;background:var(--a);height:${Math.round(v.borrow / max * 100)}%"></div>
-        <div style="flex:1;border-radius:2px 2px 0 0;min-height:2px;background:var(--green);height:${Math.round(v.return / max * 100)}%"></div>
+
+  wrap.innerHTML = Object.entries(byDay).map(([day, v]) => {
+    const hBorrow = Math.max(4, Math.round(v.borrow / max * 100));
+    const hReturn = Math.max(4, Math.round(v.return / max * 100));
+    const showLabel = (day % 5 === 0 || Number(day) === daysInMonth || Number(day) === 1);
+
+    return `
+      <div class="flex-1 flex flex-col items-center justify-end h-full group relative">
+        <!-- Tooltip -->
+        <div class="absolute -top-10 opacity-0 group-hover:opacity-100 transition-all pointer-events-none bg-[#0A6478] border border-white/20 text-white text-[10px] font-bold py-1 px-2 rounded-lg whitespace-nowrap z-20 shadow-xl">
+          วันที่ ${day}: ยืม ${v.borrow} / คืน ${v.return}
+        </div>
+
+        <div class="w-full flex items-end justify-center gap-[2px] h-full">
+          <div style="height: ${v.borrow ? hBorrow : 0}%; min-height: ${v.borrow ? '4px' : '0px'}"
+               class="w-full max-w-[8px] bg-gradient-to-t from-[#0A6478] to-[#0E7D94] rounded-t-sm transition-all group-hover:brightness-125"></div>
+          <div style="height: ${v.return ? hReturn : 0}%; min-height: ${v.return ? '4px' : '0px'}"
+               class="w-full max-w-[8px] bg-gradient-to-t from-[#1A7B4A] to-[#34d399] rounded-t-sm transition-all group-hover:brightness-125"></div>
+        </div>
+
+        <span class="text-[10px] font-bold text-[#6A8A96] mt-2 ${showLabel ? '!text-[#192D35]' : ''}">
+          ${showLabel ? day : ''}
+        </span>
       </div>
-      ${(day % 5 === 0 || Number(day) === daysInMonth || Number(day) === 1) ? `<div style="font-size:9px;color:var(--muted);margin-top:4px">${day}</div>` : ''}
-    </div>`).join('');
+    `;
+  }).join('');
 }
 
 function renderWardStats(records) {
   const wrap = document.getElementById('wardStatList');
   const byWard = {};
+
   records.forEach(r => {
     const w = r['ตึก/Ward'] || 'ไม่ระบุ';
     if (!byWard[w]) byWard[w] = { borrow: 0, return: 0 };
     if (isBorrowType(r)) byWard[w].borrow++;
     else if (isReturnType(r)) byWard[w].return++;
   });
+
   const rows = Object.entries(byWard).sort((a, b) => b[1].borrow - a[1].borrow);
-  if (!rows.length) { wrap.innerHTML = '<div class="empty">ไม่พบข้อมูลในช่วงที่เลือก</div>'; return; }
+  if (!rows.length) {
+    wrap.innerHTML = '<div class="p-8 text-center text-[#6A8A96] font-medium">ไม่พบข้อมูลในเงื่อนไขที่เลือก</div>';
+    return;
+  }
 
   const max = Math.max(1, ...rows.map(([, v]) => Math.max(v.borrow, v.return)));
-  wrap.innerHTML = rows.map(([ward, v]) => `
-    <div class="stat-row">
-      <div class="stat-name" title="${ward}">${ward}</div>
-      <div class="stat-bar-wrap">
-        <div class="stat-bar-borrow" style="width:${Math.round(v.borrow / max * 50)}%"></div>
-        <div class="stat-bar-return" style="width:${Math.round(v.return / max * 50)}%"></div>
+
+  wrap.innerHTML = rows.map(([ward, v]) => {
+    const pBorrow = Math.round(v.borrow / max * 100);
+    const pReturn = Math.round(v.return / max * 100);
+
+    return `
+      <div class="space-y-1.5 p-2.5 rounded-xl hover:bg-[#EBF5F8] transition-colors">
+        <div class="flex items-center justify-between text-xs font-bold">
+          <span class="text-[#192D35] truncate max-w-[180px]" title="${ward}">${ward}</span>
+          <div class="flex items-center gap-3">
+            <span class="text-[#0A6478]">ยืม ${v.borrow}</span>
+            <span class="text-[#1A7B4A]">คืน ${v.return}</span>
+          </div>
+        </div>
+        <div class="space-y-1">
+          <div class="w-full h-2 bg-[#DAF0F5] rounded-full overflow-hidden flex">
+            <div style="width: ${pBorrow}%" class="h-full bg-gradient-to-r from-[#0A6478] to-[#0E7D94] rounded-full"></div>
+          </div>
+          <div class="w-full h-1.5 bg-[#DAF0F5] rounded-full overflow-hidden flex">
+            <div style="width: ${pReturn}%" class="h-full bg-gradient-to-r from-[#1A7B4A] to-[#34d399] rounded-full"></div>
+          </div>
+        </div>
       </div>
-      <div class="stat-counts">
-        <b class="b">${v.borrow}</b> ยืม / <b class="r">${v.return}</b> คืน
-      </div>
-    </div>`).join('');
+    `;
+  }).join('');
 }
 
 function renderEquipStats(records) {
   const body = document.getElementById('equipStatBody');
   const byEquip = {};
+
   records.forEach(r => {
     const e = r['ชื่อเครื่อง'] || 'ไม่ระบุ';
     if (!byEquip[e]) byEquip[e] = { borrow: 0, return: 0 };
     if (isBorrowType(r)) byEquip[e].borrow++;
     else if (isReturnType(r)) byEquip[e].return++;
   });
+
   const rows = Object.entries(byEquip).sort((a, b) => b[1].borrow - a[1].borrow);
-  if (!rows.length) { body.innerHTML = '<tr><td colspan="4" class="empty">ไม่พบข้อมูลในช่วงที่เลือก</td></tr>'; return; }
+  if (!rows.length) {
+    body.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-[#6A8A96] font-medium">ไม่พบข้อมูลในเงื่อนไขที่เลือก</td></tr>';
+    return;
+  }
 
   body.innerHTML = rows.map(([equip, v]) => {
     const net = v.borrow - v.return;
-    return `<tr>
-      <td>${equip}</td>
-      <td class="num" style="color:var(--a)">${v.borrow}</td>
-      <td class="num" style="color:var(--green)">${v.return}</td>
-      <td class="num" style="color:${net > 0 ? 'var(--red)' : 'var(--muted)'}">${net}</td>
-    </tr>`;
+    return `
+      <tr class="hover:bg-[#EBF5F8] transition-colors">
+        <td class="py-3 px-4 font-semibold text-[#192D35]">${equip}</td>
+        <td class="py-3 px-4 text-right font-bold text-[#0A6478]">${v.borrow}</td>
+        <td class="py-3 px-4 text-right font-bold text-[#1A7B4A]">${v.return}</td>
+        <td class="py-3 px-4 text-right font-bold ${net > 0 ? 'text-[#B82E2E]' : 'text-[#6A8A96]'}">
+          ${net > 0 ? `+${net}` : net}
+        </td>
+      </tr>
+    `;
   }).join('');
 }
 
@@ -417,10 +621,12 @@ function renderPrintMeta(records) {
   const equip = document.getElementById('equipSel').value;
   const parts = [];
   if (month) { const [yy, mm] = month.split('-'); parts.push(`เดือน ${mm}/${yy}`); }
-  if (ward) parts.push(`หน่วยงาน ${ward}`);
-  if (equip) parts.push(`เครื่องมือ ${equip}`);
+  if (ward) parts.push(`หน่วยงาน: ${ward}`);
+  if (equip) parts.push(`เครื่องมือ: ${equip}`);
+
   document.getElementById('printMeta').textContent =
-    (parts.length ? parts.join(' · ') : 'ทั้งหมด') + ` · จำนวน ${records.length} รายการ · พิมพ์เมื่อ ${new Date().toLocaleString('th-TH')}`;
+    (parts.length ? parts.join(' · ') : 'ข้อมูลทั้งหมด') +
+    ` · รวม ${records.length} รายการ · พิมพ์เมื่อ ${new Date().toLocaleString('th-TH')}`;
 }
 
 window.addEventListener('DOMContentLoaded', loadAll);
