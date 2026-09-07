@@ -248,6 +248,38 @@ thead tr{background:#eef4f7;color:#334155}
 }
 </style>
 <style id="mems-minimal-icons">.mems-icon{width:1.15em;height:1.15em;display:inline-block;vertical-align:-.18em;flex-shrink:0}.nav-icon .mems-icon{width:25px;height:25px}.nav-icon{background:#f1f5f9!important;color:#486574!important;border:1px solid #dce6ec;border-radius:12px!important}.ei-fb .mems-icon{width:25px;height:25px}.suc-icon .mems-icon{width:64px;height:64px;color:#047857}.card-head>.mems-icon,.view-title>.mems-icon{color:#527681}</style>
+<style id="mems-kpi-theme">@media screen{
+#viewKpi{background:linear-gradient(135deg,#70aab6,#b1d2d9 55%,#83b7c1)!important;color:#1e293b}
+#kpiBgCanvas,#viewKpi .kpi-blob{opacity:0}
+#viewKpi>div:has(#kpiClock),#viewKpi>div:has(#kpiSlideLabel){background:#fff!important;border-color:#dce6ec!important}
+#viewKpi [style*="text-shadow"]{text-shadow:none!important}
+#viewKpi [style*="color:#e2e8f0"]{color:#1e293b!important}
+#viewKpi [style*="color:#94a3b8"],#viewKpi [style*="color:#64748b"],#viewKpi [style*="color:#475569"]{color:#526875!important}
+#viewKpi button{background:#eef8f9!important;border:1px solid #b3d7dd!important;color:#075763!important;border-radius:10px!important}
+#kpiClock{color:#075763!important}#kpiProgress{background:#086572!important;box-shadow:none!important}
+#viewKpi .slide-title{color:#193e46;font-size:14px;letter-spacing:0;margin-bottom:16px}
+#viewKpi .kpi-slide{padding:18px 22px 12px}
+#viewKpi .kd{background:#fff!important;border:1px solid #dce6ec!important;border-radius:16px;color:#1e293b;box-shadow:0 2px 8px #07576310;backdrop-filter:none;padding:22px}
+#viewKpi .kd-label{color:#526875;opacity:1;letter-spacing:0;font-size:14px;display:flex;align-items:center;gap:9px}
+#viewKpi .kd-sub{color:#526875;opacity:1;font-size:14px}
+#viewKpi .kd-val{font-size:clamp(38px,6vw,68px);font-weight:600;margin:10px 0}
+#viewKpi .kd:has(#kdBorrowed){border-top:3px solid #2563eb!important}
+#viewKpi .kd:has(#kdFree){border-top:3px solid #059669!important}
+#viewKpi .kd:has(#kdTodayBorrow){border-top:3px solid #d97706!important}
+#viewKpi .kd:has(#kdTodayReturn){border-top:3px solid #7c3aed!important}
+#kdBorrowed{color:#2563eb!important}#kdFree{color:#047857!important}#kdTodayBorrow{color:#b45309!important}#kdTodayReturn{color:#6d28d9!important}
+#kpiEquipBreak,#kpiWardRank{background:#fff;border:1px solid #dce6ec;border-radius:16px;padding:22px}
+#kpiEquipBreak>div>div:last-child,#kpiWardRank>div>div:last-child{color:#1d4ed8!important}
+#kpiEquipBreak [style*="background:#0f172a"],#kpiWardRank [style*="background:#0f172a"]{background:#e2e8f0!important}
+#kpiRecent>div,#kpiAlerts>div{background:#fff!important;box-shadow:0 1px 3px #07576310}
+#kpiC2Grid>div{font-size:14px!important;box-shadow:none!important;color:#1e293b!important}
+#kpiC2Grid>div[style*="background:#ef4444"]{background:#be123c!important;color:#fff!important}
+#kpiC2Grid>div[style*="rgba(34,197,94"]{background:#dcfce7!important;color:#166534!important}
+#kpiC2Summary{color:#334155!important;background:#fff;border-radius:10px;padding:10px}#kpiC2Summary span{color:#334155!important}
+#kpiTrend{background:#fff;border:1px solid #dce6ec;border-radius:16px}
+#kpiSlideLabel,#kpiNextRefresh,#kpiDate{font-size:12px!important;color:#526875!important}
+@media(max-width:480px){#viewKpi .kpi-slide{padding:14px 12px}#viewKpi .kd{padding:16px}#kpiEquipBreak,#kpiWardRank{padding:14px}#kpiC2Grid{grid-template-columns:repeat(6,1fr)!important}}
+}</style>
 </head>
 <body>
 
@@ -648,22 +680,22 @@ thead tr{background:#eef4f7;color:#334155}
         <div class="slide-title"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3v18h17M8 16v-5m5 5V7m5 9V4"/></svg> ภาพรวมการใช้งานวันนี้</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;flex:1">
           <div class="kd" style="background:linear-gradient(135deg,rgba(14,165,233,.3),rgba(3,105,161,.4));border:1px solid rgba(14,165,233,.25)">
-            <div class="kd-label">ยืมอยู่ตอนนี้</div>
+            <div class="kd-label"><svg class="mems-icon kpi-icon-0" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V3m-5 5 5-5 5 5M4 14v7h16v-7"/></svg> ยืมอยู่ตอนนี้</div>
             <div class="kd-val" id="kdBorrowed" style="color:#38bdf8;text-shadow:0 0 30px rgba(56,189,248,.5)">—</div>
             <div class="kd-sub">เครื่อง</div>
           </div>
           <div class="kd" style="background:linear-gradient(135deg,rgba(16,185,129,.3),rgba(4,120,87,.4));border:1px solid rgba(16,185,129,.25)">
-            <div class="kd-label">ว่างอยู่</div>
+            <div class="kd-label"><svg class="mems-icon kpi-icon-3" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg> ว่างอยู่</div>
             <div class="kd-val" id="kdFree" style="color:#34d399;text-shadow:0 0 30px rgba(52,211,153,.5)">—</div>
             <div class="kd-sub">เครื่อง</div>
           </div>
           <div class="kd" style="background:linear-gradient(135deg,rgba(245,158,11,.3),rgba(180,83,9,.4));border:1px solid rgba(245,158,11,.25)">
-            <div class="kd-label">ยืมวันนี้</div>
+            <div class="kd-label"><svg class="mems-icon kpi-icon-0" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V3m-5 5 5-5 5 5M4 14v7h16v-7"/></svg> ยืมวันนี้</div>
             <div class="kd-val" id="kdTodayBorrow" style="color:#fbbf24;text-shadow:0 0 30px rgba(251,191,36,.5)">—</div>
             <div class="kd-sub">ครั้ง</div>
           </div>
           <div class="kd" style="background:linear-gradient(135deg,rgba(139,92,246,.3),rgba(109,40,217,.4));border:1px solid rgba(139,92,246,.25)">
-            <div class="kd-label">คืนวันนี้</div>
+            <div class="kd-label"><svg class="mems-icon kpi-icon-1" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13m-5-5 5 5 5-5M4 14v7h16v-7"/></svg> คืนวันนี้</div>
             <div class="kd-val" id="kdTodayReturn" style="color:#a78bfa;text-shadow:0 0 30px rgba(167,139,250,.5)">—</div>
             <div class="kd-sub">ครั้ง</div>
           </div>
@@ -2142,7 +2174,7 @@ async function renderKpiData() {
   const { items: c2Items, counts: c2Counts } = computeC2Summary(c2Units, assetMap);
   const C2_STYLE = {
     sold:     { bg:'rgba(239,68,68,.18)', border:'rgba(239,68,68,.35)', shadow:'', color:'rgba(239,68,68,.5)', inner:i=>`${i}<br><span style="font-size:9px">✕</span>` },
-    repair:   { bg:'rgba(160,160,160,.2)', border:'rgba(160,160,160,.35)', shadow:'', color:'rgba(255,255,255,.35)', inner:i=>`${i}<br><span style="font-size:9px">🔧</span>` },
+    repair:   { bg:'rgba(160,160,160,.2)', border:'rgba(160,160,160,.35)', shadow:'', color:'rgba(255,255,255,.35)', inner:i=>`${i}<br><span style="font-size:9px"><svg class="mems-icon kpi-icon-2" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5a5 5 0 0 0-6 6l-5 5 4 4 5-5a5 5 0 0 0 6-6l-3 3-3-3z"/></svg></span>` },
     borrowed: { bg:'#ef4444', border:'rgba(239,68,68,.6)', shadow:'0 0 8px rgba(239,68,68,.4)', color:'#fff', inner:i=>i },
     avail:    { bg:'rgba(34,197,94,.3)', border:'rgba(34,197,94,.2)', shadow:'', color:'rgba(255,255,255,.4)', inner:i=>i }
   };
@@ -2152,9 +2184,9 @@ async function renderKpiData() {
   }).join('');
   const c2s = document.getElementById('kpiC2Summary');
   if (c2s) c2s.innerHTML =
-    `<span style="color:#4ade80;font-weight:800">🟢 ${c2Counts.avail}</span> พร้อมใช้ &nbsp;` +
-    `<span style="color:#f87171;font-weight:800">🔴 ${c2Counts.borrowed}</span> ยืมอยู่ &nbsp;` +
-    `<span style="color:#94a3b8;font-weight:800">🔧 ${c2Counts.repair}</span> ซ่อม &nbsp;` +
+    `<span style="color:#4ade80;font-weight:800"><svg class="mems-icon kpi-icon-6" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-16 0 8 8 0 0 1 16 0"/></svg> ${c2Counts.avail}</span> พร้อมใช้ &nbsp;` +
+    `<span style="color:#f87171;font-weight:800"><svg class="mems-icon kpi-icon-7" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-16 0 8 8 0 0 1 16 0"/></svg> ${c2Counts.borrowed}</span> ยืมอยู่ &nbsp;` +
+    `<span style="color:#94a3b8;font-weight:800"><svg class="mems-icon kpi-icon-2" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5a5 5 0 0 0-6 6l-5 5 4 4 5-5a5 5 0 0 0 6-6l-3 3-3-3z"/></svg> ${c2Counts.repair}</span> ซ่อม &nbsp;` +
     `<span style="color:rgba(239,68,68,.5);font-weight:800">✕ ${c2Counts.sold}</span> จำหน่าย`;
 
   // Recent
@@ -2164,7 +2196,7 @@ async function renderKpiData() {
     const dt = parseThaiDT(r);
     const ts = dt ? dt.toLocaleString('th-TH', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) : '';
     return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#0f172a;border-radius:12px;border-left:3px solid ${b?'#0ea5e9':'#10b981'}">
-      <div style="font-size:18px">${b?'📤':'📥'}</div>
+      <div style="font-size:18px">${b?'<svg class="mems-icon kpi-icon-0" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V3m-5 5 5-5 5 5M4 14v7h16v-7"/></svg>':'<svg class="mems-icon kpi-icon-1" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13m-5-5 5 5 5-5M4 14v7h16v-7"/></svg>'}</div>
       <div style="flex:1;min-width:0">
         <div style="font-size:13px;font-weight:700;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r['ชื่อเครื่อง']||''} ${r['หมายเลขเครื่อง']?'#'+r['หมายเลขเครื่อง']:''}</div>
         <div style="font-size:11px;color:#64748b">${r['ตึก/Ward']||''} • ${r['ชื่อผู้ยืม']||''}</div>
@@ -2186,13 +2218,13 @@ function renderKpiAlerts() {
   if (!wrap) return;
   const { overdue, shortage } = computeAlerts();
   if (!overdue.length && !shortage.length) {
-    wrap.innerHTML = '<div style="color:#475569;font-size:14px;text-align:center;margin:auto">✅ ไม่มีรายการแจ้งเตือน</div>';
+    wrap.innerHTML = '<div style="color:#475569;font-size:14px;text-align:center;margin:auto"><svg class="mems-icon kpi-icon-3" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg> ไม่มีรายการแจ้งเตือน</div>';
     return;
   }
   wrap.innerHTML = [
     ...overdue.map(o => `
       <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#0f172a;border-radius:12px;border-left:3px solid #ef4444">
-        <div style="font-size:18px">⏰</div>
+        <div style="font-size:18px"><svg class="mems-icon kpi-icon-4" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v5l3 2M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0"/></svg></div>
         <div style="flex:1;min-width:0">
           <div style="font-size:13px;font-weight:700;color:#e2e8f0">C2 No.${o.number} · ${o.ward || '—'}</div>
           <div style="font-size:11px;color:#64748b">ยืมมาแล้ว ${o.days} วัน (เกิน ${OVERDUE_C2_DAYS} วัน)</div>
@@ -2200,7 +2232,7 @@ function renderKpiAlerts() {
       </div>`),
     ...shortage.map(s => `
       <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#0f172a;border-radius:12px;border-left:3px solid #f59e0b">
-        <div style="font-size:18px">⚠️</div>
+        <div style="font-size:18px"><svg class="mems-icon kpi-icon-5" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 10 18H2zM12 9v5m0 3v.1"/></svg></div>
         <div style="flex:1;min-width:0">
           <div style="font-size:13px;font-weight:700;color:#e2e8f0">${s.equipment}</div>
           <div style="font-size:11px;color:#64748b">เหลือว่าง ${s.available} เครื่อง</div>
