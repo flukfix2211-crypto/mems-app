@@ -202,8 +202,8 @@
       <div class="action-card-icon teal">📊</div>
       <div class="action-card-title">สร้างรายงานประจำเดือน</div>
       <div class="action-card-desc">
-        ดึงข้อมูลจากเดือนที่ผ่านมา สรุปการยืม-คืน อัตราการใช้งาน
-        และหน่วยงานที่ยืมมากที่สุด
+        ดึงข้อมูลการยืม-คืนของเดือนที่ผ่านมา เพื่อสรุปสถิติการใช้งาน
+        อัตราการใช้งานเครื่องมือ และหน่วยงานที่มีการยืมสูงสุด
       </div>
       <button class="btn-action teal" id="btnMonthly" onclick="runAction('monthly')">
         <span id="iconMonthly">📊</span>
@@ -216,8 +216,8 @@
       <div class="action-card-icon orange">📄</div>
       <div class="action-card-title">Export PDF</div>
       <div class="action-card-desc">
-        แปลงรายงานล่าสุดที่สร้างไว้ (ประจำเดือน/สรุปผู้บริหาร/C2)
-        เป็น PDF จัดหน้า A4 ดาวน์โหลดลงเครื่องทันที
+        แปลงรายงานล่าสุดที่สร้างไว้ (รายงานประจำเดือน/สรุปผู้บริหาร/C2)
+        ให้เป็นไฟล์ PDF จัดรูปแบบขนาด A4 พร้อมดาวน์โหลดลงเครื่องได้ทันที
       </div>
       <button class="btn-action orange" id="btnPDF" onclick="runAction('pdf')">
         <span id="iconPDF">📄</span>
@@ -230,9 +230,9 @@
       <div class="action-card-icon green">🏆</div>
       <div class="action-card-title">สรุปผู้บริหาร</div>
       <div class="action-card-desc">
-        สรุปแบบ 1 หน้า อ่านได้ใน 30 วินาที แสดงตัวเลขสำคัญ:
-        ยอดรวม, อุปกรณ์ยอดนิยม, หน่วยงานที่ใช้มาก
-        และเครื่องที่ยังค้างอยู่
+        สรุปข้อมูลสำคัญในรูปแบบเอกสาร 1 หน้า สำหรับการทบทวนอย่างรวดเร็ว
+        ประกอบด้วยยอดรวมการใช้งาน อุปกรณ์ที่มีการยืมสูงสุด
+        หน่วยงานที่มีการใช้งานมาก และรายการเครื่องมือที่ยังไม่ได้คืน
       </div>
       <button class="btn-action green" id="btnExec" onclick="runAction('exec')">
         <span id="iconExec">🏆</span>
@@ -245,9 +245,10 @@
       <div class="action-card-icon teal">🔧</div>
       <div class="action-card-title">รายงาน C2 รายเครื่อง</div>
       <div class="action-card-desc">
-        สถิติเชิงลึกแต่ละเครื่อง No. 1-58 ตั้งแต่เริ่มใช้งาน:
-        ไปวอร์ดไหน กี่ครั้ง รวมกี่วัน/ชม. เวลาว่างพร้อมใช้
-        และเครื่องที่ใช้บ่อยที่สุด พร้อม PDF หลายหน้า
+        แสดงสถิติการใช้งานเชิงลึกของเครื่อง C2 หมายเลข 1-58
+        นับตั้งแต่เริ่มใช้งาน ได้แก่ หน่วยงานที่นำไปใช้ จำนวนครั้ง
+        ระยะเวลาการใช้งานสะสม (วัน/ชั่วโมง) ระยะเวลาว่างพร้อมใช้งาน
+        และเครื่องที่มีการใช้งานบ่อยที่สุด พร้อมจัดทำเป็นรายงาน PDF หลายหน้า
       </div>
       <button class="btn-action teal" id="btnC2" onclick="runAction('c2')">
         <span id="iconC2">🔧</span>
@@ -260,8 +261,9 @@
       <div class="action-card-icon orange">🔔</div>
       <div class="action-card-title">ส่งแจ้งเตือน Telegram ตอนนี้</div>
       <div class="action-card-desc">
-        สั่งส่งสรุปยืม C2 เกินกำหนด + ครุภัณฑ์ใกล้หมด เข้า Telegram ทันที
-        (แบบเดียวกับที่ระบบส่งอัตโนมัติทุกเช้า 08:00) โดยไม่ต้องรอถึงพรุ่งนี้
+        สั่งส่งสรุปรายการยืม C2 ที่เกินกำหนดคืน และครุภัณฑ์ที่ใกล้หมดสต็อก
+        เข้าสู่ Telegram ได้ทันที (รูปแบบเดียวกับที่ระบบส่งอัตโนมัติทุกวันเวลา 08.00 น.)
+        โดยไม่ต้องรอรอบการแจ้งเตือนถัดไป
       </div>
       <button class="btn-action orange" id="btnDigest" onclick="runAction('digest')">
         <span id="iconDigest">🔔</span>
@@ -525,5 +527,6 @@
   // ── INIT ───────────────────────────────────────────────────
   renderHistory();
 </script>
+<script src="mascot.js"></script>
 </body>
 </html>
