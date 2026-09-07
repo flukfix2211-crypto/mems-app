@@ -350,7 +350,7 @@
           return;
         }
         const rc = configs[_lastReportForPdf.type];
-        rc.exportPdf(_lastReportForPdf.data);
+        await rc.exportPdf(_lastReportForPdf.data);
         setLoading(cfg, false);
         showResult('success', '✅ ดาวน์โหลด PDF แล้ว', `<p style="font-size:14px;color:var(--muted)">ไฟล์: ${rc.fileName(_lastReportForPdf.data)}</p>`);
         toast('✅ ดาวน์โหลด PDF สำเร็จ');
@@ -401,12 +401,13 @@
   }
 
   /** ดาวน์โหลด PDF ซ้ำจากประวัติ (ข้อมูลถูกเก็บไว้ในเซสชันนี้) */
-  function redownloadPdf(idx) {
+  async function redownloadPdf(idx) {
     const h = localHistory[idx];
     if (!h || !h.data) return;
     const exporters = { monthly: exportMonthlyReportPDF, exec: exportExecSummaryPDF, c2: exportC2ReportPDF };
     const fn = exporters[h.reportType];
-    if (fn) fn(h.data);
+    if (!fn) return;
+    try { await fn(h.data); } catch (e) { toast('❌ สร้าง PDF ไม่สำเร็จ: ' + e.message); }
   }
 
   // ── แสดงผลลัพธ์ตามประเภท ───────────────────────────────────

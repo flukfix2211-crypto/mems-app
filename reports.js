@@ -23,6 +23,38 @@ function rptFmtDuration(ms) {
   return hours + ' ชม.';
 }
 
+/* ============================================================ PDF (jsPDF + ฟอนต์ไทย) ============================================================ */
+// ฟอนต์มาตรฐานของ jsPDF (Helvetica) ไม่มีอักษรไทย — ต้องฝัง THSarabun.ttf (อยู่ใน repo) ก่อนวาดข้อความไทยทุกครั้ง
+let _thaiFontB64 = null;
+async function loadThaiFontB64() {
+  if (_thaiFontB64) return _thaiFontB64;
+  const res = await fetch('THSarabun.ttf');
+  if (!res.ok) throw new Error('โหลดฟอนต์ THSarabun.ttf ไม่ได้ (HTTP ' + res.status + ')');
+  const buf = new Uint8Array(await res.arrayBuffer());
+  let bin = '';
+  for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
+  _thaiFontB64 = btoa(bin);
+  return _thaiFontB64;
+}
+const PDF_FONT = 'THSarabun';
+async function newThaiPdf(opts) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF(Object.assign({ unit: 'pt', format: 'a4' }, opts || {}));
+  doc.addFileToVFS('THSarabun.ttf', await loadThaiFontB64());
+  doc.addFont('THSarabun.ttf', PDF_FONT, 'normal');
+  doc.setFont(PDF_FONT);
+  return doc;
+}
+// ตัวเลือกร่วมของ autoTable: ใช้ฟอนต์ไทยทุกส่วน (Sarabun ตัวเล็กกว่าฟอนต์ละติน จึงขยายขนาดขึ้นเล็กน้อย)
+function thaiTable(doc, opts) {
+  const base = { styles: { font: PDF_FONT, fontSize: 12, cellPadding: 3 }, headStyles: { font: PDF_FONT, fontStyle: 'normal', fillColor: [10, 100, 120] }, bodyStyles: { font: PDF_FONT }, columnStyles: {} };
+  const merged = Object.assign({}, base, opts);
+  merged.styles = Object.assign({}, base.styles, opts.styles || {});
+  merged.headStyles = Object.assign({}, base.headStyles, opts.headStyles || {});
+  Object.keys(merged.columnStyles).forEach(k => { merged.columnStyles[k] = Object.assign({ font: PDF_FONT }, merged.columnStyles[k], { fontStyle: 'normal' }); });
+  doc.autoTable(merged);
+}
+
 /* ============================================================ THAI HOLIDAYS ============================================================ */
 let _thaiHolidaySetCache = null;
 async function fetchThaiHolidayDates() {
@@ -59,8 +91,8 @@ function rptStripStaffTitle(name) {
 }
 function rptEmptyShiftCount() { return { 'เวรเช้า': 0, 'เวรบ่าย': 0, 'เวรดึก': 0 }; }
 function rptShiftFromDate(d) {
-  const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(d);
-  const hh = +parts.find(p => p.type === 'hour').value, mm = +parts.find(p => p.type === 'minute').value;
+  const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(d);
+  const hh = +parts.find(p => p.type === 'hour').value % 24, mm = +parts.find(p => p.type === 'minute').value;
   const t = hh * 60 + mm;
   if (t >= 510 && t < 990) return 'เวรเช้า';
   if (t >= 990 || t < 30) return 'เวรบ่าย';
@@ -193,17 +225,16 @@ async function computeWorkloadCalendar(monthLabel) {
     staffByDay: staffOut, grandByDay, grandTotal,
     offHoursMorning,
     isCurrentMonth: monthLabel === new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok', year: 'numeric', month: '2-digit' }).format(now).slice(0, 7),
-    generatedAt: new Intl.DateTimeFormat('th-TH-u-ca-gregory', { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }).format(now)
+    generatedAt: new Intl.DateTimeFormat('th-TH-u-ca-gregory', { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(now)
   };
 }
 
-function exportWorkloadCalendarPDF(d) {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
-  doc.setFontSize(14);
-  doc.text('ภาระงานนอกเวลาราชการ (ศูนย์เครื่องมือแพทย์) — ' + d.monthTH, 20, 24);
-  doc.setFontSize(9);
-  doc.text('รวมทั้งเดือน ' + d.grandTotal + ' ครั้ง · สร้างเมื่อ ' + d.generatedAt, 20, 38);
+async function exportWorkloadCalendarPDF(d) {
+  const doc = await newThaiPdf({ orientation: 'landscape' });
+  doc.setFontSize(18);
+  doc.text(HOSPITAL_NAME + ' — ภาระงานนอกเวลาราชการ (ศูนย์เครื่องมือแพทย์) ' + d.monthTH, 20, 26);
+  doc.setFontSize(12);
+  doc.text('รวมทั้งเดือน ' + d.grandTotal + ' ครั้ง · สร้างเมื่อ ' + d.generatedAt, 20, 42);
 
   const head = [['ภาระงาน', 'เวร', ...Array.from({ length: d.daysInMonth }, (_, i) => String(i + 1)), 'รวม']];
   const body = [];
@@ -239,7 +270,7 @@ function exportWorkloadCalendarPDF(d) {
     body.push(line);
   });
 
-  doc.autoTable({ head, body, startY: 48, styles: { fontSize: 6, cellPadding: 2 }, headStyles: { fillColor: [10, 100, 120] } });
+  thaiTable(doc, { head, body, startY: 50, styles: { fontSize: 8, cellPadding: 1.5, halign: 'center' }, columnStyles: { 0: { halign: 'left', cellWidth: 150 } } });
   doc.save('Workload_' + d.month.replace('-', '_') + '.pdf');
 }
 
@@ -323,73 +354,59 @@ async function computeMonthlyReport() {
     ok: true, monthTH,
     total: borrowRows.length, totalReturn: returnRows.length,
     equipRanked, wardTop5, utilization, avgDays, daysInMonth, prep,
-    generatedAt: new Intl.DateTimeFormat('th-TH-u-ca-gregory', { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }).format(now),
+    generatedAt: new Intl.DateTimeFormat('th-TH-u-ca-gregory', { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(now),
     message: 'สร้างรายงานประจำเดือน ' + monthTH + ' เรียบร้อยแล้ว'
   };
 }
 
-function exportMonthlyReportPDF(d) {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
-  let y = 40;
-  doc.setFontSize(14); doc.text(HOSPITAL_NAME, 40, y); y += 18;
-  doc.setFontSize(12); doc.text('รายงานประจำเดือน ' + d.monthTH, 40, y); y += 14;
-  doc.setFontSize(9); doc.text('วันที่พิมพ์: ' + d.generatedAt, 40, y); y += 20;
+async function exportMonthlyReportPDF(d) {
+  const doc = await newThaiPdf();
+  let y = 44;
+  doc.setFontSize(20); doc.text(HOSPITAL_NAME, 40, y); y += 22;
+  doc.setFontSize(18); doc.text('รายงานประจำเดือน ' + d.monthTH, 40, y); y += 18;
+  doc.setFontSize(12); doc.text('วันที่พิมพ์: ' + d.generatedAt, 40, y); y += 24;
 
-  doc.setFontSize(11); doc.text(`รายการยืมทั้งหมด: ${d.total} ครั้ง   รายการคืนทั้งหมด: ${d.totalReturn} ครั้ง   จำนวนวันในเดือน: ${d.daysInMonth} วัน`, 40, y);
-  y += 16;
+  doc.setFontSize(14); doc.text(`รายการยืมทั้งหมด: ${d.total} ครั้ง   รายการคืนทั้งหมด: ${d.totalReturn} ครั้ง   จำนวนวันในเดือน: ${d.daysInMonth} วัน`, 40, y);
+  y += 22;
 
-  doc.setFontSize(11); doc.text('ก) อุปกรณ์ที่ถูกยืม (จัดอันดับ)', 40, y);
-  doc.autoTable({
-    startY: y + 6,
+  const section = (title, opts) => {
+    if (y > 700) { doc.addPage(); doc.setFont(PDF_FONT); y = 44; }
+    doc.setFontSize(15); doc.text(title, 40, y);
+    thaiTable(doc, Object.assign({ startY: y + 8 }, opts));
+    y = doc.lastAutoTable.finalY + 24;
+  };
+
+  section('ก) อุปกรณ์ที่ถูกยืม (จัดอันดับ)', {
     head: [['อันดับ', 'ประเภทเครื่อง', 'จำนวนครั้ง', 'สัดส่วน (%)']],
-    body: d.equipRanked.map(([equip, cnt], i) => [i + 1, equip, cnt, d.total > 0 ? ((cnt / d.total) * 100).toFixed(1) + '%' : '0.0%']),
-    headStyles: { fillColor: [10, 100, 120] }, styles: { fontSize: 9 }
+    body: d.equipRanked.map(([equip, cnt], i) => [i + 1, equip, cnt, d.total > 0 ? ((cnt / d.total) * 100).toFixed(1) + '%' : '0.0%'])
   });
-  y = doc.lastAutoTable.finalY + 20;
-
-  doc.text('ข) หน่วยงานที่ยืมมากที่สุด 5 อันดับแรก', 40, y);
-  doc.autoTable({
-    startY: y + 6,
+  section('ข) หน่วยงานที่ยืมมากที่สุด 5 อันดับแรก', {
     head: [['อันดับ', 'หน่วยงาน', 'จำนวนครั้ง']],
-    body: d.wardTop5.map(([ward, cnt], i) => [i + 1, ward, cnt]),
-    headStyles: { fillColor: [10, 100, 120] }, styles: { fontSize: 9 }
+    body: d.wardTop5.map(([ward, cnt], i) => [i + 1, ward, cnt])
   });
-  y = doc.lastAutoTable.finalY + 20;
-
-  if (y > 680) { doc.addPage(); y = 40; }
-  doc.text('ค) อัตราการใช้งานเฉลี่ยต่อวัน', 40, y);
-  doc.autoTable({
-    startY: y + 6,
-    head: [['ประเภทเครื่อง', 'ยืมทั้งเดือน', 'จำนวนวัน', 'เฉลี่ย (ครั้ง/วัน)']],
-    body: d.utilization,
-    headStyles: { fillColor: [10, 100, 120] }, styles: { fontSize: 9 }
+  section('ค) อัตราการใช้งานเฉลี่ยต่อวัน (Utilization Rate)', {
+    head: [['ประเภทเครื่อง', 'ยืมทั้งเดือน (ครั้ง)', 'จำนวนวัน', 'เฉลี่ย (ครั้ง/วัน)']],
+    body: d.utilization
   });
-  y = doc.lastAutoTable.finalY + 20;
-
-  if (y > 680) { doc.addPage(); y = 40; }
-  doc.text('ง) ระยะเวลายืมเฉลี่ย', 40, y);
-  doc.autoTable({
-    startY: y + 6,
+  section('ง) ระยะเวลายืมเฉลี่ย', {
     head: [['ประเภทเครื่อง', 'ระยะเวลาเฉลี่ย (วัน)', 'จำนวนคู่ที่คำนวณได้']],
-    body: d.avgDays.length ? d.avgDays.map(([equip, avg, count]) => [equip, avg, count]) : [['ไม่สามารถคำนวณได้', '', '']],
-    headStyles: { fillColor: [10, 100, 120] }, styles: { fontSize: 9 }
+    body: d.avgDays.length ? d.avgDays.map(([equip, avg, count]) => [equip, avg, count + ' คู่']) : [['ไม่สามารถคำนวณได้ (ต้องการข้อมูลคืนที่ตรงกัน)', '', '']]
   });
-  y = doc.lastAutoTable.finalY + 20;
-
-  if (y > 680) { doc.addPage(); y = 40; }
-  const p = d.prep || { total: 0, used: 0, waiting: 0, cancelled: 0 };
-  doc.text('จ) การเตรียมเครื่อง (โดยศูนย์เครื่องมือแพทย์)', 40, y);
-  doc.autoTable({
-    startY: y + 6,
+  const p = d.prep || { total: 0, used: 0, waiting: 0, cancelled: 0, byEquip: [], byPreparer: [] };
+  section('จ) การเตรียมเครื่อง (โดยศูนย์เครื่องมือแพทย์)', {
     body: [
       ['เตรียมทั้งหมด', p.total + ' ครั้ง'],
       ['ส่งมอบ/ถูกยืมแล้ว', p.used + ' ครั้ง'],
       ['ยังรอรับ', p.waiting + ' ครั้ง'],
       ['ยกเลิก', p.cancelled + ' ครั้ง']
-    ],
-    styles: { fontSize: 9 }
+    ]
   });
+  if (p.byEquip && p.byEquip.length) {
+    section('แยกตามประเภทเครื่อง', { head: [['ประเภทเครื่อง', 'จำนวนครั้ง']], body: p.byEquip });
+  }
+  if (p.byPreparer && p.byPreparer.length) {
+    section('แยกตามผู้เตรียม', { head: [['ผู้เตรียม', 'จำนวนครั้ง']], body: p.byPreparer });
+  }
 
   doc.save('Monthly_Report_' + d.monthTH.replace(' ', '_') + '.pdf');
 }
@@ -402,9 +419,14 @@ async function computeExecutiveSummary() {
   const lastOfLastMo = new Date(firstOfMonth - 1);
   const monthTH = rptThaiMonthYear(firstOfLastMo);
 
-  const { data: raw, error } = await supabase.from('borrow_records').select('*');
-  if (error) throw error;
-  if (!raw || !raw.length) return { ok: false, error: 'ไม่มีข้อมูลในระบบ' };
+  // ดึงเฉพาะช่วงเดือนที่แล้ว→ปัจจุบัน (ไม่ต้องโหลดประวัติทั้งตาราง) + สถานะปัจจุบันจาก view
+  const [raw, status] = await Promise.all([
+    fetchAllPages(() => supabase.from('borrow_records').select('action, equipment_name, ward, recorded_at')
+      .gte('recorded_at', firstOfLastMo.toISOString()).lte('recorded_at', now.toISOString())
+      .order('recorded_at').order('id')),
+    fetchEquipmentStatus()
+  ]);
+  if (!raw.length && !status.length) return { ok: false, error: 'ไม่มีข้อมูลในระบบ' };
 
   const lastMoRows = raw.filter(r => { const ts = new Date(r.recorded_at); return ts >= firstOfLastMo && ts <= lastOfLastMo; });
   const borrowLast = lastMoRows.filter(r => (r.action || '').includes('ยืม'));
@@ -419,16 +441,12 @@ async function computeExecutiveSummary() {
   const wc = {}; borrowLast.forEach(r => { const w = r.ward || ''; wc[w] = (wc[w] || 0) + 1; });
   const topWard = Object.entries(wc).sort((a, b) => b[1] - a[1])[0] || ['ไม่มีข้อมูล', 0];
 
-  const statusMap = {};
-  raw.forEach(r => {
-    if (!r.equipment_name || !r.equipment_number) return;
-    statusMap[r.equipment_name + '__' + r.equipment_number] = (r.action || '').includes('ยืม');
-  });
-  const stillBorrowed = Object.values(statusMap).filter(Boolean).length;
+  // เดิมนับเฉพาะ action ที่มี "ยืม" (ไม่รวมย้ายวอร์ด) — คงเงื่อนไขเดิมไว้
+  const stillBorrowed = status.filter(e => String(e.lastAction || '').includes('ยืม')).length;
 
   return {
     ok: true, monthTH,
-    generatedAt: new Intl.DateTimeFormat('th-TH-u-ca-gregory', { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }).format(now),
+    generatedAt: new Intl.DateTimeFormat('th-TH-u-ca-gregory', { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(now),
     totalBorrowLastMonth: borrowLast.length, totalReturnLastMonth: returnLast.length,
     stillBorrowed, topEquipName: topEquip[0], topEquipCount: topEquip[1],
     topWardName: topWard[0], topWardCount: topWard[1], borrowThisMonthMTD: borrowThis.length,
@@ -436,14 +454,13 @@ async function computeExecutiveSummary() {
   };
 }
 
-function exportExecSummaryPDF(d) {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
-  doc.setFontSize(14); doc.text(HOSPITAL_NAME, 40, 40);
-  doc.setFontSize(12); doc.text('สรุปผู้บริหาร - ' + d.monthTH, 40, 58);
-  doc.setFontSize(9); doc.text('จัดทำ: ' + d.generatedAt, 40, 72);
-  doc.autoTable({
-    startY: 90,
+async function exportExecSummaryPDF(d) {
+  const doc = await newThaiPdf();
+  doc.setFontSize(20); doc.text(HOSPITAL_NAME, 40, 44);
+  doc.setFontSize(18); doc.text('สรุปผู้บริหาร - ' + d.monthTH, 40, 66);
+  doc.setFontSize(12); doc.text('จัดทำ: ' + d.generatedAt, 40, 84);
+  thaiTable(doc, {
+    startY: 100,
     body: [
       ['จำนวนการยืมทั้งหมด', d.totalBorrowLastMonth + ' ครั้ง'],
       ['จำนวนการคืนทั้งหมด', d.totalReturnLastMonth + ' ครั้ง'],
@@ -452,8 +469,8 @@ function exportExecSummaryPDF(d) {
       ['หน่วยงานที่ยืมมากที่สุด', d.topWardName + '  (' + d.topWardCount + ' ครั้ง)'],
       ['การยืมเดือนนี้ (ถึงปัจจุบัน)', d.borrowThisMonthMTD + ' ครั้ง']
     ],
-    styles: { fontSize: 11, cellPadding: 8 },
-    columnStyles: { 0: { fontStyle: 'bold' }, 1: { fontStyle: 'bold', textColor: [10, 100, 120] } }
+    styles: { fontSize: 15, cellPadding: 8 },
+    columnStyles: { 1: { textColor: [10, 100, 120] } }
   });
   doc.save('ExecSummary_' + d.monthTH.replace(' ', '_') + '.pdf');
 }
@@ -467,9 +484,12 @@ function rptAddWard(stat, ward, ms, countOnly) {
 
 async function computeC2Report() {
   const now = new Date();
-  const { data: raw, error } = await supabase.from('borrow_records').select('*');
-  if (error) throw error;
-  if (!raw || !raw.length) return { ok: false, error: 'ไม่มีข้อมูลใน borrow_records' };
+  // กรองฝั่งเซิร์ฟเวอร์: เฉพาะ C2 และไม่ใช่ Round, แบ่งหน้ากันโดนตัดที่ 1,000 แถว
+  const raw = await fetchAllPages(() => supabase.from('borrow_records')
+    .select('action, equipment_name, equipment_number, ward, recorded_at')
+    .ilike('equipment_name', '%C2%').not('action', 'ilike', '%Round%')
+    .order('recorded_at').order('id'));
+  if (!raw.length) return { ok: false, error: 'ไม่พบข้อมูลการยืม-คืนของเครื่อง C2' };
 
   const events = {};
   raw.forEach(r => {
@@ -530,40 +550,39 @@ async function computeC2Report() {
 
   return {
     ok: true,
-    generatedAt: new Intl.DateTimeFormat('th-TH-u-ca-gregory', { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }).format(now),
+    generatedAt: new Intl.DateTimeFormat('th-TH-u-ca-gregory', { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(now),
     statList: statList.slice().sort((a, b) => a.no - b.no),
     mostUsed, longest, activeNow, usedUnits: statList.length,
     message: 'สร้างรายงาน C2 รายเครื่อง เรียบร้อยแล้ว'
   };
 }
 
-function exportC2ReportPDF(d) {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
-  doc.setFontSize(14); doc.text(HOSPITAL_NAME, 40, 40);
-  doc.setFontSize(12); doc.text('รายงานสถิติเครื่อง C2 รายเครื่อง (ตั้งแต่เริ่มใช้งาน)', 40, 58);
-  doc.setFontSize(9); doc.text('วันที่พิมพ์: ' + d.generatedAt, 40, 72);
+async function exportC2ReportPDF(d) {
+  const doc = await newThaiPdf();
+  doc.setFontSize(20); doc.text(HOSPITAL_NAME, 40, 44);
+  doc.setFontSize(18); doc.text('รายงานสถิติเครื่อง C2 รายเครื่อง (ตั้งแต่เริ่มใช้งาน)', 40, 66);
+  doc.setFontSize(12); doc.text('วันที่พิมพ์: ' + d.generatedAt, 40, 84);
 
-  doc.autoTable({
-    startY: 88,
+  thaiTable(doc, {
+    startY: 100,
     body: [
       ['เครื่องที่ถูกยืมบ่อยที่สุด', 'No. ' + d.mostUsed.no + '  (' + d.mostUsed.borrowCount + ' ครั้ง)'],
       ['เครื่องที่ถูกใช้งานนานที่สุด', 'No. ' + d.longest.no + '  (' + rptFmtDuration(d.longest.borrowedMs) + ')'],
       ['จำนวนเครื่องที่เคยถูกใช้', d.usedUnits + ' เครื่อง'],
       ['เครื่องที่กำลังถูกยืมอยู่', d.activeNow + ' เครื่อง']
     ],
-    styles: { fontSize: 10 }
+    styles: { fontSize: 13 }
   });
-  let y = doc.lastAutoTable.finalY + 20;
+  let y = doc.lastAutoTable.finalY + 24;
 
-  doc.text('ก) สรุปรายเครื่อง', 40, y);
-  doc.autoTable({
-    startY: y + 6,
+  doc.setFontSize(15); doc.text('ก) สรุปรายเครื่อง', 40, y);
+  thaiTable(doc, {
+    startY: y + 8,
     head: [['No.', 'จำนวนครั้งที่ยืม', 'เวลาถูกยืมรวม', 'เวลาว่างรวม', 'ครั้งที่ว่าง', 'สถานะปัจจุบัน']],
     body: d.statList.map(s => [s.no, s.borrowCount + ' ครั้ง', rptFmtDuration(s.borrowedMs), rptFmtDuration(s.availableMs), s.availableCount + ' ครั้ง', s.currentStatus]),
-    headStyles: { fillColor: [10, 100, 120] }, styles: { fontSize: 8 }
+    styles: { fontSize: 11 }
   });
-  y = doc.lastAutoTable.finalY + 20;
+  y = doc.lastAutoTable.finalY + 24;
 
   const wardRows = [];
   d.statList.forEach(s => {
@@ -571,13 +590,13 @@ function exportC2ReportPDF(d) {
     wards.forEach((w, i) => wardRows.push([i === 0 ? s.no : '', w, s.perWard[w].count + ' ครั้ง', rptFmtDuration(s.perWard[w].ms)]));
   });
   if (wardRows.length) {
-    if (y > 650) { doc.addPage(); y = 40; }
-    doc.text('ข) รายละเอียดการใช้งานต่อวอร์ด', 40, y);
-    doc.autoTable({
-      startY: y + 6,
+    if (y > 680) { doc.addPage(); doc.setFont(PDF_FONT); y = 44; }
+    doc.setFontSize(15); doc.text('ข) รายละเอียดการใช้งานต่อวอร์ด', 40, y);
+    thaiTable(doc, {
+      startY: y + 8,
       head: [['No.', 'วอร์ด', 'จำนวนครั้ง', 'เวลารวม']],
       body: wardRows,
-      headStyles: { fillColor: [10, 100, 120] }, styles: { fontSize: 8 }
+      styles: { fontSize: 11 }
     });
   }
 

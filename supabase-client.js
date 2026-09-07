@@ -12,37 +12,45 @@ function bkkDateStr(d) {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
 }
 function bkkTimeStr(d) {
-  return new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).format(d);
+  return new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' }).format(d);
 }
 
 /**
- * สถานะล่าสุดของทุกเครื่อง (equipment_name + equipment_number) จากประวัติยืม-คืน-Round-ย้าย
+ * ดึงข้อมูลทั้งหมดแบบแบ่งหน้า — PostgREST จำกัดผลลัพธ์สูงสุด 1,000 แถวต่อครั้ง
+ * ถ้าไม่แบ่งหน้า ข้อมูลจะถูกตัดเงียบๆ เมื่อประวัติเกิน 1,000 แถว
+ * buildQuery: () => supabase.from(...).select(...).order(...)  (ต้อง order ให้คงที่)
+ */
+async function fetchAllPages(buildQuery, pageSize = 1000) {
+  const all = [];
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await buildQuery().range(from, from + pageSize - 1);
+    if (error) throw error;
+    all.push(...(data || []));
+    if (!data || data.length < pageSize) break;
+  }
+  return all;
+}
+
+/**
+ * สถานะล่าสุดของทุกเครื่อง (equipment_name + equipment_number) จาก view equipment_status
+ * (คำนวณด้วย DISTINCT ON ฝั่ง Postgres — ไม่ต้องดึงประวัติทั้งตาราง)
  * เทียบเท่า getEquipmentStatus() ใน gas/Code.gs เดิม
  * lastUpdate เป็น ISO timestamp string (ไม่ใช่ dd/MM/yyyy แบบเดิม)
  */
 async function fetchEquipmentStatus() {
-  const { data, error } = await supabase
-    .from('borrow_records')
-    .select('equipment_name, equipment_number, ward, staff_name, action, recorded_at')
-    .not('equipment_name', 'is', null)
-    .not('equipment_number', 'is', null)
-    .order('recorded_at', { ascending: true });
-  if (error) throw error;
-
-  const map = {};
-  (data || []).forEach(r => {
-    const key = r.equipment_name + '__' + r.equipment_number;
-    map[key] = {
-      equipment: r.equipment_name,
-      number: r.equipment_number,
-      lastAction: r.action,
-      ward: r.ward,
-      borrowedBy: r.staff_name,
-      lastUpdate: r.recorded_at,
-      isBorrowed: r.action.includes('ยืม') || r.action.includes('ย้าย')
-    };
-  });
-  return Object.values(map);
+  const rows = await fetchAllPages(() =>
+    supabase.from('equipment_status')
+      .select('equipment_name, equipment_number, ward, staff_name, action, recorded_at, is_borrowed')
+      .order('equipment_name').order('equipment_number'));
+  return rows.map(r => ({
+    equipment: r.equipment_name,
+    number: r.equipment_number,
+    lastAction: r.action,
+    ward: r.ward,
+    borrowedBy: r.staff_name,
+    lastUpdate: r.recorded_at,
+    isBorrowed: !!r.is_borrowed
+  }));
 }
 
 /** สถานะเครื่อง C2 ทั้ง 58 เครื่อง (No.1-58) — เทียบเท่า getC2Status()/buildC2Units() เดิม */
@@ -133,12 +141,9 @@ function fmtThaiTime(d) {
 
 /** ประวัติการเตรียมเครื่องทั้งหมด (รวมยืมแล้ว/ยกเลิก) ใหม่→เก่า — เทียบเท่า getPrepareHistory() เดิม */
 async function fetchPrepareHistory() {
-  const { data, error } = await supabase
-    .from('prepare_records')
-    .select('*')
-    .order('recorded_at', { ascending: false });
-  if (error) throw error;
-  return (data || []).map(r => {
+  const data = await fetchAllPages(() =>
+    supabase.from('prepare_records').select('*').order('recorded_at', { ascending: false }).order('id', { ascending: false }));
+  return data.map(r => {
     const d = new Date(r.recorded_at);
     return {
       _rowIndex: r.id,
@@ -156,12 +161,9 @@ async function fetchPrepareHistory() {
 
 /** ประวัติการแก้ไขหน้างานทั้งหมด ใหม่→เก่า — เทียบเท่า getFixJobList() เดิม */
 async function fetchFixJobList() {
-  const { data, error } = await supabase
-    .from('fixjob_records')
-    .select('*')
-    .order('recorded_at', { ascending: false });
-  if (error) throw error;
-  return (data || []).map(r => {
+  const data = await fetchAllPages(() =>
+    supabase.from('fixjob_records').select('*').order('recorded_at', { ascending: false }).order('id', { ascending: false }));
+  return data.map(r => {
     const d = new Date(r.recorded_at);
     return {
       _rowIndex: r.id,

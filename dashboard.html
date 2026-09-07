@@ -771,13 +771,10 @@ function toRecordView(row) {
   };
 }
 async function fetchRecords() {
-  const { data, error } = await supabase
-    .from('borrow_records')
-    .select('*')
-    .order('recorded_at', { ascending: false })
-    .limit(5000);
-  if (error) throw error;
-  return (data || []).map(toRecordView);
+  const data = await fetchAllPages(() =>
+    supabase.from('borrow_records').select('*')
+      .order('recorded_at', { ascending: false }).order('id', { ascending: false }));
+  return data.map(toRecordView);
 }
 
 /* ============================================================ STATE ============================================================ */
@@ -912,7 +909,7 @@ async function exportWorkloadPDF() {
   btn.disabled = true; btn.textContent = '⏳ กำลังสร้าง PDF...';
   try {
     const data = await computeWorkloadCalendar(month || null);
-    exportWorkloadCalendarPDF(data);
+    await exportWorkloadCalendarPDF(data);
   } catch (e) {
     alert('⚠️ Export PDF ไม่สำเร็จ: ' + (e.message || ''));
   } finally {

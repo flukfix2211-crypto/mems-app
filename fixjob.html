@@ -220,7 +220,8 @@
     for (const p of photos) {
       try {
         const bytes = Uint8Array.from(atob(p.data), c => c.charCodeAt(0));
-        const path = Date.now() + '_' + Math.random().toString(36).slice(2) + '_' + (p.name || 'photo.jpg');
+        // ใช้ชื่อไฟล์ ASCII ล้วน — Storage key ไม่รองรับอักษรไทย/ช่องว่างในชื่อไฟล์ต้นฉบับ
+        const path = Date.now() + '_' + Math.random().toString(36).slice(2) + '.jpg';
         const { error } = await supabase.storage.from('fixjob-photos').upload(path, bytes, { contentType: p.mimeType || 'image/jpeg' });
         if (error) throw error;
         const { data } = supabase.storage.from('fixjob-photos').getPublicUrl(path);
