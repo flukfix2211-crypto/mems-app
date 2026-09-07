@@ -60,13 +60,14 @@
     .nav-menu a + a { border-top: 1px solid var(--border); }
     .nav-menu .nm-icon { font-size: 18px; width: 22px; text-align: center; flex-shrink: 0; }
   </style>
+<style id="mems-home-icons">.mems-icon{width:1.15em;height:1.15em;display:inline-block;vertical-align:-.18em;flex-shrink:0}.menu-icon{background:#f1f5f9!important;color:#486574;border:1px solid #dce6ec;border-radius:12px}.menu-icon .mems-icon{width:28px;height:28px}.nm-icon .mems-icon{width:20px;height:20px}.nm-icon{color:#486574}.icon-btn .mems-icon{width:18px;height:18px}</style>
 </head>
 <body>
 <canvas id="bgCanvas"></canvas>
 <header class="header">
   <div class="header-top" style="flex-wrap:wrap;gap:8px">
     <div style="display:flex;align-items:center;gap:8px;min-width:0">
-      <button id="menuBtn" class="icon-btn" aria-haspopup="true" aria-expanded="false" onclick="toggleNavMenu(event)" title="เมนู">☰</button>
+      <button id="menuBtn" class="icon-btn" aria-haspopup="true" aria-expanded="false" onclick="toggleNavMenu(event)" title="เมนู"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
       <span class="hosp-badge" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">โรงพยาบาลพหลพลพยุหเสนา จ.กาญจนบุรี</span>
     </div>
     <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;justify-content:flex-end;margin-left:auto">
@@ -81,15 +82,15 @@
   </div>
 </header>
 <nav id="navMenu" class="nav-menu">
-  <a href="dashboard.html"><span class="nm-icon">📊</span> แดชบอร์ด</a>
-  <a href="assets.html"><span class="nm-icon">📋</span> จัดการเครื่องมือในระบบ</a>
-  <a href="prepare.html"><span class="nm-icon">🧰</span> เตรียมเครื่องมือ</a>
-  <a href="round.html"><span class="nm-icon">🏥</span> บันทึกการ Round ward</a>
+  <a href="dashboard.html"><span class="nm-icon"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3v18h17M8 16v-5m5 5V7m5 9V4"/></svg></span> แดชบอร์ด</a>
+  <a href="assets.html"><span class="nm-icon"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14v18H5zM8 7h8M8 11h8M8 15h5"/></svg></span> จัดการเครื่องมือในระบบ</a>
+  <a href="prepare.html"><span class="nm-icon"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m3 7 9-4 9 4v13H3zM3 7l9 4 9-4M12 11v9"/></svg></span> เตรียมเครื่องมือ</a>
+  <a href="round.html"><span class="nm-icon"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V5h14v16M3 21h18M9 9h6m-3-3v6M9 21v-5h6v5"/></svg></span> บันทึกการ Round ward</a>
 </nav>
 <div class="content">
   <div class="menu-label">เลือกรายการ</div>
   <a class="menu-card" href="borrow.html">
-    <div class="menu-icon green">🔄</div>
+    <div class="menu-icon green"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18l-4-4M21 17H3l4 4"/></svg></div>
     <div class="menu-text">
       <div class="menu-title">ยืม-คืนเครื่องมือแพทย์</div>
       <div class="menu-desc">บันทึกการยืมและคืนเครื่องมือระหว่างหน่วยงาน</div>
@@ -160,14 +161,14 @@
   <div style="background:#fff;border-radius:20px;width:100%;max-width:480px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
     <div style="background:linear-gradient(135deg,#0A6478,#0E7D94);padding:18px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
       <div>
-        <div style="color:#fff;font-size:17px;font-weight:800">📖 วิธีใช้งาน MEMs</div>
+        <div style="color:#fff;font-size:17px;font-weight:800"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5C8 2 4 3 2 4v15c4-2 7-1 10 1 3-2 6-3 10-1V4c-4-2-7-1-10 1v15"/></svg> วิธีใช้งาน MEMs</div>
         <div style="color:rgba(255,255,255,.7);font-size:12px;margin-top:2px">Medical Equipment Management Systems</div>
       </div>
       <button onclick="document.getElementById('helpModal').style.display='none'" style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.2);border:none;color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">×</button>
     </div>
     <div style="overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:16px">
       <div style="background:#EBF5F8;border-radius:14px;padding:16px">
-        <div style="font-size:15px;font-weight:800;color:#0A6478;margin-bottom:10px">🔄 ยืม-คืนเครื่องมือแพทย์</div>
+        <div style="font-size:15px;font-weight:800;color:#0A6478;margin-bottom:10px"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18l-4-4M21 17H3l4 4"/></svg> ยืม-คืนเครื่องมือแพทย์</div>
         <div style="font-size:13px;color:#192D35;line-height:1.8">
           <b>การยืม:</b><br>
           1. เลือก <b>ยืม</b> → เลือกประเภทเครื่อง<br>
@@ -184,16 +185,16 @@
         </div>
       </div>
       <div style="background:#EBF5F8;border-radius:14px;padding:16px">
-        <div style="font-size:15px;font-weight:800;color:#0A6478;margin-bottom:10px">📋 จัดการเครื่องมือในระบบ</div>
+        <div style="font-size:15px;font-weight:800;color:#0A6478;margin-bottom:10px"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14v18H5zM8 7h8M8 11h8M8 15h5"/></svg> จัดการเครื่องมือในระบบ</div>
         <div style="font-size:13px;color:#192D35;line-height:1.8">
           ทะเบียนครุภัณฑ์เครื่องมือแพทย์ทุกประเภท (C2, High Flow, Brid เขียว, Monnal t60, T1, Patient Monitor, NIBP, Infusion Pump, Syringe Pump, Defibrillator ฯลฯ)<br>
           • <b>เพิ่มเครื่องใหม่:</b> กด <b>＋ เพิ่มเครื่องใหม่</b> เพื่อเพิ่มหมายเลขเครื่องใหม่เข้าระบบ<br>
-          • <b>แก้ไข:</b> กด ✏️ เพื่อแก้ไขหมายเลขเครื่อง เลขครุภัณฑ์ หรือ <b>สถานะ</b> (ใช้งานได้ / ชำรุด / ส่งซ่อม / จำหน่าย)<br>
+          • <b>แก้ไข:</b> กด <svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m4 16 12-12 4 4L8 20H4zM13 7l4 4"/></svg> เพื่อแก้ไขหมายเลขเครื่อง เลขครุภัณฑ์ หรือ <b>สถานะ</b> (ใช้งานได้ / ชำรุด / ส่งซ่อม / จำหน่าย)<br>
           • ใช้แถบประเภทหรือช่องค้นหาเพื่อกรองดูเครื่องมือแต่ละชนิด
         </div>
       </div>
       <div style="background:#EBF5F8;border-radius:14px;padding:16px">
-        <div style="font-size:15px;font-weight:800;color:#0A6478;margin-bottom:10px">📊 แดชบอร์ด</div>
+        <div style="font-size:15px;font-weight:800;color:#0A6478;margin-bottom:10px"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3v18h17M8 16v-5m5 5V7m5 9V4"/></svg> แดชบอร์ด</div>
         <div style="font-size:13px;color:#192D35;line-height:1.8">
           <b>การใช้งานแต่ละหน่วยงาน:</b> ดูเครื่องที่ยืมอยู่ แยกตามประเภทเครื่อง<br>
           <b>สถานะ C2:</b> ดูสถานะเครื่อง C2 ทั้ง 60 เครื่องแบบ real-time<br>
@@ -203,7 +204,7 @@
         </div>
       </div>
       <div style="background:#EBF5F8;border-radius:14px;padding:16px">
-        <div style="font-size:15px;font-weight:800;color:#0A6478;margin-bottom:10px">🏥 บันทึกการ Round Ward</div>
+        <div style="font-size:15px;font-weight:800;color:#0A6478;margin-bottom:10px"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V5h14v16M3 21h18M9 9h6m-3-3v6M9 21v-5h6v5"/></svg> บันทึกการ Round Ward</div>
         <div style="font-size:13px;color:#192D35;line-height:1.8">
           1. เลือก <b>หน่วยงาน</b> และ <b>เวร</b><br>
           2. บันทึกสถานะเครื่องมือแต่ละชิ้น (ใช้งานได้ / ไม่ได้ใช้งาน / ส่งซ่อม)<br>
@@ -212,7 +213,7 @@
         </div>
       </div>
       <div style="background:#EBF5F8;border-radius:14px;padding:16px">
-        <div style="font-size:15px;font-weight:800;color:#0A6478;margin-bottom:10px">💡 เคล็ดลับ</div>
+        <div style="font-size:15px;font-weight:800;color:#0A6478;margin-bottom:10px"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 10v7m0-10v.1M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0"/></svg> เคล็ดลับ</div>
         <div style="font-size:13px;color:#192D35;line-height:1.8">
           • High Flow: ถ้า <b>ER หรือ ICU</b> เป็นผู้ยืม หน่วยงานใดก็สามารถคืนได้<br>
           • บันทึกหน้าเว็บเป็น Shortcut บน iPhone หรือ Desktop เพื่อใช้งานเหมือนแอป<br>
