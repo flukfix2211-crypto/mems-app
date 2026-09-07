@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MEMs">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" type="image/png" href="icon.png">
+<title>MEMs — สถิติยืม-คืนเครื่องมือแพทย์</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --a: #0A6478; --a2: #0E7D94; --al: #DAF0F5;
+    --bg: #EBF5F8; --card: #FFFFFF; --txt: #192D35;
+    --muted: #6A8A96; --border: #C5E3ED;
+    --green: #1A7B4A; --red: #B82E2E;
+    --r: 16px; --sh: 0 2px 12px rgba(10,100,120,0.10);
+  }
+  body { font-family: 'Sarabun', sans-serif; background: #0A6478; color: var(--txt); min-height: 100vh; font-size: 15px; }
+
+  /* HEADER */
+  .header { background: none; color: #fff; padding: 18px 20px 20px; position: relative; overflow: hidden; }
+  .header::before { content: ''; position: absolute; inset: 0; z-index: 0; background: linear-gradient(135deg, #0A6478 0%, #0E7D94 100%); }
+  .header-inner { max-width: 900px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; position: relative; z-index: 1; }
+  .header h1 { font-size: 20px; font-weight: 800; }
+  .header .sub { font-size: 12px; opacity: .7; margin-top: 2px; }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  #lastUpdated { font-size: 12px; opacity: .75; }
+  .btn-back { font-size: 13px; font-weight: 700; color: #fff; text-decoration: none; background: rgba(255,255,255,.18); padding: 7px 14px; border-radius: 20px; white-space: nowrap; }
+
+  /* MAIN */
+  .main { max-width: 980px; margin: 0 auto; padding: 20px 16px 60px; }
+
+  /* FILTER BAR */
+  .filter-bar { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; background: var(--card); border-radius: var(--r); box-shadow: var(--sh); padding: 14px 16px; margin-bottom: 18px; }
+  .filter-field { display: flex; flex-direction: column; gap: 5px; }
+  .filter-field label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
+  .filter-field input, .filter-field select { padding: 8px 12px; border: 2px solid var(--border); border-radius: 10px; font-family: inherit; font-size: 13px; background: #fff; color: var(--txt); outline: none; cursor: pointer; min-width: 150px; }
+  .filter-field input:focus, .filter-field select:focus { border-color: var(--a); }
+  .btn-refresh { padding: 9px 16px; background: var(--a); color: #fff; border: none; border-radius: 10px; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .btn-refresh:disabled { opacity: .6; cursor: default; }
+  .btn-print { padding: 9px 16px; background: var(--al); color: var(--a); border: 1.5px solid var(--border); border-radius: 10px; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; margin-left: auto; }
+
+  /* KPI CARDS */
+  .kpi-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 18px; }
+  @media (min-width: 640px) { .kpi-row { grid-template-columns: repeat(4, 1fr); } }
+  .kpi-card { background: var(--card); border-radius: var(--r); box-shadow: var(--sh); padding: 18px 16px; }
+  .kpi-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 8px; }
+  .kpi-val { font-size: 30px; font-weight: 800; line-height: 1; color: var(--a); }
+  .kpi-val.green { color: var(--green); }
+  .kpi-val.red { color: var(--red); }
+  .kpi-sub { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+  /* CARD */
+  .card { background: var(--card); border-radius: var(--r); box-shadow: var(--sh); margin-bottom: 16px; overflow: hidden; }
+  .card-head { padding: 16px 18px; font-size: 15px; font-weight: 700; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+  .card-body { padding: 16px 18px; }
+
+  /* TREND CHART */
+  .trend-bar-row { display: flex; align-items: flex-end; gap: 3px; height: 140px; }
+  .trend-bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 2px; height: 100%; }
+  .legend-row { display: flex; gap: 16px; justify-content: center; margin-top: 10px; font-size: 12px; color: var(--muted); }
+  .legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
+
+  /* WARD / EQUIP BAR LIST */
+  .stat-list { display: flex; flex-direction: column; gap: 10px; }
+  .stat-row { display: flex; align-items: center; gap: 10px; }
+  .stat-name { width: 150px; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
+  .stat-bar-wrap { flex: 1; background: var(--al); border-radius: 20px; height: 10px; overflow: hidden; display: flex; }
+  .stat-bar-borrow { height: 100%; background: linear-gradient(90deg, var(--a), var(--a2)); }
+  .stat-bar-return { height: 100%; background: linear-gradient(90deg, #34d399, var(--green)); }
+  .stat-counts { width: 130px; text-align: right; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+  .stat-counts b.b { color: var(--a); }
+  .stat-counts b.r { color: var(--green); }
+  .stat-counts b.n { color: var(--red); }
+
+  /* TABLE */
+  .table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead tr { background: var(--a); color: #fff; }
+  th { padding: 10px 12px; text-align: left; font-weight: 700; white-space: nowrap; }
+  td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--al); }
+  td.num { text-align: right; font-weight: 700; }
+
+  /* STATES */
+  .empty { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 14px; }
+  .state-loading { text-align: center; padding: 30px; color: var(--muted); display: flex; align-items: center; justify-content: center; gap: 10px; }
+  .spinner { width: 20px; height: 20px; border: 3px solid var(--border); border-top-color: var(--a); border-radius: 50%; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* PRINT */
+  .print-title { font-size: 18px; font-weight: 800; margin-bottom: 6px; }
+  .print-meta  { font-size: 12px; color: #666; margin-bottom: 16px; }
+  @media print {
+    body * { visibility: hidden; }
+    #printArea, #printArea * { visibility: visible; }
+    #printArea { position: fixed; top: 0; left: 0; width: 100%; background: #fff; padding: 20px; }
+    .filter-bar, .header, .credit { display: none !important; }
+    .print-title, .print-meta { display: block !important; }
+  }
+
+  /* CREDIT */
+  .credit { text-align: center; padding: 18px 16px 8px; font-size: 12px; color: var(--muted); line-height: 1.7; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-inner">
+    <div>
+      <a href="dashboard.html" style="text-decoration:none;color:inherit"><h1>📊 สถิติยืม-คืนเครื่องมือแพทย์</h1></a>
+      <div class="sub">MEMs — สรุปการยืม-คืนแยกตามหน่วยงานและประเภทเครื่องมือ</div>
+    </div>
+    <div class="header-right">
+      <span id="lastUpdated"></span>
+      <a href="dashboard.html" class="btn-back">← แดชบอร์ด</a>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- FILTER BAR -->
+  <div class="filter-bar">
+    <div class="filter-field">
+      <label>เดือน</label>
+      <input type="month" id="monthSel" onchange="applyFilters()">
+    </div>
+    <div class="filter-field">
+      <label>หน่วยงาน</label>
+      <select id="wardSel" onchange="applyFilters()">
+        <option value="">— ทั้งหมด —</option>
+      </select>
+    </div>
+    <div class="filter-field">
+      <label>ประเภทเครื่องมือ</label>
+      <select id="equipSel" onchange="applyFilters()">
+        <option value="">— ทั้งหมด —</option>
+      </select>
+    </div>
+    <button class="btn-refresh" id="refreshBtn" onclick="loadAll()">🔄 รีเฟรช</button>
+    <button class="btn-print" onclick="window.print()">🖨️ พิมพ์รายงาน</button>
+  </div>
+
+  <div id="printArea">
+
+    <div class="print-title" style="display:none">รายงานสถิติยืม-คืนเครื่องมือแพทย์</div>
+    <div class="print-meta" id="printMeta" style="display:none"></div>
+
+    <!-- KPI CARDS -->
+    <div class="kpi-row">
+      <div class="kpi-card">
+        <div class="kpi-label">ยืมทั้งหมด</div>
+        <div class="kpi-val" id="kpiBorrow">—</div>
+        <div class="kpi-sub">ครั้ง</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">คืนทั้งหมด</div>
+        <div class="kpi-val green" id="kpiReturn">—</div>
+        <div class="kpi-sub">ครั้ง</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">คงค้าง (ยืม−คืน)</div>
+        <div class="kpi-val red" id="kpiNet">—</div>
+        <div class="kpi-sub">เครื่อง</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">หน่วยงานยืมมากสุด</div>
+        <div class="kpi-val" id="kpiTopWard" style="font-size:18px">—</div>
+        <div class="kpi-sub" id="kpiTopWardCount"></div>
+      </div>
+    </div>
+
+    <!-- TREND CHART -->
+    <div class="card">
+      <div class="card-head">📈 แนวโน้มยืม-คืนรายวัน</div>
+      <div class="card-body">
+        <div class="trend-bar-row" id="trendBars"></div>
+        <div class="legend-row">
+          <span><span class="legend-dot" style="background:var(--a)"></span>ยืม</span>
+          <span><span class="legend-dot" style="background:var(--green)"></span>คืน</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- BY WARD -->
+    <div class="card">
+      <div class="card-head">🏥 สรุปตามหน่วยงาน</div>
+      <div class="card-body">
+        <div class="stat-list" id="wardStatList"></div>
+      </div>
+    </div>
+
+    <!-- BY EQUIPMENT -->
+    <div class="card">
+      <div class="card-head">🔧 สรุปตามประเภทเครื่องมือ</div>
+      <div class="card-body">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>ประเภทเครื่องมือ</th><th style="text-align:right">ยืม</th><th style="text-align:right">คืน</th><th style="text-align:right">คงค้าง</th></tr></thead>
+            <tbody id="equipStatBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<div class="credit">
+  MEMs — Medical Equipment Management Systems v1.0<br>
+  งานศูนย์เครื่องมือแพทย์ โรงพยาบาลพหลพลพยุหเสนา จ.กาญจนบุรี
+</div>
+
+<script>
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz7_Q0Wtl7hDovuZga1q42xRTxVC6GXfuph4JU-C-aQ_zNLssdRVUsfde4a1vF15cIYtQ/exec';
+
+let allRecords = [];
+
+async function fetchGAS(action, params = {}) {
+  const url = new URL(SCRIPT_URL);
+  url.searchParams.set('action', action);
+  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+  const res = await fetch(url.toString(), { mode: 'cors' });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+function fmtDate(val) {
+  if (!val) return '';
+  const s = String(val);
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s;
+  try {
+    const d = new Date(s); if (isNaN(d)) return s;
+    return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+  } catch { return s; }
+}
+
+async function loadAll() {
+  const btn = document.getElementById('refreshBtn');
+  btn.disabled = true; btn.textContent = '⏳ กำลังโหลด...';
+  try {
+    const recRes = await fetchGAS('records', { limit: 1000 });
+    allRecords = recRes.records || [];
+    populateFilterOptions();
+    applyFilters();
+    document.getElementById('lastUpdated').textContent =
+      'อัพเดต ' + new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+  } catch (err) {
+    console.error(err);
+    document.getElementById('wardStatList').innerHTML = '<div class="empty">โหลดข้อมูลไม่สำเร็จ: ' + (err.message || '') + '</div>';
+  } finally {
+    btn.disabled = false; btn.textContent = '🔄 รีเฟรช';
+  }
+}
+
+function populateFilterOptions() {
+  const wardSel = document.getElementById('wardSel');
+  const equipSel = document.getElementById('equipSel');
+  const prevWard = wardSel.value;
+  const prevEquip = equipSel.value;
+
+  const wards = [...new Set(allRecords.map(r => r['ตึก/Ward']).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'th'));
+  wardSel.innerHTML = '<option value="">— ทั้งหมด —</option>' +
+    wards.map(w => `<option value="${w}"${w === prevWard ? ' selected' : ''}>${w}</option>`).join('');
+
+  const equips = [...new Set(allRecords.map(r => r['ชื่อเครื่อง']).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'th'));
+  equipSel.innerHTML = '<option value="">— ทั้งหมด —</option>' +
+    equips.map(e => `<option value="${e}"${e === prevEquip ? ' selected' : ''}>${e}</option>`).join('');
+
+  if (!document.getElementById('monthSel').value) {
+    const now = new Date();
+    document.getElementById('monthSel').value = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+  }
+}
+
+function getFilteredRecords() {
+  const month = document.getElementById('monthSel').value; // yyyy-mm
+  const ward = document.getElementById('wardSel').value;
+  const equip = document.getElementById('equipSel').value;
+
+  return allRecords.filter(r => {
+    if (month) {
+      const d = String(r['วันที่'] || '');
+      const m = d.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+      if (!m || `${m[3]}-${m[2]}` !== month) return false;
+    }
+    if (ward && r['ตึก/Ward'] !== ward) return false;
+    if (equip && r['ชื่อเครื่อง'] !== equip) return false;
+    return true;
+  });
+}
+
+function isBorrowType(r) { return String(r['ประเภท (ยืม/คืน)'] || '').includes('ยืม'); }
+function isReturnType(r) { return String(r['ประเภท (ยืม/คืน)'] || '').includes('คืน'); }
+
+function applyFilters() {
+  const records = getFilteredRecords();
+  renderKpis(records);
+  renderTrend(records);
+  renderWardStats(records);
+  renderEquipStats(records);
+  renderPrintMeta(records);
+}
+
+function renderKpis(records) {
+  const borrow = records.filter(isBorrowType).length;
+  const ret = records.filter(isReturnType).length;
+  const net = borrow - ret;
+
+  const byWard = {};
+  records.filter(isBorrowType).forEach(r => {
+    const w = r['ตึก/Ward'] || 'ไม่ระบุ';
+    byWard[w] = (byWard[w] || 0) + 1;
+  });
+  const topWard = Object.entries(byWard).sort((a, b) => b[1] - a[1])[0];
+
+  document.getElementById('kpiBorrow').textContent = borrow;
+  document.getElementById('kpiReturn').textContent = ret;
+  document.getElementById('kpiNet').textContent = net;
+  document.getElementById('kpiTopWard').textContent = topWard ? topWard[0] : '—';
+  document.getElementById('kpiTopWardCount').textContent = topWard ? `ยืม ${topWard[1]} ครั้ง` : '';
+}
+
+function renderTrend(records) {
+  const wrap = document.getElementById('trendBars');
+  const month = document.getElementById('monthSel').value;
+  if (!month) { wrap.innerHTML = ''; return; }
+  const [yy, mm] = month.split('-').map(Number);
+  const daysInMonth = new Date(yy, mm, 0).getDate();
+
+  const byDay = {};
+  for (let d = 1; d <= daysInMonth; d++) byDay[d] = { borrow: 0, return: 0 };
+  records.forEach(r => {
+    const d = String(r['วันที่'] || '');
+    const m = d.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (!m) return;
+    const day = Number(m[1]);
+    if (!byDay[day]) return;
+    if (isBorrowType(r)) byDay[day].borrow++;
+    else if (isReturnType(r)) byDay[day].return++;
+  });
+
+  const max = Math.max(1, ...Object.values(byDay).map(v => Math.max(v.borrow, v.return)));
+  wrap.innerHTML = Object.entries(byDay).map(([day, v]) => `
+    <div class="trend-bar-col">
+      <div style="display:flex;align-items:flex-end;gap:1px;height:100%;width:100%">
+        <div style="flex:1;border-radius:2px 2px 0 0;min-height:2px;background:var(--a);height:${Math.round(v.borrow / max * 100)}%"></div>
+        <div style="flex:1;border-radius:2px 2px 0 0;min-height:2px;background:var(--green);height:${Math.round(v.return / max * 100)}%"></div>
+      </div>
+      ${(day % 5 === 0 || Number(day) === daysInMonth || Number(day) === 1) ? `<div style="font-size:9px;color:var(--muted);margin-top:4px">${day}</div>` : ''}
+    </div>`).join('');
+}
+
+function renderWardStats(records) {
+  const wrap = document.getElementById('wardStatList');
+  const byWard = {};
+  records.forEach(r => {
+    const w = r['ตึก/Ward'] || 'ไม่ระบุ';
+    if (!byWard[w]) byWard[w] = { borrow: 0, return: 0 };
+    if (isBorrowType(r)) byWard[w].borrow++;
+    else if (isReturnType(r)) byWard[w].return++;
+  });
+  const rows = Object.entries(byWard).sort((a, b) => b[1].borrow - a[1].borrow);
+  if (!rows.length) { wrap.innerHTML = '<div class="empty">ไม่พบข้อมูลในช่วงที่เลือก</div>'; return; }
+
+  const max = Math.max(1, ...rows.map(([, v]) => Math.max(v.borrow, v.return)));
+  wrap.innerHTML = rows.map(([ward, v]) => `
+    <div class="stat-row">
+      <div class="stat-name" title="${ward}">${ward}</div>
+      <div class="stat-bar-wrap">
+        <div class="stat-bar-borrow" style="width:${Math.round(v.borrow / max * 50)}%"></div>
+        <div class="stat-bar-return" style="width:${Math.round(v.return / max * 50)}%"></div>
+      </div>
+      <div class="stat-counts">
+        <b class="b">${v.borrow}</b> ยืม / <b class="r">${v.return}</b> คืน
+      </div>
+    </div>`).join('');
+}
+
+function renderEquipStats(records) {
+  const body = document.getElementById('equipStatBody');
+  const byEquip = {};
+  records.forEach(r => {
+    const e = r['ชื่อเครื่อง'] || 'ไม่ระบุ';
+    if (!byEquip[e]) byEquip[e] = { borrow: 0, return: 0 };
+    if (isBorrowType(r)) byEquip[e].borrow++;
+    else if (isReturnType(r)) byEquip[e].return++;
+  });
+  const rows = Object.entries(byEquip).sort((a, b) => b[1].borrow - a[1].borrow);
+  if (!rows.length) { body.innerHTML = '<tr><td colspan="4" class="empty">ไม่พบข้อมูลในช่วงที่เลือก</td></tr>'; return; }
+
+  body.innerHTML = rows.map(([equip, v]) => {
+    const net = v.borrow - v.return;
+    return `<tr>
+      <td>${equip}</td>
+      <td class="num" style="color:var(--a)">${v.borrow}</td>
+      <td class="num" style="color:var(--green)">${v.return}</td>
+      <td class="num" style="color:${net > 0 ? 'var(--red)' : 'var(--muted)'}">${net}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderPrintMeta(records) {
+  const month = document.getElementById('monthSel').value;
+  const ward = document.getElementById('wardSel').value;
+  const equip = document.getElementById('equipSel').value;
+  const parts = [];
+  if (month) { const [yy, mm] = month.split('-'); parts.push(`เดือน ${mm}/${yy}`); }
+  if (ward) parts.push(`หน่วยงาน ${ward}`);
+  if (equip) parts.push(`เครื่องมือ ${equip}`);
+  document.getElementById('printMeta').textContent =
+    (parts.length ? parts.join(' · ') : 'ทั้งหมด') + ` · จำนวน ${records.length} รายการ · พิมพ์เมื่อ ${new Date().toLocaleString('th-TH')}`;
+}
+
+window.addEventListener('DOMContentLoaded', loadAll);
+</script>
+</body>
+</html>
