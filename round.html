@@ -241,8 +241,29 @@
   <button id="submitBtn" onclick="submitForm()">💉 บันทึก Round Infusion Pump</button>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="supabase-client.js"></script>
 <script>
-  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz7_Q0Wtl7hDovuZga1q42xRTxVC6GXfuph4JU-C-aQ_zNLssdRVUsfde4a1vF15cIYtQ/exec';
+  async function fetchRoundHistory(ward, equipmentType) {
+    const { data, error } = await supabase
+      .from('borrow_records')
+      .select('equipment_number, round_status, record_date, record_time, recorded_at')
+      .eq('ward', ward)
+      .ilike('equipment_name', '%' + equipmentType + '%')
+      .ilike('action', '%Round%')
+      .order('recorded_at', { ascending: true });
+    if (error) throw error;
+    const map = {};
+    (data || []).forEach(r => {
+      map[r.equipment_number] = {
+        number: r.equipment_number,
+        lastStatus: r.round_status,
+        lastDate: r.record_date,
+        lastTime: r.record_time
+      };
+    });
+    return Object.values(map).filter(m => m.number);
+  }
 
   const WARDS = [
     'ER','อายุรกรรมหญิง (M.ญ)','EENT','ศัลยกรรมหญิง','ศัลยกรรมกระดูก','ศัลยกรรมชาย',
@@ -357,10 +378,8 @@
 
     // Fetch history
     try {
-      const url = `${SCRIPT_URL}?action=roundHistory&ward=${encodeURIComponent(ward)}&equipment=Infusion%20Pump`;
-      const res = await fetch(url, { mode: 'cors' });
-      const data = await res.json();
-      renderMachines(data.machines || []);
+      const machines = await fetchRoundHistory(ward, 'Infusion Pump');
+      renderMachines(machines);
     } catch(e) {
       renderMachines([]);
     }
@@ -505,17 +524,13 @@
     const note = document.getElementById('noteField').value.trim();
 
     await Promise.all(items.map(item =>
-      fetch(SCRIPT_URL, {
-        method: 'POST', mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({
-          action: '🔵 Round', shift: shiftTH[currentShift], ward,
-          equipment: 'Infusion Pump',
-          equipmentNumber: item.no,
-          roundStatus: item.stLabel,
-          note, name,
-          timestamp: now.toISOString()
-        })
+      saveBorrowRecord({
+        action: '🔵 Round', shift: shiftTH[currentShift], ward,
+        equipment: 'Infusion Pump',
+        equipmentNumber: item.no,
+        roundStatus: item.stLabel,
+        note, name,
+        timestamp: now.toISOString()
       }).catch(() => {})
     ));
 

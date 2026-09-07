@@ -1,6 +1,9 @@
-# MEMs — Google Apps Script Backend
+# MEMs — Google Apps Script Backend (เลิกใช้งานแล้ว)
 
-## วิธีติดตั้ง
+> ⚠️ **เลิกใช้งานแล้ว** — ระบบย้ายไปใช้ Supabase ทั้งหมดแล้ว (ดู README.md ที่ root ของ repo)
+> ไฟล์ในโฟลเดอร์นี้เก็บไว้เป็นข้อมูลอ้างอิงเชิงประวัติเท่านั้น ไม่ได้ deploy หรือใช้งานจริงอีกต่อไป
+
+## วิธีติดตั้ง (เดิม — ใช้ไม่ได้แล้ว)
 
 ### 1. สร้าง Google Sheets
 1. ไปที่ [sheets.google.com](https://sheets.google.com) → สร้าง Spreadsheet ใหม่
