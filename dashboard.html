@@ -198,6 +198,55 @@
       #printArea { position: fixed; top: 0; left: 0; width: 100%; background: #fff; padding: 20px; }
     }
   </style>
+<style id="mems-approved-theme">
+/* MEMs approved visual theme. Presentation only; existing DOM and scripts are unchanged. */
+@import url('https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&display=swap');
+@media screen {
+:root{--a:#086572;--a2:#075763;--al:#eef8f9;--bg:#b1d2d9;--card:#fff;--txt:#1e293b;--muted:#526875;--border:#dce6ec;--r:16px;--rs:12px;--sh:0 1px 3px rgba(15,23,42,.07)}
+body{font-family:'Prompt','Sarabun',sans-serif;background:#8bbcc5;background-image:linear-gradient(135deg,#70aab6 0%,#b1d2d9 55%,#83b7c1 100%);background-attachment:fixed;color:var(--txt)}
+button,input,select,textarea{font-family:'Prompt','Sarabun',sans-serif!important}
+.header{background:#fff;color:#1e293b;border-top:4px solid #075763;border-bottom:1px solid #dce6ec;box-shadow:var(--sh)}
+.header::before{background:none}
+.header h1{color:#075763!important;-webkit-text-fill-color:#075763!important;background:none!important;filter:none!important;font-family:'Prompt','Sarabun',sans-serif!important;letter-spacing:0!important}
+.header .sub{color:#526875;opacity:1}
+.header a:not(:has(h1)),.header button{color:#075763!important;background:#eef8f9!important;border:1px solid #b3d7dd!important}
+.card,.filter-bar,.nav-card,.alert-banner{background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:var(--sh)}
+.card-head{background:#f8fafc;color:#1e293b}
+.field,.filter-bar select,.search-row input,.round-filter-row select{background-color:#f8fafc;border:1px solid var(--border);border-radius:12px}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #4b99a7;outline-offset:3px}
+}
+
+@media screen {
+body{font-size:16px}
+.header-inner{max-width:1200px}
+.main{max-width:1200px;padding-top:24px}
+.btn-back{border-radius:12px}
+#lastUpdated{color:#526875;opacity:1}
+.section-label{color:#193e46;font-size:14px;letter-spacing:0}
+.nav-grid{gap:16px}
+.nav-grid .nav-card{padding:22px 16px}
+.nav-grid .nav-title{font-size:16px;font-weight:600}
+.nav-grid .nav-desc{font-size:14px;line-height:1.6}
+.nav-card:hover{transform:translateY(-2px);box-shadow:0 5px 16px rgba(7,87,99,.12)}
+.nav-icon.teal{background:#d9edef;color:#075763}
+.nav-icon.blue{background:#dbeafe;color:#1d4ed8}
+.nav-icon.purple{background:#ede9fe;color:#6d28d9}
+.nav-icon.green{background:#dcfce7;color:#047857}
+.nav-card:nth-child(4n+1){border-top:3px solid #227e8d}
+.nav-card:nth-child(4n+2){border-top:3px solid #3b82f6}
+.nav-card:nth-child(4n+3){border-top:3px solid #d99a28}
+.nav-card:nth-child(4n){border-top:3px solid #8b5cf6}
+.ward-count,.equip-num{color:#1d4ed8}
+.ward-name,.ward-count,.filter-bar label,.filter-bar select,.nav-desc{font-size:14px}
+table:not(.wkl-table){font-size:14px}
+thead tr{background:#eef4f7;color:#334155}
+.wkl-table thead tr{background:var(--a);color:#fff}
+.badge-borrow{background:#ecfdf5;color:#047857}
+.badge-return{background:#fff1f2;color:#be123c}
+.badge{font-size:12px}
+@media(max-width:640px){.main{padding:18px 14px 60px}.nav-grid .nav-title{font-size:14px}.nav-grid .nav-desc{font-size:13px}}
+}
+</style>
 </head>
 <body>
 
