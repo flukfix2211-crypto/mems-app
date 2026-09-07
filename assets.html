@@ -336,10 +336,24 @@
 
 <div id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="supabase-client.js"></script>
 <script>
-  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz7_Q0Wtl7hDovuZga1q42xRTxVC6GXfuph4JU-C-aQ_zNLssdRVUsfde4a1vF15cIYtQ/exec';
-
   let allAssets = [];
+
+  function toAssetView(row) {
+    return {
+      _rowIndex: row.id,
+      'No.': row.no,
+      'เลขครุภัณฑ์': row.asset_code,
+      'S/N': row.serial_number,
+      'ID': row.asset_id,
+      'ประเภท': row.type,
+      'สถานะ': row.status,
+      'หมายเหตุ': row.note,
+      'อัปเดตล่าสุด': row.updated_at
+    };
+  }
 
   const STATUS_CLASS = {
     'ใช้งานได้': 'ok',
@@ -356,10 +370,9 @@
 
   async function loadAssets() {
     try {
-      const res = await fetch(`${SCRIPT_URL}?action=assets&t=${Date.now()}`);
-      const json = await res.json();
-      if (!json.ok) throw new Error(json.error);
-      allAssets = json.assets || [];
+      const { data, error } = await supabase.from('assets').select('*').order('no', { ascending: true });
+      if (error) throw error;
+      allAssets = (data || []).map(toAssetView);
       updateStats();
       renderTable(allAssets);
     } catch (err) {
@@ -490,15 +503,24 @@
     btn.disabled = true; btn.textContent = '⏳ กำลังบันทึก...';
 
     try {
-      const body = rowIndex
-        ? { action: 'editAsset', rowIndex: parseInt(rowIndex, 10), fields }
-        : { action: 'saveAsset', fields };
+      const row = {
+        no: fields.no,
+        asset_code: fields.asset,
+        serial_number: fields.sn,
+        asset_id: fields.id,
+        type: fields.type,
+        status: fields.status,
+        note: fields.note,
+        updated_at: new Date().toISOString()
+      };
 
-      await fetch(SCRIPT_URL, {
-        method: 'POST', mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify(body)
-      });
+      if (rowIndex) {
+        const { error } = await supabase.from('assets').update(row).eq('id', parseInt(rowIndex, 10));
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('assets').insert(row);
+        if (error) throw error;
+      }
 
       showToast(rowIndex ? '✅ แก้ไขสำเร็จ' : '✅ เพิ่มเครื่องสำเร็จ');
       closeModal();
@@ -513,11 +535,8 @@
   async function confirmDelete(rowIndex, label) {
     if (!confirm(`ลบรายการ: ${label}\n\nยืนยันการลบ?`)) return;
     try {
-      await fetch(SCRIPT_URL, {
-        method: 'POST', mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({ action: 'deleteAsset', rowIndex })
-      });
+      const { error } = await supabase.from('assets').delete().eq('id', rowIndex);
+      if (error) throw error;
       showToast('🗑️ ลบสำเร็จ');
       setTimeout(loadAssets, 1200);
     } catch (err) {

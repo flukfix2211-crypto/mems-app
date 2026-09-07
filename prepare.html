@@ -214,8 +214,25 @@
 
 <div id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="supabase-client.js"></script>
 <script>
-  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz7_Q0Wtl7hDovuZga1q42xRTxVC6GXfuph4JU-C-aQ_zNLssdRVUsfde4a1vF15cIYtQ/exec';
+  /** บันทึกรายการเตรียมหลายหมายเลข — เทียบเท่า savePrepare() ใน gas/Code.gs เดิม */
+  async function saveMultiplePrepareRecords(equipment, numbers, ward, preparedBy) {
+    const now = new Date();
+    const rows = numbers.filter(n => String(n).trim() !== '').map(num => ({
+      record_date: bkkDateStr(now),
+      record_time: bkkTimeStr(now),
+      equipment_type: equipment,
+      equipment_number: String(num).trim(),
+      ward,
+      prepared_by: preparedBy,
+      recorded_at: now.toISOString(),
+      status: 'เตรียม'
+    }));
+    const { error } = await supabase.from('prepare_records').insert(rows);
+    if (error) throw error;
+  }
 
   const EQUIPS = ['C2', 'Infusion Pump', 'Syringe pump', 'High Flow', 'Brid เขียว', 'T1', 'Monnal t60',
     'Patient Monitor', 'NIBP', 'Defibrillator', 'เครื่องมืออื่นๆ'];
@@ -303,14 +320,12 @@
 
     // กันทำซ้ำ: เครื่องที่ถูกเตรียมไว้แล้ว หรือถูกยืมอยู่ ทำซ้ำไม่ได้
     try {
-      const u1 = new URL(SCRIPT_URL); u1.searchParams.set('action', 'prepareList');
-      const u2 = new URL(SCRIPT_URL); u2.searchParams.set('action', 'equipment');
-      const [pd, eqd] = await Promise.all([
-        fetch(u1.toString(), { mode: 'cors' }).then(r => r.json()).catch(() => ({})),
-        fetch(u2.toString(), { mode: 'cors' }).then(r => r.json()).catch(() => ({}))
+      const [prepared, equipment] = await Promise.all([
+        fetchPreparedList().catch(() => []),
+        fetchEquipmentStatus().catch(() => [])
       ]);
-      const activePrep = new Set((pd.prepared || []).map(p => p.equipment + '__' + p.number));
-      const borrowed = new Set((eqd.equipment || []).filter(e => e.isBorrowed).map(e => e.equipment + '__' + e.number));
+      const activePrep = new Set(prepared.map(p => p.equipment + '__' + p.number));
+      const borrowed = new Set(equipment.filter(e => e.isBorrowed).map(e => e.equipment + '__' + e.number));
       const dups = [];
       numbers.forEach(num => {
         const key = equipName + '__' + num;
@@ -331,21 +346,15 @@
         const shift = detectShiftTH();
         const ts = new Date().toISOString();
         for (const num of numbers) {
-          await fetch(SCRIPT_URL, {
-            method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
-            body: JSON.stringify({
-              shift, action: '🟩 ยืม', equipment: equipName, equipmentNumber: num,
-              ward, name: by, timestamp: ts, note: 'เตรียมพร้อมส่ง (แอดมินนำส่ง)'
-            })
+          await saveBorrowRecord({
+            shift, action: '🟩 ยืม', equipment: equipName, equipmentNumber: num,
+            ward, name: by, timestamp: ts, note: 'เตรียมพร้อมส่ง (แอดมินนำส่ง)'
           });
         }
         toast('🚚 ส่ง ' + equipName + ' No.' + numbers.join(', ') + ' ให้ ' + ward + ' (ยืมแล้ว)');
       } else {
         // โหมดเตรียม = บันทึกเป็นรายการเตรียม
-        await fetch(SCRIPT_URL, {
-          method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify({ action: 'savePrepare', fields: { equipment: equipName, numbers, ward, preparedBy: by } })
-        });
+        await saveMultiplePrepareRecords(equipName, numbers, ward, by);
         toast('✅ เตรียม ' + equipName + ' No.' + numbers.join(', ') + ' ให้ ' + ward + ' แล้ว');
       }
       // รีเซ็ตฟอร์มพร้อมกรอกรายการใหม่ (เก็บผู้เตรียม + โหมดไว้)
@@ -374,9 +383,7 @@
     const body = document.getElementById('listBody');
     body.innerHTML = '<div class="empty">กำลังโหลด...</div>';
     try {
-      const u = new URL(SCRIPT_URL); u.searchParams.set('action', 'prepareList');
-      const data = await fetch(u.toString(), { mode: 'cors' }).then(r => r.json());
-      const items = data.prepared || [];
+      const items = await fetchPreparedList();
       if (!items.length) { body.innerHTML = '<div class="empty">ยังไม่มีรายการที่เตรียมไว้</div>'; return; }
       // group by ward
       const byWard = {};
@@ -412,10 +419,10 @@
     closeCancelModal();
     if (!rowIndex) return;
     try {
-      await fetch(SCRIPT_URL, {
-        method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({ action: 'cancelPrepare', rowIndex, reason })
-      });
+      const { error } = await supabase.from('prepare_records')
+        .update({ status: 'ยกเลิก: ' + reason })
+        .eq('id', rowIndex);
+      if (error) throw error;
       toast('🗑️ ยกเลิกแล้ว (' + reason + ')');
       setTimeout(loadList, 800);
     } catch (e) { toast('❌ ยกเลิกไม่สำเร็จ'); }

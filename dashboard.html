@@ -701,6 +701,11 @@
   พัฒนาโดย Pawarit Somchipeng
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+<script src="supabase-client.js"></script>
+<script src="reports.js"></script>
 <script>
 /* ============================================================ AUTH ============================================================ */
 const PW_HASH = '054d00a58d2ae4cfcc5563b642c7159e4475602d40809ea02bf5c97a9652a44f';
@@ -742,8 +747,38 @@ if (!isPwProtectionEnabled() || sessionStorage.getItem('mems_auth') === '1') {
   document.getElementById('loginOverlay').style.display = 'none';
 }
 
-/* ============================================================ CONFIG ============================================================ */
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz7_Q0Wtl7hDovuZga1q42xRTxVC6GXfuph4JU-C-aQ_zNLssdRVUsfde4a1vF15cIYtQ/exec';
+/* ============================================================ RECORD MAPPING (borrow_records -> shape เดิมจาก GAS getRecords()) ============================================================ */
+function isoToSlashDate(iso) {
+  if (!iso) return '';
+  const [y, m, d] = String(iso).split('-');
+  return d && m && y ? `${d}/${m}/${y}` : '';
+}
+function toRecordView(row) {
+  return {
+    _rowIndex: row.id,
+    'ลำดับ': row.id,
+    'วันที่': isoToSlashDate(row.record_date),
+    'เวลา': row.record_time,
+    'เวร': row.shift,
+    'ประเภท (ยืม/คืน)': row.action,
+    'ชื่อเครื่อง': row.equipment_name,
+    'หมายเลขเครื่อง': row.equipment_number,
+    'ตึก/Ward': row.ward,
+    'ชื่อผู้ยืม': row.staff_name,
+    'Timestamp (ISO)': row.recorded_at,
+    'สถานะ Round': row.round_status,
+    'หมายเหตุ': row.note
+  };
+}
+async function fetchRecords() {
+  const { data, error } = await supabase
+    .from('borrow_records')
+    .select('*')
+    .order('recorded_at', { ascending: false })
+    .limit(5000);
+  if (error) throw error;
+  return (data || []).map(toRecordView);
+}
 
 /* ============================================================ STATE ============================================================ */
 let allRecords = [];
@@ -790,8 +825,7 @@ async function loadWorkloadCalendar() {
   const month = document.getElementById('wklMonthSel').value;
   wrap.innerHTML = '<div class="state-loading"><div class="spinner"></div>กำลังโหลด…</div>';
   try {
-    const data = await fetchGAS('workloadCalendar', month ? { month } : {});
-    if (!data.ok) throw new Error(data.error || 'โหลดไม่สำเร็จ');
+    const data = await computeWorkloadCalendar(month || null);
     wklData = data;
     meta.innerHTML = `ประจำเดือน <b>${data.monthTH}</b> · ยอดรวมทั้งเดือน <b>${data.grandTotal}</b> ครั้ง` +
       (data.isCurrentMonth ? ' · <span style="color:var(--a);font-weight:700">กำลังนับของเดือนนี้แบบสด</span>' : '') +
@@ -877,11 +911,8 @@ async function exportWorkloadPDF() {
   const orig = btn.textContent;
   btn.disabled = true; btn.textContent = '⏳ กำลังสร้าง PDF...';
   try {
-    const rpt = await fetchGAS('workloadReport', month ? { month } : {});
-    if (!rpt.ok) throw new Error(rpt.error || 'สร้างรายงานไม่สำเร็จ');
-    const pdf = await fetchGAS('exportPDF', { sheetName: rpt.sheetName });
-    if (!pdf.ok) throw new Error(pdf.error || 'Export PDF ไม่สำเร็จ');
-    window.open(pdf.viewUrl, '_blank');
+    const data = await computeWorkloadCalendar(month || null);
+    exportWorkloadCalendarPDF(data);
   } catch (e) {
     alert('⚠️ Export PDF ไม่สำเร็จ: ' + (e.message || ''));
   } finally {
@@ -894,8 +925,7 @@ async function renderPrepareHistory() {
   const cnt  = document.getElementById('prepHistCount');
   body.innerHTML = '<div class="state-loading"><div class="spinner"></div>กำลังโหลด…</div>';
   try {
-    const data = await fetchGAS('prepareHistory');
-    const items = data.history || [];
+    const items = await fetchPrepareHistory();
     if (cnt) cnt.textContent = 'ทั้งหมด ' + items.length + ' รายการ';
     if (!items.length) { body.innerHTML = '<div style="text-align:center;color:var(--muted);padding:30px">ยังไม่มีประวัติการเตรียม</div>'; return; }
     const rows = items.map(it => {
@@ -937,8 +967,7 @@ async function renderFixJobHistory() {
   const cnt  = document.getElementById('fixJobCount');
   body.innerHTML = '<div class="state-loading"><div class="spinner"></div>กำลังโหลด…</div>';
   try {
-    const data = await fetchGAS('fixJobList');
-    const items = data.items || [];
+    const items = await fetchFixJobList();
     if (cnt) cnt.textContent = 'ทั้งหมด ' + items.length + ' รายการ';
     if (!items.length) { body.innerHTML = '<div style="text-align:center;color:var(--muted);padding:30px">ยังไม่มีประวัติการแก้ไขหน้างาน</div>'; return; }
     const rows = items.map(it => {
@@ -980,12 +1009,12 @@ window.addEventListener('DOMContentLoaded', () => {
 
 async function loadAll() {
   try {
-    const [recRes, eqRes] = await Promise.all([
-      fetchGAS('records', { limit: 1000 }),
-      fetchGAS('equipment')
+    const [records, equipment] = await Promise.all([
+      fetchRecords(),
+      fetchEquipmentStatus()
     ]);
-    allRecords  = recRes.records  || [];
-    equipStatus = eqRes.equipment || [];
+    allRecords  = records;
+    equipStatus = equipment;
     applyFilters();
     renderAlertBanner();
     renderHomeTrend();
@@ -1092,16 +1121,6 @@ function renderHomeTrend() {
   wrap.innerHTML = trendBarsHTML(computeDailyTrend(TREND_DAYS), 'var(--a)', '#1A7B4A', 'var(--muted)');
 }
 
-/* ============================================================ FETCH GAS ============================================================ */
-async function fetchGAS(action, params = {}) {
-  const url = new URL(SCRIPT_URL);
-  url.searchParams.set('action', action);
-  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-  const res = await fetch(url.toString(), { mode: 'cors' });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
-}
-
 function applyFilters() {
   filteredRecords = allRecords.slice();
   currentPage = 0;
@@ -1188,13 +1207,10 @@ function renderWardDetail() {
 }
 
 async function confirmDeleteWard(rowIndex, label) {
-  if (!confirm(`ลบรายการยืม "${label}" ?\n\nรายการนี้จะถูกลบออกจาก Google Sheets ถาวร`)) return;
+  if (!confirm(`ลบรายการยืม "${label}" ?\n\nรายการนี้จะถูกลบออกถาวร`)) return;
   try {
-    await fetch(SCRIPT_URL, {
-      method: 'POST', mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'delete', rowIndex })
-    });
+    const { error } = await supabase.from('borrow_records').delete().eq('id', rowIndex);
+    if (error) throw error;
     allRecords      = allRecords.filter(r => r['_rowIndex'] !== rowIndex);
     filteredRecords = filteredRecords.filter(r => r['_rowIndex'] !== rowIndex);
     // อัปเดต equipStatus ด้วย (เอาออกจากรายการยืมอยู่)
@@ -1248,16 +1264,12 @@ function renderTable() {
 }
 
 async function confirmDelete(rowIndex, label) {
-  if (!confirm(`ลบรายการ "${label}" ?\n\nรายการนี้จะถูกลบออกจาก Google Sheets ถาวร`)) return;
+  if (!confirm(`ลบรายการ "${label}" ?\n\nรายการนี้จะถูกลบออกถาวร`)) return;
   const row = document.getElementById('rec-row-' + rowIndex);
   if (row) row.style.opacity = '0.4';
   try {
-    const res = await fetch(SCRIPT_URL, {
-      method: 'POST', mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'delete', rowIndex })
-    });
-    // no-cors → ไม่มี response body → รอแล้วรีโหลด
+    const { error } = await supabase.from('borrow_records').delete().eq('id', rowIndex);
+    if (error) throw error;
     allRecords = allRecords.filter(r => r['_rowIndex'] !== rowIndex);
     filteredRecords = filteredRecords.filter(r => r['_rowIndex'] !== rowIndex);
     renderTable();
@@ -1317,11 +1329,14 @@ async function saveEdit() {
   };
 
   try {
-    await fetch(SCRIPT_URL, {
-      method: 'POST', mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'edit', rowIndex: _editRowIndex, fields })
-    });
+    const { error } = await supabase.from('borrow_records').update({
+      ward: fields.ward,
+      shift: fields.shift,
+      round_status: fields.roundStatus,
+      staff_name: fields.name,
+      note: fields.note
+    }).eq('id', _editRowIndex);
+    if (error) throw error;
 
     // Update local cache
     const rec = allRecords.find(r => r['_rowIndex'] === _editRowIndex);
@@ -1442,11 +1457,8 @@ async function bulkDelete(mode) {
   const rowIndexes = targets.map(r => r['_rowIndex']).sort((a, b) => b - a);
 
   try {
-    await fetch(SCRIPT_URL, {
-      method: 'POST', mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'deleteBulk', rowIndexes })
-    });
+    const { error } = await supabase.from('borrow_records').delete().in('id', rowIndexes);
+    if (error) throw error;
 
     // ลบออกจาก local cache
     const delSet = new Set(rowIndexes);
@@ -1555,13 +1567,10 @@ function renderRoundTable() {
 }
 
 async function confirmDeleteRound(rowIndex, label) {
-  if (!confirm(`ลบบันทึก Round "${label}" ?\n\nรายการนี้จะถูกลบออกจาก Google Sheets ถาวร`)) return;
+  if (!confirm(`ลบบันทึก Round "${label}" ?\n\nรายการนี้จะถูกลบออกถาวร`)) return;
   try {
-    await fetch(SCRIPT_URL, {
-      method: 'POST', mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'delete', rowIndex })
-    });
+    const { error } = await supabase.from('borrow_records').delete().eq('id', rowIndex);
+    if (error) throw error;
     allRecords      = allRecords.filter(r => r['_rowIndex'] !== rowIndex);
     filteredRecords = filteredRecords.filter(r => r['_rowIndex'] !== rowIndex);
     renderRoundTable();
@@ -1651,14 +1660,13 @@ async function renderC2Dashboard() {
   msg.textContent = 'กำลังโหลด…';
   grid.innerHTML  = '';
   try {
-    const [c2Data, assetData] = await Promise.all([
-      fetch(`${SCRIPT_URL}?action=c2status&t=${Date.now()}`, { mode: 'cors' }).then(r => r.json()),
-      fetch(`${SCRIPT_URL}?action=assets&t=${Date.now()}`, { mode: 'cors' }).then(r => r.json()).catch(() => ({ assets: [] }))
+    const [units, assetRows] = await Promise.all([
+      fetchC2Status(),
+      supabase.from('assets').select('no, status').then(r => r.data || []).catch(() => [])
     ]);
     msg.textContent = '';
-    const units = c2Data.units || [];
     const assetMap = {};
-    (assetData.assets || []).forEach(a => { if (a['No.']) assetMap[String(a['No.'])] = a['สถานะ'] || 'ใช้งานได้'; });
+    assetRows.forEach(a => { if (a.no) assetMap[String(a.no)] = a.status || 'ใช้งานได้'; });
     window._c2AssetMap = assetMap;
 
     const { items, counts } = computeC2Summary(units, assetMap);
@@ -2023,9 +2031,9 @@ function startKpiClock() {
 async function renderKpiData() {
   if (!window._c2AssetMap) {
     try {
-      const ad = await fetch(`${SCRIPT_URL}?action=assets&t=${Date.now()}`, { mode: 'cors' }).then(r => r.json());
+      const { data } = await supabase.from('assets').select('no, status');
       const m = {};
-      (ad.assets || []).forEach(a => { if (a['No.']) m[String(a['No.'])] = a['สถานะ'] || 'ใช้งานได้'; });
+      (data || []).forEach(a => { if (a.no) m[String(a.no)] = a.status || 'ใช้งานได้'; });
       window._c2AssetMap = m;
     } catch(e) { window._c2AssetMap = {}; }
   }

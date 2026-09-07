@@ -626,14 +626,9 @@
   <button class="reset-btn" onclick="resetForm()">ทำรายการใหม่</button>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="supabase-client.js"></script>
 <script>
-/* ==============================
-   CONFIG — วาง URL ของ Google Apps Script
-   ============================== */
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz7_Q0Wtl7hDovuZga1q42xRTxVC6GXfuph4JU-C-aQ_zNLssdRVUsfde4a1vF15cIYtQ/exec';
-/* ใส่ URL ที่นี่ถ้าต้องการส่งข้อมูลไป Google Sheets
-   ตัวอย่าง: 'https://script.google.com/macros/s/XXXXXX/exec' */
-
 /* ====== STATE ====== */
 let S = { action: null, shift: null, equip: null };
 
@@ -833,12 +828,10 @@ async function onWardChange(sel) {
 let wardReturnTypes = new Set();
 async function computeWardReturnTypes(ward) {
   wardReturnTypes = new Set();
-  if (!ward || !SCRIPT_URL) return;
+  if (!ward) return;
   try {
-    const u = new URL(SCRIPT_URL);
-    u.searchParams.set('action', 'equipment');
-    const data = await fetch(u.toString(), { mode: 'cors' }).then(r => r.json());
-    (data.equipment || []).forEach(e => {
+    const equipment = await fetchEquipmentStatus();
+    equipment.forEach(e => {
       // วอร์ดไหนยืม วอร์ดนั้นคืน — ยกเว้น ER (หรือ ICU) ยืม วอร์ดอื่นคืนได้ด้วย
       if (e.isBorrowed && (String(e.ward) === ward || isErIcu(e.ward))) wardReturnTypes.add(String(e.equipment));
     });
@@ -849,12 +842,8 @@ async function computeWardReturnTypes(ward) {
 let preparedList = [];
 
 async function loadPreparedList() {
-  if (!SCRIPT_URL) return;
   try {
-    const u = new URL(SCRIPT_URL);
-    u.searchParams.set('action', 'prepareList');
-    const data = await fetch(u.toString(), { mode: 'cors' }).then(r => r.json());
-    preparedList = data.prepared || [];
+    preparedList = await fetchPreparedList();
     renderPreparedBanner();
     filterEquipButtons();
   } catch (e) { /* เงียบไว้ ไม่บล็อค */ }
@@ -1030,12 +1019,9 @@ async function loadC2Status() {
   const msg = document.getElementById('c2StatusMsg');
   msg.textContent = 'กำลังโหลดสถานะ C2…';
   try {
-    const url = new URL(SCRIPT_URL);
-    url.searchParams.set('action', 'c2status');
-    const res  = await fetch(url.toString(), { mode: 'cors' });
-    const data = await res.json();
+    const units = await fetchC2Status();
     c2Status = {};
-    (data.units || []).forEach(u => { c2Status[String(u.number)] = u; });
+    units.forEach(u => { c2Status[String(u.number)] = u; });
     msg.textContent = '';
     renderC2Grid();
   } catch (e) {
@@ -1126,11 +1112,7 @@ async function loadEquipStatus() {
   const msg = document.getElementById('c2StatusMsg');
   msg.textContent = 'กำลังโหลดสถานะเครื่อง…';
   try {
-    const url = new URL(SCRIPT_URL);
-    url.searchParams.set('action', 'equipment');
-    const res  = await fetch(url.toString(), { mode: 'cors' });
-    const data = await res.json();
-    allEquipStatus = data.equipment || [];
+    allEquipStatus = await fetchEquipmentStatus();
     msg.textContent = '';
     renderEquipReturnGrid();
   } catch (e) {
@@ -1245,14 +1227,7 @@ async function submitTransfer() {
   };
 
   try {
-    if (SCRIPT_URL) {
-      await fetch(SCRIPT_URL, {
-        method : 'POST',
-        mode   : 'no-cors',
-        headers: { 'Content-Type': 'text/plain' },
-        body   : JSON.stringify(payload)
-      });
-    }
+    await saveBorrowRecord(payload);
     const movedEquip = tfCtx.equip, movedNum = tfCtx.num;
     closeTransferModal();
     allEquipStatus = null;
@@ -1276,12 +1251,9 @@ async function handleSubmit() {
   const shiftTH = { morning: 'เวรเช้า', afternoon: 'เวรบ่าย', night: 'เวรดึก' };
 
   // โหมดยืม: ต้องมีการเตรียมเครื่องสำหรับหน่วยงานนี้ก่อนจึงจะยืมได้
-  if (S.action === 'borrow' && ward && SCRIPT_URL) {
+  if (S.action === 'borrow' && ward) {
     try {
-      const u = new URL(SCRIPT_URL);
-      u.searchParams.set('action', 'prepareList');
-      const data = await fetch(u.toString(), { mode: 'cors' }).then(r => r.json());
-      preparedList = data.prepared || [];
+      preparedList = await fetchPreparedList();
       renderPreparedBanner();
       if (preparedList.filter(p => p.ward === ward).length === 0) {
         alert('⚠️ หน่วยงาน "' + ward + '" ยังไม่มีการเตรียมเครื่อง\n' +
@@ -1297,13 +1269,11 @@ async function handleSubmit() {
   }
 
   // กันยืมซ้ำ: ถ้าเครื่อง No. นั้นถูกยืมอยู่และยังไม่คืน ห้ามยืมซ้ำ
-  if (S.action === 'borrow' && SCRIPT_URL) {
+  if (S.action === 'borrow') {
     try {
-      const u = new URL(SCRIPT_URL);
-      u.searchParams.set('action', 'equipment');
-      const data = await fetch(u.toString(), { mode: 'cors' }).then(r => r.json());
+      const equipment = await fetchEquipmentStatus();
       const statusMap = {};
-      (data.equipment || []).forEach(e => {
+      equipment.forEach(e => {
         statusMap[String(e.equipment) + '__' + String(e.number)] = e.isBorrowed;
       });
       const dup = nums.filter(n => statusMap[finalEquip + '__' + String(n)] === true);
@@ -1336,21 +1306,11 @@ async function handleSubmit() {
   for (let i = 0; i < nums.length; i++) {
     btn.textContent = `กำลังบันทึก… (${i + 1}/${nums.length})`;
     const payload = { ...basePayload, equipmentNumber: nums[i] };
-    if (SCRIPT_URL) {
-      try {
-        // text/plain ไม่ trigger preflight → ใช้ได้กับ GAS no-cors
-        await fetch(SCRIPT_URL, {
-          method : 'POST',
-          mode   : 'no-cors',
-          headers: { 'Content-Type': 'text/plain' },
-          body   : JSON.stringify(payload)
-        });
-        savedCount++;
-      } catch (e2) {
-        console.error('บันทึกล้มเหลว:', e2);
-      }
-    } else {
-      savedCount++; // ไม่มี URL — นับว่าผ่าน (demo mode)
+    try {
+      await saveBorrowRecord(payload);
+      savedCount++;
+    } catch (e2) {
+      console.error('บันทึกล้มเหลว:', e2);
     }
   }
 

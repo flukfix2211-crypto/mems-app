@@ -203,7 +203,7 @@
       <div class="action-card-title">สร้างรายงานประจำเดือน</div>
       <div class="action-card-desc">
         ดึงข้อมูลจากเดือนที่ผ่านมา สรุปการยืม-คืน อัตราการใช้งาน
-        และหน่วยงานที่ยืมมากที่สุด บันทึกลง Google Sheets อัตโนมัติ
+        และหน่วยงานที่ยืมมากที่สุด
       </div>
       <button class="btn-action teal" id="btnMonthly" onclick="runAction('monthly')">
         <span id="iconMonthly">📊</span>
@@ -216,9 +216,8 @@
       <div class="action-card-icon orange">📄</div>
       <div class="action-card-title">Export PDF</div>
       <div class="action-card-desc">
-        แปลง Sheet รายงานล่าสุดเป็น PDF จัดหน้า A4 สวยงาม
-        บันทึกลง Google Drive ใน Folder MEMs_Reports
-        พร้อม Link ดาวน์โหลดทันที
+        แปลงรายงานล่าสุดที่สร้างไว้ (ประจำเดือน/สรุปผู้บริหาร/C2)
+        เป็น PDF จัดหน้า A4 ดาวน์โหลดลงเครื่องทันที
       </div>
       <button class="btn-action orange" id="btnPDF" onclick="runAction('pdf')">
         <span id="iconPDF">📄</span>
@@ -295,51 +294,74 @@
 <!-- TOAST -->
 <div id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+<script src="supabase-client.js"></script>
+<script src="reports.js"></script>
 <script>
-  // ── CONFIG ──────────────────────────────────────────────────
-  // เปลี่ยนเป็น URL ของ Google Apps Script Web App ของคุณ
-  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz7_Q0Wtl7hDovuZga1q42xRTxVC6GXfuph4JU-C-aQ_zNLssdRVUsfde4a1vF15cIYtQ/exec';
-
   // ── ประวัติในหน่วยความจำ (เซสชัน) ────────────────────────
   const localHistory = JSON.parse(sessionStorage.getItem('memsReportHistory') || '[]');
+  let _lastReportForPdf = null; // { type, data } — รายงานล่าสุดที่สร้าง ใช้โดยปุ่ม Export PDF
 
   // ── MAIN ACTION HANDLER ─────────────────────────────────────
   async function runAction(type) {
     const configs = {
       monthly: {
         btn: 'btnMonthly', icon: 'iconMonthly', label: 'labelMonthly',
-        action: 'monthlyReport', loadingText: 'กำลังสร้างรายงาน...',
-        tagClass: 'report', tagLabel: 'รายงานเดือน'
+        loadingText: 'กำลังสร้างรายงาน...', doneLabel: 'สร้างรายงานประจำเดือน',
+        tagClass: 'report', tagLabel: 'รายงานเดือน',
+        run: computeMonthlyReport, exportPdf: exportMonthlyReportPDF, fileName: d => 'Monthly_Report_' + d.monthTH.replace(' ', '_') + '.pdf'
       },
       pdf: {
         btn: 'btnPDF', icon: 'iconPDF', label: 'labelPDF',
-        action: 'exportPDF', loadingText: 'กำลัง Export PDF...',
-        tagClass: 'pdf', tagLabel: 'PDF'
+        loadingText: 'กำลัง Export PDF...', doneLabel: 'Export PDF', skipHistory: true
       },
       exec: {
         btn: 'btnExec', icon: 'iconExec', label: 'labelExec',
-        action: 'execSummary', loadingText: 'กำลังสร้างสรุปผู้บริหาร...',
-        tagClass: 'exec', tagLabel: 'สรุปผู้บริหาร'
+        loadingText: 'กำลังสร้างสรุปผู้บริหาร...', doneLabel: 'สรุปผู้บริหาร',
+        tagClass: 'exec', tagLabel: 'สรุปผู้บริหาร',
+        run: computeExecutiveSummary, exportPdf: exportExecSummaryPDF, fileName: d => 'ExecSummary_' + d.monthTH.replace(' ', '_') + '.pdf'
       },
       c2: {
         btn: 'btnC2', icon: 'iconC2', label: 'labelC2',
-        action: 'c2Report', loadingText: 'กำลังประมวลผลรายเครื่อง...',
-        tagClass: 'report', tagLabel: 'รายงาน C2'
+        loadingText: 'กำลังประมวลผลรายเครื่อง...', doneLabel: 'สร้างรายงาน C2',
+        tagClass: 'report', tagLabel: 'รายงาน C2',
+        run: computeC2Report, exportPdf: exportC2ReportPDF, fileName: () => 'C2_Report.pdf'
       },
       digest: {
         btn: 'btnDigest', icon: 'iconDigest', label: 'labelDigest',
-        action: 'sendDigestNow', loadingText: 'กำลังส่งแจ้งเตือน...',
+        loadingText: 'กำลังส่งแจ้งเตือน...', doneLabel: 'ส่งแจ้งเตือนตอนนี้',
         tagClass: 'exec', tagLabel: 'ส่งแจ้งเตือน', skipHistory: true
       }
     };
     const cfg = configs[type];
 
-    // แสดง loading
     setLoading(cfg, true);
     hideResult();
 
     try {
-      const res = await callGAS(cfg.action);
+      let res;
+      if (type === 'pdf') {
+        if (!_lastReportForPdf) {
+          setLoading(cfg, false);
+          showResult('error', '❌ ยังไม่มีรายงาน', `<p style="color:var(--red);font-size:14px">กรุณาสร้างรายงาน (ประจำเดือน / สรุปผู้บริหาร / C2) อย่างน้อย 1 รายการก่อน</p>`);
+          toast('❌ ยังไม่มีรายงานให้ export');
+          return;
+        }
+        const rc = configs[_lastReportForPdf.type];
+        rc.exportPdf(_lastReportForPdf.data);
+        setLoading(cfg, false);
+        showResult('success', '✅ ดาวน์โหลด PDF แล้ว', `<p style="font-size:14px;color:var(--muted)">ไฟล์: ${rc.fileName(_lastReportForPdf.data)}</p>`);
+        toast('✅ ดาวน์โหลด PDF สำเร็จ');
+        return;
+      }
+
+      if (type === 'digest') {
+        res = await notifyTelegram({ type: 'digest', manual: true });
+      } else {
+        res = await cfg.run();
+      }
       setLoading(cfg, false);
 
       if (!res.ok) {
@@ -348,16 +370,14 @@
         return;
       }
 
-      // แสดงผลลัพธ์
       showResultByType(type, res);
 
-      // บันทึก history (ข้ามสำหรับ action ที่ไม่ได้สร้าง "ไฟล์รายงาน" เช่นส่งแจ้งเตือน)
       if (!cfg.skipHistory) {
+        _lastReportForPdf = { type, data: res };
         const entry = {
           type: cfg.tagLabel, tagClass: cfg.tagClass,
-          name: res.sheetName || res.fileName || '-',
-          month: res.monthTH || '-',
-          fileUrl: res.fileUrl || res.viewUrl || null,
+          name: cfg.fileName(res), month: res.monthTH || '-',
+          reportType: type, data: res,
           createdAt: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
         };
         localHistory.unshift(entry);
@@ -375,48 +395,45 @@
 
     } catch (err) {
       setLoading(cfg, false);
-      showResult('error', '❌ ไม่สามารถเชื่อมต่อได้', `<p style="color:var(--red);font-size:14px">${err.message}</p>`);
-      toast('❌ เชื่อมต่อ GAS ไม่ได้');
+      showResult('error', '❌ เกิดข้อผิดพลาด', `<p style="color:var(--red);font-size:14px">${err.message}</p>`);
+      toast('❌ เกิดข้อผิดพลาด: ' + err.message);
     }
+  }
+
+  /** ดาวน์โหลด PDF ซ้ำจากประวัติ (ข้อมูลถูกเก็บไว้ในเซสชันนี้) */
+  function redownloadPdf(idx) {
+    const h = localHistory[idx];
+    if (!h || !h.data) return;
+    const exporters = { monthly: exportMonthlyReportPDF, exec: exportExecSummaryPDF, c2: exportC2ReportPDF };
+    const fn = exporters[h.reportType];
+    if (fn) fn(h.data);
   }
 
   // ── แสดงผลลัพธ์ตามประเภท ───────────────────────────────────
   function showResultByType(type, res) {
     if (type === 'monthly') {
       const html = `
-        <div class="result-row"><span class="result-key">ชื่อ Sheet</span><span class="result-val">${res.sheetName}</span></div>
         <div class="result-row"><span class="result-key">เดือน</span><span class="result-val">${res.monthTH}</span></div>
-        <div class="result-row"><span class="result-key">รายการยืมทั้งหมด</span><span class="result-val">${res.totalBorrow} ครั้ง</span></div>
+        <div class="result-row"><span class="result-key">รายการยืมทั้งหมด</span><span class="result-val">${res.total} ครั้ง</span></div>
         <div class="result-row"><span class="result-key">รายการคืนทั้งหมด</span><span class="result-val">${res.totalReturn} ครั้ง</span></div>
-        <p style="margin-top:8px;font-size:13px;color:var(--muted)">เปิด Google Sheets เพื่อดูรายงาน หรือกด Export PDF ด้านบน</p>`;
+        <p style="margin-top:8px;font-size:13px;color:var(--muted)">กด "Export PDF" ด้านบนเพื่อดาวน์โหลดรายงานฉบับเต็ม</p>`;
       showResult('success', '✅ สร้างรายงานสำเร็จ', html);
-    }
-    else if (type === 'pdf') {
-      const html = `
-        <div class="result-row"><span class="result-key">ไฟล์</span><span class="result-val">${res.fileName}</span></div>
-        <a href="${res.viewUrl}" target="_blank" class="drive-link">
-          📄 เปิด / ดาวน์โหลด PDF →
-        </a>`;
-      showResult('success', '✅ พร้อมดาวน์โหลด PDF', html);
     }
     else if (type === 'exec') {
       const html = `
-        <div class="result-row"><span class="result-key">ชื่อ Sheet</span><span class="result-val">${res.sheetName}</span></div>
         <div class="result-row"><span class="result-key">เดือน</span><span class="result-val">${res.monthTH}</span></div>
-        <div class="result-row"><span class="result-key">ยอดยืมทั้งหมด</span><span class="result-val">${res.totalBorrow} ครั้ง</span></div>
+        <div class="result-row"><span class="result-key">ยอดยืมทั้งหมด</span><span class="result-val">${res.totalBorrowLastMonth} ครั้ง</span></div>
         <div class="result-row"><span class="result-key">เครื่องค้างอยู่</span><span class="result-val">${res.stillBorrowed} เครื่อง</span></div>
-        <div class="result-row"><span class="result-key">อุปกรณ์ยอดนิยม</span><span class="result-val">${res.topEquip}</span></div>
-        <div class="result-row"><span class="result-key">หน่วยงานยืมมากสุด</span><span class="result-val">${res.topWard}</span></div>`;
+        <div class="result-row"><span class="result-key">อุปกรณ์ยอดนิยม</span><span class="result-val">${res.topEquipName} (${res.topEquipCount} ครั้ง)</span></div>
+        <div class="result-row"><span class="result-key">หน่วยงานยืมมากสุด</span><span class="result-val">${res.topWardName} (${res.topWardCount} ครั้ง)</span></div>`;
       showResult('success', '✅ สร้างสรุปผู้บริหารสำเร็จ', html);
     }
     else if (type === 'c2') {
       const html = `
-        <div class="result-row"><span class="result-key">ชื่อ Sheet</span><span class="result-val">${res.sheetName}</span></div>
-        <div class="result-row"><span class="result-key">เครื่องที่ยืมบ่อยสุด</span><span class="result-val">No. ${res.mostUsedNo} (${res.mostUsedCount} ครั้ง)</span></div>
-        <div class="result-row"><span class="result-key">เครื่องที่ใช้นานสุด</span><span class="result-val">No. ${res.longestNo} (${res.longestDur})</span></div>
-        <a href="${res.pdfUrl}" target="_blank" class="drive-link">
-          📄 เปิด / ดาวน์โหลด PDF (หลายหน้า) →
-        </a>`;
+        <div class="result-row"><span class="result-key">เครื่องที่ยืมบ่อยสุด</span><span class="result-val">No. ${res.mostUsed.no} (${res.mostUsed.borrowCount} ครั้ง)</span></div>
+        <div class="result-row"><span class="result-key">เครื่องที่ใช้นานสุด</span><span class="result-val">No. ${res.longest.no} (${rptFmtDuration(res.longest.borrowedMs)})</span></div>
+        <div class="result-row"><span class="result-key">เครื่องที่กำลังถูกยืมอยู่</span><span class="result-val">${res.activeNow} เครื่อง</span></div>
+        <p style="margin-top:8px;font-size:13px;color:var(--muted)">กด "Export PDF" ด้านบนเพื่อดาวน์โหลดรายงานฉบับเต็ม (หลายหน้า)</p>`;
       showResult('success', '✅ สร้างรายงาน C2 รายเครื่องสำเร็จ', html);
     }
     else if (type === 'digest') {
@@ -440,30 +457,17 @@
   }
 
   // ── HELPERS ────────────────────────────────────────────────
-  async function callGAS(action) {
-    const url = SCRIPT_URL + '?action=' + encodeURIComponent(action);
-    const res  = await fetch(url);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    return res.json();
-  }
-
   function setLoading(cfg, loading) {
     const btn   = document.getElementById(cfg.btn);
     const icon  = document.getElementById(cfg.icon);
-    const label = document.getElementById(cfg.label);
     btn.disabled = loading;
     if (loading) {
       icon.outerHTML  = `<span id="${cfg.icon}" class="spinner"></span>`;
       document.getElementById(cfg.label).textContent = cfg.loadingText;
     } else {
-      // restore — spinner span may have new reference
       const iconEl = document.getElementById(cfg.icon);
       if (iconEl) iconEl.outerHTML = `<span id="${cfg.icon}"></span>`;
-      document.getElementById(cfg.label).textContent =
-        cfg.action === 'monthlyReport' ? 'สร้างรายงานประจำเดือน' :
-        cfg.action === 'exportPDF'     ? 'Export PDF' :
-        cfg.action === 'c2Report'      ? 'สร้างรายงาน C2' :
-                                         'สรุปผู้บริหาร';
+      document.getElementById(cfg.label).textContent = cfg.doneLabel;
     }
   }
 
@@ -495,25 +499,22 @@
       body.innerHTML = '<div class="empty-state">ยังไม่มีรายงาน<br>กดปุ่มด้านบนเพื่อสร้างรายงาน</div>';
       return;
     }
-    const rows = localHistory.map(h => `
+    const rows = localHistory.map((h, i) => `
       <tr>
         <td><span class="tag ${h.tagClass}">${h.type}</span></td>
         <td>${h.name}</td>
         <td>${h.month}</td>
         <td>${h.createdAt}</td>
         <td>
-          ${h.fileUrl
-            ? `<a href="${h.fileUrl}" target="_blank" style="color:var(--a);font-weight:700;text-decoration:none;font-size:13px">เปิด →</a>`
-            : '<span style="color:var(--muted);font-size:13px">—</span>'
-          }
+          <button onclick="redownloadPdf(${i})" style="color:var(--a);font-weight:700;background:none;border:none;cursor:pointer;font-family:inherit;font-size:13px;padding:0">ดาวน์โหลด PDF →</button>
         </td>
       </tr>`).join('');
     body.innerHTML = `
       <table>
         <thead>
           <tr>
-            <th>ประเภท</th><th>ชื่อไฟล์ / Sheet</th>
-            <th>เดือน</th><th>เวลา</th><th>ลิงก์</th>
+            <th>ประเภท</th><th>ชื่อไฟล์</th>
+            <th>เดือน</th><th>เวลา</th><th>ดาวน์โหลด</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
