@@ -280,6 +280,20 @@ thead tr{background:#eef4f7;color:#334155}
 #kpiSlideLabel,#kpiNextRefresh,#kpiDate{font-size:12px!important;color:#526875!important}
 @media(max-width:480px){#viewKpi .kpi-slide{padding:14px 12px}#viewKpi .kd{padding:16px}#kpiEquipBreak,#kpiWardRank{padding:14px}#kpiC2Grid{grid-template-columns:repeat(6,1fr)!important}}
 }</style>
+<style id="mems-kpi-insights">@media screen{
+body:has(#viewKpi.active)>.header{display:none}
+#viewKpi{margin:0!important;min-height:100dvh!important}
+#viewKpi .kpi-slide{flex:0 0 100%;min-width:0;overflow-y:auto;max-height:calc(100dvh - 145px)}
+#kpiSlideWrap{min-height:65vh}#kpiSlides{align-items:stretch}
+.ki-panel{background:#fff;border:1px solid #dce6ec;border-radius:16px;padding:22px;overflow:auto}
+.ki-note,.ki-type p,.ki-legend{font-size:13px;color:#526875;line-height:1.7;margin:8px 0}
+.ki-type{margin:12px 0}.ki-type>div:first-child{display:flex;justify-content:space-between;gap:10px;align-items:center}.ki-type strong{color:#1d4ed8;font-size:22px}.ki-type small{font-size:13px;font-weight:400}
+.ki-track{height:12px;background:#e2e8f0;border-radius:6px;overflow:hidden;display:flex;margin:8px 0}.ki-track i{display:block;height:100%;background:#086572}.ki-track i.ki-purple{background:#7c3aed}
+.ki-scroll{overflow:auto}.ki-scroll table{min-width:500px}.ki-scroll td{text-align:center;font-size:16px;padding:14px}.ki-scroll th{background:#f1f5f9;color:#334155;font-size:13px}
+.ki-highlight{background:#eef8f9;border:1px solid #b3d7dd;border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:8px}.ki-highlight strong{font-size:40px;color:#075763}.ki-highlight small{font-size:14px}.ki-pair{display:grid;grid-template-columns:1fr 1fr;gap:16px}.ki-highlight .ki-change{font-size:26px}
+.ki-columns{display:flex;align-items:flex-end;gap:12px;margin:28px 0 15px;min-height:190px}.ki-columns>div{flex:1;text-align:center;font-size:14px}.ki-column{background:linear-gradient(#4b99a7,#086572);border-radius:6px 6px 0 0;margin:7px 0}.ki-columns small{font-size:12px}
+@media(max-width:520px){.ki-panel{padding:16px}.ki-pair{gap:10px}.ki-highlight{padding:14px}.ki-highlight strong{font-size:32px}.ki-highlight .ki-change{font-size:20px}.ki-columns{gap:6px}}
+}</style>
 </head>
 <body>
 
@@ -685,7 +699,7 @@ thead tr{background:#eef4f7;color:#334155}
             <div class="kd-sub">เครื่อง</div>
           </div>
           <div class="kd" style="background:linear-gradient(135deg,rgba(16,185,129,.3),rgba(4,120,87,.4));border:1px solid rgba(16,185,129,.25)">
-            <div class="kd-label"><svg class="mems-icon kpi-icon-3" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg> ว่างอยู่</div>
+            <div class="kd-label"><svg class="mems-icon kpi-icon-3" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg> ไม่อยู่ระหว่างยืม</div>
             <div class="kd-val" id="kdFree" style="color:#34d399;text-shadow:0 0 30px rgba(52,211,153,.5)">—</div>
             <div class="kd-sub">เครื่อง</div>
           </div>
@@ -745,6 +759,9 @@ thead tr{background:#eef4f7;color:#334155}
         <div id="kpiTrend" style="flex:1;display:flex;align-items:flex-end;gap:3px;padding:0 4px 8px"></div>
       </div>
 
+<div class="kpi-slide"><div class="slide-title">เครื่องอยู่ที่ไหน</div><div class="ki-panel" id="kiMap"></div></div>
+<div class="kpi-slide"><div class="slide-title">ภาระงานแยกเวรวันนี้</div><div class="ki-panel" id="kiShifts"></div></div>
+<div class="kpi-slide"><div class="slide-title">แนวโน้ม 7 วัน</div><div class="ki-panel" id="kiWeek"></div></div>
     </div>
   </div>
 
@@ -1956,7 +1973,7 @@ function printRoundReport() {
 }
 
 /* ============================================================ KPI DISPLAY ============================================================ */
-const KPI_SLIDES = ['📊 ภาพรวมวันนี้','🔧 แยกตามประเภทเครื่อง','🏥 หน่วยงานที่ยืมมากสุด','💊 สถานะ C2','🕐 รายการล่าสุด','🔔 แจ้งเตือน','📈 แนวโน้ม 30 วัน'];
+const KPI_SLIDES = ['ภาพรวมวันนี้','สถานะตามประเภทเครื่อง','หน่วยงานที่ยืมมากสุด','สถานะ C2','รายการล่าสุด','แจ้งเตือน','แนวโน้ม 30 วัน','เครื่องอยู่ที่ไหน','ภาระงานแยกเวร','เปรียบเทียบ 7 วัน'];
 let kpiSlideIdx = 0;
 let kpiSlideTimer = null;
 let kpiRefreshTimer = null;
@@ -2210,6 +2227,7 @@ async function renderKpiData() {
 
   renderKpiAlerts();
   renderKpiTrend();
+  renderKpiInsights();
 }
 
 // SLIDE 6: แจ้งเตือน (ใช้ computeAlerts() เดียวกับ Home banner)
@@ -2246,6 +2264,44 @@ function renderKpiTrend() {
   const wrap = document.getElementById('kpiTrend');
   if (!wrap) return;
   wrap.innerHTML = trendBarsHTML(computeDailyTrend(TREND_DAYS), '#38bdf8', '#34d399', '#475569');
+}
+
+
+function renderKpiInsights() {
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const mount = (id, html) => { const el = document.getElementById(id); if(el) el.innerHTML = html; };
+  const active = equipStatus.filter(e => e.isBorrowed);
+  const byType = new Map();
+  equipStatus.forEach(e => {if(!e.equipment)return;const v=byType.get(e.equipment)||{total:0,borrow:0};v.total++;if(e.isBorrowed)v.borrow++;byType.set(e.equipment,v);});
+  mount('kpiEquipBreak', '<div class="ki-note">เครื่องที่มีสถานะในระบบ · ไม่ใช่ทะเบียนเครื่องทั้งหมด</div>' + [...byType].sort((a,b)=>b[1].borrow-a[1].borrow).map(([name,v]) =>
+    '<div class="ki-type"><div><b>'+esc(name)+'</b><strong>'+v.borrow+' <small>/ '+v.total+' เครื่อง</small></strong></div><div class="ki-track"><i style="width:'+(v.borrow/v.total*100)+'%"></i></div><p>กำลังยืม '+v.borrow+' · ไม่อยู่ระหว่างยืม '+(v.total-v.borrow)+'</p></div>'
+  ).join('') + '<p class="ki-note">สถานะไม่ถูกยืมยังไม่ยืนยันความพร้อมใช้หรือการซ่อม</p>');
+  const types = [...new Set(active.map(e=>e.equipment).filter(Boolean))];
+  const wards = [...new Set(active.map(e=>e.ward||'ไม่ระบุ'))].map(w=>[w,active.filter(e=>(e.ward||'ไม่ระบุ')===w)]).sort((a,b)=>b[1].length-a[1].length);
+  const maxCell = Math.max(1,...wards.flatMap(([,es])=>types.map(t=>es.filter(e=>e.equipment===t).length)));
+  mount('kiMap', active.length ? '<p class="ki-note">10 หน่วยงานที่ยืมมากที่สุด · '+active.length+' เครื่องกำลังยืมทั้งหมด</p><div class="ki-scroll"><table><thead><tr><th>หน่วยงาน</th>'+types.map(t=>'<th>'+esc(t)+'</th>').join('')+'<th>รวม</th></tr></thead><tbody>'+wards.slice(0,10).map(([w,es])=>'<tr><th>'+esc(w)+'</th>'+types.map(t=>{const n=es.filter(e=>e.equipment===t).length;return '<td style="background:rgba(8,101,114,'+(n?(.12+.55*n/maxCell):0)+');color:'+(n/maxCell>.55?'#fff':'#193e46')+'">'+n+'</td>';}).join('')+'<td><b>'+es.length+'</b></td></tr>').join('')+'</tbody></table></div>' : '<p>ยังไม่มีรายการยืม</p>');
+  const zone = d => new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Bangkok',year:'numeric',month:'2-digit',day:'2-digit'}).format(d);
+  const today = zone(new Date());
+  const valid = allRecords.map(r=>({r,d:parseThaiDT(r)})).filter(x=>x.d instanceof Date && Number.isFinite(+x.d));
+  const todayRows = valid.filter(x=>zone(x.d)===today);
+  const shifts = ['เช้า','บ่าย','ดึก'];
+  let unknownShift=0;
+  const buckets=shifts.map(s=>({name:s,borrow:0,returned:0}));
+  todayRows.forEach(({r})=>{const b=buckets.find(b=>String(r['เวร']||'').includes(b.name));if(!b){unknownShift++;return;}const a=String(r['ประเภท (ยืม/คืน)']||'');if(a.includes('ยืม'))b.borrow++;else if(a.includes('คืน'))b.returned++;});
+  const maxShift=Math.max(1,...buckets.map(b=>b.borrow+b.returned));
+  mount('kiShifts','<div class="ki-highlight"><span>ธุรกรรมวันนี้</span><strong>'+todayRows.length+' <small>รายการ</small></strong></div><div class="ki-legend">สีเขียว: ยืม · สีม่วง: คืน</div>'+buckets.map(b=>'<div class="ki-type"><div><b>เวร'+b.name+'</b><strong>'+(b.borrow+b.returned)+'</strong></div><div class="ki-track"><i style="width:'+(b.borrow/maxShift*100)+'%"></i><i class="ki-purple" style="width:'+(b.returned/maxShift*100)+'%"></i></div><p>ยืม '+b.borrow+' · คืน '+b.returned+'</p></div>').join('')+'<p class="ki-note">ใช้เวรที่บันทึกในรายการ · เขตเวลาไทย · ไม่ระบุเวร '+unknownShift+' รายการ</p>');
+  // Calendar windows use Thai local date keys, including today.
+  const thaiParts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Bangkok',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+  const part=t=>Number(thaiParts.find(p=>p.type===t).value);
+  const anchor=Date.UTC(part('year'),part('month')-1,part('day'),5);
+  const dates=Array.from({length:14},(_,i)=>zone(new Date(anchor-(13-i)*86400000)));
+  const daily=dates.map(date=>({date,borrow:0,returned:0}));
+  valid.forEach(({r,d})=>{const b=daily.find(b=>b.date===zone(d));if(!b)return;const a=String(r['ประเภท (ยืม/คืน)']||'');if(a.includes('ยืม'))b.borrow++;else if(a.includes('คืน'))b.returned++;});
+  const week=daily.slice(7),previous=daily.slice(0,7);
+  const total=a=>a.reduce((s,b)=>s+b.borrow+b.returned,0),now=total(week),before=total(previous);
+  const change=before?((now-before)/before*100).toFixed(1)+'%':'ไม่มีฐานเปรียบเทียบ';
+  const top=Math.max(1,...week.map(b=>b.borrow+b.returned));
+  mount('kiWeek','<div class="ki-pair"><div class="ki-highlight"><span>7 วันล่าสุด รวมวันนี้</span><strong>'+now+'</strong><small>ธุรกรรม</small></div><div class="ki-highlight"><span>เทียบ 7 วันก่อนหน้า</span><strong class="ki-change">'+(before&&now>before?'+':'')+change+'</strong><small>ช่วงก่อนหน้า '+before+' รายการ</small></div></div><div class="ki-columns">'+week.map(b=>'<div><b>'+(b.borrow+b.returned)+'</b><div class="ki-column" style="height:'+Math.max(2,(b.borrow+b.returned)/top*140)+'px"></div><small>'+esc(b.date.slice(5))+'</small></div>').join('')+'</div><p class="ki-note">วันนี้ยังไม่สิ้นวัน · จำนวนยืม '+week.reduce((s,b)=>s+b.borrow,0)+' / คืน '+week.reduce((s,b)=>s+b.returned,0)+' · นับเฉพาะประวัติที่โหลดได้</p>');
 }
 
 // stop timers when leaving kpi view
