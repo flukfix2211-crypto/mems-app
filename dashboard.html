@@ -2105,7 +2105,7 @@ async function renderC2Dashboard() {
   try {
     const [units, assetRows] = await Promise.all([
       fetchC2Status(),
-      supabase.from('assets').select('no, status').then(r => r.data || []).catch(() => [])
+      supabase.from('assets').select('no, status').eq('type', 'C2').then(r => r.data || []).catch(() => [])
     ]);
     msg.textContent = '';
     const assetMap = {};
@@ -2507,7 +2507,7 @@ function startKpiClock() {
 async function renderKpiData() {
   if (!window._c2AssetMap) {
     try {
-      const { data } = await supabase.from('assets').select('no, status');
+      const { data } = await supabase.from('assets').select('no, status').eq('type', 'C2');
       const m = {};
       (data || []).forEach(a => { if (a.no) m[String(a.no)] = a.status || 'ใช้งานได้'; });
       window._c2AssetMap = m;
