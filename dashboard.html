@@ -1377,6 +1377,9 @@ function openCircuitModal(number, ward, days, equip = 'C2') {
   document.getElementById('circuitStaffName').value = '';
   const dateInput = document.getElementById('circuitDate');
   dateInput.max = bkkDateStr(new Date()); // เลือกวันที่ในอนาคตไม่ได้
+  // ห้ามเลือกวันที่ก่อนวันยืม/เปลี่ยน Circuit ครั้งล่าสุด — ระบบถือรายการที่มีเวลาล่าสุดเป็นสถานะปัจจุบันเสมอ
+  // ถ้าเลือกวันที่เก่ากว่านั้น รายการที่บันทึกใหม่จะถูกรายการเดิม (ที่ใหม่กว่า) บังไว้ ทำให้ดูเหมือนกดยืนยันแล้วไม่มีอะไรเกิดขึ้น
+  dateInput.min = bkkDateStr(new Date(Date.now() - Math.max(0, days) * 86400000));
   setCircuitDateToday();
   document.getElementById('circuitModal').style.display = 'flex';
 }
@@ -1403,10 +1406,15 @@ async function submitCircuitChange() {
   const name = document.getElementById('circuitStaffName').value.trim();
   if (!name) { alert('⚠️ กรุณากรอกชื่อผู้บันทึก'); return; }
 
-  const dateStr = document.getElementById('circuitDate').value;
+  const dateInput = document.getElementById('circuitDate');
+  const dateStr = dateInput.value;
   const today = bkkDateStr(new Date());
   if (!dateStr) { alert('⚠️ กรุณาเลือกวันที่เปลี่ยน Circuit'); return; }
   if (dateStr > today) { alert('⚠️ เลือกวันที่ในอนาคตไม่ได้'); return; }
+  if (dateInput.min && dateStr < dateInput.min) {
+    alert('⚠️ เลือกวันที่ก่อนวันยืม/เปลี่ยน Circuit ครั้งล่าสุดไม่ได้ เพราะระบบจะยังถือรายการเดิมเป็นสถานะล่าสุด ทำให้การบันทึกนี้ไม่มีผล กรุณาเลือกวันที่ใหม่กว่านั้น');
+    return;
+  }
 
   // ใช้วันที่ที่เลือก + เวลาปัจจุบัน (เขตเวลาไทย) เป็น timestamp ของรายการ
   const changeTimestamp = new Date(`${dateStr}T${bkkTimeStr(new Date())}+07:00`);
