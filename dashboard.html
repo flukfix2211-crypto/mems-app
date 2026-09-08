@@ -372,6 +372,15 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     </div>
 
 
+    <div class="nav-card" onclick="showView('search')">
+      <div class="nav-icon" style="background:#E0F2FE;font-size:26px;width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;z-index:1;"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16ZM21 21l-4.35-4.35"/></svg></div>
+      <div class="nav-text">
+        <div class="nav-title">ค้นหาเครื่องมือ</div>
+        <div class="nav-desc">ค้นหาสถานะเครื่องมือแพทย์ทุกประเภทแบบเรียลไทม์</div>
+      </div>
+      <span class="nav-arrow">›</span>
+    </div>
+
     <div class="nav-card" onclick="showView('round')">
       <div class="nav-icon blue"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v14H6zM9 7h6M9 11h2m1 6v4m-4 0h8"/></svg></div>
       <div class="nav-text">
@@ -538,6 +547,23 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
             <button class="btn-print" onclick="printC2Stats()"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 8V3h10v5M7 17H3V9h18v8h-4M7 14h10v7H7z"/></svg> พิมพ์รายงาน</button>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SEARCH EQUIPMENT VIEW -->
+  <div id="viewSearch" class="view">
+    <div class="view-header">
+      <button class="btn-view-back" onclick="showView('home')">← กลับ</button>
+      <div class="view-title"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16ZM21 21l-4.35-4.35"/></svg> ค้นหาเครื่องมือ</div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <div class="search-row">
+          <input type="text" id="searchToolInput" placeholder="ค้นหาชื่อเครื่อง หรือหมายเลข เช่น C2, Infusion Pump, 15…" oninput="renderSearchToolResults()" autocomplete="off">
+        </div>
+        <div id="searchToolCount" style="font-size:12px;color:var(--muted);margin:8px 0"></div>
+        <div id="searchToolBody"></div>
       </div>
     </div>
   </div>
@@ -924,6 +950,63 @@ function showView(name) {
   if (name === 'prepare') renderPrepareHistory();
   if (name === 'fixjob') renderFixJobHistory();
   if (name === 'workload') initWorkloadView();
+  if (name === 'search') initSearchToolView();
+}
+
+/* ============================================================ SEARCH EQUIPMENT ============================================================ */
+function initSearchToolView() {
+  const input = document.getElementById('searchToolInput');
+  input.value = '';
+  renderSearchToolResults();
+  input.focus();
+}
+
+function renderSearchToolResults() {
+  const q = document.getElementById('searchToolInput').value.trim().toLowerCase();
+  const countEl = document.getElementById('searchToolCount');
+  const body = document.getElementById('searchToolBody');
+
+  if (!q) {
+    countEl.textContent = '';
+    body.innerHTML = '<div class="empty">พิมพ์ชื่อเครื่อง หรือหมายเลขเครื่องเพื่อค้นหา</div>';
+    return;
+  }
+
+  const matches = equipStatus
+    .filter(e => e.equipment)
+    .filter(e => String(e.equipment).toLowerCase().includes(q) || String(e.number || '').toLowerCase().includes(q))
+    .sort((a, b) => String(a.equipment).localeCompare(String(b.equipment), 'th') || String(a.number || '').localeCompare(String(b.number || '')));
+
+  countEl.textContent = 'พบ ' + matches.length + ' รายการ';
+  if (!matches.length) {
+    body.innerHTML = '<div class="empty">ไม่พบเครื่องมือที่ค้นหา</div>';
+    return;
+  }
+
+  body.innerHTML = `<div class="equip-grid">${matches.map(e => {
+    const when = formatThaiDateTime(e.lastUpdate);
+    return e.isBorrowed
+      ? `<div class="equip-card borrowed">
+          <div class="equip-name">${e.equipment}${e.number ? ' No.' + e.number : ''}</div>
+          <div class="equip-num" style="font-size:14px">🔴 ยืมอยู่</div>
+          <div class="equip-ward">📍 ${e.ward || '—'}</div>
+          <div class="equip-who">${e.borrowedBy || ''}${when ? ' · ' + when : ''}</div>
+        </div>`
+      : `<div class="equip-card returned">
+          <div class="equip-name">${e.equipment}${e.number ? ' No.' + e.number : ''}</div>
+          <div class="equip-num" style="font-size:14px">🟢 พร้อมใช้</div>
+          <div class="equip-ward">${e.ward ? '📍 คืนล่าสุด ' + e.ward : ''}</div>
+          <div class="equip-who">${when ? 'อัปเดต ' + when : ''}</div>
+        </div>`;
+  }).join('')}</div>`;
+}
+
+/** แปลง ISO timestamp -> dd/MM/yyyy HH:mm (พ.ศ.) สำหรับแสดงในการ์ดค้นหาเครื่องมือ */
+function formatThaiDateTime(iso) {
+  const d = parseThaiTimestampStr(iso);
+  if (!d) return '';
+  const pad = n => String(n).padStart(2, '0');
+  return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
 }
 
 /* ============================================================ WORKLOAD CALENDAR ============================================================ */
