@@ -130,6 +130,26 @@
     #bgCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
     .hidden { display: none !important; }
   </style>
+<style id="mems-deep-teal-theme">
+/* Approved deep teal palette; screen-only presentation. */
+@media screen {
+body{background:#0c6173!important;background-image:none!important}
+.header{background:#0d7183!important;color:#f0fafb!important;border-top-color:#0c6173!important;border-bottom:1px solid #ffffff15!important}
+.header::before{background:none!important}
+.header h1,.header .mems-logo{color:#edf9fb!important;-webkit-text-fill-color:#edf9fb!important;background:none!important;filter:none!important;text-shadow:none!important}
+.header .sub,.header .clock,.header #lastUpdated,.header .tagline,.header .subtitle{color:#d7ecef!important;opacity:1!important}
+.header .hosp-badge,.header .icon-btn,.header a:not(:has(h1)):not(:has(.mems-logo)),.header button{color:#f1fafb!important;background:#ffffff18!important;border-color:#ffffff40!important}
+body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.section-label{color:#daedf0!important}
+.content>.footer-link a{color:#d7ecef!important}
+.content>div[style*="text-align:center"][style*="color:#6A8A96"],body>div[style*="text-align:center"][style*="color:#6A8A96"]{color:#c5e0e5!important}
+#bgCanvas,#kpiBgCanvas,.kpi-blob{display:none!important}
+#viewKpi{background:#0c6173!important;background-image:none!important}
+#viewKpi .slide-title{color:#edf9fb!important}
+#viewKpi>div:has(#kpiClock),#viewKpi>div:has(#kpiSlideLabel){background:#fff!important}
+.card,.menu-card,.filter-bar,.ki-panel{background:#fff}
+.submit-bar{background:linear-gradient(to top,#0c6173 72%,transparent)!important}
+}
+</style>
 </head>
 <body>
 <canvas id="bgCanvas"></canvas>
