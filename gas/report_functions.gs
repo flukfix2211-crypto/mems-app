@@ -504,9 +504,12 @@ function _gatherPrepareStats(ss, start, end) {
 function _pdfExportUrl(ss, sheet) {
   // รายงานภาระงาน (Workload_*) มีคอลัมน์วันที่เยอะ (สูงสุด 31 วัน) -> พิมพ์แนวนอนให้พอดีหน้าเดียว
   const landscape = sheet.getName().indexOf('Workload_') === 0;
+  // Workload_* ใช้ธีมสีเข้ม + เส้นขอบเซลล์ของตัวเองแล้ว (ดู _formatWorkloadSheet_) จึงปิด gridlines
+  // เริ่มต้นของ Sheets เพื่อไม่ให้เส้นสีเทาอ่อนตัดกับพื้นหลังเข้ม
+  const gridlines = landscape ? 'false' : 'true';
   const base = 'https://docs.google.com/spreadsheets/d/' + ss.getId() +
     '/export?format=pdf&size=A4&portrait=' + (landscape ? 'false' : 'true') +
-    '&sheetnames=false&printtitle=false&pagenumbers=true&gridlines=true&fzr=false';
+    '&sheetnames=false&printtitle=false&pagenumbers=true&gridlines=' + gridlines + '&fzr=false';
 
   if (landscape) {
     // scale=4 = Fit to page (ย่อทั้งตารางให้พอดี 1 หน้า A4 แนวนอนพอดี ไม่ตัดคอลัมน์/แถวออก)

@@ -380,20 +380,43 @@ function _formatWorkloadSheet_(sht, d) {
   const width = 3 + N + 1;
   const headerRowIdx = 5;
 
+  // ธีมสีเข้ม (dark theme) — อ่านง่ายกว่าพื้นขาวเดิม โดยเฉพาะบนจอ/เมื่อพิมพ์ในห้องแสงน้อย
+  const BG_BASE     = '#0F172A'; // พื้นหลังหลักของตาราง (slate-900)
+  const BG_ALT      = '#1B2739'; // แถบสลับสีทุกกลุ่ม ช่วยไล่สายตาตามแถวบนพื้นเข้ม
+  const BG_TITLE    = '#083344'; // แถบชื่อโรงพยาบาล
+  const BG_SUBTITLE = '#0E4F5C'; // แถบหัวข้อรายงาน
+  const BG_COLHEAD  = '#134E4A'; // แถบหัวคอลัมน์ (เลขวันที่)
+  const BG_TOTAL    = '#7C2D12'; // แถบยอดรวม เน้นสีส้ม/น้ำตาลเข้มให้เด่นแยกจากแถวข้อมูล
+  const BG_STAFF    = '#312E81'; // แถบชื่อผู้ปฏิบัติงาน เน้นสีม่วงเข้ม
+  const TEXT_LIGHT  = '#F1F5F9';
+  const TEXT_MUTED  = '#94A3B8';
+  const BORDER      = '#334155';
+
+  const lastRow = sht.getLastRow();
+
+  // พื้นฐาน: ทาพื้นเข้ม + ตัวอักษรสว่างทั้งชีตก่อน แล้วค่อยไล่ทับด้วยสีเฉพาะแต่ละแถบด้านล่าง
+  sht.getRange(1, 1, lastRow, width)
+     .setBackground(BG_BASE)
+     .setFontColor(TEXT_LIGHT)
+     .setFontFamily('TH Sarabun New')
+     .setVerticalAlignment('middle')
+     .setHorizontalAlignment('center');
+
   // หมายเหตุ: ห้าม merge ข้ามแนวที่ freeze คอลัมน์ไว้ (Sheets จะ error) — แถบหัวรายงาน 3 แถวนี้
   // เลยใส่สีพื้นหลัง/ฟอนต์แบบไม่ merge เซลล์ ข้อความจะอยู่ชิดซ้ายในคอลัมน์ A แทนการจัดกึ่งกลางเต็มแถว
   sht.getRange(1, 1, 1, width)
      .setFontSize(14).setFontWeight('bold')
-     .setBackground('#0A6478').setFontColor('#FFFFFF');
+     .setBackground(BG_TITLE).setFontColor(TEXT_LIGHT);
   sht.getRange(2, 1, 1, width)
      .setFontSize(12).setFontWeight('bold')
-     .setBackground('#0E7D94').setFontColor('#FFFFFF');
+     .setBackground(BG_SUBTITLE).setFontColor(TEXT_LIGHT);
   sht.getRange(3, 1, 1, width)
-     .setFontSize(10).setFontColor('#6A8A96');
+     .setFontSize(10).setFontColor(TEXT_MUTED);
   sht.getRange(1, 1, 3, 1).setHorizontalAlignment('left');
 
   sht.getRange(headerRowIdx, 1, 1, width)
-     .setFontWeight('bold').setBackground('#DAF0F5').setHorizontalAlignment('center');
+     .setFontWeight('bold').setBackground(BG_COLHEAD).setFontColor(TEXT_LIGHT)
+     .setHorizontalAlignment('center');
 
   sht.setColumnWidth(1, 36);
   sht.setColumnWidth(2, 230);
@@ -401,12 +424,9 @@ function _formatWorkloadSheet_(sht, d) {
   for (let c = 4; c <= 3 + N; c++) sht.setColumnWidth(c, 24);
   sht.setColumnWidth(3 + N + 1, 60);
 
-  const lastRow = sht.getLastRow();
   sht.getRange(4, 1, lastRow - 3, width)
-     .setFontFamily('TH Sarabun New')
      .setVerticalAlignment('middle')
      .setHorizontalAlignment('center');
-  sht.getRange(1, 1, 3, width).setFontFamily('TH Sarabun New').setVerticalAlignment('middle');
   sht.getRange(headerRowIdx + 1, 2, lastRow - headerRowIdx, 1).setHorizontalAlignment('left');
 
   sht.setFrozenRows(headerRowIdx);
@@ -414,13 +434,20 @@ function _formatWorkloadSheet_(sht, d) {
 
   // รวมช่องลำดับ+ภาระงาน ให้ครอบ 3 แถวเวร (ช/บ/ด) ของแต่ละกลุ่ม — merge นี้อยู่ในคอลัมน์ 1-2
   // ซึ่งอยู่ในขอบเขต freeze คอลัมน์ (1-3) ทั้งหมด จึงไม่ชนกับ frozen columns
+  // กลุ่มคี่/คู่สลับสี BG_BASE/BG_ALT ให้แยกแต่ละภาระงานง่ายขึ้นบนพื้นเข้ม
   const groupCount = d.rows.length + 2; // + ยอดรวม + ชื่อผู้ปฏิบัติงาน
   for (let g = 0; g < groupCount; g++) {
     const startRow = headerRowIdx + 1 + g * 3;
+    if (g % 2 === 1) sht.getRange(startRow, 1, 3, width).setBackground(BG_ALT);
     sht.getRange(startRow, 1, 3, 1).merge().setVerticalAlignment('middle');
     sht.getRange(startRow, 2, 3, 1).merge().setVerticalAlignment('middle').setFontWeight('bold');
   }
 
-  sht.getRange(lastRow - 5, 1, 3, width).setBackground('#FFF3CD'); // ยอดรวม
-  sht.getRange(lastRow - 2, 1, 3, width).setBackground('#F0F0F0'); // ชื่อผู้ปฏิบัติงาน
+  sht.getRange(lastRow - 5, 1, 3, width).setBackground(BG_TOTAL).setFontColor(TEXT_LIGHT).setFontWeight('bold'); // ยอดรวม
+  sht.getRange(lastRow - 2, 1, 3, width).setBackground(BG_STAFF).setFontColor(TEXT_LIGHT); // ชื่อผู้ปฏิบัติงาน
+
+  // เส้นขอบสีอ่อนบางๆ รอบตาราง แทน gridlines เริ่มต้นของ Sheets (ปิดไว้ตอน export PDF)
+  // เพื่อให้ยังแยกเซลล์ออกจากกันชัดเจนบนพื้นเข้ม
+  sht.getRange(headerRowIdx, 1, lastRow - headerRowIdx + 1, width)
+     .setBorder(true, true, true, true, true, true, BORDER, SpreadsheetApp.BorderStyle.SOLID);
 }
