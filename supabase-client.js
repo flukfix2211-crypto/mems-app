@@ -182,6 +182,26 @@ async function fetchFixJobList() {
   });
 }
 
+/**
+ * สมัครรับการเปลี่ยนแปลงข้อมูลแบบเรียลไทม์ (insert/update/delete) จากตารางที่ระบุ ผ่าน Supabase Realtime
+ * เมื่อมีการเปลี่ยนแปลงจะเรียก callback (debounce ไว้กันเรียกถี่เกินไปเวลามีหลายแถวเปลี่ยนพร้อมกัน เช่น ยืม/คืนรัวๆ)
+ * ต้องเปิด Realtime ให้ตารางนั้นในฝั่ง Supabase ก่อน (alter publication supabase_realtime add table ...)
+ * คืนค่า RealtimeChannel — เรียก .unsubscribe() ตอนออกจากหน้าถ้าต้องการเลิกฟัง
+ */
+function subscribeRealtime(tables, callback, debounceMs = 500) {
+  let timer = null;
+  const trigger = () => {
+    clearTimeout(timer);
+    timer = setTimeout(callback, debounceMs);
+  };
+  const channel = supabase.channel('mems-realtime-' + tables.join('-'));
+  tables.forEach(table => {
+    channel.on('postgres_changes', { event: '*', schema: 'public', table }, trigger);
+  });
+  channel.subscribe();
+  return channel;
+}
+
 /** เรียก Edge Function แจ้งเตือน Telegram — เทียบเท่า notifyBorrowReturn_()/sendAlertDigestManual() เดิม */
 async function notifyTelegram(payload) {
   try {
