@@ -1242,7 +1242,14 @@ function openCircuitModal(number, ward, days) {
   document.getElementById('circuitInfo').innerHTML =
     `<strong>C2 No.${number}</strong><br><span style="font-weight:500;color:var(--muted);font-size:12px">📍 ${ward || '—'} · ยืมมาแล้ว ${days} วัน</span>`;
   document.getElementById('circuitStaffName').value = '';
+  const dateInput = document.getElementById('circuitDate');
+  dateInput.max = bkkDateStr(new Date()); // เลือกวันที่ในอนาคตไม่ได้
+  setCircuitDateToday();
   document.getElementById('circuitModal').style.display = 'flex';
+}
+
+function setCircuitDateToday() {
+  document.getElementById('circuitDate').value = bkkDateStr(new Date());
 }
 
 function closeCircuitModal() {
@@ -1254,6 +1261,14 @@ async function submitCircuitChange() {
   if (!_circuitCtx) return;
   const name = document.getElementById('circuitStaffName').value.trim();
   if (!name) { alert('⚠️ กรุณากรอกชื่อผู้บันทึก'); return; }
+
+  const dateStr = document.getElementById('circuitDate').value;
+  const today = bkkDateStr(new Date());
+  if (!dateStr) { alert('⚠️ กรุณาเลือกวันที่เปลี่ยน Circuit'); return; }
+  if (dateStr > today) { alert('⚠️ เลือกวันที่ในอนาคตไม่ได้'); return; }
+
+  // ใช้วันที่ที่เลือก + เวลาปัจจุบัน (เขตเวลาไทย) เป็น timestamp ของรายการ
+  const changeTimestamp = new Date(`${dateStr}T${bkkTimeStr(new Date())}+07:00`);
 
   const btn = document.getElementById('btnSubmitCircuit');
   btn.disabled = true; btn.textContent = '⏳ กำลังบันทึก...';
@@ -1267,7 +1282,7 @@ async function submitCircuitChange() {
       ward: _circuitCtx.ward,
       name: name,
       note: `เปลี่ยน Circuit ครบกำหนด (ยืมมาแล้ว ${_circuitCtx.days} วัน) เริ่มนับใหม่อีก ${OVERDUE_C2_DAYS} วัน`,
-      timestamp: new Date().toISOString()
+      timestamp: changeTimestamp.toISOString()
     });
     closeCircuitModal();
     await loadAll();
@@ -2461,6 +2476,13 @@ showView = function(name) {
       <div id="circuitInfo" style="background:#FFF5F5;border:1.5px solid #FCA5A5;border-radius:12px;padding:12px 14px;font-size:14px"></div>
       <div style="font-size:13px;color:#526875;line-height:1.6">
         เลือกหัวข้อ <b>"ครบกำหนดเปลี่ยน Circuit แล้ว"</b> เพื่อบันทึกว่าเปลี่ยนวงจรเครื่องนี้เรียบร้อย โดยเครื่องยังถือว่ายืมอยู่ตามเดิม และระบบจะเริ่มนับกำหนดเปลี่ยนครั้งถัดไปใหม่อีก <b>14</b> วัน
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#6A8A96;margin-bottom:5px">วันที่เปลี่ยน</div>
+        <div style="display:flex;gap:8px">
+          <input id="circuitDate" type="date" style="flex:1;min-width:0;padding:9px 12px;border:2px solid #C5E3ED;border-radius:10px;font-family:inherit;font-size:14px;outline:none">
+          <button type="button" onclick="setCircuitDateToday()" style="padding:9px 14px;background:#EBF5F8;color:#0A6478;border:1.5px solid #C5E3ED;border-radius:10px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">วันนี้</button>
+        </div>
       </div>
       <div>
         <div style="font-size:12px;font-weight:700;color:#6A8A96;margin-bottom:5px">ชื่อผู้บันทึก</div>
