@@ -961,6 +961,7 @@ async function fetchRecords() {
 /* ============================================================ STATE ============================================================ */
 let allRecords = [];
 let equipStatus = [];
+let assetRows = []; // ทะเบียนครุภัณฑ์ทั้งหมด (assets: no, type, status) — ใช้เป็นฐานนับจำนวนเครื่องจริงต่อประเภท
 let filteredRecords = [];
 let currentPage = 0;
 const PAGE_SIZE = 20;
@@ -1260,12 +1261,14 @@ window.addEventListener('DOMContentLoaded', () => {
 
 async function loadAll() {
   try {
-    const [records, equipment] = await Promise.all([
+    const [records, equipment, assets] = await Promise.all([
       fetchRecords(),
-      fetchEquipmentStatus()
+      fetchEquipmentStatus(),
+      supabase.from('assets').select('no, type, status').then(r => r.data || []).catch(() => [])
     ]);
     allRecords  = records;
     equipStatus = equipment;
+    assetRows   = assets;
     applyFilters();
     renderAlertBanner();
     renderHomeTrend();
@@ -1295,15 +1298,31 @@ function computeAlerts() {
     .filter(e => e.days !== null && e.days >= OVERDUE_C2_DAYS)
     .sort((a, b) => b.days - a.days);
 
-  const availByType = {};
-  equipStatus.forEach(e => {
-    if (!e.equipment) return; // ข้ามแถวที่ไม่มีชื่อเครื่อง (ข้อมูลไม่สมบูรณ์)
-    if (!(e.equipment in availByType)) availByType[e.equipment] = 0;
-    if (!e.isBorrowed) availByType[e.equipment]++;
+  // นับจำนวนเครื่อง "ใช้งานได้" ทั้งหมดต่อประเภท จากทะเบียนครุภัณฑ์ (assets) — ไม่ใช่แค่เครื่องที่เคยมีประวัติยืม-คืนใน equipment_status
+  // (เดิมนับจาก equipStatus อย่างเดียว ทำให้เครื่องที่ยังไม่เคยถูกยืม/คืนเลยไม่ถูกนับว่า "พร้อมใช้" เลย ตัวเลขจึงต่ำกว่าความจริง)
+  const totalByType = {};
+  assetRows.forEach(a => {
+    if (!a.type) return;
+    if (!(a.type in totalByType)) totalByType[a.type] = { total: 0, usable: 0 };
+    totalByType[a.type].total++;
+    const status = a.status || 'ใช้งานได้';
+    if (status !== 'จำหน่าย' && status !== 'ชำรุด' && status !== 'ส่งซ่อม') totalByType[a.type].usable++;
   });
-  const shortage = Object.entries(availByType)
-    .filter(([, available]) => available <= SHORTAGE_MAX)
-    .map(([equipment, available]) => ({ equipment, available }))
+
+  const borrowedByType = {};
+  equipStatus.forEach(e => {
+    if (!e.equipment || !e.isBorrowed) return;
+    borrowedByType[e.equipment] = (borrowedByType[e.equipment] || 0) + 1;
+  });
+
+  const shortage = Object.entries(totalByType)
+    .map(([equipment, t]) => ({
+      equipment,
+      total: t.total,
+      borrowed: borrowedByType[equipment] || 0,
+      available: Math.max(0, t.usable - (borrowedByType[equipment] || 0))
+    }))
+    .filter(s => s.available <= SHORTAGE_MAX)
     .sort((a, b) => a.available - b.available);
 
   return { overdue, shortage };
@@ -1349,7 +1368,7 @@ function renderAlertBanner() {
       <div class="equip-card warn">
         <div class="equip-name">⚠️ ใกล้หมด</div>
         <div class="equip-num" style="font-size:16px">${s.equipment}</div>
-        <div class="equip-who">เหลือว่าง ${s.available} เครื่อง</div>
+        <div class="equip-who">เหลือว่าง ${s.available} · ยืมอยู่ ${s.borrowed} · ทั้งหมด ${s.total} เครื่อง</div>
       </div>`).join('')
   }</div>`;
 }
@@ -2703,7 +2722,7 @@ function renderKpiAlerts() {
         <div style="font-size:18px"><svg class="mems-icon kpi-icon-5" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 10 18H2zM12 9v5m0 3v.1"/></svg></div>
         <div style="flex:1;min-width:0">
           <div style="font-size:13px;font-weight:700;color:#e2e8f0">${s.equipment}</div>
-          <div style="font-size:11px;color:#64748b">เหลือว่าง ${s.available} เครื่อง</div>
+          <div style="font-size:11px;color:#64748b">เหลือว่าง ${s.available} · ยืมอยู่ ${s.borrowed} · ทั้งหมด ${s.total} เครื่อง</div>
         </div>
       </div>`)
   ].join('');
