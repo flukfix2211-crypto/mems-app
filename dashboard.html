@@ -185,6 +185,8 @@
     @keyframes spin { to { transform: rotate(360deg); } }
 
     .c2d-btn { padding:8px 4px; border-radius:8px; border:2px solid; font-size:11px; font-weight:700; text-align:center; line-height:1.3; }
+    .c2d-btn.clickable { cursor:pointer; }
+    .c2d-btn.clickable:hover { filter:brightness(0.95); }
     .c2d-avail    { background:#DCF2E5; border-color:#86EFAC; color:#1A7B4A; }
     .c2d-borrowed { background:#FDEAEA; border-color:#FCA5A5; color:#B82E2E; }
     .c2d-sold     { background:#FDEAEA; border-color:#FCA5A5; color:#B82E2E; opacity:.55; }
@@ -1859,12 +1861,20 @@ async function renderC2Dashboard() {
     const TIP = {
       sold: () => 'จำหน่ายแล้ว',
       repair: u => u.assetStatus,
-      borrowed: u => (u.ward||'') + ' ' + (u.borrowedBy||''),
+      borrowed: u => (u.ward||'') + ' ' + (u.borrowedBy||'') + ' · กดเพื่อบันทึกการเปลี่ยน Circuit',
       avail: () => 'พร้อมใช้'
     };
-    grid.innerHTML = items.map(u =>
-      `<div class="c2d-btn ${CLS[u.status]}" title="${TIP[u.status](u)}"><div>No.${u.number}</div>${SUB[u.status](u)}</div>`
-    ).join('');
+    const now = new Date();
+    grid.innerHTML = items.map(u => {
+      const clickable = u.status === 'borrowed';
+      let onclick = '';
+      if (clickable) {
+        const dt = parseThaiTimestampStr(u.lastUpdate);
+        const days = dt ? Math.floor((now - dt) / 86400000) : 0;
+        onclick = ` onclick="openCircuitModal('${String(u.number).replace(/'/g,"\\'")}','${String(u.ward||'').replace(/'/g,"\\'")}',${days})"`;
+      }
+      return `<div class="c2d-btn ${CLS[u.status]}${clickable ? ' clickable' : ''}" title="${TIP[u.status](u)}"${onclick}><div>No.${u.number}</div>${SUB[u.status](u)}</div>`;
+    }).join('');
 
     document.getElementById('c2DashSummary').innerHTML = `
       <span class="rs-badge rs-use">🟢 พร้อมใช้ ${counts.avail}</span>
