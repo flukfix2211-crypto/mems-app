@@ -375,6 +375,15 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     </div>
 
 
+    <div class="nav-card" onclick="showView('search')">
+      <div class="nav-icon" style="background:#E0F2FE;font-size:26px;width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;z-index:1;"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16ZM21 21l-4.35-4.35"/></svg></div>
+      <div class="nav-text">
+        <div class="nav-title">ค้นหาเครื่องมือ</div>
+        <div class="nav-desc">ค้นหาสถานะเครื่องมือแพทย์ทุกประเภทแบบเรียลไทม์</div>
+      </div>
+      <span class="nav-arrow">›</span>
+    </div>
+
     <div class="nav-card" onclick="showView('round')">
       <div class="nav-icon blue"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v14H6zM9 7h6M9 11h2m1 6v4m-4 0h8"/></svg></div>
       <div class="nav-text">
@@ -567,6 +576,23 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       <div class="card-body">
         <div id="equip2Msg" style="font-size:13px;color:var(--muted)"></div>
         <div id="equip2Grid" style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:8px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SEARCH EQUIPMENT VIEW -->
+  <div id="viewSearch" class="view">
+    <div class="view-header">
+      <button class="btn-view-back" onclick="showView('home')">← กลับ</button>
+      <div class="view-title"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16ZM21 21l-4.35-4.35"/></svg> ค้นหาเครื่องมือ</div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <div class="search-row">
+          <input type="text" id="searchToolInput" placeholder="ค้นหาชื่อเครื่อง หรือหมายเลข เช่น C2, Infusion Pump, 15…" oninput="renderSearchToolResults()" autocomplete="off">
+        </div>
+        <div id="searchToolCount" style="font-size:12px;color:var(--muted);margin:8px 0"></div>
+        <div id="searchToolBody"></div>
       </div>
     </div>
   </div>
@@ -954,6 +980,78 @@ function showView(name) {
   if (name === 'prepare') renderPrepareHistory();
   if (name === 'fixjob') renderFixJobHistory();
   if (name === 'workload') initWorkloadView();
+  if (name === 'search') initSearchToolView();
+}
+
+/* ============================================================ SEARCH EQUIPMENT ============================================================ */
+function initSearchToolView() {
+  const input = document.getElementById('searchToolInput');
+  input.value = '';
+  renderSearchToolResults();
+  input.focus();
+}
+
+function renderSearchToolResults() {
+  const q = document.getElementById('searchToolInput').value.trim().toLowerCase();
+  const countEl = document.getElementById('searchToolCount');
+  const body = document.getElementById('searchToolBody');
+
+  if (!q) {
+    countEl.textContent = '';
+    body.innerHTML = '<div class="empty">พิมพ์ชื่อเครื่อง หรือหมายเลขเครื่องเพื่อค้นหา</div>';
+    return;
+  }
+
+  const matches = equipStatus
+    .filter(e => e.equipment)
+    .filter(e => String(e.equipment).toLowerCase().includes(q) || String(e.number || '').toLowerCase().includes(q))
+    .sort((a, b) => String(a.equipment).localeCompare(String(b.equipment), 'th') || String(a.number || '').localeCompare(String(b.number || '')));
+
+  countEl.textContent = 'พบ ' + matches.length + ' รายการ';
+  if (!matches.length) {
+    body.innerHTML = '<div class="empty">ไม่พบเครื่องมือที่ค้นหา</div>';
+    return;
+  }
+
+  const jsStr = v => String(v || '').replace(/'/g, "\\'");
+
+  body.innerHTML = `<div class="equip-grid">${matches.map(e => {
+    const when = formatThaiDateTime(e.lastUpdate);
+    if (!e.isBorrowed) {
+      return `<div class="equip-card returned">
+          <div class="equip-name">${e.equipment}${e.number ? ' No.' + e.number : ''}</div>
+          <div class="equip-num" style="font-size:14px">🟢 พร้อมใช้</div>
+          <div class="equip-ward">${e.ward ? '📍 คืนล่าสุด ' + e.ward : ''}</div>
+          <div class="equip-who">${when ? 'อัปเดต ' + when : ''}</div>
+        </div>`;
+    }
+    // มีปุ่มจัดการเฉพาะเครื่องที่มีหมายเลขระบุตัวตนชัดเจน (ระบุเครื่องที่จะย้าย/คืน/เปลี่ยน circuit ได้แน่นอน)
+    let actions = '';
+    if (e.number) {
+      const dt = parseThaiTimestampStr(e.lastUpdate);
+      const days = dt ? Math.floor((new Date() - dt) / 86400000) : 0;
+      actions = `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px">
+          <button onclick="openToolTransferModal('${jsStr(e.equipment)}','${jsStr(e.number)}','${jsStr(e.ward)}')" style="flex:1;min-width:80px;font-size:11px;padding:5px 6px;border-radius:8px;border:1.5px solid #C5E3ED;background:#fff;color:#0A6478;cursor:pointer;font-weight:700">🔁 ย้ายวอร์ด</button>
+          <button onclick="openToolReturnModal('${jsStr(e.equipment)}','${jsStr(e.number)}','${jsStr(e.ward)}')" style="flex:1;min-width:80px;font-size:11px;padding:5px 6px;border-radius:8px;border:1.5px solid #FCA5A5;background:#fff;color:#B82E2E;cursor:pointer;font-weight:700">🟥 คืนเครื่อง</button>
+          ${VENTILATOR_EQUIPS.includes(e.equipment) ? `<button onclick="openCircuitModal('${jsStr(e.number)}','${jsStr(e.ward)}',${days},'${jsStr(e.equipment)}')" style="flex:1;min-width:110px;font-size:11px;padding:5px 6px;border-radius:8px;border:1.5px solid #C5E3ED;background:#fff;color:#0A6478;cursor:pointer;font-weight:700">🔧 เปลี่ยน Circuit</button>` : ''}
+        </div>`;
+    }
+    return `<div class="equip-card borrowed">
+          <div class="equip-name">${e.equipment}${e.number ? ' No.' + e.number : ''}</div>
+          <div class="equip-num" style="font-size:14px">🔴 ยืมอยู่</div>
+          <div class="equip-ward">📍 ${e.ward || '—'}</div>
+          <div class="equip-who">${e.borrowedBy || ''}${when ? ' · ' + when : ''}</div>
+          ${actions}
+        </div>`;
+  }).join('')}</div>`;
+}
+
+/** แปลง ISO timestamp -> dd/MM/yyyy HH:mm (พ.ศ.) สำหรับแสดงในการ์ดค้นหาเครื่องมือ */
+function formatThaiDateTime(iso) {
+  const d = parseThaiTimestampStr(iso);
+  if (!d) return '';
+  const pad = n => String(n).padStart(2, '0');
+  return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
 }
 
 /* ============================================================ WORKLOAD CALENDAR ============================================================ */
@@ -1257,7 +1355,7 @@ function renderAlertBanner() {
 // ── C2 CIRCUIT CHANGE MODAL ─────────────────────────────────
 // ครบกำหนดเปลี่ยน Circuit (ทุก 14 วัน) แต่เครื่องยังยืมอยู่ต่อ:
 // บันทึกรายการ "เปลี่ยน Circuit" ใหม่ (ไม่ใช่คืนเครื่อง) เพื่อรีเซ็ตวันนับ 14 วันถัดไป
-let _circuitCtx = null; // { number, ward, days }
+let _circuitCtx = null; // { number, ward, days, equip }
 
 function detectShiftTH() {
   const now = new Date();
@@ -1267,10 +1365,10 @@ function detectShiftTH() {
   return 'เวรดึก';
 }
 
-function openCircuitModal(number, ward, days) {
-  _circuitCtx = { number, ward, days };
+function openCircuitModal(number, ward, days, equip = 'C2') {
+  _circuitCtx = { number, ward, days, equip };
   document.getElementById('circuitInfo').innerHTML =
-    `<strong>C2 No.${number}</strong><br><span style="font-weight:500;color:var(--muted);font-size:12px">📍 ${ward || '—'} · ยืมมาแล้ว ${days} วัน</span>`;
+    `<strong>${equip} No.${number}</strong><br><span style="font-weight:500;color:var(--muted);font-size:12px">📍 ${ward || '—'} · ยืมมาแล้ว ${days} วัน</span>`;
   document.getElementById('circuitStaffName').value = '';
   const dateInput = document.getElementById('circuitDate');
   dateInput.max = bkkDateStr(new Date()); // เลือกวันที่ในอนาคตไม่ได้
@@ -1307,16 +1405,17 @@ async function submitCircuitChange() {
     await saveBorrowRecord({
       action: '🔧 ครบกำหนดเปลี่ยน Circuit',
       shift: detectShiftTH(),
-      equipment: 'C2',
+      equipment: _circuitCtx.equip,
       equipmentNumber: _circuitCtx.number,
       ward: _circuitCtx.ward,
       name: name,
-      note: `เปลี่ยน Circuit ครบกำหนด (ยืมมาแล้ว ${_circuitCtx.days} วัน) เริ่มนับใหม่อีก ${OVERDUE_C2_DAYS} วัน`,
+      note: `บันทึกเปลี่ยน Circuit (ยืมมาแล้ว ${_circuitCtx.days} วัน) เริ่มนับใหม่อีก ${OVERDUE_C2_DAYS} วัน`,
       timestamp: changeTimestamp.toISOString()
     });
     closeCircuitModal();
     await loadAll();
     if (currentView === 'kpi') renderKpiAlerts();
+    if (currentView === 'search') renderSearchToolResults();
     showToast('✅ บันทึกการเปลี่ยน Circuit เรียบร้อยแล้ว เริ่มนับ ' + OVERDUE_C2_DAYS + ' วันใหม่');
   } catch (err) {
     alert('❌ บันทึกไม่สำเร็จ: ' + err.message);
@@ -1327,7 +1426,109 @@ async function submitCircuitChange() {
 
 document.addEventListener('click', e => {
   if (e.target.id === 'circuitModal') closeCircuitModal();
+  if (e.target.id === 'toolTransferModal') closeToolTransferModal();
+  if (e.target.id === 'toolReturnModal') closeToolReturnModal();
 });
+
+// ── ย้ายวอร์ด / คืนเครื่อง จากผลค้นหาเครื่องมือ ─────────────────────────────
+const WARDS_ALL = ['ER','อายุรกรรมหญิง (M.ญ)','EENT','ศัลยกรรมหญิง','ศัลยกรรมกระดูก','ศัลยกรรมชาย',
+  'อายุรกรรมชาย (M.ช)','Semi ICU','ICU 100 ปี','กจ.3','กจ.2','TM','เด็กล่าง','PICU','เด็กบน',
+  'ICU ญสส.','ห้องคลอด LR','หลังคลอด PP','ญสส.9','Premium ญสส.8','ญสส.7','ICU.S','ICU Nuero',
+  'NICU','SNB','กจ.4','AIIR','สธ.7','สธ.6','ศูนย์เปล','เคมีบำบัด'];
+
+let _toolTransferCtx = null; // { equip, number, fromWard }
+
+function openToolTransferModal(equip, number, fromWard) {
+  _toolTransferCtx = { equip, number, fromWard };
+  document.getElementById('toolTransferInfo').innerHTML =
+    `<strong>${equip} No.${number}</strong><br><span style="font-weight:500;color:var(--muted);font-size:12px">ปัจจุบันอยู่ที่วอร์ด ${fromWard || '—'}</span>`;
+  const sel = document.getElementById('toolTransferWardSel');
+  sel.innerHTML = '<option value="">— เลือกวอร์ดปลายทาง —</option>' +
+    WARDS_ALL.filter(w => w !== fromWard).map(w => `<option>${w}</option>`).join('');
+  document.getElementById('toolTransferStaffName').value = '';
+  document.getElementById('toolTransferModal').style.display = 'flex';
+}
+
+function closeToolTransferModal() {
+  document.getElementById('toolTransferModal').style.display = 'none';
+  _toolTransferCtx = null;
+}
+
+async function submitToolTransfer() {
+  if (!_toolTransferCtx) return;
+  const toWard = document.getElementById('toolTransferWardSel').value;
+  const name = document.getElementById('toolTransferStaffName').value.trim();
+  if (!toWard) { alert('⚠️ กรุณาเลือกวอร์ดปลายทาง'); return; }
+  if (!name)   { alert('⚠️ กรุณากรอกชื่อผู้ย้าย'); return; }
+
+  const btn = document.getElementById('btnSubmitToolTransfer');
+  btn.disabled = true; btn.textContent = '⏳ กำลังบันทึก...';
+
+  try {
+    await saveBorrowRecord({
+      action: '🔁 ย้ายวอร์ด',
+      shift: detectShiftTH(),
+      equipment: _toolTransferCtx.equip,
+      equipmentNumber: _toolTransferCtx.number,
+      ward: toWard,
+      name: name,
+      note: 'ย้ายจาก ' + (_toolTransferCtx.fromWard || '—'),
+      timestamp: new Date().toISOString()
+    });
+    closeToolTransferModal();
+    await loadAll();
+    if (currentView === 'search') renderSearchToolResults();
+    showToast('✅ ย้ายไปวอร์ด ' + toWard + ' เรียบร้อยแล้ว');
+  } catch (err) {
+    alert('❌ ย้ายวอร์ดไม่สำเร็จ: ' + err.message);
+  } finally {
+    btn.disabled = false; btn.textContent = '✅ ยืนยันย้ายวอร์ด';
+  }
+}
+
+let _toolReturnCtx = null; // { equip, number, ward }
+
+function openToolReturnModal(equip, number, ward) {
+  _toolReturnCtx = { equip, number, ward };
+  document.getElementById('toolReturnInfo').innerHTML =
+    `<strong>${equip} No.${number}</strong><br><span style="font-weight:500;color:var(--muted);font-size:12px">📍 ${ward || '—'}</span>`;
+  document.getElementById('toolReturnStaffName').value = '';
+  document.getElementById('toolReturnModal').style.display = 'flex';
+}
+
+function closeToolReturnModal() {
+  document.getElementById('toolReturnModal').style.display = 'none';
+  _toolReturnCtx = null;
+}
+
+async function submitToolReturn() {
+  if (!_toolReturnCtx) return;
+  const name = document.getElementById('toolReturnStaffName').value.trim();
+  if (!name) { alert('⚠️ กรุณากรอกชื่อผู้คืน'); return; }
+
+  const btn = document.getElementById('btnSubmitToolReturn');
+  btn.disabled = true; btn.textContent = '⏳ กำลังบันทึก...';
+
+  try {
+    await saveBorrowRecord({
+      action: '🟥 คืน',
+      shift: detectShiftTH(),
+      equipment: _toolReturnCtx.equip,
+      equipmentNumber: _toolReturnCtx.number,
+      ward: _toolReturnCtx.ward,
+      name: name,
+      timestamp: new Date().toISOString()
+    });
+    closeToolReturnModal();
+    await loadAll();
+    if (currentView === 'search') renderSearchToolResults();
+    showToast('✅ บันทึกการคืนเครื่องเรียบร้อยแล้ว');
+  } catch (err) {
+    alert('❌ บันทึกไม่สำเร็จ: ' + err.message);
+  } finally {
+    btn.disabled = false; btn.textContent = '✅ ยืนยันคืนเครื่อง';
+  }
+}
 
 function trendBarsHTML(data, borrowColor, returnColor, labelColor) {
   const max = Math.max(1, ...data.map(d => Math.max(d.borrow, d.return)));
@@ -2618,6 +2819,54 @@ showView = function(name) {
     <div style="padding:14px 20px;display:flex;gap:10px;border-top:1px solid #C5E3ED">
       <button onclick="closeCircuitModal()" style="flex:1;padding:11px;background:#EBF5F8;color:#6A8A96;border:none;border-radius:12px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer">ยกเลิก</button>
       <button onclick="submitCircuitChange()" id="btnSubmitCircuit" style="flex:2;padding:11px;background:#0A6478;color:#fff;border:none;border-radius:12px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer">✅ ยืนยันเปลี่ยน Circuit แล้ว</button>
+    </div>
+  </div>
+</div>
+
+<!-- ย้ายวอร์ด MODAL (จากผลค้นหาเครื่องมือ) -->
+<div id="toolTransferModal" style="display:none;position:fixed;inset:0;background:rgba(10,30,40,0.6);z-index:9998;align-items:center;justify-content:center;padding:16px">
+  <div style="background:#fff;border-radius:20px;width:100%;max-width:420px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+    <div style="background:linear-gradient(135deg,#0A6478,#0E7D94);padding:16px 20px;display:flex;align-items:center;justify-content:space-between">
+      <div style="color:#fff;font-size:16px;font-weight:800">🔁 ย้ายวอร์ด</div>
+      <button onclick="closeToolTransferModal()" style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.2);border:none;color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">×</button>
+    </div>
+    <div style="padding:20px;display:flex;flex-direction:column;gap:14px">
+      <div id="toolTransferInfo" style="background:#EBF5F8;border:1.5px solid #C5E3ED;border-radius:12px;padding:12px 14px;font-size:14px"></div>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#6A8A96;margin-bottom:5px">ย้ายไปวอร์ด</div>
+        <select id="toolTransferWardSel" style="width:100%;padding:9px 12px;border:2px solid #C5E3ED;border-radius:10px;font-family:inherit;font-size:14px;background:#fff;outline:none">
+          <option value="">— เลือกวอร์ดปลายทาง —</option>
+        </select>
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#6A8A96;margin-bottom:5px">ชื่อผู้ย้าย</div>
+        <input id="toolTransferStaffName" type="text" placeholder="ชื่อผู้ย้าย" style="width:100%;padding:9px 12px;border:2px solid #C5E3ED;border-radius:10px;font-family:inherit;font-size:14px;outline:none">
+      </div>
+    </div>
+    <div style="padding:14px 20px;display:flex;gap:10px;border-top:1px solid #C5E3ED">
+      <button onclick="closeToolTransferModal()" style="flex:1;padding:11px;background:#EBF5F8;color:#6A8A96;border:none;border-radius:12px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer">ยกเลิก</button>
+      <button onclick="submitToolTransfer()" id="btnSubmitToolTransfer" style="flex:2;padding:11px;background:#0A6478;color:#fff;border:none;border-radius:12px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer">✅ ยืนยันย้ายวอร์ด</button>
+    </div>
+  </div>
+</div>
+
+<!-- คืนเครื่อง MODAL (จากผลค้นหาเครื่องมือ) -->
+<div id="toolReturnModal" style="display:none;position:fixed;inset:0;background:rgba(10,30,40,0.6);z-index:9998;align-items:center;justify-content:center;padding:16px">
+  <div style="background:#fff;border-radius:20px;width:100%;max-width:420px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+    <div style="background:linear-gradient(135deg,#B82E2E,#D9534F);padding:16px 20px;display:flex;align-items:center;justify-content:space-between">
+      <div style="color:#fff;font-size:16px;font-weight:800">🟥 คืนเครื่อง</div>
+      <button onclick="closeToolReturnModal()" style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.2);border:none;color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">×</button>
+    </div>
+    <div style="padding:20px;display:flex;flex-direction:column;gap:14px">
+      <div id="toolReturnInfo" style="background:#FFF5F5;border:1.5px solid #FCA5A5;border-radius:12px;padding:12px 14px;font-size:14px"></div>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#6A8A96;margin-bottom:5px">ชื่อผู้คืน</div>
+        <input id="toolReturnStaffName" type="text" placeholder="ชื่อผู้นำเครื่องมาคืน" style="width:100%;padding:9px 12px;border:2px solid #C5E3ED;border-radius:10px;font-family:inherit;font-size:14px;outline:none">
+      </div>
+    </div>
+    <div style="padding:14px 20px;display:flex;gap:10px;border-top:1px solid #C5E3ED">
+      <button onclick="closeToolReturnModal()" style="flex:1;padding:11px;background:#EBF5F8;color:#6A8A96;border:none;border-radius:12px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer">ยกเลิก</button>
+      <button onclick="submitToolReturn()" id="btnSubmitToolReturn" style="flex:2;padding:11px;background:#B82E2E;color:#fff;border:none;border-radius:12px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer">✅ ยืนยันคืนเครื่อง</button>
     </div>
   </div>
 </div>
