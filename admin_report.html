@@ -293,6 +293,31 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 
   </div>
 
+  <!-- ── C2 MONTHLY STATS ── -->
+  <div class="section-label">สถิติรายเดือน (C2)</div>
+  <div class="history-card" style="margin-bottom:32px">
+    <div style="padding:20px 22px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:14px">
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">เดือน</div>
+          <select id="c2mMonthSel" onchange="renderC2MonthlyStats()" style="width:100%;padding:9px 12px;border:2px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;background:#fff;outline:none">
+            <option value="">— เลือกเดือน —</option>
+          </select>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">หน่วยงาน</div>
+          <select id="c2mWardSel" onchange="renderC2MonthlyStats()" style="width:100%;padding:9px 12px;border:2px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;background:#fff;outline:none">
+            <option value="">— ทั้งหมด —</option>
+          </select>
+        </div>
+      </div>
+      <div id="c2mStatsWrap"><div class="empty-state">เลือกเดือนเพื่อดูสถิติ</div></div>
+      <div id="c2mPrintWrap" style="display:none;margin-top:14px;text-align:right">
+        <button class="btn-action teal" style="width:auto;display:inline-flex" onclick="exportC2MonthlyStatsPDF()">📄 Export PDF</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ── RESULT BOX ── -->
   <div id="resultBox" class="result-box">
     <div class="result-title" id="resultTitle"></div>
@@ -544,8 +569,148 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       </table>`;
   }
 
+  // ── C2 MONTHLY STATS (เดือน/หน่วยงาน) ───────────────────────
+  let _c2mRaw = null; // cache: [{no, ward, ts, isBorrow, isReturn}]
+
+  async function loadC2MonthlyOptions() {
+    const monthSel = document.getElementById('c2mMonthSel');
+    const wardSel  = document.getElementById('c2mWardSel');
+    monthSel.innerHTML = '<option value="">— กำลังโหลด —</option>';
+    try {
+      const raw = await fetchAllPages(() => supabase.from('borrow_records')
+        .select('action, equipment_number, ward, recorded_at')
+        .ilike('equipment_name', '%C2%').not('action', 'ilike', '%Round%')
+        .order('recorded_at').order('id'));
+
+      _c2mRaw = raw.map(r => ({
+        no: parseInt(r.equipment_number, 10),
+        ward: r.ward || 'ไม่ระบุ',
+        ts: new Date(r.recorded_at),
+        isBorrow: (r.action || '').includes('ยืม'),
+        isReturn: (r.action || '').includes('คืน')
+      })).filter(r => !isNaN(r.no) && r.no >= 1 && r.no <= 58 && !isNaN(r.ts) && (r.isBorrow || r.isReturn));
+
+      const months = [...new Set(_c2mRaw.map(r => `${r.ts.getFullYear()}-${String(r.ts.getMonth()+1).padStart(2,'0')}`))].sort().reverse();
+      const wards  = [...new Set(_c2mRaw.map(r => r.ward))].sort();
+
+      monthSel.innerHTML = '<option value="">— เลือกเดือน —</option>' +
+        months.map(m => `<option value="${m}">${rptThaiMonthYear(new Date(+m.split('-')[0], +m.split('-')[1]-1, 1))}</option>`).join('');
+      wardSel.innerHTML = '<option value="">— ทั้งหมด —</option>' +
+        wards.map(w => `<option value="${w}">${w}</option>`).join('');
+    } catch (e) {
+      monthSel.innerHTML = '<option value="">— โหลดไม่สำเร็จ —</option>';
+    }
+  }
+
+  function renderC2MonthlyStats() {
+    const month = document.getElementById('c2mMonthSel').value;
+    const ward  = document.getElementById('c2mWardSel').value;
+    const wrap  = document.getElementById('c2mStatsWrap');
+    document.getElementById('c2mPrintWrap').style.display = 'none';
+    if (!month || !_c2mRaw) { wrap.innerHTML = '<div class="empty-state">เลือกเดือนเพื่อดูสถิติ</div>'; return; }
+
+    const filtered = _c2mRaw.filter(r => {
+      if (ward && r.ward !== ward) return false;
+      return `${r.ts.getFullYear()}-${String(r.ts.getMonth()+1).padStart(2,'0')}` === month;
+    });
+
+    const byNum = {};
+    filtered.forEach(r => { (byNum[r.no] = byNum[r.no] || []).push(r); });
+
+    const rows = [];
+    Object.entries(byNum).forEach(([no, recs]) => {
+      recs.sort((a, b) => a.ts - b.ts);
+      let borrows = 0, returns = 0, totalMs = 0, sessions = [], pending = null;
+      recs.forEach(r => {
+        if (r.isBorrow) { pending = r.ts; borrows++; }
+        else if (r.isReturn) {
+          returns++;
+          if (pending) {
+            const ms = r.ts - pending;
+            if (ms > 0) { totalMs += ms; sessions.push(ms); }
+            pending = null;
+          }
+        }
+      });
+      rows.push({ no: +no, borrows, returns, sessions, totalMs });
+    });
+    rows.sort((a, b) => a.no - b.no);
+
+    if (!rows.length) {
+      wrap.innerHTML = '<div class="empty-state">ไม่มีข้อมูลเดือนนี้</div>';
+      return;
+    }
+
+    const totalBorrow = rows.reduce((s, r) => s + r.borrows, 0);
+    const totalReturn = rows.reduce((s, r) => s + r.returns, 0);
+    const totalMsAll  = rows.reduce((s, r) => s + r.totalMs, 0);
+
+    wrap.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
+        <div style="background:#DCF2E5;border-radius:12px;padding:12px;text-align:center">
+          <div style="font-size:11px;font-weight:700;color:#1A7B4A;margin-bottom:4px">ยืมทั้งหมด</div>
+          <div style="font-size:26px;font-weight:800;color:#1A7B4A">${totalBorrow}</div>
+        </div>
+        <div style="background:#FDEAEA;border-radius:12px;padding:12px;text-align:center">
+          <div style="font-size:11px;font-weight:700;color:#B82E2E;margin-bottom:4px">คืนทั้งหมด</div>
+          <div style="font-size:26px;font-weight:800;color:#B82E2E">${totalReturn}</div>
+        </div>
+        <div style="background:var(--al);border-radius:12px;padding:12px;text-align:center">
+          <div style="font-size:11px;font-weight:700;color:var(--a);margin-bottom:4px">รวมชั่วโมงใช้งาน</div>
+          <div style="font-size:20px;font-weight:800;color:var(--a)">${rptFmtDuration(totalMsAll)}</div>
+        </div>
+      </div>
+      <table>
+        <thead><tr><th>No.</th><th>ยืม (ครั้ง)</th><th>คืน (ครั้ง)</th><th>รวม</th><th>รายละเอียดแต่ละครั้ง</th></tr></thead>
+        <tbody>${rows.map(r => `<tr>
+          <td><strong>No.${r.no}</strong></td>
+          <td style="text-align:center">${r.borrows}</td>
+          <td style="text-align:center">${r.returns}</td>
+          <td style="text-align:center;font-weight:700;color:var(--a)">${rptFmtDuration(r.totalMs)}</td>
+          <td style="font-size:12px;color:var(--muted)">${r.sessions.map((ms,i)=>`ครั้งที่${i+1}: ${rptFmtDuration(ms)}`).join(' · ')||'—'}</td>
+        </tr>`).join('')}</tbody>
+      </table>`;
+
+    window._c2mPrintData = {
+      month, ward, rows, totalBorrow, totalReturn, totalMsAll,
+      monthTH: rptThaiMonthYear(new Date(+month.split('-')[0], +month.split('-')[1]-1, 1))
+    };
+    document.getElementById('c2mPrintWrap').style.display = 'block';
+  }
+
+  async function exportC2MonthlyStatsPDF() {
+    const d = window._c2mPrintData;
+    if (!d) return;
+    const doc = await newThaiPdf();
+    doc.setFontSize(20); doc.text(HOSPITAL_NAME, 40, 44);
+    doc.setFontSize(18); doc.text('สถิติการใช้งาน C2 รายเดือน — ' + d.monthTH, 40, 66);
+    const genAt = new Intl.DateTimeFormat('th-TH-u-ca-gregory', { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date());
+    doc.setFontSize(12); doc.text((d.ward ? 'หน่วยงาน: ' + d.ward : 'ทุกหน่วยงาน') + '   วันที่พิมพ์: ' + genAt, 40, 84);
+
+    thaiTable(doc, {
+      startY: 100,
+      body: [
+        ['ยืมทั้งหมด', d.totalBorrow + ' ครั้ง'],
+        ['คืนทั้งหมด', d.totalReturn + ' ครั้ง'],
+        ['รวมชั่วโมงใช้งาน', rptFmtDuration(d.totalMsAll)]
+      ],
+      styles: { fontSize: 13 }
+    });
+    let y = doc.lastAutoTable.finalY + 24;
+
+    thaiTable(doc, {
+      startY: y,
+      head: [['No.', 'ยืม (ครั้ง)', 'คืน (ครั้ง)', 'รวม', 'รายละเอียดแต่ละครั้ง']],
+      body: d.rows.map(r => [r.no, r.borrows, r.returns, rptFmtDuration(r.totalMs), r.sessions.map((ms,i)=>`ครั้งที่${i+1}: ${rptFmtDuration(ms)}`).join(' · ')||'—']),
+      styles: { fontSize: 10 }
+    });
+
+    doc.save('C2_Monthly_' + d.month.replace('-', '_') + (d.ward ? '_' + d.ward.replace(/\s+/g, '') : '') + '.pdf');
+  }
+
   // ── INIT ───────────────────────────────────────────────────
   renderHistory();
+  loadC2MonthlyOptions();
 </script>
 <script src="mascot.js"></script>
 </body>

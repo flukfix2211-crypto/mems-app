@@ -537,7 +537,6 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       <div id="c2DashSummary" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px"></div>
       <!-- Two-column on desktop -->
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;align-items:start">
-        <!-- Grid -->
         <div class="card" style="margin-bottom:0">
           <div class="card-head">สถานะปัจจุบัน</div>
           <div class="card-body">
@@ -545,28 +544,11 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
             <div id="c2DashGrid" style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:8px"></div>
           </div>
         </div>
-        <!-- Monthly stats -->
+        <!-- Circuit due dates -->
         <div class="card" style="margin-bottom:0">
-          <div class="card-head">สถิติรายเดือน (C2)</div>
+          <div class="card-head">วันเปลี่ยน Circuit</div>
           <div class="card-body">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
-              <div>
-                <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">เดือน</div>
-                <select id="c2MonthSel" onchange="renderC2Stats()" style="width:100%;padding:9px 12px;border:2px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;background:#fff;outline:none">
-                  <option value="">— เลือกเดือน —</option>
-                </select>
-              </div>
-              <div>
-                <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">หน่วยงาน</div>
-                <select id="c2WardSel" onchange="renderC2Stats()" style="width:100%;padding:9px 12px;border:2px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;background:#fff;outline:none">
-                  <option value="">— ทั้งหมด —</option>
-                </select>
-              </div>
-            </div>
-            <div id="c2StatsWrap"><div class="empty">เลือกเดือนเพื่อดูสถิติ</div></div>
-            <div id="c2PrintWrap" style="display:none;margin-top:12px;text-align:right">
-              <button class="btn-print" onclick="printC2Stats()"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 8V3h10v5M7 17H3V9h18v8h-4M7 14h10v7H7z"/></svg> พิมพ์รายงาน</button>
-            </div>
+            <div id="c2CircuitDueList"></div>
           </div>
         </div>
       </div>
@@ -2074,61 +2056,6 @@ async function confirmDeleteRound(rowIndex, label) {
   }
 }
 
-async function printC2Stats() {
-  const d = window._c2PrintData;
-  if (!d) return;
-  let area = document.getElementById('printArea');
-  if (!area) { area = document.createElement('div'); area.id = 'printArea'; document.body.appendChild(area); }
-
-  const tableRows = d.rows.map(r => `<tr>
-    <td style="font-weight:700">No.${r.num}</td>
-    <td style="text-align:center">${r.borrows}</td>
-    <td style="text-align:center">${r.returns}</td>
-    <td style="text-align:center;font-weight:700">${fmtDuration(r.totalHrs)}</td>
-    <td style="font-size:11px">${r.sessions.map((s,i)=>`ครั้งที่${i+1}: ${fmtDuration(s.hrs)}`).join(' · ')||'—'}</td>
-  </tr>`).join('');
-
-  area.innerHTML = `
-    <div style="font-family:'Sarabun',sans-serif;max-width:800px;margin:0 auto;padding:20px">
-      <div style="text-align:center;margin-bottom:20px;border-bottom:2px solid #0A6478;padding-bottom:14px">
-        <div style="font-size:22px;font-weight:800;color:#0A6478">💊 รายงานสถิติการใช้งาน C2</div>
-        <div style="font-size:14px;color:#666;margin-top:4px">เดือน: ${d.month}${d.ward ? '  |  หน่วยงาน: '+d.ward : '  |  ทุกหน่วยงาน'}</div>
-        <div style="font-size:12px;color:#999;margin-top:2px">พิมพ์เมื่อ: ${new Date().toLocaleString('th-TH',{dateStyle:'short',timeStyle:'short'})}</div>
-        <div style="font-size:12px;color:#666;margin-top:2px">โรงพยาบาลพหลพลพยุหเสนา จ.กาญจนบุรี — งานศูนย์เครื่องมือแพทย์</div>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">
-        <div style="border:2px solid #86EFAC;border-radius:12px;padding:12px;text-align:center">
-          <div style="font-size:11px;font-weight:700;color:#1A7B4A">ยืมทั้งหมด</div>
-          <div style="font-size:28px;font-weight:800;color:#1A7B4A">${d.totalBorrow} ครั้ง</div>
-        </div>
-        <div style="border:2px solid #FCA5A5;border-radius:12px;padding:12px;text-align:center">
-          <div style="font-size:11px;font-weight:700;color:#B82E2E">คืนทั้งหมด</div>
-          <div style="font-size:28px;font-weight:800;color:#B82E2E">${d.totalReturn} ครั้ง</div>
-        </div>
-        <div style="border:2px solid #C5E3ED;border-radius:12px;padding:12px;text-align:center">
-          <div style="font-size:11px;font-weight:700;color:#0A6478">รวมชั่วโมงใช้งาน</div>
-          <div style="font-size:24px;font-weight:800;color:#0A6478">${fmtDuration(d.totalHrsAll)}</div>
-        </div>
-      </div>
-      <table style="width:100%;border-collapse:collapse;font-size:13px">
-        <thead>
-          <tr style="background:#0A6478;color:#fff">
-            <th style="padding:10px 12px;text-align:left">หมายเลข</th>
-            <th style="padding:10px 12px;text-align:center">ยืม (ครั้ง)</th>
-            <th style="padding:10px 12px;text-align:center">คืน (ครั้ง)</th>
-            <th style="padding:10px 12px;text-align:center">รวม (ชม.)</th>
-            <th style="padding:10px 12px;text-align:left">รายละเอียดแต่ละครั้ง</th>
-          </tr>
-        </thead>
-        <tbody>${tableRows}</tbody>
-      </table>
-      <div style="margin-top:24px;font-size:11px;color:#999;text-align:center">
-        MEMs Medical Equipment Management Systems v1.0 — พัฒนาโดย Pawarit Somchipeng
-      </div>
-    </div>`;
-  window.print();
-}
-
 /* ============================================================ C2 STATUS (ใช้ร่วมกันระหว่าง #eqStatusC2 และ KPI Display) ============================================================ */
 function classifyC2Status(assetStatus, isBorrowed) {
   if (assetStatus === 'จำหน่าย') return 'sold';
@@ -2196,10 +2123,53 @@ async function renderC2Dashboard() {
       <span class="rs-badge" style="background:#FDEAEA;color:#B82E2E;border-radius:20px;padding:4px 12px;font-size:13px;font-weight:700">❌ จำหน่าย ${counts.sold}</span>`;
     document.getElementById('navEqStatusDesc').textContent =
       `C2 — พร้อมใช้ ${counts.avail} · ยืมอยู่ ${counts.borrowed} · ซ่อม ${counts.repair} · จำหน่าย ${counts.sold}`;
+
+    renderC2CircuitDue(items);
   } catch (e) {
     msg.textContent = '⚠️ โหลดไม่ได้';
   }
-  buildC2MonthStats();
+}
+
+// รายการ "วันเปลี่ยน Circuit" ของเครื่อง C2 ที่กำลังยืมอยู่ เรียงจากวันครบกำหนดใกล้สุด → ไกลสุด
+// (ครบกำหนดทุก 14 วันนับจากวันที่ยืม/เปลี่ยน Circuit ครั้งล่าสุด — ดู OVERDUE_C2_DAYS)
+function renderC2CircuitDue(items) {
+  const wrap = document.getElementById('c2CircuitDueList');
+  if (!wrap) return;
+  const now = new Date();
+
+  const due = items
+    .filter(u => u.status === 'borrowed')
+    .map(u => {
+      const dt = parseThaiTimestampStr(u.lastUpdate);
+      if (!dt) return null;
+      const daysBorrowed = Math.floor((now - dt) / 86400000);
+      const dueDate = new Date(dt.getTime() + OVERDUE_C2_DAYS * 86400000);
+      const daysLeft = Math.ceil((dueDate - now) / 86400000);
+      return { number: u.number, ward: u.ward, daysBorrowed, dueDate, daysLeft };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.dueDate - b.dueDate);
+
+  if (!due.length) {
+    wrap.innerHTML = '<div class="empty" style="padding:16px 0">ไม่มีเครื่องที่กำลังยืมอยู่</div>';
+    return;
+  }
+
+  wrap.innerHTML = due.map(u => {
+    const overdue = u.daysLeft < 0;
+    const label = overdue ? `เกินกำหนด ${Math.abs(u.daysLeft)} วัน`
+      : u.daysLeft === 0 ? 'ครบกำหนดวันนี้'
+      : `เหลือ ${u.daysLeft} วัน`;
+    const color = overdue ? '#B82E2E' : (u.daysLeft <= 3 ? '#D97706' : '#1A7B4A');
+    return `
+      <div onclick="openCircuitModal('${String(u.number).replace(/'/g,"\\'")}','${String(u.ward||'').replace(/'/g,"\\'")}',${u.daysBorrowed})" title="กดเพื่อบันทึกการเปลี่ยน Circuit" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 10px;border-radius:10px;border:1.5px solid var(--border);margin-bottom:6px;cursor:pointer">
+        <div>
+          <div style="font-weight:800;color:var(--a)">No.${u.number} <span style="font-weight:600;color:var(--muted);font-size:12px">${u.ward||''}</span></div>
+          <div style="font-size:11px;color:var(--muted)">ครบกำหนด ${fmtDate(u.dueDate)}</div>
+        </div>
+        <div style="font-size:12px;font-weight:800;color:${color};white-space:nowrap">${label}</div>
+      </div>`;
+  }).join('');
 }
 
 /* ============================================================ EQUIPMENT STATUS TABS (C2 / High Flow / Brid เขียว — เลือกดูเป็นบล็อคในการ์ดเดียว) ============================================================ */
@@ -2309,41 +2279,6 @@ async function renderEquip2Dashboard() {
   }
 }
 
-function buildC2MonthStats() {
-  const c2recs = allRecords.filter(r => String(r['ชื่อเครื่อง']).includes('C2'));
-
-  const months = [...new Set(c2recs.map(r => {
-    const s = String(r['วันที่']);
-    if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s.slice(3);
-    try { const d = new Date(s); return `${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`; } catch { return ''; }
-  }).filter(Boolean))].sort((a,b) => b.localeCompare(a));
-
-  const wards = [...new Set(c2recs.map(r => r['ตึก/Ward']).filter(Boolean))].sort();
-
-  const monthSel = document.getElementById('c2MonthSel');
-  const curMonth = monthSel.value;
-  monthSel.innerHTML = '<option value="">— เลือกเดือน —</option>' +
-    months.map(m => `<option value="${m}"${m===curMonth?' selected':''}>${m}</option>`).join('');
-
-  const wardSel = document.getElementById('c2WardSel');
-  const curWard = wardSel.value;
-  wardSel.innerHTML = '<option value="">— ทั้งหมด —</option>' +
-    wards.map(w => `<option value="${w}"${w===curWard?' selected':''}>${w}</option>`).join('');
-}
-
-function fmtDuration(hrs) {
-  if (!hrs || hrs <= 0) return '—';
-  const totalMins = Math.round(hrs * 60);
-  const days  = Math.floor(totalMins / 1440);
-  const remH  = Math.floor((totalMins % 1440) / 60);
-  const remM  = totalMins % 60;
-  let s = '';
-  if (days > 0)  s += days + 'วัน ';
-  if (remH > 0)  s += remH + 'ชั่วโมง ';
-  if (remM > 0)  s += remM + 'นาที';
-  return s.trim() || (hrs > 0 ? '< 1 นาที' : '—');
-}
-
 // parse "dd/MM/yyyy HH:mm[:ss]" (หรือ ISO string ทั่วไป) เป็น Date — ใช้ร่วมกันหลายจุด
 function parseThaiTimestampStr(s) {
   s = String(s || '');
@@ -2364,96 +2299,6 @@ function parseThaiDT(r) {
   const mh = tm.match(/^(\d{2}):(\d{2})(?::(\d{2}))?/);
   if (md && mh) return new Date(+md[3], +md[2]-1, +md[1], +mh[1], +mh[2], +(mh[3]||0));
   return null;
-}
-
-function renderC2Stats() {
-  const month = document.getElementById('c2MonthSel').value;
-  const ward  = document.getElementById('c2WardSel').value;
-  const wrap  = document.getElementById('c2StatsWrap');
-  if (!month) { wrap.innerHTML = '<div class="empty">เลือกเดือนเพื่อดูสถิติ</div>'; return; }
-
-  const c2recs = allRecords.filter(r => {
-    if (!String(r['ชื่อเครื่อง']).includes('C2')) return false;
-    if (ward && r['ตึก/Ward'] !== ward) return false;
-    const s = String(r['วันที่']);
-    let m;
-    if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) m = s.slice(3);
-    else try { const d = new Date(s); m = `${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`; } catch { return false; }
-    return m === month;
-  });
-
-  // Group by number, pair borrow/return
-  const byNum = {};
-  c2recs.forEach(r => {
-    const n = String(r['หมายเลขเครื่อง']);
-    if (!byNum[n]) byNum[n] = [];
-    byNum[n].push(r);
-  });
-
-  const rows = [];
-  Object.entries(byNum).forEach(([num, recs]) => {
-    // เรียงตาม timestamp ก่อนเสมอ
-    recs.sort((a, b) => (parseThaiDT(a)||0) - (parseThaiDT(b)||0));
-    let borrows = 0, returns = 0, totalHrs = 0, sessions = [];
-    let pending = null;
-    recs.forEach(r => {
-      const act = String(r['ประเภท (ยืม/คืน)']);
-      const ts  = parseThaiDT(r);
-      if (act.includes('ยืม')) { pending = ts; borrows++; }
-      else if (act.includes('คืน')) {
-        returns++;
-        if (pending && ts) {
-          const hrs = (ts - pending) / 3600000;
-          if (hrs > 0) {
-            totalHrs += hrs;
-            sessions.push({ hrs: Math.round(hrs*10)/10 });
-          }
-          pending = null;
-        }
-      }
-    });
-    rows.push({ num, borrows, returns, sessions, totalHrs: Math.round(totalHrs*10)/10 });
-  });
-
-  rows.sort((a,b) => +a.num - +b.num);
-  if (!rows.length) {
-    wrap.innerHTML = '<div class="empty">ไม่มีข้อมูลเดือนนี้</div>';
-    document.getElementById('c2PrintWrap').style.display = 'none';
-    return;
-  }
-
-  const totalBorrow = rows.reduce((s,r) => s + r.borrows, 0);
-  const totalReturn = rows.reduce((s,r) => s + r.returns, 0);
-  const totalHrsAll = Math.round(rows.reduce((s,r) => s + r.totalHrs, 0) * 10) / 10;
-  const activeNums  = rows.filter(r => r.borrows > 0).length;
-
-  wrap.innerHTML = `
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">
-      <div style="background:#DCF2E5;border-radius:12px;padding:12px;text-align:center">
-        <div style="font-size:11px;font-weight:700;color:#1A7B4A;margin-bottom:4px">ยืมทั้งหมด</div>
-        <div style="font-size:26px;font-weight:800;color:#1A7B4A">${totalBorrow}</div>
-      </div>
-      <div style="background:#FDEAEA;border-radius:12px;padding:12px;text-align:center">
-        <div style="font-size:11px;font-weight:700;color:#B82E2E;margin-bottom:4px">คืนทั้งหมด</div>
-        <div style="font-size:26px;font-weight:800;color:#B82E2E">${totalReturn}</div>
-      </div>
-      <div style="background:#DAF0F5;border-radius:12px;padding:12px;text-align:center">
-        <div style="font-size:11px;font-weight:700;color:#0A6478;margin-bottom:4px">รวมชั่วโมง</div>
-        <div style="font-size:22px;font-weight:800;color:#0A6478">${fmtDuration(totalHrsAll)}</div>
-      </div>
-    </div>
-    <div class="table-wrap"><table>
-    <thead><tr><th>No.</th><th>ยืม (ครั้ง)</th><th>คืน (ครั้ง)</th><th>รวม (ชม.)</th><th>รายละเอียดแต่ละครั้ง</th></tr></thead>
-    <tbody>${rows.map(r => `<tr>
-      <td><strong>No.${r.num}</strong></td>
-      <td style="text-align:center">${r.borrows}</td>
-      <td style="text-align:center">${r.returns}</td>
-      <td style="text-align:center;font-weight:700;color:var(--a)">${fmtDuration(r.totalHrs)}</td>
-      <td style="font-size:12px;color:var(--muted)">${r.sessions.map((s,i)=>`ครั้งที่${i+1}: ${fmtDuration(s.hrs)}`).join(' · ')||'—'}</td>
-    </tr>`).join('')}</tbody></table></div>`;
-
-  window._c2PrintData = { month, ward, rows, totalBorrow, totalReturn, totalHrsAll, activeNums };
-  document.getElementById('c2PrintWrap').style.display = 'block';
 }
 
 function printRoundReport() {
