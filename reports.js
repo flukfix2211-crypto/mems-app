@@ -231,31 +231,17 @@ async function computeWorkloadCalendar(monthLabel) {
 
 async function exportWorkloadCalendarPDF(d) {
   const doc = await newThaiPdf({ orientation: 'landscape' });
+  const pageW = doc.internal.pageSize.getWidth();
+  const BLACK = [0, 0, 0];
 
-  // ธีมสีเข้ม — นี่คือ PDF จริงที่ผู้ใช้ได้จากปุ่ม "Export PDF" ในแดชบอร์ด (jsPDF ฝั่งเบราว์เซอร์)
-  const BG        = [15, 23, 42];   // slate-900 พื้นหลังหลัก
-  const BG_ALT     = [27, 39, 57];   // แถบสลับสีต่อกลุ่มภาระงาน (กลุ่มละ 3 แถว = เวรเช้า/บ่าย/ดึก)
-  const HEAD_BG    = [19, 78, 74];   // teal-900 แถบหัวตาราง (แถวเลขวันที่)
-  const TOTAL_BG   = [124, 45, 18];  // แถบยอดรวม
-  const STAFF_BG   = [49, 46, 129];  // แถบชื่อผู้ปฏิบัติงาน
-  const TEXT_LIGHT = [241, 245, 249];
-  const TEXT_MUTED = [148, 163, 184];
-  const BORDER     = [51, 65, 85];
-
-  // วาดพื้นหลังเข้มเต็มหน้า — หน้าแรกวาดตอนนี้ (ก่อนเขียนหัวเรื่อง) ส่วนหน้าถัดไป (ถ้าตารางล้นหน้า)
-  // วาดผ่าน willDrawPage ของ autoTable ด้านล่าง
-  const paintPageBg = () => {
-    doc.setFillColor(...BG);
-    doc.rect(0, 0, doc.internal.pageSize.getWidth(), doc.internal.pageSize.getHeight(), 'F');
-  };
-  paintPageBg();
-
-  doc.setTextColor(...TEXT_LIGHT);
+  // หัวรายงานแบบทางการ: พื้นหลังขาว จัดกึ่งกลางบนสุดเหมือนหัวหนังสือราชการ
+  doc.setTextColor(...BLACK);
   doc.setFontSize(18);
-  doc.text(HOSPITAL_NAME + ' — ภาระงานนอกเวลาราชการ (ศูนย์เครื่องมือแพทย์) ' + d.monthTH, 20, 26);
-  doc.setTextColor(...TEXT_MUTED);
-  doc.setFontSize(12);
-  doc.text('รวมทั้งเดือน ' + d.grandTotal + ' ครั้ง · สร้างเมื่อ ' + d.generatedAt, 20, 42);
+  doc.text(HOSPITAL_NAME, pageW / 2, 22, { align: 'center' });
+  doc.setFontSize(14);
+  doc.text('ภาระงานนอกเวลาราชการ (ศูนย์เครื่องมือแพทย์) — ' + d.monthTH, pageW / 2, 38, { align: 'center' });
+  doc.setFontSize(11);
+  doc.text('รวมทั้งเดือน ' + d.grandTotal + ' ครั้ง · สร้างเมื่อ ' + d.generatedAt, pageW / 2, 52, { align: 'center' });
 
   const head = [['ภาระงาน', 'เวร', ...Array.from({ length: d.daysInMonth }, (_, i) => String(i + 1)), 'รวม']];
   const body = [];
@@ -291,29 +277,18 @@ async function exportWorkloadCalendarPDF(d) {
     body.push(line);
   });
 
-  const serviceRowCount = d.rows.length * 3;
-  const totalStartIdx = body.length - 6; // 3 แถวยอดรวม ก่อนหน้า 3 แถวชื่อผู้ปฏิบัติงานสุดท้าย
-  const staffStartIdx = body.length - 3;
+  const totalStartIdx = body.length - 6; // 3 แถวยอดรวม + 3 แถวชื่อผู้ปฏิบัติงาน ท้ายตาราง
 
   thaiTable(doc, {
-    head, body, startY: 50,
-    theme: 'grid', // ปิด zebra striping เริ่มต้นของ autoTable ที่จะทับสีเข้มของเราด้วยแถบขาว/เทาอ่อน
-    styles: { fontSize: 8, cellPadding: 1.5, halign: 'center', textColor: TEXT_LIGHT, fillColor: BG, lineColor: BORDER, lineWidth: 0.3 },
-    headStyles: { fillColor: HEAD_BG, textColor: TEXT_LIGHT, lineColor: BORDER },
-    alternateRowStyles: { fillColor: BG, textColor: TEXT_LIGHT }, // เท่ากับสีพื้นฐาน กัน default striping ทับ
+    head, body, startY: 60,
+    theme: 'grid', // ตารางเส้นกรอบเต็ม พื้นหลังขาว-เส้นดำ แบบทางการ
+    styles: { fontSize: 8, cellPadding: 1.5, halign: 'center', textColor: BLACK, fillColor: [255, 255, 255], lineColor: BLACK, lineWidth: 0.4 },
+    headStyles: { fillColor: [255, 255, 255], textColor: BLACK, lineColor: BLACK, fontStyle: 'bold' },
     columnStyles: { 0: { halign: 'left', cellWidth: 150 } },
-    willDrawPage: (data) => { if (data.pageNumber > 1) paintPageBg(); },
     didParseCell: (data) => {
       if (data.section !== 'body') return;
       const idx = data.row.index;
-      if (idx >= totalStartIdx && idx < totalStartIdx + 3) {
-        data.cell.styles.fillColor = TOTAL_BG;
-        data.cell.styles.fontStyle = 'bold';
-      } else if (idx >= staffStartIdx) {
-        data.cell.styles.fillColor = STAFF_BG;
-      } else if (idx < serviceRowCount && Math.floor(idx / 3) % 2 === 1) {
-        data.cell.styles.fillColor = BG_ALT;
-      }
+      if (idx >= totalStartIdx) data.cell.styles.fontStyle = 'bold'; // ยอดรวม + ชื่อผู้ปฏิบัติงาน เน้นตัวหนา
     }
   });
   doc.save('Workload_' + d.month.replace('-', '_') + '.pdf');
