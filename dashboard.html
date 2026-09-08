@@ -197,6 +197,17 @@
     .eq2-tab { padding:9px 18px; border:2px solid var(--border); border-radius:24px; font-family:inherit; font-size:14px; font-weight:700; background:var(--card); color:var(--muted); cursor:pointer; transition:all .18s; }
     .eq2-tab.active { background:var(--a); border-color:var(--a); color:#fff; }
 
+    .ward-block { border-radius:12px; border:2px solid var(--border); padding:10px 12px; cursor:pointer; transition:all .15s; background:#fff; }
+    .ward-block:hover { filter:brightness(0.97); }
+    .ward-block-head { display:flex; align-items:center; justify-content:space-between; gap:8px; font-weight:800; font-size:13px; margin-bottom:6px; }
+    .ward-block-badge { font-size:11px; font-weight:700; padding:2px 8px; border-radius:12px; white-space:nowrap; }
+    .ward-block-empty { background:#F7F9FA; }
+    .ward-block-empty .ward-block-badge { background:#DCF2E5; color:#1A7B4A; }
+    .ward-block-active { background:#FDEAEA; border-color:#FCA5A5; }
+    .ward-block-active .ward-block-badge { background:#B82E2E; color:#fff; }
+    .ward-block-list { display:flex; flex-direction:column; gap:3px; }
+    .ward-block-item { font-size:11.5px; color:#444; line-height:1.4; }
+
     /* PRINT */
     .print-title { font-size: 18px; font-weight: 800; margin-bottom: 8px; }
     .print-meta  { font-size: 12px; color: #666; margin-bottom: 16px; }
@@ -467,6 +478,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       <button class="btn-view-back" onclick="showView('home')">← กลับ</button>
       <div class="view-title"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V5h14v16M3 21h18M9 9h6m-3-3v6M9 21v-5h6v5"/></svg> การใช้งานแต่ละหน่วยงาน</div>
     </div>
+    <div id="wardBlocksGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:16px"></div>
     <div class="card">
       <div class="card-body">
         <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">เลือกหน่วยงาน</div>
@@ -1576,6 +1588,7 @@ async function initWardView() {
     body.innerHTML = '<div class="card"><div class="card-body"><div class="empty">⏳ กำลังโหลดข้อมูล...</div></div></div>';
     await loadAll();
   }
+  renderWardBlocks();
   const sel = document.getElementById('wardViewSel');
   // Only show wards that currently have borrowed equipment
   const wards = [...new Set(equipStatus.filter(e => e.isBorrowed).map(e => e.ward).filter(Boolean))].sort();
@@ -1587,6 +1600,36 @@ async function initWardView() {
     return;
   }
   renderWardDetail();
+}
+
+// ภาพรวมทุกหน่วยงานเป็นบล็อค — เห็นได้ทันทีว่าตึกไหนมีเครื่องยืมอยู่บ้าง หรือว่าง
+function renderWardBlocks() {
+  const grid = document.getElementById('wardBlocksGrid');
+  if (!grid) return;
+  grid.innerHTML = WARDS_ALL.map(ward => {
+    const items = equipStatus
+      .filter(e => e.isBorrowed && e.ward === ward)
+      .sort((a, b) => String(a.equipment).localeCompare(String(b.equipment), 'th') || String(a.number).localeCompare(String(b.number)));
+    const empty = items.length === 0;
+    return `
+      <div class="ward-block ${empty ? 'ward-block-empty' : 'ward-block-active'}" onclick="selectWardBlock('${ward.replace(/'/g, "\\'")}')">
+        <div class="ward-block-head">
+          <span>${ward}</span>
+          <span class="ward-block-badge">${empty ? 'ว่าง' : items.length + ' เครื่อง'}</span>
+        </div>
+        ${empty ? '' : `<div class="ward-block-list">${items.map(e => `<div class="ward-block-item">${e.equipment} No.${e.number || '—'}</div>`).join('')}</div>`}
+      </div>`;
+  }).join('');
+}
+
+function selectWardBlock(ward) {
+  const sel = document.getElementById('wardViewSel');
+  if (![...sel.options].some(o => o.value === ward)) {
+    sel.insertAdjacentHTML('beforeend', `<option value="${ward}">${ward}</option>`);
+  }
+  sel.value = ward;
+  renderWardDetail();
+  document.getElementById('wardDetailBody').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function renderWardDetail() {
