@@ -97,6 +97,8 @@
     .equip-card.borrowed { background: #FFF5F5; border-color: #FCA5A5; }
     .equip-card.returned { background: #F0FFF4; border-color: #86EFAC; }
     .equip-card.warn { background: #FFFBEB; border-color: #FCD34D; }
+    .equip-card.clickable { cursor: pointer; transition: transform .15s ease, box-shadow .15s ease; }
+    .equip-card.clickable:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.10); }
     .equip-name { font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
     .equip-num  { font-size: 18px; font-weight: 800; color: var(--txt); margin-bottom: 6px; }
     .equip-badge { font-size: 12px; font-weight: 700; margin-bottom: 6px; }
@@ -1205,7 +1207,7 @@ function renderAlertBanner() {
   banner.style.display = 'block';
   body.innerHTML = `<div class="equip-grid">${
     overdue.map(o => `
-      <div class="equip-card borrowed">
+      <div class="equip-card borrowed clickable" onclick="openCircuitModal('${String(o.number).replace(/'/g,"\\'")}','${String(o.ward||'').replace(/'/g,"\\'")}',${o.days})" title="กดเพื่อบันทึกการเปลี่ยน Circuit">
         <div class="equip-name">⏰ C2 ยืมเกินกำหนด</div>
         <div class="equip-num" style="font-size:16px">No.${o.number}</div>
         <div class="equip-ward">📍 ${o.ward || '—'}</div>
@@ -1219,6 +1221,66 @@ function renderAlertBanner() {
       </div>`).join('')
   }</div>`;
 }
+
+// ── C2 CIRCUIT CHANGE MODAL ─────────────────────────────────
+// ครบกำหนดเปลี่ยน Circuit (ทุก 14 วัน) แต่เครื่องยังยืมอยู่ต่อ:
+// บันทึกรายการ "เปลี่ยน Circuit" ใหม่ (ไม่ใช่คืนเครื่อง) เพื่อรีเซ็ตวันนับ 14 วันถัดไป
+let _circuitCtx = null; // { number, ward, days }
+
+function detectShiftTH() {
+  const now = new Date();
+  const t = now.getHours() * 60 + now.getMinutes();
+  if (t >= 510 && t < 990) return 'เวรเช้า';
+  if (t >= 990 || t < 30)  return 'เวรบ่าย';
+  return 'เวรดึก';
+}
+
+function openCircuitModal(number, ward, days) {
+  _circuitCtx = { number, ward, days };
+  document.getElementById('circuitInfo').innerHTML =
+    `<strong>C2 No.${number}</strong><br><span style="font-weight:500;color:var(--muted);font-size:12px">📍 ${ward || '—'} · ยืมมาแล้ว ${days} วัน</span>`;
+  document.getElementById('circuitStaffName').value = '';
+  document.getElementById('circuitModal').style.display = 'flex';
+}
+
+function closeCircuitModal() {
+  document.getElementById('circuitModal').style.display = 'none';
+  _circuitCtx = null;
+}
+
+async function submitCircuitChange() {
+  if (!_circuitCtx) return;
+  const name = document.getElementById('circuitStaffName').value.trim();
+  if (!name) { alert('⚠️ กรุณากรอกชื่อผู้บันทึก'); return; }
+
+  const btn = document.getElementById('btnSubmitCircuit');
+  btn.disabled = true; btn.textContent = '⏳ กำลังบันทึก...';
+
+  try {
+    await saveBorrowRecord({
+      action: '🔧 ครบกำหนดเปลี่ยน Circuit',
+      shift: detectShiftTH(),
+      equipment: 'C2',
+      equipmentNumber: _circuitCtx.number,
+      ward: _circuitCtx.ward,
+      name: name,
+      note: `เปลี่ยน Circuit ครบกำหนด (ยืมมาแล้ว ${_circuitCtx.days} วัน) เริ่มนับใหม่อีก ${OVERDUE_C2_DAYS} วัน`,
+      timestamp: new Date().toISOString()
+    });
+    closeCircuitModal();
+    await loadAll();
+    if (currentView === 'kpi') renderKpiAlerts();
+    showToast('✅ บันทึกการเปลี่ยน Circuit เรียบร้อยแล้ว เริ่มนับ ' + OVERDUE_C2_DAYS + ' วันใหม่');
+  } catch (err) {
+    alert('❌ บันทึกไม่สำเร็จ: ' + err.message);
+  } finally {
+    btn.disabled = false; btn.textContent = '✅ ยืนยันเปลี่ยน Circuit แล้ว';
+  }
+}
+
+document.addEventListener('click', e => {
+  if (e.target.id === 'circuitModal') closeCircuitModal();
+});
 
 function trendBarsHTML(data, borrowColor, returnColor, labelColor) {
   const max = Math.max(1, ...data.map(d => Math.max(d.borrow, d.return)));
@@ -2262,7 +2324,7 @@ function renderKpiAlerts() {
   }
   wrap.innerHTML = [
     ...overdue.map(o => `
-      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#0f172a;border-radius:12px;border-left:3px solid #ef4444">
+      <div onclick="openCircuitModal('${String(o.number).replace(/'/g,"\\'")}','${String(o.ward||'').replace(/'/g,"\\'")}',${o.days})" title="กดเพื่อบันทึกการเปลี่ยน Circuit" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#0f172a;border-radius:12px;border-left:3px solid #ef4444;cursor:pointer">
         <div style="font-size:18px"><svg class="mems-icon kpi-icon-4" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v5l3 2M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0"/></svg></div>
         <div style="flex:1;min-width:0">
           <div style="font-size:13px;font-weight:700;color:#e2e8f0">C2 No.${o.number} · ${o.ward || '—'}</div>
@@ -2374,6 +2436,30 @@ showView = function(name) {
     <div style="padding:14px 20px;display:flex;gap:10px;border-top:1px solid #C5E3ED">
       <button onclick="closeEditModal()" style="flex:1;padding:11px;background:#EBF5F8;color:#6A8A96;border:none;border-radius:12px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer">ยกเลิก</button>
       <button onclick="saveEdit()" id="btnSaveEdit" style="flex:2;padding:11px;background:#0A6478;color:#fff;border:none;border-radius:12px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3h13l3 3v15H4zM8 3v6h8V3M8 21v-7h8v7"/></svg> บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- C2 CIRCUIT CHANGE MODAL -->
+<div id="circuitModal" style="display:none;position:fixed;inset:0;background:rgba(10,30,40,0.6);z-index:9998;align-items:center;justify-content:center;padding:16px">
+  <div style="background:#fff;border-radius:20px;width:100%;max-width:440px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+    <div style="background:linear-gradient(135deg,#0A6478,#0E7D94);padding:16px 20px;display:flex;align-items:center;justify-content:space-between">
+      <div style="color:#fff;font-size:16px;font-weight:800">🔧 บันทึกการเปลี่ยน Circuit</div>
+      <button onclick="closeCircuitModal()" style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.2);border:none;color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">×</button>
+    </div>
+    <div style="padding:20px;display:flex;flex-direction:column;gap:14px">
+      <div id="circuitInfo" style="background:#FFF5F5;border:1.5px solid #FCA5A5;border-radius:12px;padding:12px 14px;font-size:14px"></div>
+      <div style="font-size:13px;color:#526875;line-height:1.6">
+        เลือกหัวข้อ <b>"ครบกำหนดเปลี่ยน Circuit แล้ว"</b> เพื่อบันทึกว่าเปลี่ยนวงจรเครื่องนี้เรียบร้อย โดยเครื่องยังถือว่ายืมอยู่ตามเดิม และระบบจะเริ่มนับกำหนดเปลี่ยนครั้งถัดไปใหม่อีก <b>14</b> วัน
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#6A8A96;margin-bottom:5px">ชื่อผู้บันทึก</div>
+        <input id="circuitStaffName" type="text" placeholder="ชื่อผู้เปลี่ยน Circuit" style="width:100%;padding:9px 12px;border:2px solid #C5E3ED;border-radius:10px;font-family:inherit;font-size:14px;outline:none">
+      </div>
+    </div>
+    <div style="padding:14px 20px;display:flex;gap:10px;border-top:1px solid #C5E3ED">
+      <button onclick="closeCircuitModal()" style="flex:1;padding:11px;background:#EBF5F8;color:#6A8A96;border:none;border-radius:12px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer">ยกเลิก</button>
+      <button onclick="submitCircuitChange()" id="btnSubmitCircuit" style="flex:2;padding:11px;background:#0A6478;color:#fff;border:none;border-radius:12px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer">✅ ยืนยันเปลี่ยน Circuit แล้ว</button>
     </div>
   </div>
 </div>
