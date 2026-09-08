@@ -395,20 +395,11 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       <span class="nav-arrow">›</span>
     </div>
 
-    <div class="nav-card" onclick="showView('c2')">
+    <div class="nav-card" onclick="showView('equipStatus')">
       <div class="nav-icon" style="background:#FEF3C7;font-size:26px;width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;z-index:1;"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v14H6zM9 7h6M9 11h2m1 6v4m-4 0h8"/></svg></div>
       <div class="nav-text">
-        <div class="nav-title">สถานะ C2 (No.1–60)</div>
-        <div class="nav-desc" id="navC2Desc">ตรวจสอบสถานะและสถิติการใช้งาน C2</div>
-      </div>
-      <span class="nav-arrow">›</span>
-    </div>
-
-    <div class="nav-card" onclick="showView('equip2')">
-      <div class="nav-icon" style="background:#D1FAE5;font-size:26px;width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;z-index:1;"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v14H6zM9 7h6M9 11h2m1 6v4m-4 0h8"/></svg></div>
-      <div class="nav-text">
-        <div class="nav-title">สถานะ High Flow / Brid</div>
-        <div class="nav-desc" id="navEquip2Desc">ตรวจสอบสถานะเครื่อง High Flow และ Brid เขียว</div>
+        <div class="nav-title">สถานะเครื่องมือ (C2 / High Flow / Brid)</div>
+        <div class="nav-desc" id="navEqStatusDesc">ตรวจสอบสถานะ C2, High Flow และ Brid เขียว</div>
       </div>
       <span class="nav-arrow">›</span>
     </div>
@@ -520,64 +511,64 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     </div>
   </div>
 
-  <!-- C2 VIEW -->
-  <div id="viewC2" class="view">
+  <!-- EQUIPMENT STATUS VIEW (C2 / High Flow / Brid เขียว) -->
+  <div id="viewEquipStatus" class="view">
     <div class="view-header">
       <button class="btn-view-back" onclick="showView('home')">← กลับ</button>
-      <div class="view-title"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v14H6zM9 7h6M9 11h2m1 6v4m-4 0h8"/></svg> สถานะ C2 (No.1–60)</div>
+      <div class="view-title"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v14H6zM9 7h6M9 11h2m1 6v4m-4 0h8"/></svg> สถานะเครื่องมือ</div>
     </div>
-    <!-- Summary -->
-    <div id="c2DashSummary" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px"></div>
-    <!-- Two-column on desktop -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;align-items:start">
-      <!-- Grid -->
-      <div class="card" style="margin-bottom:0">
+    <div id="eqStatusTabs" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"></div>
+
+    <!-- C2 SUB-VIEW -->
+    <div id="eqStatusC2">
+      <!-- Summary -->
+      <div id="c2DashSummary" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px"></div>
+      <!-- Two-column on desktop -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;align-items:start">
+        <!-- Grid -->
+        <div class="card" style="margin-bottom:0">
+          <div class="card-head">สถานะปัจจุบัน</div>
+          <div class="card-body">
+            <div id="c2DashMsg" style="font-size:13px;color:var(--muted)"></div>
+            <div id="c2DashGrid" style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:8px"></div>
+          </div>
+        </div>
+        <!-- Monthly stats -->
+        <div class="card" style="margin-bottom:0">
+          <div class="card-head">สถิติรายเดือน (C2)</div>
+          <div class="card-body">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+              <div>
+                <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">เดือน</div>
+                <select id="c2MonthSel" onchange="renderC2Stats()" style="width:100%;padding:9px 12px;border:2px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;background:#fff;outline:none">
+                  <option value="">— เลือกเดือน —</option>
+                </select>
+              </div>
+              <div>
+                <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">หน่วยงาน</div>
+                <select id="c2WardSel" onchange="renderC2Stats()" style="width:100%;padding:9px 12px;border:2px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;background:#fff;outline:none">
+                  <option value="">— ทั้งหมด —</option>
+                </select>
+              </div>
+            </div>
+            <div id="c2StatsWrap"><div class="empty">เลือกเดือนเพื่อดูสถิติ</div></div>
+            <div id="c2PrintWrap" style="display:none;margin-top:12px;text-align:right">
+              <button class="btn-print" onclick="printC2Stats()"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 8V3h10v5M7 17H3V9h18v8h-4M7 14h10v7H7z"/></svg> พิมพ์รายงาน</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HIGH FLOW / BRID SUB-VIEW -->
+    <div id="eqStatusEquip2" style="display:none">
+      <div id="equip2Summary" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px"></div>
+      <div class="card">
         <div class="card-head">สถานะปัจจุบัน</div>
         <div class="card-body">
-          <div id="c2DashMsg" style="font-size:13px;color:var(--muted)"></div>
-          <div id="c2DashGrid" style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:8px"></div>
+          <div id="equip2Msg" style="font-size:13px;color:var(--muted)"></div>
+          <div id="equip2Grid" style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:8px"></div>
         </div>
-      </div>
-      <!-- Monthly stats -->
-      <div class="card" style="margin-bottom:0">
-        <div class="card-head">สถิติรายเดือน (C2)</div>
-        <div class="card-body">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
-            <div>
-              <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">เดือน</div>
-              <select id="c2MonthSel" onchange="renderC2Stats()" style="width:100%;padding:9px 12px;border:2px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;background:#fff;outline:none">
-                <option value="">— เลือกเดือน —</option>
-              </select>
-            </div>
-            <div>
-              <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">หน่วยงาน</div>
-              <select id="c2WardSel" onchange="renderC2Stats()" style="width:100%;padding:9px 12px;border:2px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;background:#fff;outline:none">
-                <option value="">— ทั้งหมด —</option>
-              </select>
-            </div>
-          </div>
-          <div id="c2StatsWrap"><div class="empty">เลือกเดือนเพื่อดูสถิติ</div></div>
-          <div id="c2PrintWrap" style="display:none;margin-top:12px;text-align:right">
-            <button class="btn-print" onclick="printC2Stats()"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 8V3h10v5M7 17H3V9h18v8h-4M7 14h10v7H7z"/></svg> พิมพ์รายงาน</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- EQUIP2 VIEW (High Flow / Brid เขียว) -->
-  <div id="viewEquip2" class="view">
-    <div class="view-header">
-      <button class="btn-view-back" onclick="showView('home')">← กลับ</button>
-      <div class="view-title"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v14H6zM9 7h6M9 11h2m1 6v4m-4 0h8"/></svg> สถานะ High Flow / Brid เขียว</div>
-    </div>
-    <div id="equip2Tabs" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"></div>
-    <div id="equip2Summary" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px"></div>
-    <div class="card">
-      <div class="card-head">สถานะปัจจุบัน</div>
-      <div class="card-body">
-        <div id="equip2Msg" style="font-size:13px;color:var(--muted)"></div>
-        <div id="equip2Grid" style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:8px"></div>
       </div>
     </div>
   </div>
@@ -977,8 +968,7 @@ function showView(name) {
   if (name === 'round')   populateRoundFilters();
   if (name === 'kpi')     startKpiView();
   if (name === 'records') renderTable();
-  if (name === 'c2') renderC2Dashboard();
-  if (name === 'equip2') initEquip2View();
+  if (name === 'equipStatus') initEqStatusView();
   if (name === 'prepare') renderPrepareHistory();
   if (name === 'fixjob') renderFixJobHistory();
   if (name === 'workload') initWorkloadView();
@@ -2077,7 +2067,7 @@ async function printC2Stats() {
   window.print();
 }
 
-/* ============================================================ C2 STATUS (ใช้ร่วมกันระหว่าง #viewC2 และ KPI Display) ============================================================ */
+/* ============================================================ C2 STATUS (ใช้ร่วมกันระหว่าง #eqStatusC2 และ KPI Display) ============================================================ */
 function classifyC2Status(assetStatus, isBorrowed) {
   if (assetStatus === 'จำหน่าย') return 'sold';
   if (assetStatus === 'ส่งซ่อม' || assetStatus === 'ชำรุด') return 'repair';
@@ -2142,35 +2132,46 @@ async function renderC2Dashboard() {
       <span class="rs-badge rs-lost">🔴 ยืมอยู่ ${counts.borrowed}</span>
       <span class="rs-badge" style="background:#F0F0F0;color:#555;border-radius:20px;padding:4px 12px;font-size:13px;font-weight:700">🔧 ซ่อม ${counts.repair}</span>
       <span class="rs-badge" style="background:#FDEAEA;color:#B82E2E;border-radius:20px;padding:4px 12px;font-size:13px;font-weight:700">❌ จำหน่าย ${counts.sold}</span>`;
-    document.getElementById('navC2Desc').textContent =
-      `พร้อมใช้ ${counts.avail} · ยืมอยู่ ${counts.borrowed} · ซ่อม ${counts.repair} · จำหน่าย ${counts.sold}`;
+    document.getElementById('navEqStatusDesc').textContent =
+      `C2 — พร้อมใช้ ${counts.avail} · ยืมอยู่ ${counts.borrowed} · ซ่อม ${counts.repair} · จำหน่าย ${counts.sold}`;
   } catch (e) {
     msg.textContent = '⚠️ โหลดไม่ได้';
   }
   buildC2MonthStats();
 }
 
-/* ============================================================ EQUIP2 STATUS (High Flow / Brid เขียว — เลือกดูเป็นบล็อคเหมือน C2) ============================================================ */
-const EQUIP2_TYPES = [
+/* ============================================================ EQUIPMENT STATUS TABS (C2 / High Flow / Brid เขียว — เลือกดูเป็นบล็อคในการ์ดเดียว) ============================================================ */
+const EQSTATUS_TABS = [
+  { key: 'c2', label: 'C2' },
   { key: 'High Flow', label: 'High Flow' },
   { key: 'Brid เขียว', label: 'Brid เขียว' }
 ];
-let equip2CurrentType = EQUIP2_TYPES[0].key;
+let eqStatusCurrentTab = EQSTATUS_TABS[0].key;
+let equip2CurrentType = 'High Flow';
 
-function initEquip2View() {
-  const tabs = document.getElementById('equip2Tabs');
-  tabs.innerHTML = EQUIP2_TYPES.map(t =>
-    `<button class="eq2-tab${t.key === equip2CurrentType ? ' active' : ''}" data-type="${t.key}" onclick="selectEquip2Type('${t.key.replace(/'/g, "\\'")}')">${t.label}</button>`
-  ).join('');
-  renderEquip2Dashboard();
+function initEqStatusView() {
+  renderEqStatusTabs();
+  selectEqStatusTab(eqStatusCurrentTab);
 }
 
-function selectEquip2Type(type) {
-  equip2CurrentType = type;
-  document.querySelectorAll('#equip2Tabs .eq2-tab').forEach(b => {
-    b.classList.toggle('active', b.dataset.type === type);
-  });
-  renderEquip2Dashboard();
+function renderEqStatusTabs() {
+  document.getElementById('eqStatusTabs').innerHTML = EQSTATUS_TABS.map(t =>
+    `<button class="eq2-tab${t.key === eqStatusCurrentTab ? ' active' : ''}" onclick="selectEqStatusTab('${t.key.replace(/'/g, "\\'")}')">${t.label}</button>`
+  ).join('');
+}
+
+function selectEqStatusTab(key) {
+  eqStatusCurrentTab = key;
+  renderEqStatusTabs();
+  const isC2 = key === 'c2';
+  document.getElementById('eqStatusC2').style.display = isC2 ? '' : 'none';
+  document.getElementById('eqStatusEquip2').style.display = isC2 ? 'none' : '';
+  if (isC2) {
+    renderC2Dashboard();
+  } else {
+    equip2CurrentType = key;
+    renderEquip2Dashboard();
+  }
 }
 
 async function renderEquip2Dashboard() {
@@ -2239,8 +2240,8 @@ async function renderEquip2Dashboard() {
       <span class="rs-badge rs-lost">🔴 ยืมอยู่ ${finalCounts.borrowed}</span>
       <span class="rs-badge" style="background:#F0F0F0;color:#555;border-radius:20px;padding:4px 12px;font-size:13px;font-weight:700">🔧 ซ่อม ${finalCounts.repair}</span>
       <span class="rs-badge" style="background:#FDEAEA;color:#B82E2E;border-radius:20px;padding:4px 12px;font-size:13px;font-weight:700">❌ จำหน่าย ${finalCounts.sold}</span>`;
-    document.getElementById('navEquip2Desc').textContent =
-      `พร้อมใช้ ${finalCounts.avail} · ยืมอยู่ ${finalCounts.borrowed} · ซ่อม ${finalCounts.repair} · จำหน่าย ${finalCounts.sold}`;
+    document.getElementById('navEqStatusDesc').textContent =
+      `${type} — พร้อมใช้ ${finalCounts.avail} · ยืมอยู่ ${finalCounts.borrowed} · ซ่อม ${finalCounts.repair} · จำหน่าย ${finalCounts.sold}`;
   } catch (e) {
     msg.textContent = '⚠️ โหลดไม่ได้';
   }
