@@ -535,11 +535,21 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     <div id="eqStatusC2">
       <!-- Summary -->
       <div id="c2DashSummary" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px"></div>
-      <div class="card" style="margin-bottom:0">
-        <div class="card-head">สถานะปัจจุบัน</div>
-        <div class="card-body">
-          <div id="c2DashMsg" style="font-size:13px;color:var(--muted)"></div>
-          <div id="c2DashGrid" style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:8px"></div>
+      <!-- Two-column on desktop -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;align-items:start">
+        <div class="card" style="margin-bottom:0">
+          <div class="card-head">สถานะปัจจุบัน</div>
+          <div class="card-body">
+            <div id="c2DashMsg" style="font-size:13px;color:var(--muted)"></div>
+            <div id="c2DashGrid" style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:8px"></div>
+          </div>
+        </div>
+        <!-- Circuit due dates -->
+        <div class="card" style="margin-bottom:0">
+          <div class="card-head">วันเปลี่ยน Circuit</div>
+          <div class="card-body">
+            <div id="c2CircuitDueList"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -2113,9 +2123,53 @@ async function renderC2Dashboard() {
       <span class="rs-badge" style="background:#FDEAEA;color:#B82E2E;border-radius:20px;padding:4px 12px;font-size:13px;font-weight:700">❌ จำหน่าย ${counts.sold}</span>`;
     document.getElementById('navEqStatusDesc').textContent =
       `C2 — พร้อมใช้ ${counts.avail} · ยืมอยู่ ${counts.borrowed} · ซ่อม ${counts.repair} · จำหน่าย ${counts.sold}`;
+
+    renderC2CircuitDue(items);
   } catch (e) {
     msg.textContent = '⚠️ โหลดไม่ได้';
   }
+}
+
+// รายการ "วันเปลี่ยน Circuit" ของเครื่อง C2 ที่กำลังยืมอยู่ เรียงจากวันครบกำหนดใกล้สุด → ไกลสุด
+// (ครบกำหนดทุก 14 วันนับจากวันที่ยืม/เปลี่ยน Circuit ครั้งล่าสุด — ดู OVERDUE_C2_DAYS)
+function renderC2CircuitDue(items) {
+  const wrap = document.getElementById('c2CircuitDueList');
+  if (!wrap) return;
+  const now = new Date();
+
+  const due = items
+    .filter(u => u.status === 'borrowed')
+    .map(u => {
+      const dt = parseThaiTimestampStr(u.lastUpdate);
+      if (!dt) return null;
+      const daysBorrowed = Math.floor((now - dt) / 86400000);
+      const dueDate = new Date(dt.getTime() + OVERDUE_C2_DAYS * 86400000);
+      const daysLeft = Math.ceil((dueDate - now) / 86400000);
+      return { number: u.number, ward: u.ward, daysBorrowed, dueDate, daysLeft };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.dueDate - b.dueDate);
+
+  if (!due.length) {
+    wrap.innerHTML = '<div class="empty" style="padding:16px 0">ไม่มีเครื่องที่กำลังยืมอยู่</div>';
+    return;
+  }
+
+  wrap.innerHTML = due.map(u => {
+    const overdue = u.daysLeft < 0;
+    const label = overdue ? `เกินกำหนด ${Math.abs(u.daysLeft)} วัน`
+      : u.daysLeft === 0 ? 'ครบกำหนดวันนี้'
+      : `เหลือ ${u.daysLeft} วัน`;
+    const color = overdue ? '#B82E2E' : (u.daysLeft <= 3 ? '#D97706' : '#1A7B4A');
+    return `
+      <div onclick="openCircuitModal('${String(u.number).replace(/'/g,"\\'")}','${String(u.ward||'').replace(/'/g,"\\'")}',${u.daysBorrowed})" title="กดเพื่อบันทึกการเปลี่ยน Circuit" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 10px;border-radius:10px;border:1.5px solid var(--border);margin-bottom:6px;cursor:pointer">
+        <div>
+          <div style="font-weight:800;color:var(--a)">No.${u.number} <span style="font-weight:600;color:var(--muted);font-size:12px">${u.ward||''}</span></div>
+          <div style="font-size:11px;color:var(--muted)">ครบกำหนด ${fmtDate(u.dueDate)}</div>
+        </div>
+        <div style="font-size:12px;font-weight:800;color:${color};white-space:nowrap">${label}</div>
+      </div>`;
+  }).join('');
 }
 
 /* ============================================================ EQUIPMENT STATUS TABS (C2 / High Flow / Brid เขียว — เลือกดูเป็นบล็อคในการ์ดเดียว) ============================================================ */
