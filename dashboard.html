@@ -1408,6 +1408,14 @@ function closeCircuitModal() {
   _circuitCtx = null;
 }
 
+// รีเฟรชกริดสถานะเครื่องมือ (C2 / High Flow / Brid เขียว) หลังบันทึกรายการ ถ้ากำลังเปิดหน้านี้อยู่
+// (loadAll() อัปเดตแค่ equipStatus/allRecords ในตัวแปร แต่ไม่รีเฟรชกริดนี้ให้เอง)
+function refreshEqStatusViewIfActive() {
+  if (currentView !== 'equipStatus') return;
+  if (eqStatusCurrentTab === 'c2') renderC2Dashboard();
+  else renderEquip2Dashboard();
+}
+
 async function submitCircuitChange() {
   if (!_circuitCtx) return;
   const name = document.getElementById('circuitStaffName').value.trim();
@@ -1439,6 +1447,7 @@ async function submitCircuitChange() {
     await loadAll();
     if (currentView === 'kpi') renderKpiAlerts();
     if (currentView === 'search') renderSearchToolResults();
+    refreshEqStatusViewIfActive();
     showToast('✅ บันทึกการเปลี่ยน Circuit เรียบร้อยแล้ว เริ่มนับ ' + OVERDUE_C2_DAYS + ' วันใหม่');
   } catch (err) {
     alert('❌ บันทึกไม่สำเร็จ: ' + err.message);
@@ -1501,6 +1510,7 @@ async function submitToolTransfer() {
     closeToolTransferModal();
     await loadAll();
     if (currentView === 'search') renderSearchToolResults();
+    refreshEqStatusViewIfActive();
     showToast('✅ ย้ายไปวอร์ด ' + toWard + ' เรียบร้อยแล้ว');
   } catch (err) {
     alert('❌ ย้ายวอร์ดไม่สำเร็จ: ' + err.message);
@@ -1545,6 +1555,7 @@ async function submitToolReturn() {
     closeToolReturnModal();
     await loadAll();
     if (currentView === 'search') renderSearchToolResults();
+    refreshEqStatusViewIfActive();
     showToast('✅ บันทึกการคืนเครื่องเรียบร้อยแล้ว');
   } catch (err) {
     alert('❌ บันทึกไม่สำเร็จ: ' + err.message);
