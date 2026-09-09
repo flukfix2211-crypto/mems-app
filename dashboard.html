@@ -1660,13 +1660,16 @@ function renderWardDetail() {
     <div style="font-size:13px;color:var(--muted);margin-bottom:10px">พบ <strong>${active.length}</strong> เครื่องที่ยืมอยู่</div>
     ${groupKeys.map(eq => {
       const items = groups[eq];
-      // หา _rowIndex ของรายการยืมล่าสุดของแต่ละเครื่องใน ward นี้
+      // หา _rowIndex ของรายการล่าสุดของแต่ละเครื่องใน ward นี้
+      // เดิมเช็คเฉพาะ action ที่มีคำว่า "ยืม" ทำให้เครื่องที่เพิ่งถูก "ย้ายวอร์ด"
+      // (บันทึกเป็นแถวใหม่ที่ ward ปัจจุบัน แต่ action คือ "ย้ายวอร์ด" ไม่ใช่ "ยืม")
+      // หา _rowIndex ไม่เจอ ปุ่ม "แก้ไข"/"ลบ" (คืน) จึงถูกปิดใช้งาน
+      // allRecords เรียงจากล่าสุดไปเก่าสุดอยู่แล้ว จึง .find() แถวแรกที่ ward ตรงกันได้เลย
       const withIdx = items.map(e => {
         const rec = allRecords.find(r =>
           String(r['ชื่อเครื่อง']) === e.equipment &&
           String(r['หมายเลขเครื่อง']) === String(e.number) &&
-          r['ตึก/Ward'] === ward &&
-          String(r['ประเภท (ยืม/คืน)']).includes('ยืม')
+          r['ตึก/Ward'] === ward
         );
         return { e, rowIdx: rec ? rec['_rowIndex'] : null };
       });
