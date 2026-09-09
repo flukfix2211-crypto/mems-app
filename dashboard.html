@@ -1258,9 +1258,31 @@ async function loadAll() {
     renderHomeTrend();
     document.getElementById('lastUpdated').textContent =
       'อัพเดต ' + new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+    initDashboardRealtime();
   } catch (err) {
     console.error(err);
   }
+}
+
+/* ============================================================ REALTIME ============================================================
+   เมื่อมีการยืม/คืน/เตรียมเครื่อง จากอุปกรณ์เครื่องไหนก็ตาม (borrow_records/assets/prepare_records เปลี่ยนแปลง)
+   Supabase จะ push แจ้งมาทันทีผ่าน WebSocket แทนที่จะรอ poll ทุก 60 วินาที
+   แล้วรีโหลด + รีเรนเดอร์เฉพาะวิวที่กำลังเปิดอยู่ ณ ตอนนั้น */
+let _realtimeChannel = null;
+function initDashboardRealtime() {
+  if (_realtimeChannel) return;
+  _realtimeChannel = subscribeRealtime(['borrow_records', 'assets', 'prepare_records'], async () => {
+    await loadAll();
+    if (currentView === 'kpi') {
+      kpiRefreshCountdown = 60;
+      renderKpiData();
+      goToSlide(kpiSlideIdx, false);
+    } else if (currentView === 'records') {
+      renderTable();
+    } else if (currentView === 'search') {
+      renderSearchToolResults();
+    }
+  });
 }
 
 /* ============================================================ HOME: แจ้งเตือน & แนวโน้ม ============================================================ */
