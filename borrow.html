@@ -502,6 +502,33 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 </head>
 <body>
 
+<!-- LOGIN OVERLAY -->
+<div id="loginOverlay" style="position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#0A6478 0%,#0E7D94 100%);display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box">
+  <div style="background:#fff;border-radius:20px;padding:36px 32px;width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,0.25);text-align:center;box-sizing:border-box">
+    <div style="font-size:40px;margin-bottom:12px">🔒</div>
+    <div style="font-size:18px;font-weight:800;color:#192D35;margin-bottom:4px">MEMs</div>
+    <div style="font-size:13px;color:#6A8A96;margin-bottom:24px">เข้าสู่ระบบเพื่อใช้งาน</div>
+    <input id="authUser" type="text" placeholder="ชื่อผู้ใช้" autocomplete="username" autofocus
+      style="width:100%;border:2px solid #C5E3ED;border-radius:12px;padding:12px 16px;font-size:16px;font-family:inherit;outline:none;margin-bottom:8px;box-sizing:border-box"
+      onkeydown="if(event.key==='Enter'){document.getElementById('authPass').focus()}">
+    <input id="authPass" type="password" placeholder="รหัสผ่าน" autocomplete="current-password"
+      style="width:100%;border:2px solid #C5E3ED;border-radius:12px;padding:12px 16px;font-size:16px;font-family:inherit;outline:none;margin-bottom:8px;box-sizing:border-box"
+      onkeydown="if(event.key==='Enter')memsHandleLogin()">
+    <div id="authErr" style="color:#B82E2E;font-size:13px;margin-bottom:10px;display:none">เข้าสู่ระบบไม่สำเร็จ</div>
+    <button id="authBtn" onclick="memsHandleLogin()" style="width:100%;background:#0A6478;color:#fff;border:none;border-radius:12px;padding:13px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;">เข้าสู่ระบบ</button>
+  </div>
+</div>
+
+<!-- FORBIDDEN OVERLAY -->
+<div id="forbiddenOverlay" style="display:none;position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#0A6478 0%,#0E7D94 100%);align-items:center;justify-content:center;padding:20px;box-sizing:border-box">
+  <div style="background:#fff;border-radius:20px;padding:36px 32px;width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,0.25);text-align:center;box-sizing:border-box">
+    <div style="font-size:40px;margin-bottom:12px">🚫</div>
+    <div style="font-size:18px;font-weight:800;color:#192D35;margin-bottom:4px">ไม่มีสิทธิ์เข้าหน้านี้</div>
+    <div style="font-size:13px;color:#6A8A96;margin-bottom:24px">บัญชีของคุณไม่ได้รับอนุญาตให้เข้าหน้านี้ ติดต่อแอดมินถ้าต้องการสิทธิ์เพิ่ม</div>
+    <a href="index.html" style="display:block;width:100%;background:#0A6478;color:#fff;border:none;border-radius:12px;padding:13px;font-size:15px;font-weight:700;font-family:inherit;text-decoration:none;box-sizing:border-box">กลับหน้าหลัก</a>
+  </div>
+</div>
+
 <!-- ====== HEADER ====== -->
 <canvas id="bgCanvas" style="position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100%;z-index:0;pointer-events:none;"></canvas>
 
@@ -511,6 +538,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     <div style="display:flex;align-items:center;gap:10px">
       <a href="index.html" style="font-size:11px;font-weight:700;background:rgba(255,255,255,0.18);color:#fff;padding:4px 10px;border-radius:20px;text-decoration:none;border:1px solid rgba(255,255,255,0.3)"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10 12 3l9 7M5 9v12h5v-7h4v7h5V9"/></svg> หน้าหลัก</a>
       <a href="dashboard.html" style="font-size:11px;font-weight:700;background:rgba(255,255,255,0.18);color:#fff;padding:4px 10px;border-radius:20px;text-decoration:none;border:1px solid rgba(255,255,255,0.3)"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3v18h17M8 16v-5m5 5V7m5 9V4"/></svg> แดชบอร์ด</a>
+      <span id="memsUserBadge" style="font-size:11px;color:#fff"></span>
       <span class="clock" id="clock"></span>
       <button onclick="document.getElementById('helpModal').style.display='flex'" style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.4);color:#fff;font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">?</button>
     </div>
@@ -699,6 +727,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 
 <script src="vendor/supabase.js"></script>
 <script src="supabase-client.js"></script>
+<script src="auth.js"></script>
 <script>
 /* ====== STATE ====== */
 let S = { action: null, shift: null, equip: null };
@@ -850,7 +879,9 @@ function setShift(s) {
 }
 
 /* ====== AUTO-RUN ON LOAD ====== */
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
+  const profile = await memsGuard('borrow');
+  if (!profile) return;
   setShift(detectShift());
   const mode = new URLSearchParams(location.search).get('mode');
   if (mode === 'borrow' || mode === 'return') setAction(mode);

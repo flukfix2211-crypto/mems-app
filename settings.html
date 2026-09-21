@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>MEMs — การตั้งค่า / จัดการบัญชีผู้ใช้</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --a: #0A6478; --a2: #0E7D94; --al: #DAF0F5;
+      --bg: #EBF5F8; --card: #fff; --txt: #192D35;
+      --muted: #6A8A96; --border: #C5E3ED;
+      --sh: 0 2px 10px rgba(10,100,120,0.08), 0 1px 3px rgba(0,0,0,0.05);
+      --r: 18px; --rs: 12px; --tr: 0.3s cubic-bezier(.4,0,.2,1);
+      --green: #14612D; --green-bg: #DCF2E5;
+      --red: #B82E2E; --red-bg: #FDEAEA;
+      --yellow: #8B5000; --yellow-bg: #FFF3CD;
+      --grey: #555; --grey-bg: #F0F0F0;
+    }
+    body { font-family: 'Sarabun', sans-serif; background: #0A6478; color: var(--txt); min-height: 100vh; font-size: 16px; -webkit-font-smoothing: antialiased; }
+
+    .header { background: none; color: #fff; padding: 22px 18px 60px; position: relative; overflow: hidden; }
+    .header::before { content: ''; position: absolute; inset: 0; z-index: 0; background: linear-gradient(145deg, #0A6478 0%, #0E7D94 100%); }
+    .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; position: relative; z-index: 1; flex-wrap: wrap; gap: 8px; }
+    .hosp-badge { font-size: 10px; font-weight: 700; letter-spacing: 0.04em; background: rgba(255,255,255,0.18); padding: 4px 10px; border-radius: 20px; }
+    .btn-back { font-size: 11px; font-weight: 700; background: rgba(255,255,255,.18); color: #fff; padding: 4px 10px; border-radius: 20px; text-decoration: none; border: 1px solid rgba(255,255,255,.3); }
+    .header h1 { font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 44px; letter-spacing: 0.12em; background: linear-gradient(135deg,#fff 0%,rgba(255,255,255,.65) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; line-height: 1.1; margin-bottom: 4px; position: relative; z-index: 1; }
+    .header .sub { font-size: 11px; font-weight: 500; opacity: 0.6; letter-spacing: 0.18em; text-transform: uppercase; position: relative; z-index: 1; }
+    .header .page-title { font-size: 16px; font-weight: 700; opacity: 0.92; margin-top: 8px; display: flex; align-items: center; gap: 8px; position: relative; z-index: 1; }
+
+    .content { max-width: 800px; margin: -22px auto 0; padding: 0 14px 100px; position: relative; z-index: 1; }
+    .card { background: var(--card); border-radius: var(--r); box-shadow: var(--sh); padding: 18px; margin-bottom: 12px; }
+
+    .ctrl-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+    .add-btn { padding: 10px 18px; background: linear-gradient(135deg, var(--a), var(--a2)); color: #fff; border: none; border-radius: var(--rs); font-family: 'Sarabun', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap; box-shadow: 0 3px 12px rgba(10,100,120,.25); transition: all .2s; -webkit-tap-highlight-color: transparent; }
+    .add-btn:active { transform: scale(.97); }
+
+    .tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    table { width: 100%; border-collapse: collapse; min-width: 640px; }
+    thead th { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); padding: 10px 12px; text-align: left; border-bottom: 2px solid var(--border); background: #FAFCFD; }
+    tbody tr { border-bottom: 1px solid #ECF4F7; transition: background .15s; }
+    tbody tr:hover { background: #F5FBFD; }
+    tbody td { padding: 11px 12px; font-size: 14px; vertical-align: middle; }
+
+    .badge { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; border-radius: 20px; padding: 3px 10px; white-space: nowrap; }
+    .badge.admin { background: #EDE9F8; color: #5B3FA8; }
+    .badge.user  { background: var(--al); color: var(--a); }
+    .badge.on    { background: var(--green-bg); color: var(--green); }
+    .badge.off   { background: var(--red-bg); color: var(--red); }
+
+    .perm-chip { display: inline-block; font-size: 11px; font-weight: 700; background: var(--grey-bg); color: var(--grey); border-radius: 20px; padding: 2px 8px; margin: 1px 2px 1px 0; white-space: nowrap; }
+
+    .act-wrap { display: flex; gap: 6px; flex-wrap: wrap; }
+    .act-btn { padding: 5px 12px; border: none; border-radius: 8px; font-family: 'Sarabun', sans-serif; font-size: 12px; font-weight: 700; cursor: pointer; transition: all .15s; -webkit-tap-highlight-color: transparent; white-space: nowrap; }
+    .act-btn:active { transform: scale(.95); }
+    .act-edit { background: #EBF5F8; color: var(--a); }
+    .act-edit:hover { background: var(--al); }
+    .act-pass { background: #FFF3CD; color: var(--yellow); }
+    .act-del  { background: #FDEAEA; color: var(--red); }
+    .act-del:hover  { background: #fcd7d7; }
+    .act-toggle-on  { background: var(--green-bg); color: var(--green); }
+    .act-toggle-off { background: var(--grey-bg); color: var(--grey); }
+
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(10,30,40,.6); z-index: 9999; align-items: flex-end; justify-content: center; padding: 0; }
+    .modal-overlay.show { display: flex; }
+    .modal-box { background: #fff; border-radius: 22px 22px 0 0; width: 100%; max-width: 480px; max-height: 92vh; overflow-y: auto; padding: 0 0 32px; box-shadow: 0 -8px 40px rgba(0,0,0,.2); }
+    @media (min-width: 600px) {
+      .modal-overlay { align-items: center; padding: 20px; }
+      .modal-box { border-radius: 22px; max-height: 88vh; }
+    }
+    .modal-head { background: linear-gradient(135deg, var(--a), var(--a2)); padding: 18px 20px; display: flex; align-items: center; justify-content: space-between; border-radius: 22px 22px 0 0; }
+    .modal-head-title { color: #fff; font-size: 16px; font-weight: 800; }
+    .modal-close { width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,.2); border: none; color: #fff; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .modal-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-label { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+    .form-input { padding: 13px 15px; border: 2px solid var(--border); border-radius: var(--rs); font-family: 'Sarabun', sans-serif; font-size: 15px; color: var(--txt); background: #FAFCFD; outline: none; transition: border-color .2s; -webkit-appearance: none; appearance: none; width: 100%; }
+    .form-input:focus { border-color: var(--a); background: #fff; }
+    select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%236A8A96' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 13px center; padding-right: 40px; cursor: pointer; }
+    .save-btn { width: 100%; padding: 15px; background: linear-gradient(135deg, var(--a), var(--a2)); color: #fff; border: none; border-radius: var(--rs); font-family: 'Sarabun', sans-serif; font-size: 17px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 18px rgba(10,100,120,.25); transition: all .2s; margin-top: 4px; }
+    .save-btn:disabled { opacity: .5; cursor: default; box-shadow: none; }
+    .hint { font-size: 12px; color: var(--muted); line-height: 1.5; }
+    .err-box { background: var(--red-bg); color: var(--red); font-size: 13px; padding: 10px 14px; border-radius: 10px; display: none; }
+
+    .perm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .perm-check { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border: 2px solid var(--border); border-radius: var(--rs); font-size: 13px; font-weight: 600; cursor: pointer; background: #FAFCFD; }
+    .perm-check input { width: 17px; height: 17px; accent-color: var(--a); }
+    .preset-row { display: flex; gap: 6px; flex-wrap: wrap; }
+    .preset-btn { padding: 7px 12px; border: 1.5px solid var(--border); border-radius: 20px; background: #fff; color: var(--a); font-size: 12px; font-weight: 700; cursor: pointer; }
+    .role-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .role-btn { padding: 12px; border: 2.5px solid var(--border); border-radius: var(--rs); background: #FAFCFD; font-size: 14px; font-weight: 800; color: var(--muted); cursor: pointer; text-align: center; }
+    .role-btn.active { border-color: var(--a); background: var(--al); color: var(--a); }
+
+    .empty-row td { text-align: center; padding: 40px; color: var(--muted); font-size: 14px; }
+    #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); background: #192D35; color: #fff; padding: 11px 22px; border-radius: 40px; font-size: 14px; font-weight: 600; opacity: 0; transition: all .3s; pointer-events: none; z-index: 99999; white-space: nowrap; }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .loading { text-align: center; padding: 40px; color: var(--muted); }
+    .spinner { display: inline-block; width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--a); border-radius: 50%; animation: spin .7s linear infinite; margin-bottom: 10px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 420px) { .perm-grid { grid-template-columns: 1fr; } }
+  </style>
+<style id="mems-deep-teal-theme">
+@media screen {
+body{background:#0c6173!important;background-image:none!important}
+.header{background:#0d7183!important;color:#f0fafb!important;border-top-color:#0c6173!important;border-bottom:1px solid #ffffff15!important}
+.header::before{background:none!important}
+.card{background:#fff}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN OVERLAY -->
+<div id="loginOverlay" style="position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#0A6478 0%,#0E7D94 100%);display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box">
+  <div style="background:#fff;border-radius:20px;padding:36px 32px;width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,0.25);text-align:center;box-sizing:border-box">
+    <div style="font-size:40px;margin-bottom:12px">🔒</div>
+    <div style="font-size:18px;font-weight:800;color:#192D35;margin-bottom:4px">MEMs</div>
+    <div style="font-size:13px;color:#6A8A96;margin-bottom:24px">เข้าสู่ระบบเพื่อใช้งาน</div>
+    <input id="authUser" type="text" placeholder="ชื่อผู้ใช้" autocomplete="username" autofocus
+      style="width:100%;border:2px solid #C5E3ED;border-radius:12px;padding:12px 16px;font-size:16px;font-family:inherit;outline:none;margin-bottom:8px;box-sizing:border-box"
+      onkeydown="if(event.key==='Enter'){document.getElementById('authPass').focus()}">
+    <input id="authPass" type="password" placeholder="รหัสผ่าน" autocomplete="current-password"
+      style="width:100%;border:2px solid #C5E3ED;border-radius:12px;padding:12px 16px;font-size:16px;font-family:inherit;outline:none;margin-bottom:8px;box-sizing:border-box"
+      onkeydown="if(event.key==='Enter')memsHandleLogin()">
+    <div id="authErr" style="color:#B82E2E;font-size:13px;margin-bottom:10px;display:none">เข้าสู่ระบบไม่สำเร็จ</div>
+    <button id="authBtn" onclick="memsHandleLogin()" style="width:100%;background:#0A6478;color:#fff;border:none;border-radius:12px;padding:13px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;">เข้าสู่ระบบ</button>
+  </div>
+</div>
+
+<!-- FORBIDDEN OVERLAY -->
+<div id="forbiddenOverlay" style="display:none;position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#0A6478 0%,#0E7D94 100%);align-items:center;justify-content:center;padding:20px;box-sizing:border-box">
+  <div style="background:#fff;border-radius:20px;padding:36px 32px;width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,0.25);text-align:center;box-sizing:border-box">
+    <div style="font-size:40px;margin-bottom:12px">🚫</div>
+    <div style="font-size:18px;font-weight:800;color:#192D35;margin-bottom:4px">เฉพาะแอดมิน</div>
+    <div style="font-size:13px;color:#6A8A96;margin-bottom:24px">หน้านี้สำหรับผู้ดูแลระบบเท่านั้น</div>
+    <a href="index.html" style="display:block;width:100%;background:#0A6478;color:#fff;border:none;border-radius:12px;padding:13px;font-size:15px;font-weight:700;font-family:inherit;text-decoration:none;box-sizing:border-box">กลับหน้าหลัก</a>
+  </div>
+</div>
+
+<header class="header">
+  <div class="header-top">
+    <span class="hosp-badge">โรงพยาบาลพหลพลพยุหเสนา จ.กาญจนบุรี</span>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span id="memsUserBadge" style="font-size:11px;color:#fff"></span>
+      <a href="index.html" class="btn-back">🏠 หน้าหลัก</a>
+    </div>
+  </div>
+  <h1>MEMs</h1>
+  <div class="sub">Medical Equipment Management Systems</div>
+  <div class="page-title">⚙️ การตั้งค่า / จัดการบัญชีผู้ใช้</div>
+</header>
+
+<div class="content">
+  <div class="card">
+    <div class="ctrl-row">
+      <div style="font-size:14px;color:var(--muted)">บัญชีทั้งหมดในระบบ — เฉพาะแอดมินเท่านั้นที่เข้าหน้านี้ได้</div>
+      <button class="add-btn" onclick="openCreateModal()">＋ เพิ่มบัญชีผู้ใช้</button>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ชื่อผู้ใช้</th>
+            <th>ชื่อที่แสดง</th>
+            <th>สิทธิ์</th>
+            <th>สถานะ</th>
+            <th>การจัดการ</th>
+          </tr>
+        </thead>
+        <tbody id="userTableBody">
+          <tr class="empty-row"><td colspan="5"><div class="loading"><div class="spinner"></div>กำลังโหลด…</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- CREATE / EDIT MODAL -->
+<div class="modal-overlay" id="userModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div class="modal-head-title" id="userModalTitle">เพิ่มบัญชีผู้ใช้</div>
+      <button class="modal-close" onclick="closeUserModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="err-box" id="userModalErr"></div>
+
+      <div class="form-group" id="usernameGroup">
+        <div class="form-label">ชื่อผู้ใช้ (username)</div>
+        <input class="form-input" id="fUsername" placeholder="เช่น natthawat" autocomplete="off">
+        <div class="hint">ตัวพิมพ์เล็ก a-z, 0-9, จุด/ขีด ได้ (3-32 ตัวอักษร) — แก้ไขไม่ได้ภายหลัง</div>
+      </div>
+
+      <div class="form-group">
+        <div class="form-label">ชื่อที่แสดง</div>
+        <input class="form-input" id="fDisplayName" placeholder="เช่น นัฐวัติ">
+      </div>
+
+      <div class="form-group" id="passwordGroup">
+        <div class="form-label">รหัสผ่าน</div>
+        <input class="form-input" id="fPassword" type="text" placeholder="อย่างน้อย 10 ตัวอักษร">
+        <div class="hint" id="passwordHint">ผู้ใช้เปลี่ยนรหัสเองไม่ได้ในตอนนี้ — ถ้าลืมให้แอดมินกด "รีเซ็ตรหัส" ให้</div>
+      </div>
+
+      <div class="form-group">
+        <div class="form-label">บทบาท</div>
+        <div class="role-toggle">
+          <button type="button" class="role-btn active" id="roleUserBtn" onclick="setRole('user')">ผู้ใช้ทั่วไป</button>
+          <button type="button" class="role-btn" id="roleAdminBtn" onclick="setRole('admin')">แอดมิน</button>
+        </div>
+        <div class="hint">แอดมินได้สิทธิ์เข้าทุกหน้าอัตโนมัติ (รวมหน้านี้)</div>
+      </div>
+
+      <div class="form-group" id="permGroup">
+        <div class="form-label">สิทธิ์เข้าหน้าต่างๆ (เฉพาะผู้ใช้ทั่วไป)</div>
+        <div class="preset-row">
+          <button type="button" class="preset-btn" onclick="applyPreset('borrow')">ยืม-คืนอย่างเดียว</button>
+          <button type="button" class="preset-btn" onclick="applyPreset('center')">เจ้าหน้าที่ศูนย์ (ไม่รวมครุภัณฑ์)</button>
+          <button type="button" class="preset-btn" onclick="applyPreset('all')">ทุกหน้า</button>
+          <button type="button" class="preset-btn" onclick="applyPreset('none')">ล้างทั้งหมด</button>
+        </div>
+        <div class="perm-grid" id="permCheckboxes"></div>
+      </div>
+
+      <button class="save-btn" id="userModalSaveBtn" onclick="submitUserModal()">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- RESET PASSWORD MODAL -->
+<div class="modal-overlay" id="passModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div class="modal-head-title">รีเซ็ตรหัสผ่าน</div>
+      <button class="modal-close" onclick="closePassModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="err-box" id="passModalErr"></div>
+      <div class="hint" id="passModalWho"></div>
+      <div class="form-group">
+        <div class="form-label">รหัสผ่านใหม่</div>
+        <input class="form-input" id="fNewPassword" type="text" placeholder="อย่างน้อย 10 ตัวอักษร">
+      </div>
+      <button class="save-btn" id="passModalSaveBtn" onclick="submitResetPassword()">รีเซ็ตรหัสผ่าน</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="vendor/supabase.js"></script>
+<script src="supabase-client.js"></script>
+<script src="auth.js"></script>
+<script>
+let allUsers = [];
+let editingUserId = null; // null = create mode
+let modalRole = 'user';
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+function buildPermCheckboxes() {
+  const wrap = document.getElementById('permCheckboxes');
+  wrap.innerHTML = MEMS_PAGE_KEYS.map(key => `
+    <label class="perm-check">
+      <input type="checkbox" value="${key}" class="permCheckbox">
+      ${memsEsc(MEMS_PAGE_LABELS[key])}
+    </label>`).join('');
+}
+
+function getCheckedPerms() {
+  return Array.from(document.querySelectorAll('.permCheckbox:checked')).map(el => el.value);
+}
+function setCheckedPerms(perms) {
+  document.querySelectorAll('.permCheckbox').forEach(el => { el.checked = perms.includes(el.value); });
+}
+
+function applyPreset(name) {
+  if (name === 'borrow') setCheckedPerms(['borrow']);
+  else if (name === 'center') setCheckedPerms(['borrow', 'prepare', 'dashboard', 'round', 'fixjob']);
+  else if (name === 'all') setCheckedPerms(MEMS_PAGE_KEYS);
+  else setCheckedPerms([]);
+}
+
+function setRole(role) {
+  modalRole = role;
+  document.getElementById('roleUserBtn').classList.toggle('active', role === 'user');
+  document.getElementById('roleAdminBtn').classList.toggle('active', role === 'admin');
+  document.getElementById('permGroup').style.display = role === 'admin' ? 'none' : '';
+}
+
+function openCreateModal() {
+  editingUserId = null;
+  document.getElementById('userModalTitle').textContent = 'เพิ่มบัญชีผู้ใช้';
+  document.getElementById('usernameGroup').style.display = '';
+  document.getElementById('passwordGroup').style.display = '';
+  document.getElementById('passwordHint').textContent = 'ผู้ใช้เปลี่ยนรหัสเองไม่ได้ในตอนนี้ — ถ้าลืมให้แอดมินกด "รีเซ็ตรหัส" ให้ทีหลัง';
+  document.getElementById('fUsername').value = '';
+  document.getElementById('fUsername').disabled = false;
+  document.getElementById('fDisplayName').value = '';
+  document.getElementById('fPassword').value = '';
+  setRole('user');
+  setCheckedPerms(['borrow']);
+  document.getElementById('userModalErr').style.display = 'none';
+  document.getElementById('userModal').classList.add('show');
+}
+
+function openEditModal(id) {
+  const u = allUsers.find(x => x.id === id);
+  if (!u) return;
+  editingUserId = id;
+  document.getElementById('userModalTitle').textContent = 'แก้ไขบัญชี: ' + u.username;
+  document.getElementById('usernameGroup').style.display = 'none';
+  document.getElementById('passwordGroup').style.display = 'none';
+  document.getElementById('fDisplayName').value = u.display_name || '';
+  setRole(u.role);
+  setCheckedPerms(u.permissions || []);
+  document.getElementById('userModalErr').style.display = 'none';
+  document.getElementById('userModal').classList.add('show');
+}
+
+function closeUserModal() {
+  document.getElementById('userModal').classList.remove('show');
+}
+
+async function submitUserModal() {
+  const errBox = document.getElementById('userModalErr');
+  errBox.style.display = 'none';
+  const displayName = document.getElementById('fDisplayName').value.trim();
+  const btn = document.getElementById('userModalSaveBtn');
+  const origText = btn.textContent;
+
+  if (!displayName) { errBox.textContent = 'กรุณากรอกชื่อที่แสดง'; errBox.style.display = 'block'; return; }
+
+  btn.disabled = true; btn.textContent = 'กำลังบันทึก…';
+  try {
+    if (editingUserId === null) {
+      const username = document.getElementById('fUsername').value.trim().toLowerCase();
+      const password = document.getElementById('fPassword').value;
+      if (!/^[a-z0-9._-]{3,32}$/.test(username)) throw new Error('ชื่อผู้ใช้ต้องเป็นตัวพิมพ์เล็ก a-z, 0-9, จุด/ขีด ยาว 3-32 ตัว');
+      if (password.length < 10) throw new Error('รหัสผ่านต้องอย่างน้อย 10 ตัวอักษร');
+      await memsUserAdminCall({
+        action: 'create',
+        username, password, display_name: displayName,
+        role: modalRole,
+        permissions: modalRole === 'admin' ? [] : getCheckedPerms()
+      });
+      toast('✅ เพิ่มบัญชี ' + username + ' แล้ว');
+    } else {
+      await memsUserAdminCall({
+        action: 'update',
+        user_id: editingUserId,
+        display_name: displayName,
+        role: modalRole,
+        permissions: modalRole === 'admin' ? MEMS_PAGE_KEYS : getCheckedPerms()
+      });
+      toast('✅ แก้ไขบัญชีแล้ว');
+    }
+    closeUserModal();
+    loadUsers();
+  } catch (e) {
+    errBox.textContent = e.message || 'เกิดข้อผิดพลาด';
+    errBox.style.display = 'block';
+  }
+  btn.disabled = false; btn.textContent = origText;
+}
+
+let passingUserId = null;
+function openPassModal(id) {
+  const u = allUsers.find(x => x.id === id);
+  if (!u) return;
+  passingUserId = id;
+  document.getElementById('passModalWho').textContent = 'ตั้งรหัสผ่านใหม่ให้ "' + u.username + '" (' + (u.display_name || '') + ')';
+  document.getElementById('fNewPassword').value = '';
+  document.getElementById('passModalErr').style.display = 'none';
+  document.getElementById('passModal').classList.add('show');
+}
+function closePassModal() {
+  document.getElementById('passModal').classList.remove('show');
+}
+async function submitResetPassword() {
+  const errBox = document.getElementById('passModalErr');
+  errBox.style.display = 'none';
+  const password = document.getElementById('fNewPassword').value;
+  const btn = document.getElementById('passModalSaveBtn');
+  const origText = btn.textContent;
+  if (password.length < 10) { errBox.textContent = 'รหัสผ่านต้องอย่างน้อย 10 ตัวอักษร'; errBox.style.display = 'block'; return; }
+  btn.disabled = true; btn.textContent = 'กำลังบันทึก…';
+  try {
+    await memsUserAdminCall({ action: 'reset_password', user_id: passingUserId, password });
+    toast('✅ ตั้งรหัสผ่านใหม่แล้ว');
+    closePassModal();
+  } catch (e) {
+    errBox.textContent = e.message || 'เกิดข้อผิดพลาด';
+    errBox.style.display = 'block';
+  }
+  btn.disabled = false; btn.textContent = origText;
+}
+
+async function toggleActive(id, nextActive) {
+  try {
+    await memsUserAdminCall({ action: 'set_active', user_id: id, active: nextActive });
+    toast(nextActive ? '✅ เปิดใช้งานบัญชีแล้ว' : '✅ ปิดใช้งานบัญชีแล้ว');
+    loadUsers();
+  } catch (e) { toast('❌ ' + (e.message || 'เกิดข้อผิดพลาด')); }
+}
+
+async function deleteUser(id, username) {
+  if (!confirm('ลบบัญชี "' + username + '" ถาวร? กู้คืนไม่ได้')) return;
+  try {
+    await memsUserAdminCall({ action: 'delete', user_id: id });
+    toast('🗑️ ลบบัญชี ' + username + ' แล้ว');
+    loadUsers();
+  } catch (e) { toast('❌ ' + (e.message || 'เกิดข้อผิดพลาด')); }
+}
+
+function renderUsers() {
+  const tbody = document.getElementById('userTableBody');
+  if (!allUsers.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="5">ยังไม่มีบัญชีผู้ใช้</td></tr>';
+    return;
+  }
+  tbody.innerHTML = allUsers.map(u => {
+    const permsHtml = u.role === 'admin'
+      ? '<span class="perm-chip">ทุกหน้า</span>'
+      : (u.permissions && u.permissions.length
+          ? u.permissions.map(p => `<span class="perm-chip">${memsEsc(MEMS_PAGE_LABELS[p] || p)}</span>`).join('')
+          : '<span class="perm-chip">— ไม่มีสิทธิ์ —</span>');
+    const isSelf = MEMS_USER && MEMS_USER.id === u.id;
+    return `
+    <tr>
+      <td><b>${memsEsc(u.username)}</b>${isSelf ? ' <span style="color:var(--muted);font-size:11px">(คุณ)</span>' : ''}</td>
+      <td>${memsEsc(u.display_name || '—')}</td>
+      <td>
+        <span class="badge ${u.role === 'admin' ? 'admin' : 'user'}">${u.role === 'admin' ? 'แอดมิน' : 'ผู้ใช้ทั่วไป'}</span>
+        <div style="margin-top:4px">${permsHtml}</div>
+      </td>
+      <td><span class="badge ${u.active ? 'on' : 'off'}">${u.active ? 'ใช้งานอยู่' : 'ปิดใช้งาน'}</span></td>
+      <td>
+        <div class="act-wrap">
+          <button class="act-btn act-edit" onclick="openEditModal('${u.id}')">แก้ไข</button>
+          <button class="act-btn act-pass" onclick="openPassModal('${u.id}')">รีเซ็ตรหัส</button>
+          <button class="act-btn ${u.active ? 'act-toggle-off' : 'act-toggle-on'}" onclick="toggleActive('${u.id}', ${!u.active})" ${isSelf && u.active ? 'disabled title="ปิดบัญชีตัวเองไม่ได้"' : ''}>${u.active ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}</button>
+          <button class="act-btn act-del" onclick="deleteUser('${u.id}','${memsEsc(u.username)}')" ${isSelf ? 'disabled title="ลบบัญชีตัวเองไม่ได้"' : ''}>ลบ</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function loadUsers() {
+  try {
+    const res = await memsUserAdminCall({ action: 'list' });
+    allUsers = res.users || [];
+    renderUsers();
+  } catch (e) {
+    document.getElementById('userTableBody').innerHTML =
+      '<tr class="empty-row"><td colspan="5" style="color:var(--red)">โหลดไม่ได้: ' + memsEsc(e.message) + '</td></tr>';
+  }
+}
+
+buildPermCheckboxes();
+
+window.addEventListener('DOMContentLoaded', async () => {
+  const profile = await memsGuard('admin'); // ไม่ใช่ page key จริง แต่ memsHasPermission คืน true เฉพาะ role==='admin' เท่านั้น = เท่ากับเช็คแอดมินล้วนๆ
+  if (profile) loadUsers();
+});
+</script>
+</body>
+</html>
