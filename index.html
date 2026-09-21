@@ -161,7 +161,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     if (!profile) return;
     document.querySelectorAll('[data-perm]').forEach(el => {
       const key = el.dataset.perm;
-      const allowed = key === 'admin' ? profile.role === 'admin' : memsHasPermission(profile, key);
+      const allowed = key === 'admin' ? memsIsSuperAdmin(profile) : memsHasPermission(profile, key);
       el.style.display = allowed ? '' : 'none';
     });
   });

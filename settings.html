@@ -136,8 +136,8 @@ body{background:#0c6173!important;background-image:none!important}
 <div id="forbiddenOverlay" style="display:none;position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#0A6478 0%,#0E7D94 100%);align-items:center;justify-content:center;padding:20px;box-sizing:border-box">
   <div style="background:#fff;border-radius:20px;padding:36px 32px;width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,0.25);text-align:center;box-sizing:border-box">
     <div style="font-size:40px;margin-bottom:12px">🚫</div>
-    <div style="font-size:18px;font-weight:800;color:#192D35;margin-bottom:4px">เฉพาะแอดมิน</div>
-    <div style="font-size:13px;color:#6A8A96;margin-bottom:24px">หน้านี้สำหรับผู้ดูแลระบบเท่านั้น</div>
+    <div style="font-size:18px;font-weight:800;color:#192D35;margin-bottom:4px">เฉพาะแอดมินหลัก</div>
+    <div style="font-size:13px;color:#6A8A96;margin-bottom:24px">หน้านี้จัดการบัญชีได้เฉพาะแอดมินหลักเท่านั้น แอดมินทั่วไปเข้าหน้าอื่นได้ปกติแต่จัดการบัญชีไม่ได้</div>
     <a href="index.html" style="display:block;width:100%;background:#0A6478;color:#fff;border:none;border-radius:12px;padding:13px;font-size:15px;font-weight:700;font-family:inherit;text-decoration:none;box-sizing:border-box">กลับหน้าหลัก</a>
   </div>
 </div>
@@ -203,8 +203,11 @@ body{background:#0c6173!important;background-image:none!important}
 
       <div class="form-group" id="passwordGroup">
         <div class="form-label">รหัสผ่าน</div>
-        <input class="form-input" id="fPassword" type="text" placeholder="อย่างน้อย 10 ตัวอักษร">
-        <div class="hint" id="passwordHint">ผู้ใช้เปลี่ยนรหัสเองไม่ได้ในตอนนี้ — ถ้าลืมให้แอดมินกด "รีเซ็ตรหัส" ให้</div>
+        <div style="display:flex;gap:8px">
+          <input class="form-input" id="fPassword" type="text" placeholder="อย่างน้อย 10 ตัวอักษร" style="flex:1">
+          <button type="button" class="preset-btn" style="white-space:nowrap" onclick="document.getElementById('fPassword').value=memsGenPassword()">🎲 สุ่มรหัส</button>
+        </div>
+        <div class="hint" id="passwordHint">พิมพ์เองหรือกด "สุ่มรหัส" ก็ได้ — บันทึกแล้วระบบจะโชว์รหัสนี้ให้อีกครั้งให้จดไว้</div>
       </div>
 
       <div class="form-group">
@@ -244,9 +247,34 @@ body{background:#0c6173!important;background-image:none!important}
       <div class="hint" id="passModalWho"></div>
       <div class="form-group">
         <div class="form-label">รหัสผ่านใหม่</div>
-        <input class="form-input" id="fNewPassword" type="text" placeholder="อย่างน้อย 10 ตัวอักษร">
+        <div style="display:flex;gap:8px">
+          <input class="form-input" id="fNewPassword" type="text" placeholder="อย่างน้อย 10 ตัวอักษร" style="flex:1">
+          <button type="button" class="preset-btn" style="white-space:nowrap" onclick="document.getElementById('fNewPassword').value=memsGenPassword()">🎲 สุ่มรหัส</button>
+        </div>
       </div>
       <button class="save-btn" id="passModalSaveBtn" onclick="submitResetPassword()">รีเซ็ตรหัสผ่าน</button>
+    </div>
+  </div>
+</div>
+
+<!-- PASSWORD REVEAL MODAL -->
+<div class="modal-overlay" id="pwRevealModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div class="modal-head-title">รหัสผ่านที่ตั้งไว้</div>
+      <button class="modal-close" onclick="closePwRevealModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="hint" id="pwRevealWho"></div>
+      <div class="form-group">
+        <div class="form-label">รหัสผ่าน</div>
+        <div style="display:flex;gap:8px">
+          <input class="form-input" id="pwRevealValue" readonly style="flex:1;font-family:monospace;font-size:16px;letter-spacing:.03em">
+          <button type="button" class="preset-btn" style="white-space:nowrap" onclick="memsCopyPwReveal()">📋 คัดลอก</button>
+        </div>
+        <div class="hint" style="color:var(--red)">⚠️ ระบบจะไม่แสดงรหัสนี้ให้ดูอีก — จดหรือคัดลอกเก็บไว้ให้เรียบร้อยก่อนปิดหน้าต่างนี้</div>
+      </div>
+      <button class="save-btn" onclick="closePwRevealModal()">จดไว้แล้ว ปิดหน้าต่างนี้</button>
     </div>
   </div>
 </div>
@@ -260,6 +288,34 @@ body{background:#0c6173!important;background-image:none!important}
 let allUsers = [];
 let editingUserId = null; // null = create mode
 let modalRole = 'user';
+
+function memsGenPassword() {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+  const bytes = new Uint32Array(14);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, b => chars[b % chars.length]).join('');
+}
+
+function showPwReveal(username, password) {
+  document.getElementById('pwRevealWho').textContent = 'บัญชี "' + username + '"';
+  document.getElementById('pwRevealValue').value = password;
+  document.getElementById('pwRevealModal').classList.add('show');
+}
+function closePwRevealModal() {
+  document.getElementById('pwRevealModal').classList.remove('show');
+  document.getElementById('pwRevealValue').value = '';
+}
+async function memsCopyPwReveal() {
+  const val = document.getElementById('pwRevealValue').value;
+  try {
+    await navigator.clipboard.writeText(val);
+    toast('📋 คัดลอกแล้ว');
+  } catch (e) {
+    const el = document.getElementById('pwRevealValue');
+    el.removeAttribute('readonly'); el.select(); document.execCommand('copy'); el.setAttribute('readonly', 'readonly');
+    toast('📋 คัดลอกแล้ว');
+  }
+}
 
 function toast(msg) {
   const t = document.getElementById('toast');
@@ -355,6 +411,11 @@ async function submitUserModal() {
         permissions: modalRole === 'admin' ? [] : getCheckedPerms()
       });
       toast('✅ เพิ่มบัญชี ' + username + ' แล้ว');
+      closeUserModal();
+      loadUsers();
+      showPwReveal(username, password);
+      btn.disabled = false; btn.textContent = origText;
+      return;
     } else {
       await memsUserAdminCall({
         action: 'update',
@@ -396,9 +457,11 @@ async function submitResetPassword() {
   if (password.length < 10) { errBox.textContent = 'รหัสผ่านต้องอย่างน้อย 10 ตัวอักษร'; errBox.style.display = 'block'; return; }
   btn.disabled = true; btn.textContent = 'กำลังบันทึก…';
   try {
+    const u = allUsers.find(x => x.id === passingUserId);
     await memsUserAdminCall({ action: 'reset_password', user_id: passingUserId, password });
     toast('✅ ตั้งรหัสผ่านใหม่แล้ว');
     closePassModal();
+    showPwReveal(u ? u.username : '', password);
   } catch (e) {
     errBox.textContent = e.message || 'เกิดข้อผิดพลาด';
     errBox.style.display = 'block';
@@ -436,9 +499,11 @@ function renderUsers() {
           ? u.permissions.map(p => `<span class="perm-chip">${memsEsc(MEMS_PAGE_LABELS[p] || p)}</span>`).join('')
           : '<span class="perm-chip">— ไม่มีสิทธิ์ —</span>');
     const isSelf = MEMS_USER && MEMS_USER.id === u.id;
+    const cantDelete = isSelf || u.is_super_admin;
+    const cantDeleteReason = isSelf ? 'ลบบัญชีตัวเองไม่ได้' : 'ลบแอดมินหลักไม่ได้';
     return `
     <tr>
-      <td><b>${memsEsc(u.username)}</b>${isSelf ? ' <span style="color:var(--muted);font-size:11px">(คุณ)</span>' : ''}</td>
+      <td><b>${memsEsc(u.username)}</b>${isSelf ? ' <span style="color:var(--muted);font-size:11px">(คุณ)</span>' : ''}${u.is_super_admin ? ' <span class="badge admin" style="background:#FFF3CD;color:#8B5000">ซูเปอร์แอดมิน</span>' : ''}</td>
       <td>${memsEsc(u.display_name || '—')}</td>
       <td>
         <span class="badge ${u.role === 'admin' ? 'admin' : 'user'}">${u.role === 'admin' ? 'แอดมิน' : 'ผู้ใช้ทั่วไป'}</span>
@@ -450,7 +515,7 @@ function renderUsers() {
           <button class="act-btn act-edit" onclick="openEditModal('${u.id}')">แก้ไข</button>
           <button class="act-btn act-pass" onclick="openPassModal('${u.id}')">รีเซ็ตรหัส</button>
           <button class="act-btn ${u.active ? 'act-toggle-off' : 'act-toggle-on'}" onclick="toggleActive('${u.id}', ${!u.active})" ${isSelf && u.active ? 'disabled title="ปิดบัญชีตัวเองไม่ได้"' : ''}>${u.active ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}</button>
-          <button class="act-btn act-del" onclick="deleteUser('${u.id}','${memsEsc(u.username)}')" ${isSelf ? 'disabled title="ลบบัญชีตัวเองไม่ได้"' : ''}>ลบ</button>
+          <button class="act-btn act-del" onclick="deleteUser('${u.id}','${memsEsc(u.username)}')" ${cantDelete ? `disabled title="${cantDeleteReason}"` : ''}>ลบ</button>
         </div>
       </td>
     </tr>`;
@@ -471,7 +536,7 @@ async function loadUsers() {
 buildPermCheckboxes();
 
 window.addEventListener('DOMContentLoaded', async () => {
-  const profile = await memsGuard('admin'); // ไม่ใช่ page key จริง แต่ memsHasPermission คืน true เฉพาะ role==='admin' เท่านั้น = เท่ากับเช็คแอดมินล้วนๆ
+  const profile = await memsGuard('super_admin'); // เฉพาะแอดมินหลัก (is_super_admin) เท่านั้น — role='admin' ทั่วไปเข้าไม่ได้
   if (profile) loadUsers();
 });
 </script>
