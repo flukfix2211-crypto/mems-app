@@ -43,7 +43,7 @@ async function memsLoadProfile() {
   if (!session) return null;
   const { data, error } = await supabase
     .from('user_profiles')
-    .select('id, username, display_name, role, active, permissions')
+    .select('id, username, display_name, role, active, permissions, is_super_admin')
     .eq('id', session.user.id)
     .single();
   if (error || !data) return null;
@@ -54,6 +54,11 @@ function memsHasPermission(profile, pageKey) {
   if (!profile || !profile.active) return false;
   if (profile.role === 'admin') return true;
   return Array.isArray(profile.permissions) && profile.permissions.includes(pageKey);
+}
+
+/** จัดการบัญชีผู้ใช้ (settings.html) ได้เฉพาะแอดมินหลักเท่านั้น — role='admin' ทั่วไปไม่นับ */
+function memsIsSuperAdmin(profile) {
+  return !!(profile && profile.active && profile.is_super_admin);
 }
 
 function memsShowLogin() {
@@ -108,7 +113,9 @@ async function memsHandleLogin() {
 
 /**
  * เรียกตอนเริ่มหน้าทุกหน้าที่ต้อง login
- * requiredPermission: 'borrow' | 'prepare' | 'dashboard' | 'assets' | 'round' | 'fixjob' | null (แค่ login พอ ไม่เช็คสิทธิ์รายหน้า)
+ * requiredPermission: 'borrow' | 'prepare' | 'dashboard' | 'assets' | 'round' | 'fixjob'
+ *   | 'super_admin' (เฉพาะแอดมินหลัก — ใช้กับ settings.html)
+ *   | null (แค่ login พอ ไม่เช็คสิทธิ์รายหน้า)
  * คืนค่า profile ถ้าผ่าน, null ถ้าไม่ผ่าน (หน้าที่เรียกต้องหยุดทำงานต่อ — ไม่ init อย่างอื่น)
  */
 async function memsGuard(requiredPermission) {
@@ -128,7 +135,9 @@ async function memsGuard(requiredPermission) {
     memsShowLogin();
     return null;
   }
-  if (requiredPermission && !memsHasPermission(profile, requiredPermission)) {
+  if (requiredPermission === 'super_admin') {
+    if (!memsIsSuperAdmin(profile)) { memsShowForbidden(); return null; }
+  } else if (requiredPermission && !memsHasPermission(profile, requiredPermission)) {
     memsShowForbidden();
     return null;
   }
