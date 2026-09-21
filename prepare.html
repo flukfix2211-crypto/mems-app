@@ -85,58 +85,40 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 </head>
 <body>
 
-<!-- LOGIN เตรียมเครื่อง (รหัส 6077, แป้นตัวเลข) -->
-<div id="loginOverlay" style="position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#0A6478 0%,#0E7D94 100%);display:flex;align-items:center;justify-content:center;">
-  <div style="background:#fff;border-radius:20px;padding:36px 32px;width:90%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,0.25);text-align:center;">
+<!-- LOGIN OVERLAY -->
+<div id="loginOverlay" style="position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#0A6478 0%,#0E7D94 100%);display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box">
+  <div style="background:#fff;border-radius:20px;padding:36px 32px;width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,0.25);text-align:center;box-sizing:border-box">
     <div style="font-size:40px;margin-bottom:12px">🔒</div>
     <div style="font-size:18px;font-weight:800;color:#192D35;margin-bottom:4px">เตรียมเครื่องมือ</div>
-    <div style="font-size:13px;color:#6A8A96;margin-bottom:24px">กรุณาใส่รหัสผ่าน (ตัวเลข)</div>
-    <input id="pwInput" type="password" inputmode="numeric" pattern="[0-9]*" placeholder="• • • •" autofocus
-      oninput="this.value=this.value.replace(/[^0-9]/g,'');document.getElementById('pwErr').style.display='none'"
-      onkeydown="if(event.key==='Enter')checkPw()"
-      style="width:100%;border:2px solid #C5E3ED;border-radius:12px;padding:12px 16px;font-size:20px;font-family:inherit;outline:none;text-align:center;letter-spacing:.3em;margin-bottom:8px;">
-    <div id="pwErr" style="color:#B82E2E;font-size:13px;margin-bottom:10px;display:none">รหัสผ่านไม่ถูกต้อง</div>
-    <button onclick="checkPw()" style="width:100%;background:#0A6478;color:#fff;border:none;border-radius:12px;padding:13px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;">เข้าสู่ระบบ</button>
+    <div style="font-size:13px;color:#6A8A96;margin-bottom:24px">เข้าสู่ระบบเพื่อใช้งาน</div>
+    <input id="authUser" type="text" placeholder="ชื่อผู้ใช้" autocomplete="username" autofocus
+      style="width:100%;border:2px solid #C5E3ED;border-radius:12px;padding:12px 16px;font-size:16px;font-family:inherit;outline:none;margin-bottom:8px;box-sizing:border-box"
+      onkeydown="if(event.key==='Enter'){document.getElementById('authPass').focus()}">
+    <input id="authPass" type="password" placeholder="รหัสผ่าน" autocomplete="current-password"
+      style="width:100%;border:2px solid #C5E3ED;border-radius:12px;padding:12px 16px;font-size:16px;font-family:inherit;outline:none;margin-bottom:8px;box-sizing:border-box"
+      onkeydown="if(event.key==='Enter')memsHandleLogin()">
+    <div id="authErr" style="color:#B82E2E;font-size:13px;margin-bottom:10px;display:none">เข้าสู่ระบบไม่สำเร็จ</div>
+    <button id="authBtn" onclick="memsHandleLogin()" style="width:100%;background:#0A6478;color:#fff;border:none;border-radius:12px;padding:13px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;">เข้าสู่ระบบ</button>
   </div>
 </div>
 
-<!-- HIDDEN PASSWORD TOGGLE (admin only) -->
-<div id="pwToggleBtn" onclick="togglePwProtection()"
-  style="position:fixed;bottom:6px;left:6px;z-index:10000;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:16px;opacity:.12;cursor:pointer;border-radius:50%;transition:opacity .2s;-webkit-tap-highlight-color:transparent;"
-  onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.12">🔑</div>
-
-<script>
-  const PREP_CODE = '6077';
-  const PW_TOGGLE_KEY = 'mems_pw_toggle_prepare';
-  function checkPw() {
-    if (document.getElementById('pwInput').value === PREP_CODE) {
-      sessionStorage.setItem('mems_prep_auth', '1');
-      document.getElementById('loginOverlay').style.display = 'none';
-    } else {
-      document.getElementById('pwErr').style.display = 'block';
-      document.getElementById('pwInput').value = '';
-      document.getElementById('pwInput').focus();
-    }
-  }
-  function isPwProtectionEnabled() {
-    return localStorage.getItem(PW_TOGGLE_KEY) !== '0';
-  }
-  function togglePwProtection() {
-    const code = prompt('รหัสสำหรับเปิด/ปิดการใช้งานรหัสผ่าน:');
-    if (code === null) return;
-    if (code !== 'Mec60776078') { alert('รหัสไม่ถูกต้อง'); return; }
-    const enabling = !isPwProtectionEnabled();
-    localStorage.setItem(PW_TOGGLE_KEY, enabling ? '1' : '0');
-    alert(enabling ? '🔒 เปิดการใช้งานรหัสผ่านแล้ว' : '🔓 ปิดการใช้งานรหัสผ่านแล้ว');
-    location.reload();
-  }
-  if (!isPwProtectionEnabled() || sessionStorage.getItem('mems_prep_auth') === '1') document.getElementById('loginOverlay').style.display = 'none';
-</script>
+<!-- FORBIDDEN OVERLAY -->
+<div id="forbiddenOverlay" style="display:none;position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#0A6478 0%,#0E7D94 100%);align-items:center;justify-content:center;padding:20px;box-sizing:border-box">
+  <div style="background:#fff;border-radius:20px;padding:36px 32px;width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,0.25);text-align:center;box-sizing:border-box">
+    <div style="font-size:40px;margin-bottom:12px">🚫</div>
+    <div style="font-size:18px;font-weight:800;color:#192D35;margin-bottom:4px">ไม่มีสิทธิ์เข้าหน้านี้</div>
+    <div style="font-size:13px;color:#6A8A96;margin-bottom:24px">บัญชีของคุณไม่ได้รับอนุญาตให้เข้าหน้านี้ ติดต่อแอดมินถ้าต้องการสิทธิ์เพิ่ม</div>
+    <a href="index.html" style="display:block;width:100%;background:#0A6478;color:#fff;border:none;border-radius:12px;padding:13px;font-size:15px;font-weight:700;font-family:inherit;text-decoration:none;box-sizing:border-box">กลับหน้าหลัก</a>
+  </div>
+</div>
 
 <header class="header">
   <div class="header-top">
     <span class="hosp-badge">โรงพยาบาลพหลพลพยุหเสนา จ.กาญจนบุรี</span>
-    <a href="index.html" class="btn-back">🏠 หน้าหลัก</a>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span id="memsUserBadge" style="font-size:11px;color:#fff"></span>
+      <a href="index.html" class="btn-back">🏠 หน้าหลัก</a>
+    </div>
   </div>
   <a href="index.html" style="text-decoration:none"><h1>MEMs</h1></a>
   <div class="page-title">🧰 เตรียมเครื่องมือ (สำหรับแอดมิน)</div>
@@ -236,6 +218,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 
 <script src="vendor/supabase.js"></script>
 <script src="supabase-client.js"></script>
+<script src="auth.js"></script>
 <script>
   /** บันทึกรายการเตรียมหลายหมายเลข — เทียบเท่า savePrepare() ใน gas/Code.gs เดิม */
   async function saveMultiplePrepareRecords(equipment, numbers, ward, preparedBy) {
@@ -448,7 +431,10 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     } catch (e) { toast('❌ ยกเลิกไม่สำเร็จ'); }
   }
 
-  loadList();
+  window.addEventListener('DOMContentLoaded', async () => {
+    const profile = await memsGuard('prepare');
+    if (profile) loadList();
+  });
 </script>
 <script src="mascot.js"></script>
 </body>
