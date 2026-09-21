@@ -96,6 +96,15 @@
     .role-btn.active { border-color: var(--a); background: var(--al); color: var(--a); }
 
     .empty-row td { text-align: center; padding: 40px; color: var(--muted); font-size: 14px; }
+
+    .activity-row { display: flex; gap: 10px; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: var(--rs); background: #FAFCFD; align-items: flex-start; }
+    .activity-icon { width: 30px; height: 30px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; background: var(--al); }
+    .activity-icon.prepare { background: #E8F0FE; }
+    .activity-icon.fixjob { background: #EDE9F8; }
+    .activity-main { flex: 1; min-width: 0; }
+    .activity-title { font-size: 13px; font-weight: 700; color: var(--txt); }
+    .activity-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .activity-time { font-size: 11px; color: var(--muted); white-space: nowrap; }
     #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); background: #192D35; color: #fff; padding: 11px 22px; border-radius: 40px; font-size: 14px; font-weight: 600; opacity: 0; transition: all .3s; pointer-events: none; z-index: 99999; white-space: nowrap; }
     #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
     .loading { text-align: center; padding: 40px; color: var(--muted); }
@@ -275,6 +284,20 @@ body{background:#0c6173!important;background-image:none!important}
         <div class="hint" style="color:var(--red)">⚠️ ระบบจะไม่แสดงรหัสนี้ให้ดูอีก — จดหรือคัดลอกเก็บไว้ให้เรียบร้อยก่อนปิดหน้าต่างนี้</div>
       </div>
       <button class="save-btn" onclick="closePwRevealModal()">จดไว้แล้ว ปิดหน้าต่างนี้</button>
+    </div>
+  </div>
+</div>
+
+<!-- ACTIVITY HISTORY MODAL -->
+<div class="modal-overlay" id="activityModal">
+  <div class="modal-box" style="max-width:640px">
+    <div class="modal-head">
+      <div class="modal-head-title" id="activityModalTitle">ประวัติการใช้งาน</div>
+      <button class="modal-close" onclick="closeActivityModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="hint" id="activityWho"></div>
+      <div id="activityBody" style="display:flex;flex-direction:column;gap:8px;max-height:60vh;overflow-y:auto"></div>
     </div>
   </div>
 </div>
@@ -477,6 +500,68 @@ async function toggleActive(id, nextActive) {
   } catch (e) { toast('❌ ' + (e.message || 'เกิดข้อผิดพลาด')); }
 }
 
+function memsFmtDateTime(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: '2-digit' }) + ' ' +
+    d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+}
+
+async function openActivityModal(id) {
+  const u = allUsers.find(x => x.id === id);
+  if (!u) return;
+  document.getElementById('activityModalTitle').textContent = 'ประวัติการใช้งาน: ' + u.username;
+  document.getElementById('activityWho').textContent = 'กำลังโหลด…';
+  document.getElementById('activityBody').innerHTML = '';
+  document.getElementById('activityModal').classList.add('show');
+  try {
+    const res = await memsUserAdminCall({ action: 'activity', user_id: id, limit: 100 });
+    document.getElementById('activityWho').textContent =
+      'เข้าสู่ระบบล่าสุด: ' + memsFmtDateTime(res.last_sign_in_at) +
+      ' · สร้างบัญชีเมื่อ: ' + memsFmtDateTime(res.created_at);
+
+    const items = [
+      ...(res.borrow || []).map(r => ({
+        type: 'borrow', icon: '🔄', ts: r.recorded_at,
+        title: (r.action || 'ยืม-คืน') + ' ' + (r.equipment_name || '') + (r.equipment_number ? ' No.' + r.equipment_number : ''),
+        sub: [r.ward, r.note].filter(Boolean).join(' · ')
+      })),
+      ...(res.prepare || []).map(r => ({
+        type: 'prepare', icon: '🧰', ts: r.recorded_at,
+        title: 'เตรียม ' + (r.equipment_type || '') + (r.equipment_number ? ' No.' + r.equipment_number : ''),
+        sub: [r.ward, r.status].filter(Boolean).join(' · ')
+      })),
+      ...(res.fixjob || []).map(r => ({
+        type: 'fixjob', icon: '🛠️', ts: r.recorded_at,
+        title: 'แก้ไขหน้างาน: ' + (r.topic || '—'),
+        sub: [r.ward, r.detail].filter(Boolean).join(' · ')
+      }))
+    ].sort((a, b) => new Date(b.ts) - new Date(a.ts));
+
+    const body = document.getElementById('activityBody');
+    if (!items.length) {
+      body.innerHTML = '<div class="empty-row" style="padding:30px 0"><div style="text-align:center;color:var(--muted);font-size:14px">ยังไม่มีประวัติการใช้งาน</div></div>';
+      return;
+    }
+    body.innerHTML = items.map(it => `
+      <div class="activity-row">
+        <div class="activity-icon ${it.type}">${it.icon}</div>
+        <div class="activity-main">
+          <div class="activity-title">${memsEsc(it.title)}</div>
+          ${it.sub ? `<div class="activity-sub">${memsEsc(it.sub)}</div>` : ''}
+        </div>
+        <div class="activity-time">${memsFmtDateTime(it.ts)}</div>
+      </div>`).join('');
+  } catch (e) {
+    document.getElementById('activityWho').textContent = '';
+    document.getElementById('activityBody').innerHTML =
+      '<div style="color:var(--red);text-align:center;padding:20px">โหลดไม่ได้: ' + memsEsc(e.message) + '</div>';
+  }
+}
+function closeActivityModal() {
+  document.getElementById('activityModal').classList.remove('show');
+}
+
 async function deleteUser(id, username) {
   if (!confirm('ลบบัญชี "' + username + '" ถาวร? กู้คืนไม่ได้')) return;
   try {
@@ -512,6 +597,7 @@ function renderUsers() {
       <td><span class="badge ${u.active ? 'on' : 'off'}">${u.active ? 'ใช้งานอยู่' : 'ปิดใช้งาน'}</span></td>
       <td>
         <div class="act-wrap">
+          <button class="act-btn act-edit" onclick="openActivityModal('${u.id}')">ประวัติ</button>
           <button class="act-btn act-edit" onclick="openEditModal('${u.id}')">แก้ไข</button>
           <button class="act-btn act-pass" onclick="openPassModal('${u.id}')">รีเซ็ตรหัส</button>
           <button class="act-btn ${u.active ? 'act-toggle-off' : 'act-toggle-on'}" onclick="toggleActive('${u.id}', ${!u.active})" ${isSelf && u.active ? 'disabled title="ปิดบัญชีตัวเองไม่ได้"' : ''}>${u.active ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}</button>
