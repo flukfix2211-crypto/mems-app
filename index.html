@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="MEMs">
@@ -82,8 +82,9 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 .submit-bar{background:linear-gradient(to top,#0c6173 72%,transparent)!important}
 }
 </style>
+  <link rel="stylesheet" href="mems-ui.css">
 </head>
-<body>
+<body class="mems-home">
 
 <!-- LOGIN OVERLAY -->
 <div id="loginOverlay" style="position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#0A6478 0%,#0E7D94 100%);display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box">
@@ -131,7 +132,8 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 </nav>
 <div class="content">
   <div class="menu-label">เลือกรายการ</div>
-  <a class="menu-card" href="borrow.html" data-perm="borrow">
+  <div class="home-actions">
+  <a class="menu-card primary-action" href="borrow.html" data-perm="borrow">
     <div class="menu-icon green"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18l-4-4M21 17H3l4 4"/></svg></div>
     <div class="menu-text">
       <div class="menu-title">ยืม-คืนเครื่องมือแพทย์</div>
@@ -187,6 +189,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     </div>
     <span class="menu-arrow">›</span>
   </a>
+  </div>
 
   <div style="text-align:center;padding:20px 0 8px;font-size:11px;color:#6A8A96;line-height:1.7">
     MEMs v1.0 — งานศูนย์เครื่องมือแพทย์<br>โรงพยาบาลพหลพลพยุหเสนา จ.กาญจนบุรี<br>พัฒนาโดย Pawarit Somchipeng

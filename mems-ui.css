@@ -1,0 +1,129 @@
+/* MEMs clinical workspace. Presentation only; print layouts retain their original styles. */
+@media screen {
+  :root {
+    --mems-text: #173b45; --mems-muted: #526d76; --mems-line: #d6e5e9;
+    --mems-bg: #f2f7f8; --mems-teal: #087c86; --mems-teal-dark: #075c65;
+    --ui-shadow: 0 4px 20px #173b4507;
+  }
+  html { background: #f2f7f8; }
+  body { background: #f2f7f8 !important; color: #173b45 !important; font-size: 1rem; line-height: 1.6; }
+  body::before { display: none !important; }
+  #bgCanvas, #kpiBgCanvas, .kpi-blob { display: none !important; }
+  .header {
+    background: #075c65 !important; color: #fff !important;
+    border: 0 !important; border-bottom: 4px solid #30b5b1 !important;
+    padding-bottom: 32px !important;
+  }
+  .header::before, .header::after { display: none !important; }
+  .header .page-title, .header .sub, .header .mems-th, .header .subtitle,
+  .header .tagline, .header .clock, .header .clock-badge { color: #eefbfc !important; opacity: 1 !important; }
+  .header h1, .header .mems-logo {
+    background: none !important; color: #fff !important; -webkit-text-fill-color: #fff !important;
+    filter: none !important; text-shadow: none !important;
+  }
+  .header .hosp-badge { font-size: .8125rem !important; line-height: 1.5; }
+  .header .icon-btn { min-width: 44px; min-height: 44px; border-radius: 12px !important; }
+  .header-top { gap: 12px; flex-wrap: wrap; }
+  .content, .main { min-width: 0; }
+  .card, .filter-bar, .ki-panel, .ward-block, .history-card, .panel {
+    border: 1px solid #d6e5e9 !important; border-radius: 16px !important;
+    background: #fff !important; box-shadow: var(--ui-shadow) !important;
+  }
+  .menu-label, .section-label, .sec-label { color: #173b45 !important; font-size: .9375rem !important; letter-spacing: 0 !important; }
+  .content > .footer-link a { color: #075c65 !important; opacity: 1; }
+  .content > div[style*="text-align:center"][style*="color:#6A8A96"] { color: #526d76 !important; font-size: .8125rem !important; }
+  .menu-desc, .nav-desc, .mode-desc { color: #526d76 !important; font-size: .9375rem !important; line-height: 1.65; }
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="hidden"]), select, textarea {
+    font-family: inherit; font-size: 1rem !important; min-height: 46px;
+    border-radius: 10px !important; border-color: #adc8cf !important;
+  }
+  input[type="checkbox"], input[type="radio"] { min-height: 0 !important; accent-color: #087c86; }
+  label, .form-label, .stat-lbl, .info-label, .stat-label { font-size: .875rem !important; }
+  button, a, input, select, textarea { touch-action: manipulation; }
+  button { font-family: inherit; }
+  button:disabled { cursor: not-allowed; }
+  a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+    outline: 3px solid #087c86 !important; outline-offset: 4px !important;
+  }
+  .header a:focus-visible, .header button:focus-visible { outline-color: #9ff3e6 !important; }
+  .tbl-wrap, .table-wrap { max-width: 100%; overflow-x: auto; border-radius: 12px !important; border: 1px solid #d6e5e9; }
+  table th { color: #315662 !important; background: #eaf3f5 !important; font-size: .875rem !important; letter-spacing: 0 !important; }
+  table td { font-size: .875rem; }
+  .mems-account-bar { flex-wrap: wrap; padding: 14px 16px; border-radius: 12px; box-shadow: none; }
+  .mems-account-name { font-size: .875rem; white-space: normal; overflow-wrap: anywhere; }
+  .mems-account-actions { flex-wrap: wrap; }
+  .mems-account-actions a, .mems-account-actions button { font-size: .875rem; min-height: 40px; display: inline-flex; align-items: center; }
+  .nav-menu { max-width: calc(100vw - 32px); max-height: calc(100dvh - 90px); overflow-y: auto; }
+  .nav-menu a { min-height: 48px; }
+  .submit-bar { background: linear-gradient(to top,#f2f7f8 78%,#f2f7f800) !important; }
+  body.mode-return #submitBtn { background: #b32f38 !important; }
+  body.mode-borrow #submitBtn { background: #167449 !important; }
+
+  /* Main task chooser: consistent grid with the borrowing action first. */
+  .mems-home .header { padding: 20px max(20px,calc((100vw - 1120px)/2)) 30px !important; }
+  .mems-home .header-top { margin-bottom: 24px; }
+  .mems-home .header-body { text-align: left; display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 24px; }
+  .mems-home .mems-logo { grid-row: 1 / 3; font-size: clamp(2.5rem,6vw,3.5rem) !important; letter-spacing: .035em !important; }
+  .mems-home .mems-sub { font-size: .75rem !important; letter-spacing: .09em; color: #c7e9ed !important; opacity: 1 !important; }
+  .mems-home .mems-th { font-size: 1.125rem !important; margin-top: 2px; }
+  .mems-home .content { width: calc(100% - 40px); max-width: 1120px !important; margin: 24px auto 0 !important; padding: 0 0 40px !important; }
+  .mems-home .menu-label { color: #315662 !important; margin: 24px 0 14px !important; font-size: 1rem !important; }
+  .mems-home .home-actions { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }
+  .mems-home .menu-card {
+    min-width: 0; min-height: 116px; margin: 0 !important; padding: 22px !important;
+    background: #fff !important; border: 1px solid #d6e5e9 !important; border-radius: 16px !important;
+    box-shadow: var(--ui-shadow) !important; gap: 18px; text-decoration: none;
+    transition: border-color .18s, transform .18s, box-shadow .18s !important;
+  }
+  .mems-home .menu-card:hover { border-color: #087c86 !important; box-shadow: 0 8px 24px #075c6512 !important; transform: translateY(-2px) !important; }
+  .mems-home .menu-card.primary-action { grid-column: 1 / -1; min-height: 122px; background: #e6f5f3 !important; border-color: #a6d6d1 !important; border-left: 5px solid #087c86 !important; }
+  .mems-home .menu-icon { width: 52px !important; height: 52px !important; border-radius: 14px !important; background: #edf5f7 !important; color: #075c65 !important; border: none !important; }
+  .mems-home .primary-action .menu-icon { background: #087c86 !important; color: #fff !important; width: 58px !important; height: 58px !important; }
+  .mems-home .menu-title { color: #173b45 !important; font-size: 1.125rem !important; font-weight: 700; line-height: 1.5; }
+  .mems-home .primary-action .menu-title { font-size: 1.25rem !important; }
+  .mems-home .menu-arrow { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; color: #087c86 !important; background: #edf5f7; opacity: 1; flex-shrink: 0; }
+
+  /* Existing sign-in flow, with a separate identity and form surface. */
+  .mems-login { min-height: 100dvh; margin: 0; padding: 32px !important; display: grid; place-items: center; }
+  .mems-login .shell { position: relative; display: grid; grid-template-columns: .95fr 1.05fr; width: min(100%,920px); overflow: hidden; border: 1px solid #d6e5e9; border-radius: 24px; background: #fff; box-shadow: 0 24px 80px #173b4512; }
+  .mems-login .brand { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; padding: 48px; margin: 0; text-align: left; background: #075c65; color: #fff; }
+  .mems-login .brand img { width: 76px; height: 76px; object-fit: contain; padding: 8px; background: #fff; border-radius: 18px; filter: none; }
+  .mems-login .brand h1 { font-size: 2.75rem; letter-spacing: .04em; margin: 22px 0 4px; line-height: 1.2; }
+  .mems-login .brand p { font-size: 1rem; line-height: 1.75; color: #e0f3f4; }
+  .mems-login .brand .hospital-name { margin-top: 32px; padding-top: 24px; border-top: 1px solid #ffffff30; font-size: .875rem; }
+  .mems-login .card { border: none !important; border-radius: 0 !important; box-shadow: none !important; padding: 48px 40px; align-self: center; }
+  .mems-login .card h2 { font-size: 1.625rem; color: #173b45; }
+  .mems-login .card .sub { font-size: .9375rem; color: #526d76; }
+  .mems-login label { margin-top: 20px; }
+  .mems-login .hint { color: #526d76; font-size: .875rem; line-height: 1.65; }
+  .mems-login #submitBtn { background: #087c86 !important; border-radius: 10px !important; box-shadow: none !important; font-size: 1rem; }
+  #loginOverlay > div { border-top: 5px solid #30b5b1; }
+  #loginOverlay input { font-family: inherit; }
+
+  @media (max-width: 720px) {
+    .header .hosp-badge { white-space: normal !important; }
+    .header-top > div { min-width: 0; }
+    .mems-home .header { padding: 16px 20px 24px !important; }
+    .mems-home .header-body { grid-template-columns: 1fr; gap: 4px; }
+    .mems-home .mems-logo { grid-row: auto; margin-bottom: 4px; }
+    .mems-home .mems-sub { letter-spacing: .025em; font-size: .75rem !important; }
+    .mems-home .content { width: calc(100% - 32px); margin-top: 18px !important; }
+    .mems-home .home-actions { grid-template-columns: 1fr; gap: 12px; }
+    .mems-home .menu-card, .mems-home .menu-card.primary-action { grid-column: auto; min-height: 108px; padding: 18px 16px !important; gap: 12px; }
+    .mems-home .menu-icon { width: 44px !important; height: 44px !important; }
+    .mems-home .primary-action .menu-icon { width: 48px !important; height: 48px !important; }
+    .mems-home .menu-title, .mems-home .primary-action .menu-title { font-size: 1.0625rem !important; }
+    .mems-home .menu-arrow { width: 26px; height: 26px; }
+    .mems-login { padding: 16px !important; }
+    .mems-login .shell { max-width: 440px; grid-template-columns: 1fr; border-radius: 20px; }
+    .mems-login .brand { padding: 24px; display: grid; grid-template-columns: 56px 1fr; column-gap: 16px; }
+    .mems-login .brand img { grid-row: 1 / 3; width: 56px; height: 56px; border-radius: 12px; }
+    .mems-login .brand h1 { margin: 0; font-size: 2rem; }
+    .mems-login .brand p { font-size: .875rem; }
+    .mems-login .brand .hospital-name { grid-column: 1 / -1; margin-top: 16px; padding-top: 12px; }
+    .mems-login .card { padding: 28px 24px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+  }
+}
