@@ -82,7 +82,9 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 .submit-bar{background:linear-gradient(to top,#0c6173 72%,transparent)!important}
 }
 </style>
+  <link rel="stylesheet" href="professional.css">
   <link rel="stylesheet" href="mems-ui.css">
+  <link rel="stylesheet" href="home-office.css">
 </head>
 <body class="mems-home">
 
@@ -111,12 +113,16 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       <span class="hosp-badge" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">โรงพยาบาลพหลพลพยุหเสนา จ.กาญจนบุรี</span>
     </div>
     <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;justify-content:flex-end;margin-left:auto">
-      <span id="memsUserBadge" style="font-size:12px"></span>
+      <details class="home-account" id="homeAccount">
+        <summary><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></svg><span><small>เข้าสู่ระบบโดย</small><strong id="homeAccountName">…</strong></span><span aria-hidden="true">⌄</span></summary>
+        <div class="home-account-menu"><a href="settings.html" data-perm="admin" style="display:none">บัญชีผู้ใช้</a><button type="button" onclick="memsLogout()">ออกจากระบบ</button></div>
+      </details>
       <span class="clock-badge" id="clock"></span>
       <button class="icon-btn" style="width:28px;height:28px;font-size:13px;font-weight:800;border-radius:50%;line-height:1" onclick="document.getElementById('helpModal').style.display='flex'">?</button>
     </div>
   </div>
   <div class="header-body">
+    <img class="home-brand-icon" src="logo.png" alt="">
     <div class="mems-logo">MEMs</div>
     <div class="mems-sub">Medical Equipment Management Systems</div>
     <div class="mems-th">ระบบจัดการเครื่องมือแพทย์</div>
@@ -131,6 +137,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   <a href="settings.html" data-perm="admin"><span class="nm-icon"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg></span> การตั้งค่า</a>
 </nav>
 <div class="content">
+  <h1 class="home-page-title">หน้าหลัก</h1>
   <div class="menu-label">เลือกรายการ</div>
   <div class="home-actions">
   <a class="menu-card primary-action" href="borrow.html" data-perm="borrow">
@@ -209,12 +216,17 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   window.addEventListener('DOMContentLoaded', async () => {
     const profile = await memsGuard(null); // แค่ login พอ ไม่บังคับสิทธิ์หน้าใดหน้าหนึ่ง
     if (!profile) return;
+    document.getElementById('homeAccountName').textContent = profile.display_name || profile.username;
     document.querySelectorAll('[data-perm]').forEach(el => {
       const key = el.dataset.perm;
       const allowed = key === 'admin' ? memsIsSuperAdmin(profile) : memsHasPermission(profile, key);
       el.style.display = allowed ? '' : 'none';
     });
   });
+
+  const homeAccount = document.getElementById('homeAccount');
+  document.addEventListener('click', e => { if (!homeAccount.contains(e.target)) homeAccount.open = false; });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && homeAccount.open) { homeAccount.open = false; homeAccount.querySelector('summary').focus(); } });
 
   const navMenu = document.getElementById('navMenu');
   const menuBtn = document.getElementById('menuBtn');
@@ -332,3 +344,4 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 <script src="mascot.js"></script>
 </body>
 </html>
+
