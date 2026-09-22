@@ -83,8 +83,114 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 }
 </style>
   <link rel="stylesheet" href="professional.css">
-  <link rel="stylesheet" href="mems-ui.css">
+  <link rel="stylesheet" href="mems-ui.css?v=20260922-login-2">
   <link rel="stylesheet" href="home-office.css">
+<style id="mems-login-theme">
+/* Shared sign-in overlay: official MEMs identity, retaining existing auth controls. */
+@media screen {
+  #loginOverlay {
+    background: #f3f6fa !important;
+    padding: 24px !important;
+    overflow-y: auto;
+    align-items: safe center !important;
+  }
+  #loginOverlay > div {
+    position: relative;
+    display: grid;
+    grid-template-columns: .85fr 1fr;
+    column-gap: 48px;
+    row-gap: 12px;
+    width: 100% !important;
+    max-width: 880px !important;
+    padding: 48px 40px !important;
+    border: 1px solid #dce4eb !important;
+    border-radius: 18px !important;
+    background: #fff !important;
+    box-shadow: 0 20px 60px #142b4014 !important;
+    box-sizing: border-box;
+    text-align: left !important;
+    overflow: hidden;
+  }
+  #loginOverlay > div::before {
+    content: "MEMs\Aระบบจัดการเครื่องมือแพทย์\A\Aโรงพยาบาลพหลพลพยุหเสนา\Aจังหวัดกาญจนบุรี";
+    white-space: pre-line;
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 44%;
+    box-sizing: border-box;
+    padding: 154px 32px 32px;
+    background: #142b40 url("logo.png") no-repeat 32px 48px / 72px 72px;
+    color: #edf6fb;
+    font: 600 18px/1.9 'Sarabun', sans-serif;
+    text-align: left;
+    pointer-events: none;
+  }
+  #loginOverlay > div > * {
+    grid-column: 2;
+    min-width: 0;
+    box-sizing: border-box;
+    margin: 0 !important;
+  }
+  #loginOverlay > div > :first-child { display: none !important; }
+  #loginOverlay > div > :nth-child(2) {
+    color: #142b40 !important;
+    font-size: 26px !important;
+    line-height: 1.4;
+  }
+  #loginOverlay > div > :nth-child(3) {
+    color: #617586 !important;
+    font-size: 16px !important;
+    margin-bottom: 16px !important;
+  }
+  #loginOverlay #authUser, #loginOverlay #authPass {
+    width: 100% !important;
+    min-height: 52px;
+    padding: 12px 14px !important;
+    border: 1px solid #afc4d1 !important;
+    border-radius: 8px !important;
+    background: #f8fafc;
+    color: #142b40;
+    font-size: 16px !important;
+    letter-spacing: normal !important;
+  }
+  #loginOverlay #authBtn {
+    width: 100% !important;
+    min-height: 50px;
+    margin-top: 8px !important;
+    border-radius: 8px !important;
+    background: #216579 !important;
+    color: #fff !important;
+    font-size: 16px !important;
+    box-shadow: none !important;
+  }
+  #loginOverlay #authBtn:hover { background: #194e60 !important; }
+  #loginOverlay #authBtn:disabled { opacity: .65; }
+  #loginOverlay #authErr { font-size: 14px !important; line-height: 1.5; }
+  @media (max-width: 640px) {
+    #loginOverlay { padding: 16px !important; }
+    #loginOverlay > div {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-width: 440px !important;
+      padding: 0 24px 28px !important;
+    }
+    #loginOverlay > div::before {
+      position: relative;
+      inset: auto;
+      width: calc(100% + 48px);
+      margin: 0 -24px 12px;
+      padding: 28px 24px 28px 94px;
+      background-position: 24px 28px;
+      background-size: 52px 52px;
+      content: "MEMs\Aระบบจัดการเครื่องมือแพทย์";
+      font-size: 16px;
+      line-height: 1.7;
+    }
+  }
+}
+
+</style>
 </head>
 <body class="mems-home">
 
