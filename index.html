@@ -191,23 +191,101 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 }
 
 </style>
+<style id="mems-login-reference">
+#loginOverlay.mems-auth-screen {
+  position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center;
+  padding:32px; box-sizing:border-box; overflow:auto; background:#f2f7f8!important;
+  font-family:'Sarabun',sans-serif;
+}
+#loginOverlay .mems-auth-shell {
+  width:min(1150px,100%); min-height:656px; display:grid; grid-template-columns:47.5% 52.5%;
+  overflow:hidden; border:1px solid #d2e0e5; border-radius:30px; background:#fff;
+  box-shadow:0 26px 70px rgba(20,43,64,.14); text-align:left;
+}
+#loginOverlay .mems-auth-shell::before { display:none!important; content:none!important; }
+#loginOverlay .mems-auth-brand {
+  display:flex; flex-direction:column; justify-content:center; align-items:flex-start;
+  padding:64px 60px; box-sizing:border-box; background:#0b666c; color:#fff;
+}
+#loginOverlay .mems-auth-brand img {
+  width:96px; height:96px; object-fit:contain; padding:9px; box-sizing:border-box;
+  border-radius:22px; background:#fff; margin-bottom:34px;
+}
+#loginOverlay .mems-auth-brand h1 { margin:0; color:#fff; font-size:54px; line-height:1.15; letter-spacing:.03em; }
+#loginOverlay .mems-auth-brand>p { margin:10px 0 0; color:#fff; font-size:21px; font-weight:600; }
+#loginOverlay .mems-auth-hospital {
+  width:100%; margin-top:44px; padding-top:31px; border-top:1px solid rgba(255,255,255,.22);
+  color:#eefafa; font-size:17px; font-weight:600; line-height:1.85;
+}
+#loginOverlay .mems-auth-form {
+  display:flex; flex-direction:column; justify-content:center; padding:58px 50px; box-sizing:border-box;
+}
+#loginOverlay .mems-auth-heading h2 { margin:0; color:#142b40; font-size:34px; line-height:1.3; }
+#loginOverlay .mems-auth-heading p { margin:8px 0 28px; color:#617586; font-size:17px; }
+#loginOverlay .mems-auth-form label { margin:0 0 8px; color:#142b40; font-size:17px!important; font-weight:700; }
+#loginOverlay #authUser,#loginOverlay #authPass {
+  width:100%!important; min-height:62px; margin:0 0 27px!important; padding:13px 16px!important;
+  box-sizing:border-box; border:1px solid #a9c8d4!important; border-radius:12px!important;
+  background:#fff!important; color:#142b40; font:400 17px 'Sarabun',sans-serif!important;
+}
+#loginOverlay #authUser:focus,#loginOverlay #authPass:focus {
+  outline:3px solid rgba(11,126,137,.18)!important; border-color:#0b7e89!important;
+}
+#loginOverlay #authErr {
+  display:none; margin:-10px 0 18px!important; padding:13px 15px; border-radius:12px;
+  background:#fdebec; color:#b52e36!important; font-size:15px!important; line-height:1.5;
+}
+#loginOverlay #authBtn {
+  width:100%!important; min-height:62px; margin:0!important; padding:14px!important;
+  border:0!important; border-radius:12px!important; background:#0d8790!important; color:#fff!important;
+  box-shadow:none!important; font:700 18px 'Sarabun',sans-serif!important; cursor:pointer;
+}
+#loginOverlay #authBtn:hover { background:#096f77!important; }
+#loginOverlay #authBtn:disabled { opacity:.62; cursor:wait; }
+#loginOverlay .mems-auth-help { margin:21px 0 0; text-align:center; color:#617586; font-size:15px; }
+@media(max-width:720px) {
+  #loginOverlay.mems-auth-screen { padding:16px; align-items:flex-start; }
+  #loginOverlay .mems-auth-shell { min-height:0; grid-template-columns:1fr; border-radius:22px; margin:auto; }
+  #loginOverlay .mems-auth-brand { padding:25px 24px; display:grid; grid-template-columns:58px 1fr; column-gap:16px; }
+  #loginOverlay .mems-auth-brand img { grid-row:1/3; width:58px; height:58px; padding:6px; border-radius:14px; margin:0; }
+  #loginOverlay .mems-auth-brand h1 { font-size:30px; align-self:end; }
+  #loginOverlay .mems-auth-brand>p { margin:1px 0 0; font-size:15px; align-self:start; }
+  #loginOverlay .mems-auth-hospital { grid-column:1/-1; margin-top:20px; padding-top:17px; font-size:14px; }
+  #loginOverlay .mems-auth-form { padding:30px 24px; }
+  #loginOverlay .mems-auth-heading h2 { font-size:27px; }
+  #loginOverlay .mems-auth-heading p { margin-bottom:24px; font-size:15px; }
+  #loginOverlay #authUser,#loginOverlay #authPass { min-height:52px; margin-bottom:20px!important; }
+  #loginOverlay #authBtn { min-height:54px; font-size:16px!important; }
+}
+</style>
+
 </head>
 <body class="mems-home">
 
 <!-- LOGIN OVERLAY -->
-<div id="loginOverlay" style="position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#0A6478 0%,#0E7D94 100%);display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box">
-  <div style="background:#fff;border-radius:20px;padding:36px 32px;width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,0.25);text-align:center;box-sizing:border-box">
-    <div style="font-size:40px;margin-bottom:12px">🔒</div>
-    <div style="font-size:18px;font-weight:800;color:#192D35;margin-bottom:4px">MEMs</div>
-    <div style="font-size:13px;color:#6A8A96;margin-bottom:24px">เข้าสู่ระบบเพื่อใช้งาน</div>
-    <input id="authUser" type="text" placeholder="ชื่อผู้ใช้" autocomplete="username" autofocus
-      style="width:100%;border:2px solid #C5E3ED;border-radius:12px;padding:12px 16px;font-size:16px;font-family:inherit;outline:none;margin-bottom:8px;box-sizing:border-box"
-      onkeydown="if(event.key==='Enter'){document.getElementById('authPass').focus()}">
-    <input id="authPass" type="password" placeholder="รหัสผ่าน" autocomplete="current-password"
-      style="width:100%;border:2px solid #C5E3ED;border-radius:12px;padding:12px 16px;font-size:16px;font-family:inherit;outline:none;margin-bottom:8px;box-sizing:border-box"
-      onkeydown="if(event.key==='Enter')memsHandleLogin()">
-    <div id="authErr" style="color:#B82E2E;font-size:13px;margin-bottom:10px;display:none">เข้าสู่ระบบไม่สำเร็จ</div>
-    <button id="authBtn" onclick="memsHandleLogin()" style="width:100%;background:#0A6478;color:#fff;border:none;border-radius:12px;padding:13px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;">เข้าสู่ระบบ</button>
+<div id="loginOverlay" class="mems-auth-screen">
+  <div class="mems-auth-shell">
+    <section class="mems-auth-brand" aria-label="MEMs">
+      <img src="logo.png" alt="โลโก้ MEMs">
+      <h1>MEMs</h1>
+      <p>ระบบจัดการเครื่องมือแพทย์</p>
+      <div class="mems-auth-hospital">งานศูนย์เครื่องมือแพทย์<br>โรงพยาบาลพหลพลพยุหเสนา จ.กาญจนบุรี</div>
+    </section>
+    <section class="mems-auth-form">
+      <div class="mems-auth-heading">
+        <h2>เข้าสู่ระบบ</h2>
+        <p>ใช้บัญชีที่ผู้ดูแลระบบสร้างให้</p>
+      </div>
+      <label for="authUser">ชื่อผู้ใช้</label>
+      <input id="authUser" type="text" placeholder="" autocomplete="username" autofocus
+        onkeydown="if(event.key==='Enter'){document.getElementById('authPass').focus()}">
+      <label for="authPass">รหัสผ่าน</label>
+      <input id="authPass" type="password" placeholder="" autocomplete="current-password"
+        onkeydown="if(event.key==='Enter')memsHandleLogin()">
+      <div id="authErr" role="alert">เข้าสู่ระบบไม่สำเร็จ</div>
+      <button id="authBtn" type="button" onclick="memsHandleLogin()">เข้าสู่ระบบ</button>
+      <p class="mems-auth-help">หากลืมรหัสผ่าน กรุณาติดต่อผู้ดูแล MEMs</p>
+    </section>
   </div>
 </div>
 
