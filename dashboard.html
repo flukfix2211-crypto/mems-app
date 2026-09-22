@@ -335,9 +335,13 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 .submit-bar{background:linear-gradient(to top,#0c6173 72%,transparent)!important}
 }
 </style>
+  <link rel="stylesheet" href="professional.css">
+  <link rel="stylesheet" href="mems-ui.css">
+  <link rel="stylesheet" href="dashboard-office.css">
 </head>
-<body>
+<body class="mems-dashboard">
 
+<aside class="dash-sidebar" aria-label="เมนูแดชบอร์ด"><a class="dash-brand" href="index.html"><img src="logo.png" alt=""><span><strong>MEMs</strong><small>ศูนย์เครื่องมือแพทย์</small></span></a><div class="dash-nav-label">ระบบบริหารจัดการ</div><nav class="dash-nav"><button type="button" data-dash-view="home" aria-current="page" onclick="showView('home')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></svg><span>ภาพรวม</span></button><button type="button" data-dash-view="search" onclick="showView('search')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16M16 16l6 6"/></svg><span>ค้นหาเครื่องมือ</span></button><button type="button" data-dash-view="equipStatus" onclick="showView('equipStatus')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v13H4zM8 21h8m-4-4v4"/></svg><span>สถานะเครื่องมือ</span></button><button type="button" data-dash-view="ward" onclick="showView('ward')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V3h16v18M8 7h8M8 11h8M8 15h8"/></svg><span>การใช้งานหน่วยงาน</span></button><button type="button" data-dash-view="records" onclick="showView('records')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14v18H5zM8 8h8M8 12h8M8 16h5"/></svg><span>รายการยืม–คืน</span></button><button type="button" data-dash-view="round" onclick="showView('round')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3h8v4H8zM8 5H5v16h14V5h-3M8 12h8M8 16h5"/></svg><span>Round Ward</span></button><button type="button" data-dash-view="workload" onclick="showView('workload')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v16H4zM8 3v4m8-4v4M4 11h16"/></svg><span>รายงานภาระงาน</span></button><button type="button" data-dash-view="kpi" onclick="showView('kpi')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h18v13H3zM12 17v4m-5 0h10"/></svg><span>แสดงผลบนจอ</span></button><a href="admin_report.html"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14v18H5zM8 8h8M8 12h8M8 16h5"/></svg><span>รายงานประจำเดือน</span></a></nav><div class="dash-sidebar-foot">โรงพยาบาลพหลพลพยุหเสนา<br>จังหวัดกาญจนบุรี</div></aside>
 <!-- HEADER -->
 <div class="header">
   <div class="header-inner">
@@ -358,13 +362,13 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 <div class="main">
 
   <!-- HOME VIEW: NAV CARDS -->
-  <div id="viewHome" class="view active">
+  <div id="viewHome" class="view active"><div class="dash-page-heading"><div><div class="dash-eyebrow">MEDICAL EQUIPMENT MANAGEMENT</div><h2>ภาพรวมเครื่องมือแพทย์</h2><p>ติดตามสถานะเครื่องมือและการยืม–คืนระหว่างหน่วยงาน</p></div><button id="dashRefresh" class="dash-refresh" onclick="loadAll()" type="button">↻ อัปเดตข้อมูล</button></div><section class="dash-summary" aria-label="สรุปการใช้งาน"><article class="dash-stat"><div class="dash-stat-label">อยู่ระหว่างยืม</div><div class="dash-stat-value"><strong id="dash-borrowed">—</strong><span>เครื่อง</span></div><small>สถานะล่าสุดในระบบ</small></article><article class="dash-stat"><div class="dash-stat-label">หน่วยงานที่ยืม</div><div class="dash-stat-value"><strong id="dash-wards">—</strong><span>หน่วยงาน</span></div><small>มีเครื่องมืออยู่ระหว่างยืม</small></article><article class="dash-stat"><div class="dash-stat-label">รายการยืมวันนี้</div><div class="dash-stat-value"><strong id="dash-borrow">—</strong><span>รายการ</span></div><small>รายการที่บันทึกในวันนี้</small></article><article class="dash-stat"><div class="dash-stat-label">รายการคืนวันนี้</div><div class="dash-stat-value"><strong id="dash-return">—</strong><span>รายการ</span></div><small>รายการที่บันทึกในวันนี้</small></article></section><div id="dashLoadNote" class="dash-load-note" role="status">กำลังโหลดข้อมูล…</div>
     <div id="homeAlertBanner" class="alert-banner" style="display:none">
       <div class="card-head"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0 1 12 0v6l2 3H4l2-3zM10 21h4"/></svg> แจ้งเตือน</div>
       <div class="card-body" id="homeAlertBody"></div>
     </div>
 
-    <div class="card" style="margin-bottom:16px">
+    <div class="card dash-trend" style="margin-bottom:16px">
       <div class="card-head"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18M6 15l5-5 4 3 6-8"/></svg> แนวโน้มยืม-คืน 30 วันล่าสุด</div>
       <div class="card-body">
         <div class="trend-bar-row" id="homeTrendBars"></div>
@@ -375,11 +379,11 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       </div>
     </div>
 
-    <div class="section-label">รายงาน &amp; ข้อมูล</div>
-
+    <details class="dash-report-options">
+    <summary>รายงาน &amp; ข้อมูล</summary>
     <div class="nav-grid">
 
-    <div class="nav-card" onclick="showView('ward')">
+    <div class="nav-card" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}" onclick="showView('ward')">
       <div class="nav-icon teal"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V5h14v16M3 21h18M9 9h6m-3-3v6M9 21v-5h6v5"/></svg></div>
       <div class="nav-text">
         <div class="nav-title">การใช้งานแต่ละหน่วยงาน</div>
@@ -389,7 +393,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     </div>
 
 
-    <div class="nav-card" onclick="showView('search')">
+    <div class="nav-card" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}" onclick="showView('search')">
       <div class="nav-icon" style="background:#E0F2FE;font-size:26px;width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;z-index:1;"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16ZM21 21l-4.35-4.35"/></svg></div>
       <div class="nav-text">
         <div class="nav-title">ค้นหาเครื่องมือ</div>
@@ -398,7 +402,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       <span class="nav-arrow">›</span>
     </div>
 
-    <div class="nav-card" onclick="showView('round')">
+    <div class="nav-card" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}" onclick="showView('round')">
       <div class="nav-icon blue"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v14H6zM9 7h6M9 11h2m1 6v4m-4 0h8"/></svg></div>
       <div class="nav-text">
         <div class="nav-title">บันทึกการ Round เครื่อง</div>
@@ -407,7 +411,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       <span class="nav-arrow">›</span>
     </div>
 
-    <div class="nav-card" onclick="showView('equipStatus')">
+    <div class="nav-card" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}" onclick="showView('equipStatus')">
       <div class="nav-icon" style="background:#FEF3C7;font-size:26px;width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;z-index:1;"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v14H6zM9 7h6M9 11h2m1 6v4m-4 0h8"/></svg></div>
       <div class="nav-text">
         <div class="nav-title">สถานะเครื่องมือ (C2 / High Flow / Brid)</div>
@@ -416,7 +420,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       <span class="nav-arrow">›</span>
     </div>
 
-    <div class="nav-card" onclick="showView('records')">
+    <div class="nav-card" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}" onclick="showView('records')">
       <div class="nav-icon purple"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14v18H5zM8 7h8M8 11h8M8 15h5"/></svg></div>
       <div class="nav-text">
         <div class="nav-title">รายการทั้งหมด</div>
@@ -425,7 +429,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       <span class="nav-arrow">›</span>
     </div>
 
-    <div class="nav-card" onclick="showView('prepare')">
+    <div class="nav-card" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}" onclick="showView('prepare')">
       <div class="nav-icon" style="background:#DAF0F5;font-size:26px;width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;z-index:1;"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m3 7 9-4 9 4v13H3zM3 7l9 4 9-4M12 11v9"/></svg></div>
       <div class="nav-text">
         <div class="nav-title">บันทึกการเตรียมเครื่องมือ</div>
@@ -434,7 +438,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       <span class="nav-arrow">›</span>
     </div>
 
-    <div class="nav-card" onclick="showView('fixjob')">
+    <div class="nav-card" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}" onclick="showView('fixjob')">
       <div class="nav-icon" style="background:#EDE9F8;font-size:26px;width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;z-index:1;"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5a5 5 0 0 0-6 6l-5 5 4 4 5-5a5 5 0 0 0 6-6l-3 3-3-3z"/></svg></div>
       <div class="nav-text">
         <div class="nav-title">แก้ไขหน้างาน</div>
@@ -443,7 +447,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       <span class="nav-arrow">›</span>
     </div>
 
-    <div class="nav-card" onclick="showView('workload')">
+    <div class="nav-card" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}" onclick="showView('workload')">
       <div class="nav-icon" style="background:#FFE8CC;font-size:26px;width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;z-index:1;"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v16H4zM8 3v4m8-4v4M4 11h16"/></svg></div>
       <div class="nav-text">
         <div class="nav-title">ภาระงานนอกเวลาราชการ</div>
@@ -452,7 +456,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       <span class="nav-arrow">›</span>
     </div>
 
-    <div class="nav-card" onclick="location.href='admin_report.html'">
+    <div class="nav-card" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}" onclick="location.href='admin_report.html'">
       <div class="nav-icon" style="background:#FEF3C7;font-size:26px;width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14v18H5zM8 7h8M8 11h8M8 15h5"/></svg></div>
       <div class="nav-text">
         <div class="nav-title">รายงานประจำเดือน</div>
@@ -461,7 +465,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       <span class="nav-arrow">›</span>
     </div>
 
-    <div class="nav-card nav-card-wide" onclick="showView('kpi')" style="background:linear-gradient(135deg,#0f172a,#1e293b);border-color:#334155">
+    <div class="nav-card nav-card-wide" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}" onclick="showView('kpi')" style="background:linear-gradient(135deg,#0f172a,#1e293b);border-color:#334155">
       <div class="nav-icon" style="background:#1e3a5f;font-size:26px;width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h18v13H3zM12 17v4m-5 0h10"/></svg></div>
       <div class="nav-text">
         <div class="nav-title" style="color:#e2e8f0">KPI Display</div>
@@ -471,6 +475,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     </div>
 
     </div>
+    </details>
   </div>
 
   <!-- WARD VIEW -->
@@ -869,7 +874,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 </div>
 
 <!-- CREDIT FOOTER -->
-<div style="text-align:center;padding:18px 16px 28px;font-size:12px;color:#6A8A96;line-height:1.7">
+<div class="dash-footer" style="text-align:center;padding:18px 16px 28px;font-size:12px;color:#6A8A96;line-height:1.7">
   MEMs — Medical Equipment Management Systems v1.0<br>
   งานศูนย์เครื่องมือแพทย์ โรงพยาบาลพหลพลพยุหเสนา จ.กาญจนบุรี<br>
   พัฒนาโดย Pawarit Somchipeng
@@ -882,7 +887,6 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 <script src="auth.js"></script>
 <script src="reports.js"></script>
 <script>
-
 /* ============================================================ RECORD MAPPING (borrow_records -> shape เดิมจาก GAS getRecords()) ============================================================ */
 function isoToSlashDate(iso) {
   if (!iso) return '';
@@ -928,6 +932,10 @@ function showView(name) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view' + name.charAt(0).toUpperCase() + name.slice(1)).classList.add('active');
   currentView = name;
+  document.querySelectorAll('[data-dash-view]').forEach(button => {
+    if (button.dataset.dashView === name) button.setAttribute('aria-current', 'page');
+    else button.removeAttribute('aria-current');
+  });
   window.scrollTo({ top: 0, behavior: 'smooth' });
   if (name === 'ward')    initWardView();
   if (name === 'round')   populateRoundFilters();
@@ -1215,6 +1223,11 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function loadAll() {
+  const refresh = document.getElementById('dashRefresh');
+  const note = document.getElementById('dashLoadNote');
+  refresh.disabled = true;
+  note.textContent = 'กำลังอัปเดตข้อมูล…';
+  note.dataset.error = 'false';
   try {
     const [records, equipment, assets] = await Promise.all([
       fetchRecords(),
@@ -1227,11 +1240,24 @@ async function loadAll() {
     applyFilters();
     renderAlertBanner();
     renderHomeTrend();
+    renderDashboardSummary();
+    note.textContent = '';
     document.getElementById('lastUpdated').textContent =
       'อัพเดต ' + new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
   } catch (err) {
     console.error(err);
+    note.textContent = 'โหลดข้อมูลไม่สำเร็จ กรุณากดอัปเดตข้อมูลเพื่อลองอีกครั้ง';
+    note.dataset.error = 'true';
+  } finally {
+    refresh.disabled = false;
   }
+}
+
+function renderDashboardSummary() {
+  const borrowed = equipStatus.filter(item => item.isBorrowed);
+  const today = computeDailyTrend(1)[0];
+  const values = {borrowed: borrowed.length, wards: new Set(borrowed.map(item => item.ward).filter(Boolean)).size, borrow: today.borrow, return: today.return};
+  Object.entries(values).forEach(([key, value]) => { document.getElementById('dash-' + key).textContent = value.toLocaleString('th-TH'); });
 }
 
 /* ============================================================ HOME: แจ้งเตือน & แนวโน้ม ============================================================ */
@@ -1528,12 +1554,12 @@ async function submitToolReturn() {
 function trendBarsHTML(data, borrowColor, returnColor, labelColor) {
   const max = Math.max(1, ...data.map(d => Math.max(d.borrow, d.return)));
   return data.map((d, i) => `
-    <div class="trend-bar-col">
+    <div class="trend-bar-col" role="img" aria-label="${d.label}: ยืม ${d.borrow} รายการ คืน ${d.return} รายการ" title="${d.label}: ยืม ${d.borrow} · คืน ${d.return}">
       <div style="display:flex;align-items:flex-end;gap:1px;height:100%;width:100%">
         <div style="flex:1;border-radius:2px 2px 0 0;min-height:2px;background:${borrowColor};height:${Math.round(d.borrow / max * 100)}%"></div>
         <div style="flex:1;border-radius:2px 2px 0 0;min-height:2px;background:${returnColor};height:${Math.round(d.return / max * 100)}%"></div>
       </div>
-      ${(i % 5 === 0 || i === data.length - 1) ? `<div style="font-size:9px;color:${labelColor};margin-top:4px;white-space:nowrap">${d.label}</div>` : ''}
+      <div class="trend-date" style="font-size:12px;color:${labelColor};margin-top:4px;white-space:nowrap">${(i % 7 === 0) ? d.label : '&nbsp;'}</div>
     </div>`).join('');
 }
 
@@ -2851,6 +2877,8 @@ showView = function(name) {
     <div style="padding:12px 20px;border-top:1px solid #C5E3ED;text-align:center;font-size:11px;color:#6A8A96;flex-shrink:0">MEMs v1.0 — งานศูนย์เครื่องมือแพทย์ โรงพยาบาลพหลพลพยุหเสนา</div>
   </div>
 </div>
+
 <script src="mascot.js"></script>
 </body>
 </html>
+

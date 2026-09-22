@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="MEMs">
@@ -259,6 +259,77 @@
       background: var(--al);
     }
 
+    /* ====== PREPARED EQUIPMENT ====== */
+    .prepared-panel {
+      background: #E6F5EC;
+      border: 2px solid #1A7B4A;
+      border-radius: 16px;
+      padding: 14px 16px;
+      margin-bottom: 12px;
+    }
+    .prepared-title {
+      font-size: 13px;
+      font-weight: 800;
+      color: #14612D;
+      margin-bottom: 4px;
+    }
+    .prepared-hint {
+      font-size: 11px;
+      color: #1A7B4A;
+      margin-bottom: 10px;
+    }
+    .prepared-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .prepared-chip {
+      min-width: min(100%, 210px);
+      padding: 7px 11px 7px 7px;
+      border: 2px solid #1A7B4A;
+      border-radius: 12px;
+      background: #fff;
+      color: #14612D;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-align: left;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .prepared-chip:active { transform: scale(.98); }
+    .prepared-thumb {
+      width: 42px;
+      height: 42px;
+      object-fit: contain;
+      object-position: center;
+      border-radius: 9px;
+      background: #F3F8FA;
+      padding: 4px;
+      flex-shrink: 0;
+    }
+    .prepared-thumb-fallback {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+    .prepared-chip-label { flex: 1; }
+    .prepared-chip-arrow { opacity: .6; font-weight: 500; }
+    .prepared-selected {
+      display: none;
+      margin-top: 10px;
+      font-size: 14px;
+      font-weight: 800;
+      color: #14612D;
+    }
+    @media (max-width: 520px) {
+      .prepared-chip { width: 100%; }
+    }
+
     /* ====== FIELD ====== */
     .field {
       width: 100%;
@@ -499,6 +570,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 .submit-bar{background:linear-gradient(to top,#0c6173 72%,transparent)!important}
 }
 </style>
+  <link rel="stylesheet" href="mems-ui.css">
 </head>
 <body>
 
@@ -960,19 +1032,53 @@ function renderPreparedBanner() {
   const items = ward ? preparedList.filter(p => p.ward === ward) : [];
   if (!items.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
 
-  const chips = items.map(p =>
-    `<button type="button" onclick="applyPrepared('${p.equipment}','${p.number}')"
-      style="padding:9px 14px;border:2px solid #1A7B4A;border-radius:12px;background:#fff;color:#14612D;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;-webkit-tap-highlight-color:transparent">
-      ${p.equipment} No.${p.number} <span style="opacity:.6;font-weight:500">›</span></button>`
-  ).join('');
-
   el.innerHTML = `
-    <div style="background:#E6F5EC;border:2px solid #1A7B4A;border-radius:16px;padding:14px 16px;margin-bottom:12px">
-      <div style="font-size:13px;font-weight:800;color:#14612D;margin-bottom:4px">🔧 เครื่องที่เตรียมไว้สำหรับ ${ward}</div>
-      <div style="font-size:11px;color:#1A7B4A;margin-bottom:10px">กดเพื่อเติมประเภทและหมายเลขให้อัตโนมัติ</div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px">${chips}</div>
-      <div id="prepSelInfo" style="display:none;margin-top:10px;font-size:14px;font-weight:800;color:#14612D"></div>
+    <div class="prepared-panel">
+      <div class="prepared-title"></div>
+      <div class="prepared-hint">กดเพื่อเติมประเภทและหมายเลขให้อัตโนมัติ</div>
+      <div class="prepared-list"></div>
+      <div id="prepSelInfo" class="prepared-selected"></div>
     </div>`;
+
+  el.querySelector('.prepared-title').textContent = '🔧 เครื่องที่เตรียมไว้สำหรับ ' + ward;
+  const list = el.querySelector('.prepared-list');
+  items.forEach(p => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'prepared-chip';
+    button.addEventListener('click', () => applyPrepared(p.equipment, p.number));
+
+    const sourceImage = Array.from(document.querySelectorAll('.equip-btn')).find(
+      item => item.getAttribute('data-e') === String(p.equipment)
+    )?.querySelector('img.ei');
+
+    if (sourceImage?.src) {
+      const image = document.createElement('img');
+      image.className = 'prepared-thumb';
+      image.src = sourceImage.src;
+      image.alt = '';
+      image.setAttribute('aria-hidden', 'true');
+      button.appendChild(image);
+    } else {
+      const fallback = document.createElement('span');
+      fallback.className = 'prepared-thumb prepared-thumb-fallback';
+      fallback.textContent = '🔧';
+      fallback.setAttribute('aria-hidden', 'true');
+      button.appendChild(fallback);
+    }
+
+    const label = document.createElement('span');
+    label.className = 'prepared-chip-label';
+    label.textContent = p.equipment + ' No.' + p.number;
+    button.appendChild(label);
+
+    const arrow = document.createElement('span');
+    arrow.className = 'prepared-chip-arrow';
+    arrow.textContent = '›';
+    arrow.setAttribute('aria-hidden', 'true');
+    button.appendChild(arrow);
+    list.appendChild(button);
+  });
   el.style.display = '';
 }
 
@@ -1555,3 +1661,4 @@ function resetForm() {
 <script src="mascot.js"></script>
 </body>
 </html>
+
