@@ -1,54 +1,52 @@
-/* MEMs operational pages — shared formal interface */
+/* MEMs operational pages — aligned with the official home and dashboard UI. */
 @media screen {
   :root {
     --ops-navy: #142b40;
-    --ops-teal: #0b666c;
-    --ops-teal-2: #0b7e89;
-    --ops-bg: #f2f7f8;
+    --ops-navy-soft: #203d53;
+    --ops-primary: #216579;
+    --ops-primary-dark: #194e60;
+    --ops-bg: #f3f6fa;
     --ops-card: #ffffff;
-    --ops-text: #172f3d;
+    --ops-text: #203d53;
     --ops-muted: #617586;
-    --ops-line: #d6e3e7;
-    --ops-soft: #eaf5f5;
-    --ops-shadow: 0 12px 34px rgba(20, 43, 64, .08);
+    --ops-line: #dce4eb;
+    --ops-soft: #edf4f7;
+    --ops-success: #287c67;
+    --ops-danger: #b94a52;
+    --ops-shadow: 0 2px 5px rgba(20, 43, 64, .035);
   }
-
   body.mems-operation {
     min-height: 100vh;
     background: var(--ops-bg) !important;
-    color: var(--ops-text);
+    color: var(--ops-text) !important;
+    font-family: 'Sarabun', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
   }
-
-  body.mems-operation::before {
-    content: "";
-    position: fixed;
-    inset: 0 0 auto;
-    height: 250px;
-    z-index: 0;
-    pointer-events: none;
-    background: linear-gradient(135deg, #0b5e65 0%, #0b7179 58%, #0b7e89 100%);
-    display: block !important;
-  }
-
+  body.mems-operation::before { display: none !important; }
+  .mems-operation #bgCanvas { display: none !important; }
   .mems-operation .header {
-    width: min(100% - 48px, 1180px);
-    margin: 0 auto;
-    padding: 26px 0 82px !important;
-    background: transparent !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 18px max(24px, calc((100vw - 1120px) / 2)) 22px !important;
+    background: var(--ops-navy) !important;
     border: 0 !important;
+    border-bottom: 3px solid var(--ops-primary) !important;
     box-shadow: none !important;
     overflow: visible;
   }
   .mems-operation .header::before,
   .mems-operation .header::after { display: none !important; }
-  .mems-operation .header-top { margin-bottom: 32px !important; }
+  .mems-operation .header-top {
+    width: 100% !important;
+    max-width: 1120px !important;
+    margin: 0 auto 18px !important;
+  }
   .mems-operation .hosp-badge {
-    padding: 7px 12px !important;
-    border: 1px solid rgba(255,255,255,.22) !important;
-    border-radius: 999px !important;
-    background: rgba(255,255,255,.1) !important;
-    color: #effbfb !important;
-    font-size: 12px !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    color: #cfdfeb !important;
+    font-size: .8125rem !important;
+    font-weight: 600 !important;
     letter-spacing: 0 !important;
   }
   .mems-operation .btn-back,
@@ -57,112 +55,147 @@
     min-height: 38px;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 7px;
-    padding: 7px 12px !important;
-    border: 1px solid rgba(255,255,255,.24) !important;
-    border-radius: 10px !important;
-    background: rgba(255,255,255,.11) !important;
-    color: #fff !important;
-    font-size: 13px !important;
+    padding: 7px 11px !important;
+    border: 1px solid #3b5469 !important;
+    border-radius: 8px !important;
+    background: var(--ops-navy-soft) !important;
+    color: #eef6fb !important;
+    font-size: .8125rem !important;
+    font-weight: 600 !important;
+  }
+  .mems-operation .header > a {
+    display: block;
+    width: min(1120px, 100%);
+    margin: 0 auto !important;
   }
   .mems-operation .header h1 {
+    display: flex;
+    align-items: center;
+    gap: 11px;
     margin: 0 !important;
     color: #fff !important;
     background: none !important;
     -webkit-text-fill-color: #fff !important;
-    font-size: clamp(28px, 4vw, 42px) !important;
-    letter-spacing: .06em !important;
+    font-family: 'Sarabun', sans-serif !important;
+    font-size: 1.75rem !important;
+    font-weight: 700 !important;
+    letter-spacing: .02em !important;
     filter: none !important;
   }
+  .mems-operation .header h1::before {
+    content: "";
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+    border-radius: 9px;
+    background: #fff url("logo.png") center / 32px 32px no-repeat;
+  }
+  .mems-operation .header .sub {
+    width: min(1120px, 100%);
+    margin: 5px auto 0 !important;
+    color: #b6c9d8 !important;
+    font-size: .75rem !important;
+    letter-spacing: .04em !important;
+    opacity: 1 !important;
+  }
   .mems-operation .page-title {
-    margin-top: 10px !important;
+    width: min(1120px, 100%);
+    margin: 14px auto 0 !important;
     color: #fff !important;
-    font-size: clamp(20px, 2.8vw, 28px) !important;
-    font-weight: 800 !important;
+    font-size: clamp(1.25rem, 2.2vw, 1.55rem) !important;
+    font-weight: 600 !important;
+    line-height: 1.45;
     opacity: 1 !important;
     letter-spacing: 0 !important;
   }
-  .mems-operation .header .sub,
-  .mems-operation .header .clock { color: #d4eeee !important; }
-
+  .mems-operation .header .clock { color: #c7d7e3 !important; }
+  .mems-operation .header #shiftBadge {
+    min-height: 30px;
+    margin-top: 10px !important;
+    padding: 5px 10px !important;
+    border: 1px solid #3b5469;
+    border-radius: 999px !important;
+    background: var(--ops-navy-soft) !important;
+    color: #d6e4ed !important;
+    font-size: .75rem !important;
+  }
   .mems-operation .content {
-    width: min(100% - 48px, 1180px) !important;
-    max-width: 1180px !important;
-    margin: -50px auto 0 !important;
-    padding: 0 0 80px !important;
+    width: min(1120px, calc(100% - 48px)) !important;
+    max-width: 1120px !important;
+    margin: 28px auto 0 !important;
+    padding: 0 0 72px !important;
     position: relative;
     z-index: 2;
   }
   .mems-operation .card {
-    margin-bottom: 18px !important;
-    padding: 24px !important;
+    margin-bottom: 16px !important;
+    padding: 20px !important;
     border: 1px solid var(--ops-line) !important;
-    border-radius: 18px !important;
+    border-radius: 12px !important;
     background: var(--ops-card) !important;
     box-shadow: var(--ops-shadow) !important;
   }
   .mems-operation .sec-label,
   .mems-operation .form-label {
-    margin-bottom: 11px !important;
-    color: #365464 !important;
-    font-size: 14px !important;
-    font-weight: 800 !important;
-    line-height: 1.45;
+    margin-bottom: 10px !important;
+    color: #365268 !important;
+    font-size: .9rem !important;
+    font-weight: 700 !important;
+    line-height: 1.5;
     letter-spacing: 0 !important;
     text-transform: none !important;
   }
   .mems-operation .req-dot {
-    width: 7px !important;
-    height: 7px !important;
-    background: #d34b52 !important;
-    box-shadow: 0 0 0 4px #fdecee;
+    width: 6px !important;
+    height: 6px !important;
+    background: var(--ops-danger) !important;
+    box-shadow: none !important;
   }
-
   .mems-operation .field,
   .mems-operation .form-input,
   .mems-operation .fsel,
   .mems-operation input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
   .mems-operation select,
   .mems-operation textarea {
-    min-height: 50px;
-    border: 1px solid #b7ccd4 !important;
-    border-radius: 11px !important;
-    background-color: #fbfdfd !important;
+    min-height: 48px;
+    border: 1px solid #cbd9e3 !important;
+    border-radius: 8px !important;
+    background-color: #fff !important;
     color: var(--ops-text) !important;
-    box-shadow: inset 0 1px 2px rgba(20,43,64,.025);
+    box-shadow: none !important;
   }
-  .mems-operation textarea { min-height: 110px; resize: vertical; }
+  .mems-operation textarea { min-height: 108px; resize: vertical; }
   .mems-operation .field:focus,
   .mems-operation .form-input:focus,
   .mems-operation input:focus,
   .mems-operation select:focus,
   .mems-operation textarea:focus {
-    outline: 3px solid rgba(11,126,137,.14) !important;
-    border-color: var(--ops-teal-2) !important;
-    background: #fff !important;
+    outline: 3px solid rgba(33,101,121,.14) !important;
+    outline-offset: 0;
+    border-color: var(--ops-primary) !important;
   }
-
   .mems-operation .save-btn,
   .mems-operation .add-btn,
   .mems-operation .add-row-btn,
   .mems-operation .ward-confirm-btn,
   .mems-operation .submit-btn,
-  .mems-operation #submitBtn {
-    min-height: 52px !important;
+  .mems-operation #submitBtn,
+  .mems-operation .add-equip-btn {
+    min-height: 48px !important;
     border: 0 !important;
-    border-radius: 12px !important;
-    background: linear-gradient(135deg, var(--ops-teal-2), var(--ops-teal)) !important;
+    border-radius: 8px !important;
+    background: var(--ops-primary) !important;
     color: #fff !important;
-    font-weight: 800 !important;
-    box-shadow: 0 9px 20px rgba(11,102,108,.2) !important;
+    font-weight: 700 !important;
+    box-shadow: none !important;
   }
   .mems-operation .save-btn:hover,
   .mems-operation .add-btn:hover,
   .mems-operation .add-row-btn:hover,
-  .mems-operation .ward-confirm-btn:hover {
-    transform: translateY(-1px);
-    filter: brightness(1.04);
-  }
+  .mems-operation .ward-confirm-btn:hover,
+  .mems-operation .add-equip-btn:hover { background: var(--ops-primary-dark) !important; }
   .mems-operation .reset-btn,
   .mems-operation .mode-btn,
   .mems-operation .equip-btn,
@@ -170,12 +203,13 @@
   .mems-operation .type-chip,
   .mems-operation .st-btn,
   .mems-operation .role-btn,
-  .mems-operation .preset-btn {
-    min-height: 46px;
+  .mems-operation .preset-btn,
+  .mems-operation .reason-btn {
+    min-height: 44px;
     border: 1px solid var(--ops-line) !important;
-    border-radius: 11px !important;
-    background: #f8fbfc !important;
-    color: #46606e !important;
+    border-radius: 8px !important;
+    background: #f8fafc !important;
+    color: #365268 !important;
     box-shadow: none !important;
   }
   .mems-operation .mode-btn.active,
@@ -185,92 +219,55 @@
   .mems-operation .st-btn.active,
   .mems-operation .role-btn.active,
   .mems-operation .preset-btn.active {
-    border-color: var(--ops-teal-2) !important;
+    border-color: var(--ops-primary) !important;
     background: var(--ops-soft) !important;
-    color: var(--ops-teal) !important;
-    box-shadow: inset 0 0 0 1px var(--ops-teal-2) !important;
+    color: var(--ops-primary-dark) !important;
+    box-shadow: inset 3px 0 var(--ops-primary) !important;
   }
-
-  .mems-operation .stats-row,
-  .mems-operation .info-row,
-  .mems-operation .summary-bar { gap: 12px !important; }
   .mems-operation .stat-chip,
   .mems-operation .info-chip,
   .mems-operation .sum-chip,
   .mems-operation .suc-chip {
     border: 1px solid var(--ops-line) !important;
-    border-radius: 14px !important;
+    border-radius: 10px !important;
     background: #fff !important;
-    box-shadow: 0 5px 16px rgba(20,43,64,.05);
+    box-shadow: var(--ops-shadow) !important;
   }
-  .mems-operation .stat-num { color: var(--ops-teal) !important; }
-
+  .mems-operation .stat-num { color: var(--ops-primary) !important; }
   .mems-operation .tbl-wrap,
   .mems-operation .table-wrap {
     border: 1px solid var(--ops-line) !important;
-    border-radius: 14px !important;
+    border-radius: 10px !important;
     background: #fff;
     overflow: auto;
   }
   .mems-operation table { border-collapse: separate !important; border-spacing: 0 !important; }
   .mems-operation th {
-    padding: 13px 12px !important;
-    background: #edf5f6 !important;
-    color: #345361 !important;
-    font-weight: 800 !important;
-    border-color: #dce8eb !important;
+    padding: 12px 14px !important;
+    background: #f0f4f8 !important;
+    color: #365268 !important;
+    font-weight: 700 !important;
+    border-color: #e4eaf0 !important;
   }
-  .mems-operation td { padding: 13px 12px !important; border-color: #e7eff1 !important; }
-  .mems-operation tbody tr:hover td { background: #f8fbfb; }
-
-  .mems-operation .modal-overlay { backdrop-filter: blur(5px); }
+  .mems-operation td { padding: 12px 14px !important; border-color: #e9eef3 !important; }
+  .mems-operation tbody tr:hover td { background: #f9fbfc; }
+  .mems-operation .modal-overlay { backdrop-filter: blur(4px); }
   .mems-operation .modal-box {
     border: 1px solid var(--ops-line) !important;
-    border-radius: 18px !important;
-    box-shadow: 0 24px 70px rgba(20,43,64,.25) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 20px 55px rgba(20,43,64,.22) !important;
   }
-  .mems-operation .modal-head {
-    background: var(--ops-navy) !important;
-    color: #fff !important;
-  }
-
+  .mems-operation .modal-head { background: var(--ops-navy) !important; color: #fff !important; }
   .mems-operation .empty,
-  .mems-operation .empty-row {
-    color: var(--ops-muted) !important;
-  }
-
+  .mems-operation .empty-row,
   .mems-operation .footer-link,
   .mems-operation .footer-link a,
-  body.mems-fixjob .content > a {
-    color: var(--ops-muted) !important;
-  }
-
-  body.mems-assets .type-chips {
-    margin-bottom: 16px !important;
-    padding: 12px !important;
-    border: 1px solid var(--ops-line);
-    border-radius: 15px;
-    background: #fff;
-    box-shadow: var(--ops-shadow);
-  }
-  body.mems-round .steps {
-    margin: 0 0 18px !important;
-    padding: 14px 18px !important;
-    border: 1px solid var(--ops-line);
-    border-radius: 15px;
-    background: #fff;
-    box-shadow: var(--ops-shadow);
-  }
-  body.mems-round .step { color: #708592 !important; }
-  body.mems-round .step.active { color: var(--ops-teal) !important; }
-  body.mems-round .step-num { background: #dfecee !important; color: #46606e !important; }
-  body.mems-round .step.active .step-num { background: var(--ops-teal-2) !important; color: #fff !important; }
-
+  body.mems-fixjob .content > a { color: var(--ops-muted) !important; }
   body.mems-prepare .content,
   body.mems-fixjob .content {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 18px;
+    gap: 16px;
     align-items: start;
   }
   body.mems-prepare .content > .card,
@@ -279,27 +276,37 @@
   body.mems-prepare .content > .card:last-child,
   body.mems-fixjob .content > .save-btn,
   body.mems-fixjob .content > .card:last-of-type { grid-column: 1 / -1; }
-  body.mems-assets .content,
-  body.mems-settings .content { max-width: 1240px !important; }
+  body.mems-assets .type-chips,
+  body.mems-round .steps {
+    margin: 0 0 16px !important;
+    padding: 12px !important;
+    border: 1px solid var(--ops-line);
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: var(--ops-shadow);
+  }
+  body.mems-round .step { color: #708592 !important; }
+  body.mems-round .step.active { color: var(--ops-primary) !important; }
+  body.mems-round .step-num { background: #dfe8ed !important; color: #46606e !important; }
+  body.mems-round .step.active .step-num { background: var(--ops-primary) !important; color: #fff !important; }
   body.mems-round .submit-bar,
   body.mems-borrow .submit-bar {
-    background: linear-gradient(to top, var(--ops-bg) 78%, rgba(242,247,248,0)) !important;
+    background: linear-gradient(to top, var(--ops-bg) 78%, rgba(243,246,250,0)) !important;
   }
-
   @media (max-width: 760px) {
-    body.mems-operation::before { height: 220px; }
-    .mems-operation .header {
-      width: min(100% - 28px, 1180px);
-      padding: 18px 0 72px !important;
-    }
-    .mems-operation .header-top { margin-bottom: 24px !important; gap: 8px; }
-    .mems-operation .hosp-badge { max-width: 58%; overflow: hidden; text-overflow: ellipsis; }
+    .mems-operation .header { padding: 14px 16px 18px !important; }
+    .mems-operation .header-top { margin-bottom: 14px !important; gap: 8px; }
+    .mems-operation .header-top > div { flex-wrap: wrap; justify-content: flex-end; }
+    .mems-operation .hosp-badge { max-width: 52%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .mems-operation .header h1 { font-size: 1.45rem !important; }
+    .mems-operation .header h1::before { width: 34px; height: 34px; flex-basis: 34px; background-size: 28px 28px; }
+    .mems-operation .page-title { margin-top: 10px !important; font-size: 1.18rem !important; }
     .mems-operation .content {
-      width: min(100% - 24px, 1180px) !important;
-      margin-top: -42px !important;
-      padding-bottom: 54px !important;
+      width: calc(100% - 32px) !important;
+      margin-top: 20px !important;
+      padding-bottom: 52px !important;
     }
-    .mems-operation .card { padding: 18px !important; border-radius: 15px !important; }
+    .mems-operation .card { padding: 16px !important; border-radius: 10px !important; }
     body.mems-prepare .content,
     body.mems-fixjob .content { grid-template-columns: 1fr; gap: 12px; }
     body.mems-prepare .content > .save-btn,
@@ -307,12 +314,11 @@
     body.mems-fixjob .content > .save-btn,
     body.mems-fixjob .content > .card:last-of-type { grid-column: auto; }
     .mems-operation .stats-row,
-    .mems-operation .info-row { overflow-x: auto; padding-bottom: 5px; }
+    .mems-operation .info-row { overflow-x: auto; padding-bottom: 4px; }
     .mems-operation .stat-chip,
-    .mems-operation .info-chip { min-width: 130px; }
+    .mems-operation .info-chip { min-width: 126px; }
   }
 }
-
 @media (prefers-reduced-motion: reduce) {
   .mems-operation *, .mems-operation *::before, .mems-operation *::after {
     animation-duration: .01ms !important;
