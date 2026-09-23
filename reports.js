@@ -809,4 +809,3 @@ async function exportC2ReportPDF(d, options) {
   rptPdfFooter(doc);
   return rptDeliverPdf(doc, 'C2_Report.pdf', options);
 }
-
