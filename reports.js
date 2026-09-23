@@ -294,48 +294,48 @@ async function exportWorkloadCalendarPDF(d) {
   doc.save('Workload_' + d.month.replace('-', '_') + '.pdf');
 }
 
-/* ============================================================ MONTHLY REPORT (เทียบเท่า generateMonthlyReport()) ============================================================ */
+/* ============================================================ MONTHLY REPORT (รวมสรุปผู้บริหารไว้เป็นหน้าแรก) ============================================================ */
+/**
+ * ระยะเวลายืมเฉลี่ยต่อประเภทเครื่อง — จับคู่ "ยืม" ในเดือนกับ "คืน" ครั้งแรกหลังจากนั้น (คืนข้ามเดือนก็นับ)
+ * คืนหนึ่งครั้งจับคู่ได้กับการยืมครั้งเดียว; ยืมที่ยังไม่คืนนับแยกไว้ ไม่รวมในค่าเฉลี่ย
+ */
 function rptCalcAvgBorrowDays(borrowRows, returnRows) {
-  const equipSet = {};
-  borrowRows.forEach(r => {
-    const key = r.equipment_name + '__' + r.equipment_number + '__' + r.ward;
-    (equipSet[key] = equipSet[key] || []).push({ borrow: new Date(r.recorded_at), equip: r.equipment_name });
-  });
-  const returnMap = {};
-  returnRows.forEach(r => {
-    const key = r.equipment_name + '__' + r.equipment_number + '__' + r.ward;
-    (returnMap[key] = returnMap[key] || []).push(new Date(r.recorded_at));
-  });
-  const durations = {};
-  Object.keys(equipSet).forEach(key => {
-    const rList = (returnMap[key] || []).slice().sort((a, b) => a - b);
-    equipSet[key].forEach(({ borrow, equip }) => {
-      const ret = rList.find(t => t >= borrow);
-      if (ret) {
-        const days = (ret - borrow) / 86400000;
-        (durations[equip] = durations[equip] || []).push(days);
-      }
+  const keyOf = r => r.equipment_name + '__' + r.equipment_number + '__' + r.ward;
+  const borrowsByKey = {};
+  borrowRows.forEach(r => { (borrowsByKey[keyOf(r)] = borrowsByKey[keyOf(r)] || []).push({ ts: new Date(r.recorded_at), equip: r.equipment_name || 'ไม่ระบุ' }); });
+  const returnsByKey = {};
+  returnRows.forEach(r => { (returnsByKey[keyOf(r)] = returnsByKey[keyOf(r)] || []).push(new Date(r.recorded_at)); });
+
+  const stats = {};
+  Object.keys(borrowsByKey).forEach(key => {
+    const borrows = borrowsByKey[key].sort((a, b) => a.ts - b.ts);
+    const returns = (returnsByKey[key] || []).sort((a, b) => a - b);
+    let ri = 0;
+    borrows.forEach(({ ts, equip }) => {
+      const s = stats[equip] = stats[equip] || { days: [], open: 0 };
+      while (ri < returns.length && returns[ri] < ts) ri++;
+      if (ri < returns.length) { s.days.push((returns[ri] - ts) / 86400000); ri++; }
+      else s.open++;
     });
   });
-  return Object.entries(durations).map(([equip, arr]) => [equip, (arr.reduce((s, v) => s + v, 0) / arr.length).toFixed(1), arr.length]);
+  return Object.entries(stats)
+    .map(([equip, s]) => [equip, s.days.length ? (s.days.reduce((a, v) => a + v, 0) / s.days.length).toFixed(1) : '-', s.days.length, s.open])
+    .sort((a, b) => (b[2] + b[3]) - (a[2] + a[3]));
 }
 
 async function rptGatherPrepareStats(start, end) {
-  const res = { total: 0, used: 0, waiting: 0, cancelled: 0, byEquip: [], byPreparer: [] };
-  const { data } = await supabase.from('prepare_records').select('equipment_type, prepared_by, status, recorded_at')
-    .gte('recorded_at', start.toISOString()).lt('recorded_at', end.toISOString());
-  const equipCount = {}, prepCount = {};
-  (data || []).forEach(r => {
+  const res = { total: 0, used: 0, waiting: 0, cancelled: 0, byEquip: {} };
+  const data = await fetchAllPages(() => supabase.from('prepare_records').select('equipment_type, status, recorded_at')
+    .gte('recorded_at', start.toISOString()).lt('recorded_at', end.toISOString())
+    .order('recorded_at').order('id'));
+  data.forEach(r => {
     res.total++;
     const st = r.status || '';
     if (st === 'ยืมแล้ว') res.used++;
-    else if (st.indexOf('ยกเลิก') === 0) res.cancelled++;
+    else if (st.indexOf('ยกเลิก') === 0) { res.cancelled++; return; }
     else res.waiting++;
-    const eq = r.equipment_type || 'ไม่ระบุ'; equipCount[eq] = (equipCount[eq] || 0) + 1;
-    const by = r.prepared_by || 'ไม่ระบุ'; prepCount[by] = (prepCount[by] || 0) + 1;
+    const eq = r.equipment_type || 'ไม่ระบุ'; res.byEquip[eq] = (res.byEquip[eq] || 0) + 1;
   });
-  res.byEquip = Object.entries(equipCount).sort((a, b) => b[1] - a[1]);
-  res.byPreparer = Object.entries(prepCount).sort((a, b) => b[1] - a[1]);
   return res;
 }
 
@@ -344,36 +344,46 @@ async function computeMonthlyReport() {
   const now = new Date();
   const firstOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const firstOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const lastOfLastMonth = new Date(firstOfThisMonth - 1);
   const monthTH = rptThaiMonthYear(firstOfLastMonth);
 
-  const { data: raw, error } = await supabase.from('borrow_records').select('*')
-    .gte('recorded_at', firstOfLastMonth.toISOString()).lte('recorded_at', lastOfLastMonth.toISOString());
-  if (error) throw error;
-  if (!raw || !raw.length) return { ok: false, error: 'ไม่มีข้อมูลในเดือนที่แล้ว' };
+  // ดึงตั้งแต่ต้นเดือนที่แล้วถึงปัจจุบัน แบบแบ่งหน้า (ไม่โดนตัดที่ 1,000 แถว)
+  // ข้อมูลเดือนนี้ใช้หา "คืน" ของรายการที่ยืมปลายเดือนที่แล้ว และยอดยืมเดือนนี้ถึงปัจจุบัน
+  const [raw, status, prep] = await Promise.all([
+    fetchAllPages(() => supabase.from('borrow_records').select('action, equipment_name, equipment_number, ward, recorded_at')
+      .gte('recorded_at', firstOfLastMonth.toISOString()).lte('recorded_at', now.toISOString())
+      .order('recorded_at').order('id')),
+    fetchEquipmentStatus(),
+    rptGatherPrepareStats(firstOfLastMonth, firstOfThisMonth)
+  ]);
 
-  const rows = raw.filter(r => (r.action || '').includes('ยืม') || (r.action || '').includes('คืน'));
-  const borrowRows = rows.filter(r => (r.action || '').includes('ยืม'));
-  const returnRows = rows.filter(r => (r.action || '').includes('คืน'));
+  const isBorrow = r => (r.action || '').includes('ยืม');
+  const isReturn = r => (r.action || '').includes('คืน');
+  const inLastMonth = r => new Date(r.recorded_at) < firstOfThisMonth;
+  const borrowRows = raw.filter(r => isBorrow(r) && inLastMonth(r));
+  const returnRows = raw.filter(r => isReturn(r) && inLastMonth(r));
+  if (!borrowRows.length && !returnRows.length) return { ok: false, error: 'ไม่มีข้อมูลในเดือนที่แล้ว' };
 
   const equipCount = {};
   borrowRows.forEach(r => { const e = r.equipment_name || 'ไม่ระบุ'; equipCount[e] = (equipCount[e] || 0) + 1; });
   const equipRanked = Object.entries(equipCount).sort((a, b) => b[1] - a[1]);
+  // ประเภทที่ถูกเตรียมแต่ไม่มีการยืมในเดือนนั้น ต่อท้ายตาราง (ยืม 0 ครั้ง)
+  Object.keys(prep.byEquip).forEach(e => { if (!equipCount[e]) equipRanked.push([e, 0]); });
 
   const wardCount = {};
   borrowRows.forEach(r => { const w = r.ward || 'ไม่ระบุ'; wardCount[w] = (wardCount[w] || 0) + 1; });
   const wardTop5 = Object.entries(wardCount).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
-  const daysInMonth = lastOfLastMonth.getDate();
-  const utilization = equipRanked.map(([equip, cnt]) => [equip, cnt, daysInMonth, (cnt / daysInMonth).toFixed(2)]);
-
-  const avgDays = rptCalcAvgBorrowDays(borrowRows, returnRows);
-  const prep = await rptGatherPrepareStats(firstOfLastMonth, firstOfThisMonth);
+  // เดิมนับเฉพาะ action ที่มี "ยืม" (ไม่รวมย้ายวอร์ด) — คงเงื่อนไขเดิมของสรุปผู้บริหารไว้
+  const stillBorrowed = status.filter(e => String(e.lastAction || '').includes('ยืม')).length;
 
   return {
     ok: true, monthTH,
     total: borrowRows.length, totalReturn: returnRows.length,
-    equipRanked, wardTop5, utilization, avgDays, daysInMonth, prep,
+    daysInMonth: new Date(firstOfThisMonth - 1).getDate(),
+    equipRanked, wardTop5,
+    avgDays: rptCalcAvgBorrowDays(borrowRows, raw.filter(isReturn)),
+    prep, stillBorrowed,
+    borrowThisMonthMTD: raw.filter(r => isBorrow(r) && !inLastMonth(r)).length,
     generatedAt: new Intl.DateTimeFormat('th-TH-u-ca-gregory', { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(now),
     message: 'สร้างรายงานประจำเดือน ' + monthTH + ' เรียบร้อยแล้ว'
   };
@@ -386,9 +396,6 @@ async function exportMonthlyReportPDF(d) {
   doc.setFontSize(18); doc.text('รายงานประจำเดือน ' + d.monthTH, 40, y); y += 18;
   doc.setFontSize(12); doc.text('วันที่พิมพ์: ' + d.generatedAt, 40, y); y += 24;
 
-  doc.setFontSize(14); doc.text(`รายการยืมทั้งหมด: ${d.total} ครั้ง   รายการคืนทั้งหมด: ${d.totalReturn} ครั้ง   จำนวนวันในเดือน: ${d.daysInMonth} วัน`, 40, y);
-  y += 22;
-
   const section = (title, opts) => {
     if (y > 700) { doc.addPage(); doc.setFont(PDF_FONT); y = 44; }
     doc.setFontSize(15); doc.text(title, 40, y);
@@ -396,24 +403,41 @@ async function exportMonthlyReportPDF(d) {
     y = doc.lastAutoTable.finalY + 24;
   };
 
-  section('ก) อุปกรณ์ที่ถูกยืม (จัดอันดับ)', {
-    head: [['อันดับ', 'ประเภทเครื่อง', 'จำนวนครั้ง', 'สัดส่วน (%)']],
-    body: d.equipRanked.map(([equip, cnt], i) => [i + 1, equip, cnt, d.total > 0 ? ((cnt / d.total) * 100).toFixed(1) + '%' : '0.0%'])
+  const top = d.equipRanked[0] && d.equipRanked[0][1] > 0 ? d.equipRanked[0] : ['ไม่มีข้อมูล', 0];
+  const topWard = d.wardTop5[0] || ['ไม่มีข้อมูล', 0];
+  section('สรุปผู้บริหาร', {
+    body: [
+      ['จำนวนการยืมทั้งหมด', d.total + ' ครั้ง'],
+      ['จำนวนการคืนทั้งหมด', d.totalReturn + ' ครั้ง'],
+      ['อุปกรณ์ที่ถูกยืมมากที่สุด', top[0] + '  (' + top[1] + ' ครั้ง)'],
+      ['หน่วยงานที่ยืมมากที่สุด', topWard[0] + '  (' + topWard[1] + ' ครั้ง)'],
+      ['เครื่องที่ยังค้างอยู่ ณ วันที่พิมพ์', d.stillBorrowed + ' เครื่อง'],
+      ['การยืมเดือนนี้ (ถึงวันที่พิมพ์)', d.borrowThisMonthMTD + ' ครั้ง']
+    ],
+    styles: { fontSize: 14, cellPadding: 6 },
+    columnStyles: { 0: { cellWidth: 220 }, 1: { textColor: [10, 100, 120] } }
+  });
+
+  const prepBy = (d.prep && d.prep.byEquip) || {};
+  section(`ก) อุปกรณ์ที่ถูกยืม (จัดอันดับ) — ${d.daysInMonth} วัน`, {
+    head: [['อันดับ', 'ประเภทเครื่อง', 'ยืม (ครั้ง)', 'สัดส่วน', 'เฉลี่ย/วัน', 'เตรียมโดยศูนย์']],
+    body: d.equipRanked.map(([equip, cnt], i) => [
+      cnt > 0 ? i + 1 : '-', equip, cnt,
+      d.total > 0 ? ((cnt / d.total) * 100).toFixed(1) + '%' : '0.0%',
+      (cnt / d.daysInMonth).toFixed(2),
+      prepBy[equip] || 0
+    ])
   });
   section('ข) หน่วยงานที่ยืมมากที่สุด 5 อันดับแรก', {
     head: [['อันดับ', 'หน่วยงาน', 'จำนวนครั้ง']],
     body: d.wardTop5.map(([ward, cnt], i) => [i + 1, ward, cnt])
   });
-  section('ค) อัตราการใช้งานเฉลี่ยต่อวัน (Utilization Rate)', {
-    head: [['ประเภทเครื่อง', 'ยืมทั้งเดือน (ครั้ง)', 'จำนวนวัน', 'เฉลี่ย (ครั้ง/วัน)']],
-    body: d.utilization
+  section('ค) ระยะเวลายืมเฉลี่ย (นับถึงวันคืนจริง แม้คืนในเดือนถัดไป)', {
+    head: [['ประเภทเครื่อง', 'ระยะเวลาเฉลี่ย (วัน)', 'คืนแล้ว (ครั้ง)', 'ยังไม่คืน (ครั้ง)']],
+    body: d.avgDays.length ? d.avgDays : [['ไม่มีข้อมูล', '', '', '']]
   });
-  section('ง) ระยะเวลายืมเฉลี่ย', {
-    head: [['ประเภทเครื่อง', 'ระยะเวลาเฉลี่ย (วัน)', 'จำนวนคู่ที่คำนวณได้']],
-    body: d.avgDays.length ? d.avgDays.map(([equip, avg, count]) => [equip, avg, count + ' คู่']) : [['ไม่สามารถคำนวณได้ (ต้องการข้อมูลคืนที่ตรงกัน)', '', '']]
-  });
-  const p = d.prep || { total: 0, used: 0, waiting: 0, cancelled: 0, byEquip: [], byPreparer: [] };
-  section('จ) การเตรียมเครื่อง (โดยศูนย์เครื่องมือแพทย์)', {
+  const p = d.prep || { total: 0, used: 0, waiting: 0, cancelled: 0 };
+  section('ง) การเตรียมเครื่อง (โดยศูนย์เครื่องมือแพทย์)', {
     body: [
       ['เตรียมทั้งหมด', p.total + ' ครั้ง'],
       ['ส่งมอบ/ถูกยืมแล้ว', p.used + ' ครั้ง'],
@@ -421,78 +445,8 @@ async function exportMonthlyReportPDF(d) {
       ['ยกเลิก', p.cancelled + ' ครั้ง']
     ]
   });
-  if (p.byEquip && p.byEquip.length) {
-    section('แยกตามประเภทเครื่อง', { head: [['ประเภทเครื่อง', 'จำนวนครั้ง']], body: p.byEquip });
-  }
-  if (p.byPreparer && p.byPreparer.length) {
-    section('แยกตามผู้เตรียม', { head: [['ผู้เตรียม', 'จำนวนครั้ง']], body: p.byPreparer });
-  }
 
   doc.save('Monthly_Report_' + d.monthTH.replace(' ', '_') + '.pdf');
-}
-
-/* ============================================================ EXECUTIVE SUMMARY (เทียบเท่า generateExecutiveSummary()) ============================================================ */
-async function computeExecutiveSummary() {
-  const now = new Date();
-  const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const firstOfLastMo = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const lastOfLastMo = new Date(firstOfMonth - 1);
-  const monthTH = rptThaiMonthYear(firstOfLastMo);
-
-  // ดึงเฉพาะช่วงเดือนที่แล้ว→ปัจจุบัน (ไม่ต้องโหลดประวัติทั้งตาราง) + สถานะปัจจุบันจาก view
-  const [raw, status] = await Promise.all([
-    fetchAllPages(() => supabase.from('borrow_records').select('action, equipment_name, ward, recorded_at')
-      .gte('recorded_at', firstOfLastMo.toISOString()).lte('recorded_at', now.toISOString())
-      .order('recorded_at').order('id')),
-    fetchEquipmentStatus()
-  ]);
-  if (!raw.length && !status.length) return { ok: false, error: 'ไม่มีข้อมูลในระบบ' };
-
-  const lastMoRows = raw.filter(r => { const ts = new Date(r.recorded_at); return ts >= firstOfLastMo && ts <= lastOfLastMo; });
-  const borrowLast = lastMoRows.filter(r => (r.action || '').includes('ยืม'));
-  const returnLast = lastMoRows.filter(r => (r.action || '').includes('คืน'));
-
-  const thisMonthRows = raw.filter(r => { const ts = new Date(r.recorded_at); return ts >= firstOfMonth && ts <= now; });
-  const borrowThis = thisMonthRows.filter(r => (r.action || '').includes('ยืม'));
-
-  const ec = {}; borrowLast.forEach(r => { const e = r.equipment_name || ''; ec[e] = (ec[e] || 0) + 1; });
-  const topEquip = Object.entries(ec).sort((a, b) => b[1] - a[1])[0] || ['ไม่มีข้อมูล', 0];
-
-  const wc = {}; borrowLast.forEach(r => { const w = r.ward || ''; wc[w] = (wc[w] || 0) + 1; });
-  const topWard = Object.entries(wc).sort((a, b) => b[1] - a[1])[0] || ['ไม่มีข้อมูล', 0];
-
-  // เดิมนับเฉพาะ action ที่มี "ยืม" (ไม่รวมย้ายวอร์ด) — คงเงื่อนไขเดิมไว้
-  const stillBorrowed = status.filter(e => String(e.lastAction || '').includes('ยืม')).length;
-
-  return {
-    ok: true, monthTH,
-    generatedAt: new Intl.DateTimeFormat('th-TH-u-ca-gregory', { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(now),
-    totalBorrowLastMonth: borrowLast.length, totalReturnLastMonth: returnLast.length,
-    stillBorrowed, topEquipName: topEquip[0], topEquipCount: topEquip[1],
-    topWardName: topWard[0], topWardCount: topWard[1], borrowThisMonthMTD: borrowThis.length,
-    message: 'สร้างสรุปผู้บริหาร ' + monthTH + ' เรียบร้อยแล้ว'
-  };
-}
-
-async function exportExecSummaryPDF(d) {
-  const doc = await newThaiPdf();
-  doc.setFontSize(20); doc.text(HOSPITAL_NAME, 40, 44);
-  doc.setFontSize(18); doc.text('สรุปผู้บริหาร - ' + d.monthTH, 40, 66);
-  doc.setFontSize(12); doc.text('จัดทำ: ' + d.generatedAt, 40, 84);
-  thaiTable(doc, {
-    startY: 100,
-    body: [
-      ['จำนวนการยืมทั้งหมด', d.totalBorrowLastMonth + ' ครั้ง'],
-      ['จำนวนการคืนทั้งหมด', d.totalReturnLastMonth + ' ครั้ง'],
-      ['เครื่องที่ยังค้างอยู่ ณ ปัจจุบัน', d.stillBorrowed + ' เครื่อง'],
-      ['อุปกรณ์ที่ถูกยืมมากที่สุด', d.topEquipName + '  (' + d.topEquipCount + ' ครั้ง)'],
-      ['หน่วยงานที่ยืมมากที่สุด', d.topWardName + '  (' + d.topWardCount + ' ครั้ง)'],
-      ['การยืมเดือนนี้ (ถึงปัจจุบัน)', d.borrowThisMonthMTD + ' ครั้ง']
-    ],
-    styles: { fontSize: 15, cellPadding: 8 },
-    columnStyles: { 1: { textColor: [10, 100, 120] } }
-  });
-  doc.save('ExecSummary_' + d.monthTH.replace(' ', '_') + '.pdf');
 }
 
 /* ============================================================ C2 REPORT (เทียบเท่า generateC2Report()) ============================================================ */

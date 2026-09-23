@@ -163,10 +163,21 @@ body{background:#0c6173!important;background-image:none!important}
   </div>
   <h1>MEMs</h1>
   <div class="sub">Medical Equipment Management Systems</div>
-  <div class="page-title">⚙️ การตั้งค่า / จัดการบัญชีผู้ใช้</div>
+  <div class="page-title">⚙️ การตั้งค่า / จัดการบัญชีผู้ใช้ / แจ้งเตือน</div>
 </header>
 
 <div class="content">
+  <div class="card">
+    <div class="ctrl-row" style="margin-bottom:0">
+      <div>
+        <div style="font-size:15px;font-weight:800">🔔 ส่งแจ้งเตือน Telegram ตอนนี้</div>
+        <div style="font-size:13px;color:var(--muted)">ส่งสรุป C2 ที่ยืมเกินกำหนดและครุภัณฑ์ใกล้หมดทันที (รูปแบบเดียวกับที่ส่งอัตโนมัติทุกวัน 08.00 น.)</div>
+      </div>
+      <button class="add-btn" id="btnDigest" onclick="sendDigestNow()">ส่งแจ้งเตือนตอนนี้</button>
+    </div>
+    <div id="digestResult" style="display:none;margin-top:12px;font-size:13px"></div>
+  </div>
+
   <div class="card">
     <div class="ctrl-row">
       <div style="font-size:14px;color:var(--muted)">บัญชีทั้งหมดในระบบ — เฉพาะแอดมินเท่านั้นที่เข้าหน้านี้ได้</div>
@@ -347,6 +358,26 @@ function toast(msg) {
   t.textContent = msg;
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+async function sendDigestNow() {
+  const btn = document.getElementById('btnDigest');
+  const out = document.getElementById('digestResult');
+  btn.disabled = true; btn.textContent = 'กำลังส่ง…';
+  const res = await notifyTelegram({ type: 'digest', manual: true });
+  btn.disabled = false; btn.textContent = 'ส่งแจ้งเตือนตอนนี้';
+  let html;
+  if (res.skipped) {
+    html = 'ℹ️ ตอนนี้ไม่มีรายการ "ยืมเกินกำหนด" หรือ "ใกล้หมด" จึงไม่ได้ส่งข้อความ';
+  } else if (!res.configured) {
+    html = '<span style="color:var(--red)">⚠️ ยังไม่ได้ตั้งค่า Telegram' + (res.error ? ': ' + memsEsc(res.error) : '') + '</span>';
+  } else {
+    html = (res.sent ? '✅ ส่งสำเร็จ' : '<span style="color:var(--red)">❌ ส่งไม่สำเร็จ' + (res.statusCode ? ' (HTTP ' + res.statusCode + ')' : '') + ' ' + memsEsc(res.errorDetail || '') + '</span>') +
+      ' — ยืมเกินกำหนด (C2) ' + (res.overdueCount || 0) + ' รายการ, ใกล้หมด ' + (res.shortageCount || 0) + ' รายการ' +
+      (res.message ? '<pre style="white-space:pre-wrap;background:var(--bg);border-radius:10px;padding:10px 12px;font-family:inherit;margin-top:8px">' + memsEsc(res.message) + '</pre>' : '');
+  }
+  out.innerHTML = html; out.style.display = 'block';
+  toast(res.skipped ? 'ℹ️ ไม่มีรายการแจ้งเตือน' : res.sent ? '✅ ส่งแจ้งเตือนสำเร็จ' : '❌ ส่งแจ้งเตือนไม่สำเร็จ');
 }
 
 function buildPermCheckboxes() {
