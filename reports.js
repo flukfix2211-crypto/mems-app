@@ -539,6 +539,7 @@ async function computeMonthlyReport() {
 
 async function exportMonthlyReportPDF(d, options) {
   const doc = await newThaiPdf();
+  const reportTitle = 'รายงานประจำเดือน ' + d.monthTH;
   let y = rptPdfHeader(doc, 'รายงานประจำเดือน', d.monthTH, d.generatedAt);
   y = rptPdfMetricCards(doc, [
     ['รายการยืมทั้งหมด', d.total + ' ครั้ง'],
@@ -553,7 +554,14 @@ async function exportMonthlyReportPDF(d, options) {
       y = rptPdfContinuationHeader(doc, 'รายงานประจำเดือน ' + d.monthTH);
     }
     y = rptPdfSectionTitle(doc, title, y);
-    thaiTable(doc, Object.assign({ startY: y }, opts));
+    const tableOpts = Object.assign({ startY: y }, opts);
+    const existingHook = tableOpts.didDrawPage;
+    tableOpts.margin = Object.assign({ top: 55 }, tableOpts.margin || {});
+    tableOpts.didDrawPage = data => {
+      if (data.pageNumber > 1) rptPdfContinuationHeader(doc, reportTitle);
+      if (existingHook) existingHook(data);
+    };
+    thaiTable(doc, tableOpts);
     y = doc.lastAutoTable.finalY + 27;
   };
 
@@ -767,7 +775,11 @@ async function computeC2Report() {
 
 async function exportC2ReportPDF(d, options) {
   const doc = await newThaiPdf();
-  let y = rptPdfHeader(doc, 'รายงานสถิติเครื่อง C2 รายเครื่อง', 'ข้อมูลสะสมตั้งแต่เริ่มใช้งาน', d.generatedAt);
+  const reportTitle = 'รายงานเครื่อง C2';
+  const continuationHook = data => {
+    if (data.pageNumber > 1) rptPdfContinuationHeader(doc, reportTitle);
+  };
+  let y = rptPdfHeader(doc, reportTitle, 'สถิติรายเครื่องและการใช้งานแยกตามหน่วยงาน', d.generatedAt);
   y = rptPdfMetricCards(doc, [
     ['เครื่องที่เคยใช้', d.usedUnits + ' เครื่อง'],
     ['กำลังถูกยืม', d.activeNow + ' เครื่อง'],
@@ -781,6 +793,8 @@ async function exportC2ReportPDF(d, options) {
     head: [['No.', 'จำนวนครั้ง', 'เวลาถูกยืมรวม', 'เวลาว่างรวม', 'ครั้งที่ว่าง', 'สถานะปัจจุบัน']],
     body: d.statList.map(s => [s.no, s.borrowCount + ' ครั้ง', rptFmtDuration(s.borrowedMs), rptFmtDuration(s.availableMs), s.availableCount + ' ครั้ง', s.currentStatus]),
     styles: { fontSize: 10.5 },
+    margin: { top: 55 },
+    didDrawPage: continuationHook,
     columnStyles: { 0: { halign: 'center', cellWidth: 38 }, 1: { halign: 'right' }, 4: { halign: 'right' } }
   });
   y = doc.lastAutoTable.finalY + 28;
@@ -802,6 +816,8 @@ async function exportC2ReportPDF(d, options) {
       head: [['No.', 'หน่วยงาน', 'จำนวนครั้ง', 'เวลารวม']],
       body: wardRows,
       styles: { fontSize: 10.5 },
+      margin: { top: 55 },
+      didDrawPage: continuationHook,
       columnStyles: { 0: { halign: 'center', cellWidth: 40 }, 2: { halign: 'right' }, 3: { halign: 'right' } }
     });
   }
