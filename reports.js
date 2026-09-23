@@ -26,6 +26,7 @@ function rptFmtDuration(ms) {
 /* ============================================================ PDF (jsPDF + ฟอนต์ไทย) ============================================================ */
 // ฟอนต์มาตรฐานของ jsPDF (Helvetica) ไม่มีอักษรไทย — ต้องฝัง THSarabun.ttf (อยู่ใน repo) ก่อนวาดข้อความไทยทุกครั้ง
 let _thaiFontB64 = null;
+let _memsLogoDataUrl = null;
 async function loadThaiFontB64() {
   if (_thaiFontB64) return _thaiFontB64;
   const res = await fetch('THSarabun.ttf');
@@ -36,6 +37,18 @@ async function loadThaiFontB64() {
   _thaiFontB64 = btoa(bin);
   return _thaiFontB64;
 }
+
+async function loadMemsLogoDataUrl() {
+  if (_memsLogoDataUrl) return _memsLogoDataUrl;
+  const res = await fetch('logo.png');
+  if (!res.ok) throw new Error('โหลดโลโก้ MEMs ไม่ได้ (HTTP ' + res.status + ')');
+  const buf = new Uint8Array(await res.arrayBuffer());
+  let bin = '';
+  for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
+  _memsLogoDataUrl = 'data:image/png;base64,' + btoa(bin);
+  return _memsLogoDataUrl;
+}
+
 const PDF_FONT = 'THSarabun';
 async function newThaiPdf(opts) {
   const { jsPDF } = window.jspdf;
@@ -43,6 +56,12 @@ async function newThaiPdf(opts) {
   doc.addFileToVFS('THSarabun.ttf', await loadThaiFontB64());
   doc.addFont('THSarabun.ttf', PDF_FONT, 'normal');
   doc.setFont(PDF_FONT);
+  try {
+    doc.__memsLogoDataUrl = await loadMemsLogoDataUrl();
+  } catch (err) {
+    console.warn(err);
+    doc.__memsLogoDataUrl = null;
+  }
   return doc;
 }
 // ตัวเลือกร่วมของ autoTable: ใช้ฟอนต์ไทยทุกส่วน (Sarabun ตัวเล็กกว่าฟอนต์ละติน จึงขยายขนาดขึ้นเล็กน้อย)
@@ -87,6 +106,19 @@ function thaiTable(doc, opts) {
   doc.autoTable(merged);
 }
 
+function rptPdfLogoBadge(doc, x, y, width, height) {
+  doc.setFillColor(255, 255, 255);
+  doc.roundedRect(x, y, width, height, 7, 7, 'F');
+  if (doc.__memsLogoDataUrl) {
+    const inset = Math.max(4, Math.min(width, height) * .12);
+    doc.addImage(doc.__memsLogoDataUrl, 'PNG', x + inset, y + inset, width - inset * 2, height - inset * 2, 'mems-logo', 'FAST');
+    return;
+  }
+  doc.setTextColor(...PDF_THEME.brand);
+  doc.setFontSize(Math.max(10, Math.min(width, height) * .28));
+  doc.text('MEMs', x + width / 2, y + height / 2 + 4, { align: 'center' });
+}
+
 function rptPdfHeader(doc, title, subtitle, generatedAt) {
   const pageW = doc.internal.pageSize.getWidth();
   doc.setFillColor(...PDF_THEME.brand);
@@ -99,11 +131,7 @@ function rptPdfHeader(doc, title, subtitle, generatedAt) {
   doc.text(title, 40, 55);
   doc.setFontSize(12);
   doc.text(subtitle || 'ระบบจัดการเครื่องมือแพทย์ MEMs', 40, 76);
-  doc.setFillColor(255, 255, 255);
-  doc.roundedRect(pageW - 105, 25, 65, 35, 8, 8, 'F');
-  doc.setTextColor(...PDF_THEME.brand);
-  doc.setFontSize(16);
-  doc.text('MEMs', pageW - 72.5, 47, { align: 'center' });
+  rptPdfLogoBadge(doc, pageW - 96, 16, 56, 60);
   doc.setTextColor(...PDF_THEME.muted);
   doc.setFontSize(10.5);
   doc.text('จัดทำเมื่อ ' + generatedAt, 40, 113);
@@ -150,6 +178,7 @@ function rptPdfContinuationHeader(doc, title) {
   doc.setFont(PDF_FONT, 'normal');
   doc.setFontSize(12);
   doc.text(title + ' (ต่อ)', 40, 22);
+  rptPdfLogoBadge(doc, pageW - 66, 5, 26, 26);
   doc.setTextColor(...PDF_THEME.text);
   return 55;
 }
@@ -780,3 +809,4 @@ async function exportC2ReportPDF(d, options) {
   rptPdfFooter(doc);
   return rptDeliverPdf(doc, 'C2_Report.pdf', options);
 }
+
