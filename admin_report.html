@@ -194,8 +194,9 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 </style>
   <link rel="stylesheet" href="mems-ui.css">
   <link rel="stylesheet" href="mems-auth-theme.css?v=20260923-app-2">
+  <link rel="stylesheet" href="report-office.css?v=20260923-report-1">
 </head>
-<body>
+<body class="mems-report">
 
 <!-- LOGIN OVERLAY -->
 <div id="loginOverlay" style="position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#0A6478 0%,#0E7D94 100%);display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box">
@@ -242,6 +243,18 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 
 <!-- MAIN -->
 <main class="main">
+
+  <section class="report-intro" aria-labelledby="reportCenterTitle">
+    <div>
+      <div class="report-eyebrow">MEMs Report Center</div>
+      <h2 id="reportCenterTitle">ศูนย์รายงานและสรุปข้อมูล</h2>
+      <p>สร้างรายงานประจำเดือน ส่งออกเอกสาร PDF และติดตามสถิติการใช้งานเครื่องมือแพทย์จากจุดเดียว</p>
+    </div>
+    <div class="report-intro-meta" aria-label="ความสามารถของระบบรายงาน">
+      <span class="report-meta-chip">ข้อมูลล่าสุดจากระบบ</span>
+      <span class="report-meta-chip">รองรับไฟล์ PDF</span>
+    </div>
+  </section>
 
   <!-- ── ACTION CARDS ── -->
   <div class="section-label">เครื่องมือสร้างรายงาน</div>
@@ -325,7 +338,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 
   <!-- ── C2 MONTHLY STATS ── -->
   <div class="section-label">สถิติรายเดือน (C2)</div>
-  <div class="history-card" style="margin-bottom:32px">
+  <div class="history-card report-filter-card" style="margin-bottom:32px">
     <div style="padding:20px 22px">
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:14px">
         <div>
