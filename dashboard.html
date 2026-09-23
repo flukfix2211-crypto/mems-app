@@ -106,7 +106,16 @@
 
     /* ALERT BANNER (หน้าแรก) */
     .alert-banner { background: var(--card); border-radius: var(--r); box-shadow: var(--sh); margin-bottom: 16px; overflow: hidden; }
-    .alert-banner .card-head { background: #FDEAEA; color: #B82E2E; }
+    .alert-banner .card-head { background: #FDEAEA; color: #B82E2E; flex-wrap: wrap; }
+    .alert-filter { margin-left: auto; display: flex; flex-wrap: wrap; gap: 6px; }
+    .alert-filter button { font: inherit; font-size: 12px; font-weight: 600; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--border); background: #fff; color: #475569; cursor: pointer; transition: background .15s, color .15s, border-color .15s; }
+    .alert-filter button:hover { border-color: #94a3b8; }
+    .alert-filter button.active { background: #1e293b; border-color: #1e293b; color: #fff; }
+    .alert-filter button .cnt { display: inline-block; min-width: 18px; margin-left: 4px; padding: 0 5px; border-radius: 999px; background: rgba(148,163,184,.25); font-size: 11px; text-align: center; }
+    .alert-filter button.active .cnt { background: rgba(255,255,255,.2); }
+    .alert-source { margin-top: 12px; font-size: 12px; color: var(--muted); }
+    .alert-source a { color: inherit; font-weight: 600; }
+    .alert-empty { color: var(--muted); font-size: 13px; text-align: center; padding: 12px 0; }
     .trend-bar-row { display: flex; align-items: flex-end; gap: 3px; height: 90px; }
     .trend-bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 2px; height: 100%; }
 
@@ -365,7 +374,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   <!-- HOME VIEW: NAV CARDS -->
   <div id="viewHome" class="view active"><div class="dash-page-heading"><div><div class="dash-eyebrow">MEDICAL EQUIPMENT MANAGEMENT</div><h2>ภาพรวมเครื่องมือแพทย์</h2><p>ติดตามสถานะเครื่องมือและการยืม–คืนระหว่างหน่วยงาน</p></div><button id="dashRefresh" class="dash-refresh" onclick="loadAll()" type="button">↻ อัปเดตข้อมูล</button></div><section class="dash-summary" aria-label="สรุปการใช้งาน"><article class="dash-stat"><div class="dash-stat-label">อยู่ระหว่างยืม</div><div class="dash-stat-value"><strong id="dash-borrowed">—</strong><span>เครื่อง</span></div><small>สถานะล่าสุดในระบบ</small></article><article class="dash-stat"><div class="dash-stat-label">หน่วยงานที่ยืม</div><div class="dash-stat-value"><strong id="dash-wards">—</strong><span>หน่วยงาน</span></div><small>มีเครื่องมืออยู่ระหว่างยืม</small></article><article class="dash-stat"><div class="dash-stat-label">รายการยืมวันนี้</div><div class="dash-stat-value"><strong id="dash-borrow">—</strong><span>รายการ</span></div><small>รายการที่บันทึกในวันนี้</small></article><article class="dash-stat"><div class="dash-stat-label">รายการคืนวันนี้</div><div class="dash-stat-value"><strong id="dash-return">—</strong><span>รายการ</span></div><small>รายการที่บันทึกในวันนี้</small></article></section><div id="dashLoadNote" class="dash-load-note" role="status">กำลังโหลดข้อมูล…</div>
     <div id="homeAlertBanner" class="alert-banner" style="display:none">
-      <div class="card-head"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0 1 12 0v6l2 3H4l2-3zM10 21h4"/></svg> แจ้งเตือน</div>
+      <div class="card-head"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0 1 12 0v6l2 3H4l2-3zM10 21h4"/></svg> แจ้งเตือน<div class="alert-filter" id="homeAlertFilter" role="tablist" aria-label="เลือกหัวข้อแจ้งเตือน"></div></div>
       <div class="card-body" id="homeAlertBody"></div>
     </div>
 
@@ -1233,8 +1242,9 @@ async function loadAll() {
     const [records, equipment, assets] = await Promise.all([
       fetchRecords(),
       fetchEquipmentStatus(),
-      supabase.from('assets').select('no, type, status').then(r => r.data || []).catch(() => [])
-    ]);
+      supabase.from('assets').select('no, type, status').then(r => r.data || []).catch(() => []),
+      fetchRoundC2().catch(err => { console.warn('Round Ventilator โหลดไม่สำเร็จ', err); return null; })
+    ]).then(([rec, eq, ast, round]) => { roundC2 = round; return [rec, eq, ast]; });
     allRecords  = records;
     equipStatus = equipment;
     assetRows   = assets;
@@ -1267,18 +1277,131 @@ const SHORTAGE_MAX = 2;
 const TREND_DAYS = 30;
 
 // รวมโค้ดคำนวณ alert ไว้จุดเดียว ใช้ทั้ง Home banner และ KPI Display slide
+// ── ข้อมูลเดินราวด์หน้างานจริง (Round Ventilator Dashboard) ─────────────
+// https://beesukanya2534.github.io/ventilator-round/ — เจ้าหน้าที่บันทึกทุกครั้งที่เดินราวด์ (ตึก, เลขเครื่อง, วันครบเปลี่ยน Circuit)
+// ใช้เป็นแหล่งจริงของ "วันครบเปลี่ยนเซ็ต" และใช้ตรวจว่าเครื่อง C2 ที่ MEMs ถือว่ายืมอยู่ ยังอยู่ที่ตึกจริงหรือกลับศูนย์แล้ว
+// (anon key สาธารณะชุดเดียวกับที่หน้า Round ใช้ อ่านได้อย่างเดียว)
+const ROUND_SUPABASE_URL = 'https://xbwrawrdnygcfctnxezq.supabase.co';
+const ROUND_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhid3Jhd3JkbnlnY2ZjdG54ZXpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk5NzE3MzUsImV4cCI6MjEwNTU0NzczNX0.CgPsQ19JBw-4QzwWiuCxYB3p0mmlPsF2CxA7rmJDKdA';
+const ROUND_ACTIVE_DAYS = 7;   // เหมือนหน้า Round: นับเฉพาะเครื่องที่พบในราวด์ภายใน 7 วันก่อนราวด์ล่าสุด
+const CIRCUIT_SOON_DAYS = 2;   // แจ้งเตือนล่วงหน้าเมื่อวันเปลี่ยน (อังคาร/พฤหัส) ถึงภายใน 2 วัน
+let roundC2 = null;            // null = โหลดไม่ได้ → ใช้เกณฑ์เดิม (ยืมเกิน 14 วัน)
+
+function isoAddDays(iso, n) {
+  const d = new Date(iso + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+function isoWeekday(iso) { return new Date(iso + 'T00:00:00Z').getUTCDay(); }
+function isoDaysBetween(a, b) { return Math.round((new Date(b + 'T00:00:00Z') - new Date(a + 'T00:00:00Z')) / 86400000); }
+function thaiDateShort(iso) {
+  const m = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  const [y, mo, d] = iso.split('-').map(Number);
+  return `${d} ${m[mo - 1]} ${y + 543}`;
+}
+function thaiWeekdayName(iso) { return ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'][isoWeekday(iso)]; }
+
+// วันที่สั้นแบบ พ.ศ. ที่เจ้าหน้าที่คีย์ (เช่น "6/10/69", "3-10-69") → ISO — ตรรกะเดียวกับหน้า Round
+function roundDueToISO(raw) {
+  if (raw == null) return null;
+  const s = String(raw).trim().replace(/-/g, '/');
+  const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if (!m) return null;
+  let a = +m[1], b = +m[2], dd, mm;
+  if (a > 12) { dd = a; mm = b; } else if (b > 12) { mm = a; dd = b; } else { dd = a; mm = b; }
+  let year = m[3].length >= 4 ? +m[3] : 1957 + +m[3];
+  if (year > 2400) year -= 543;
+  if (mm < 1 || mm > 12 || dd < 1 || dd > 31) return null;
+  return `${year}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`;
+}
+// เปลี่ยน Circuit ได้เฉพาะวันอังคาร/พฤหัส: ครบอังคาร→อังคาร, พุธ/พฤหัส→พฤหัส, ศุกร์–จันทร์→อังคารถัดไป
+// ถ้าเลยวันอังคารไปแล้ว เลื่อนไปพฤหัสของสัปดาห์เดียวกัน (เหมือนหน้า Round)
+const CIRCUIT_DAY_OFFSET = { 0: 2, 1: 1, 2: 0, 3: 1, 4: 0, 5: 4, 6: 3 };
+function circuitChangeDay(dueISO, todayISO) {
+  let iso = isoAddDays(dueISO, CIRCUIT_DAY_OFFSET[isoWeekday(dueISO)]);
+  if (isoWeekday(iso) === 2 && todayISO > iso) iso = isoAddDays(iso, 2);
+  return iso;
+}
+// เลขเครื่องเป็นข้อความอิสระ ("25", "No.25", "C2-25") → "25"
+function roundMachineNo(raw) {
+  const m = String(raw || '').match(/\d+/);
+  return m ? String(parseInt(m[0], 10)) : null;
+}
+
+// ดึงราวด์ C2 ย้อนหลัง 60 วัน → { latestRoundDate, activeSince, byNumber: { "25": {ward, bed, dueISO, dueRaw, roundDate, recordedAt} } }
+async function fetchRoundC2() {
+  const since = isoAddDays(bkkDateStr(new Date()), -60);
+  const url = `${ROUND_SUPABASE_URL}/rest/v1/ventilator_rounds?select=recorded_at,round_date,ward,vent_type,machine_no,due_change_date,bed`
+    + `&round_date=gte.${since}&order=recorded_at.asc&limit=5000`;
+  const res = await fetch(url, { headers: { apikey: ROUND_SUPABASE_KEY, Authorization: 'Bearer ' + ROUND_SUPABASE_KEY } });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const rows = await res.json();
+  let latestRoundDate = null;
+  const byNumber = {};
+  rows.forEach(r => {
+    const date = String(r.round_date || '').slice(0, 10);
+    if (!date) return;
+    if (!latestRoundDate || date > latestRoundDate) latestRoundDate = date;   // วันราวด์ล่าสุด (ทุกประเภทเครื่อง)
+    if (!String(r.vent_type || '').trim().toLowerCase().startsWith('c2')) return;
+    const no = roundMachineNo(r.machine_no);
+    if (!no) return;
+    const recordedAt = r.recorded_at || date;
+    if (byNumber[no] && byNumber[no].recordedAt > recordedAt) return;
+    byNumber[no] = {
+      ward: String(r.ward || '').trim(), bed: r.bed || '', roundDate: date, recordedAt,
+      dueRaw: r.due_change_date || '', dueISO: roundDueToISO(r.due_change_date)
+    };
+  });
+  const activeSince = latestRoundDate ? isoAddDays(latestRoundDate, -ROUND_ACTIVE_DAYS) : null;
+  return { latestRoundDate, activeSince, byNumber };
+}
+
+// รวมโค้ดคำนวณ alert ไว้จุดเดียว ใช้ทั้ง Home banner และ KPI Display slide
+//   circuit    : C2 ที่ยืมอยู่และพบในราวด์ — ครบเปลี่ยน Circuit ตามวันที่ในราวด์ (เลยกำหนด / ใกล้ถึง)
+//   notInRound : MEMs ว่ายืมอยู่ แต่ไม่พบในราวด์ล่าสุด → น่าจะกลับศูนย์แล้ว ให้ตรวจสอบและบันทึกคืน
+//   notBorrowed: พบในราวด์ (อยู่ที่ตึกจริง) แต่ MEMs ไม่มีรายการยืมค้าง → ควรบันทึกยืม
+//   overdue    : ใช้เฉพาะเมื่อโหลดข้อมูลราวด์ไม่ได้ (เกณฑ์เดิม: ยืมเกิน 14 วัน)
 function computeAlerts() {
   const now = new Date();
+  const todayISO = bkkDateStr(now);
+  const borrowedC2 = equipStatus.filter(e => e.isBorrowed && String(e.equipment).includes('C2'));
+  const daysSince = e => { const dt = parseThaiTimestampStr(e.lastUpdate); return dt ? Math.floor((now - dt) / 86400000) : null; };
 
-  const overdue = equipStatus
-    .filter(e => e.isBorrowed && String(e.equipment).includes('C2'))
-    .map(e => {
-      const dt = parseThaiTimestampStr(e.lastUpdate);
-      const days = dt ? Math.floor((now - dt) / 86400000) : null;
-      return { number: e.number, ward: e.ward, days };
-    })
-    .filter(e => e.days !== null && e.days >= OVERDUE_C2_DAYS)
-    .sort((a, b) => b.days - a.days);
+  let overdue = [], circuit = [], notInRound = [], notBorrowed = [];
+  const round = roundC2 && roundC2.latestRoundDate ? roundC2 : null;
+  if (!round) {
+    overdue = borrowedC2
+      .map(e => ({ number: e.number, ward: e.ward, days: daysSince(e) }))
+      .filter(e => e.days !== null && e.days >= OVERDUE_C2_DAYS)
+      .sort((a, b) => b.days - a.days);
+  } else {
+    const active = no => { const r = round.byNumber[no]; return r && r.roundDate >= round.activeSince ? r : null; };
+    const borrowedNos = new Set();
+    borrowedC2.forEach(e => {
+      const no = roundMachineNo(e.number);
+      if (!no) return;
+      borrowedNos.add(no);
+      const r = active(no);
+      const base = { equipment: e.equipment, number: e.number, ward: e.ward, days: daysSince(e) ?? 0 };
+      if (!r) {
+        const last = round.byNumber[no];
+        notInRound.push({ ...base, lastRound: last ? last.roundDate : null, lastRoundWard: last ? last.ward : '' });
+        return;
+      }
+      if (!r.dueISO) return;
+      const changeISO = circuitChangeDay(r.dueISO, todayISO);
+      const diff = isoDaysBetween(todayISO, changeISO);
+      if (diff <= CIRCUIT_SOON_DAYS) circuit.push({ ...base, roundWard: r.ward, bed: r.bed, dueISO: r.dueISO, changeISO, diff });
+    });
+    Object.entries(round.byNumber).forEach(([no, r]) => {
+      if (r.roundDate < round.activeSince || borrowedNos.has(no)) return;
+      notBorrowed.push({ number: no, roundWard: r.ward, bed: r.bed, roundDate: r.roundDate });
+    });
+    const byNo = (a, b) => (parseInt(a.number, 10) || 0) - (parseInt(b.number, 10) || 0);
+    circuit.sort((a, b) => a.changeISO.localeCompare(b.changeISO) || byNo(a, b));
+    notInRound.sort(byNo);
+    notBorrowed.sort(byNo);
+  }
 
   // นับจำนวนเครื่อง "ใช้งานได้" ทั้งหมดต่อประเภท จากทะเบียนครุภัณฑ์ (assets) — ไม่ใช่แค่เครื่องที่เคยมีประวัติยืม-คืนใน equipment_status
   // (เดิมนับจาก equipStatus อย่างเดียว ทำให้เครื่องที่ยังไม่เคยถูกยืม/คืนเลยไม่ถูกนับว่า "พร้อมใช้" เลย ตัวเลขจึงต่ำกว่าความจริง)
@@ -1307,7 +1430,7 @@ function computeAlerts() {
     .filter(s => s.available <= SHORTAGE_MAX)
     .sort((a, b) => a.available - b.available);
 
-  return { overdue, shortage };
+  return { overdue, circuit, notInRound, notBorrowed, shortage, round };
 }
 
 // นับจำนวนยืม/คืนรายวัน ย้อนหลัง `days` วัน (รวมวันนี้) — ใช้ทั้ง Home และ KPI Display
@@ -1331,28 +1454,97 @@ function computeDailyTrend(days) {
   return out;
 }
 
-function renderAlertBanner() {
-  const banner = document.getElementById('homeAlertBanner');
-  const body = document.getElementById('homeAlertBody');
-  if (!banner || !body) return;
-  const { overdue, shortage } = computeAlerts();
-  if (!overdue.length && !shortage.length) { banner.style.display = 'none'; return; }
-  banner.style.display = 'block';
-  body.innerHTML = `<div class="equip-grid">${
-    overdue.map(o => `
-      <div class="equip-card borrowed clickable" onclick="openCircuitModal('${String(o.number).replace(/'/g,"\\'")}','${String(o.ward||'').replace(/'/g,"\\'")}',${o.days})" title="กดเพื่อบันทึกการเปลี่ยน Circuit">
+// หัวข้อแจ้งเตือนที่เลือกไว้ (จำไว้ในเบราว์เซอร์นี้)
+const ALERT_TOPICS = [
+  { key: 'all',         label: 'ทั้งหมด' },
+  { key: 'circuit',     label: '🔁 ครบเปลี่ยน Circuit' },
+  { key: 'overdue',     label: '⏰ C2 ยืมเกินกำหนด' },
+  { key: 'notInRound',  label: '🏠 ไม่พบในราวด์ (อาจคืนศูนย์แล้ว)' },
+  { key: 'notBorrowed', label: '📋 พบในราวด์ แต่ไม่มีรายการยืม' },
+  { key: 'shortage',    label: '⚠️ ใกล้หมด' }
+];
+let alertTopic = (() => { try { return localStorage.getItem('memsAlertTopic') || 'all'; } catch (_) { return 'all'; } })();
+
+function setAlertTopic(key) {
+  alertTopic = key;
+  try { localStorage.setItem('memsAlertTopic', key); } catch (_) {}
+  renderAlertBanner();
+}
+
+const jsq = v => String(v ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+function circuitWhen(c) {
+  if (c.diff < 0) return `เลยกำหนด ${-c.diff} วัน (ควรเปลี่ยน ${thaiWeekdayName(c.changeISO)} ${thaiDateShort(c.changeISO)})`;
+  if (c.diff === 0) return 'เปลี่ยนวันนี้';
+  return `เปลี่ยน ${thaiWeekdayName(c.changeISO)} ${thaiDateShort(c.changeISO)}`;
+}
+
+function alertCardsHTML(a) {
+  return {
+    circuit: a.circuit.map(c => `
+      <div class="equip-card ${c.diff < 0 ? 'borrowed' : 'warn'} clickable" onclick="openCircuitModal('${jsq(c.number)}','${jsq(c.ward)}',${c.days})" title="กดเพื่อบันทึกการเปลี่ยน Circuit">
+        <div class="equip-name">🔁 ครบเปลี่ยน Circuit</div>
+        <div class="equip-num" style="font-size:16px">No.${c.number}</div>
+        <div class="equip-ward">📍 ${c.roundWard || c.ward || '—'}${c.bed ? ' · เตียง ' + c.bed : ''}</div>
+        <div class="equip-who">${circuitWhen(c)}</div>
+      </div>`).join(''),
+    overdue: a.overdue.map(o => `
+      <div class="equip-card borrowed clickable" onclick="openCircuitModal('${jsq(o.number)}','${jsq(o.ward)}',${o.days})" title="กดเพื่อบันทึกการเปลี่ยน Circuit">
         <div class="equip-name">⏰ C2 ยืมเกินกำหนด</div>
         <div class="equip-num" style="font-size:16px">No.${o.number}</div>
         <div class="equip-ward">📍 ${o.ward || '—'}</div>
         <div class="equip-who">ยืมมาแล้ว ${o.days} วัน</div>
-      </div>`).join('') +
-    shortage.map(s => `
+      </div>`).join(''),
+    notInRound: a.notInRound.map(n => `
+      <div class="equip-card returned clickable" onclick="openToolReturnModal('${jsq(n.equipment)}','${jsq(n.number)}','${jsq(n.ward)}')" title="ตรวจสอบแล้วเครื่องอยู่ที่ศูนย์ → กดเพื่อบันทึกคืน">
+        <div class="equip-name">🏠 ไม่พบในราวด์</div>
+        <div class="equip-num" style="font-size:16px">No.${n.number}</div>
+        <div class="equip-ward">📍 MEMs: ${n.ward || '—'}</div>
+        <div class="equip-who">${n.lastRound ? `พบล่าสุด ${thaiDateShort(n.lastRound)}${n.lastRoundWard ? ' · ' + n.lastRoundWard : ''}` : 'ไม่พบในราวด์ 60 วันล่าสุด'} — ถ้าอยู่ที่ศูนย์แล้ว กดบันทึกคืน</div>
+      </div>`).join(''),
+    notBorrowed: a.notBorrowed.map(n => `
+      <div class="equip-card warn">
+        <div class="equip-name">📋 ไม่มีรายการยืม</div>
+        <div class="equip-num" style="font-size:16px">No.${n.number}</div>
+        <div class="equip-ward">📍 ราวด์: ${n.roundWard || '—'}${n.bed ? ' · เตียง ' + n.bed : ''}</div>
+        <div class="equip-who">พบในราวด์ ${thaiDateShort(n.roundDate)} แต่ MEMs ไม่มีรายการยืมค้าง — ควรบันทึกยืม</div>
+      </div>`).join(''),
+    shortage: a.shortage.map(s => `
       <div class="equip-card warn">
         <div class="equip-name">⚠️ ใกล้หมด</div>
         <div class="equip-num" style="font-size:16px">${s.equipment}</div>
         <div class="equip-who">เหลือว่าง ${s.available} · ยืมอยู่ ${s.borrowed} · ทั้งหมด ${s.total} เครื่อง</div>
       </div>`).join('')
-  }</div>`;
+  };
+}
+
+function renderAlertBanner() {
+  const banner = document.getElementById('homeAlertBanner');
+  const body = document.getElementById('homeAlertBody');
+  const filter = document.getElementById('homeAlertFilter');
+  if (!banner || !body) return;
+  const a = computeAlerts();
+  const keys = ALERT_TOPICS.map(t => t.key).filter(k => k !== 'all');
+  const counts = Object.fromEntries(keys.map(k => [k, a[k].length]));
+  counts.all = keys.reduce((n, k) => n + counts[k], 0);
+  if (!counts.all) { banner.style.display = 'none'; return; }
+  banner.style.display = 'block';
+  // ซ่อนหัวข้อที่ไม่เกี่ยว: "ยืมเกินกำหนด" ใช้เฉพาะตอนโหลดข้อมูลราวด์ไม่ได้, หัวข้อราวด์ใช้เฉพาะตอนโหลดได้
+  const topics = ALERT_TOPICS.filter(t => t.key === 'all' || t.key === 'shortage' || (a.round ? t.key !== 'overdue' : t.key === 'overdue'));
+  if (!topics.some(t => t.key === alertTopic)) alertTopic = 'all';
+
+  if (filter) {
+    filter.innerHTML = topics.map(t => `
+      <button type="button" role="tab" aria-selected="${t.key === alertTopic}" class="${t.key === alertTopic ? 'active' : ''}" onclick="setAlertTopic('${t.key}')">${t.label}<span class="cnt">${counts[t.key]}</span></button>`).join('');
+  }
+
+  const html = alertCardsHTML(a);
+  const cards = keys.filter(k => alertTopic === 'all' || alertTopic === k).map(k => html[k]).join('');
+  const source = a.round
+    ? `<div class="alert-source">ข้อมูลตึก/วันครบเปลี่ยนจาก <a href="https://beesukanya2534.github.io/ventilator-round/" target="_blank" rel="noopener">Round Ventilator</a> · ราวด์ล่าสุด ${thaiDateShort(a.round.latestRoundDate)}</div>`
+    : `<div class="alert-source">⚠️ โหลดข้อมูล Round Ventilator ไม่ได้ — ใช้เกณฑ์เดิม (ยืมเกิน ${OVERDUE_C2_DAYS} วัน)</div>`;
+  body.innerHTML = (cards
+    ? `<div class="equip-grid">${cards}</div>`
+    : `<div class="alert-empty">ไม่มีรายการในหัวข้อนี้</div>`) + source;
 }
 
 // ── C2 CIRCUIT CHANGE MODAL ─────────────────────────────────
@@ -2163,6 +2355,13 @@ function renderC2CircuitDue(items) {
       const dt = parseThaiTimestampStr(u.lastUpdate);
       if (!dt) return null;
       const daysBorrowed = Math.floor((now - dt) / 86400000);
+      // ถ้ามีวันครบเปลี่ยนจากราวด์หน้างาน (Round Ventilator) ให้ใช้วันนั้น (ปัดเป็นวันอังคาร/พฤหัส) — ไม่งั้นนับ 14 วันจากวันยืมเหมือนเดิม
+      const r = roundC2 && roundC2.activeSince && roundC2.byNumber[roundMachineNo(u.number)];
+      if (r && r.dueISO && r.roundDate >= roundC2.activeSince) {
+        const todayISO = bkkDateStr(now);
+        const changeISO = circuitChangeDay(r.dueISO, todayISO);
+        return { number: u.number, ward: u.ward, daysBorrowed, dueDate: new Date(changeISO + 'T00:00:00+07:00'), daysLeft: isoDaysBetween(todayISO, changeISO) };
+      }
       const dueDate = new Date(dt.getTime() + OVERDUE_C2_DAYS * 86400000);
       const daysLeft = Math.ceil((dueDate - now) / 86400000);
       return { number: u.number, ward: u.ward, daysBorrowed, dueDate, daysLeft };
@@ -2612,29 +2811,26 @@ async function renderKpiData() {
 function renderKpiAlerts() {
   const wrap = document.getElementById('kpiAlerts');
   if (!wrap) return;
-  const { overdue, shortage } = computeAlerts();
-  if (!overdue.length && !shortage.length) {
-    wrap.innerHTML = '<div style="color:#475569;font-size:14px;text-align:center;margin:auto"><svg class="mems-icon kpi-icon-3" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg> ไม่มีรายการแจ้งเตือน</div>';
-    return;
-  }
-  wrap.innerHTML = [
-    ...overdue.map(o => `
-      <div onclick="openCircuitModal('${String(o.number).replace(/'/g,"\\'")}','${String(o.ward||'').replace(/'/g,"\\'")}',${o.days})" title="กดเพื่อบันทึกการเปลี่ยน Circuit" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#0f172a;border-radius:12px;border-left:3px solid #ef4444;cursor:pointer">
-        <div style="font-size:18px"><svg class="mems-icon kpi-icon-4" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v5l3 2M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0"/></svg></div>
+  const a = computeAlerts();
+  const row = (color, icon, title, sub, onclick) => `
+      <div ${onclick ? `onclick="${onclick}"` : ''} style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#0f172a;border-radius:12px;border-left:3px solid ${color};${onclick ? 'cursor:pointer' : ''}">
+        <div style="font-size:18px">${icon}</div>
         <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:700;color:#e2e8f0">C2 No.${o.number} · ${o.ward || '—'}</div>
-          <div style="font-size:11px;color:#64748b">ยืมมาแล้ว ${o.days} วัน (เกิน ${OVERDUE_C2_DAYS} วัน)</div>
+          <div style="font-size:13px;font-weight:700;color:#e2e8f0">${title}</div>
+          <div style="font-size:11px;color:#64748b">${sub}</div>
         </div>
-      </div>`),
-    ...shortage.map(s => `
-      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#0f172a;border-radius:12px;border-left:3px solid #f59e0b">
-        <div style="font-size:18px"><svg class="mems-icon kpi-icon-5" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 10 18H2zM12 9v5m0 3v.1"/></svg></div>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:700;color:#e2e8f0">${s.equipment}</div>
-          <div style="font-size:11px;color:#64748b">เหลือว่าง ${s.available} · ยืมอยู่ ${s.borrowed} · ทั้งหมด ${s.total} เครื่อง</div>
-        </div>
-      </div>`)
-  ].join('');
+      </div>`;
+  const items = [
+    ...a.circuit.map(c => row(c.diff < 0 ? '#ef4444' : '#f59e0b', '🔁', `C2 No.${c.number} · ${c.roundWard || c.ward || '—'}`, circuitWhen(c),
+      `openCircuitModal('${jsq(c.number)}','${jsq(c.ward)}',${c.days})`)),
+    ...a.overdue.map(o => row('#ef4444', '⏰', `C2 No.${o.number} · ${o.ward || '—'}`, `ยืมมาแล้ว ${o.days} วัน (เกิน ${OVERDUE_C2_DAYS} วัน)`,
+      `openCircuitModal('${jsq(o.number)}','${jsq(o.ward)}',${o.days})`)),
+    ...a.notInRound.map(n => row('#10b981', '🏠', `C2 No.${n.number} · ไม่พบในราวด์`, `MEMs: ${n.ward || '—'} — อาจคืนศูนย์แล้ว`)),
+    ...a.notBorrowed.map(n => row('#f59e0b', '📋', `C2 No.${n.number} · ${n.roundWard || '—'}`, 'พบในราวด์ แต่ไม่มีรายการยืม')),
+    ...a.shortage.map(s => row('#f59e0b', '⚠️', s.equipment, `เหลือว่าง ${s.available} · ยืมอยู่ ${s.borrowed} · ทั้งหมด ${s.total} เครื่อง`))
+  ];
+  wrap.innerHTML = items.length ? items.join('')
+    : '<div style="color:#475569;font-size:14px;text-align:center;margin:auto"><svg class="mems-icon kpi-icon-3" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg> ไม่มีรายการแจ้งเตือน</div>';
 }
 
 // SLIDE 7: แนวโน้มยืม-คืน 30 วัน (ใช้ computeDailyTrend() เดียวกับ Home)
