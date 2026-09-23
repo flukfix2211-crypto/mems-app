@@ -239,3 +239,27 @@
     }
   }
 }
+
+
+/* All secondary sign-in overlays use the same identity colors as the main sign-in screen. */
+@media screen {
+  #loginOverlay {
+    background: var(--mems-bg) !important;
+  }
+  #loginOverlay > div {
+    border-color: var(--mems-line) !important;
+    border-top-color: var(--mems-primary) !important;
+    background: #fff !important;
+    box-shadow: 0 24px 70px rgba(20,43,64,.13) !important;
+  }
+  #loginOverlay > div::before {
+    background-color: var(--mems-brand) !important;
+  }
+  #loginOverlay #authBtn {
+    background: var(--mems-primary) !important;
+    color: #fff !important;
+  }
+  #loginOverlay #authBtn:hover {
+    background: var(--mems-primary-hover) !important;
+  }
+}
