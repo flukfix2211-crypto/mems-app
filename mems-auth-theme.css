@@ -1,0 +1,241 @@
+/* MEMs unified visual theme — matches the official sign-in screen. */
+@media screen {
+  :root {
+    --mems-brand: #0b666c;
+    --mems-brand-deep: #08565c;
+    --mems-primary: #0d8790;
+    --mems-primary-hover: #096f77;
+    --mems-bg: #f2f7f8;
+    --mems-surface: #ffffff;
+    --mems-soft: #e8f4f5;
+    --mems-text: #142b40;
+    --mems-muted: #617586;
+    --mems-line: #d2e0e5;
+    --mems-focus: rgba(11,126,137,.18);
+    --mems-shadow: 0 10px 30px rgba(20,43,64,.07);
+    --a: #0d8790;
+    --a2: #0b666c;
+    --al: #e8f4f5;
+    --bg: #f2f7f8;
+    --card: #ffffff;
+    --txt: #142b40;
+    --muted: #617586;
+    --border: #d2e0e5;
+  }
+
+  html, body {
+    background: var(--mems-bg) !important;
+    color: var(--mems-text) !important;
+  }
+  body::before { display: none !important; }
+  #bgCanvas, #kpiBgCanvas, .kpi-blob { display: none !important; }
+
+  /* Shared branded page header */
+  body:not(.mems-dashboard) > .header,
+  .mems-home .header {
+    background: var(--mems-brand) !important;
+    color: #fff !important;
+    border: 0 !important;
+    border-bottom: 3px solid var(--mems-primary) !important;
+    box-shadow: none !important;
+  }
+  body:not(.mems-dashboard) > .header::before,
+  body:not(.mems-dashboard) > .header::after { display: none !important; }
+  .header h1, .header .page-title, .header .mems-logo,
+  .header .sub, .header .subtitle, .header .mems-sub, .header .mems-th,
+  .header .clock, .header .clock-badge, .header .hosp-sub {
+    color: #fff !important;
+    -webkit-text-fill-color: #fff !important;
+    background: none !important;
+    filter: none !important;
+    opacity: 1 !important;
+  }
+  .header .sub, .header .subtitle, .header .mems-sub, .header .clock,
+  .header .clock-badge, .header .hosp-sub { color: #d9eff0 !important; }
+  .header .hosp-badge, .header .icon-btn, .header .btn-back {
+    color: #f4ffff !important;
+    background: rgba(255,255,255,.11) !important;
+    border: 1px solid rgba(255,255,255,.24) !important;
+  }
+  .header .icon-btn:hover, .header .btn-back:hover {
+    background: rgba(255,255,255,.2) !important;
+  }
+
+  /* Surfaces and content hierarchy */
+  .card, .menu-card, .nav-card, .action-card, .history-card,
+  .filter-bar, .ki-panel, .ward-block, .panel, .modal-box,
+  .dash-stat, .prepared-panel {
+    background: var(--mems-surface) !important;
+    border-color: var(--mems-line) !important;
+    box-shadow: var(--mems-shadow) !important;
+  }
+  .card, .menu-card, .nav-card, .action-card, .history-card,
+  .filter-bar, .ki-panel, .ward-block, .panel, .modal-box {
+    border-radius: 16px !important;
+  }
+  .page-title, .view-title, .section-label, .sec-label, .menu-label,
+  .menu-title, .nav-title, .action-card-title, .result-title {
+    color: var(--mems-text) !important;
+  }
+  .sub, .menu-desc, .nav-desc, .action-card-desc, .mode-desc,
+  .hint, .empty, .empty-state { color: var(--mems-muted) !important; }
+
+  /* Forms */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="hidden"]),
+  select, textarea, .form-input, .fsel {
+    background: #fff !important;
+    color: var(--mems-text) !important;
+    border-color: #a9c8d4 !important;
+    border-radius: 12px !important;
+    box-shadow: none !important;
+  }
+  input:focus, select:focus, textarea:focus, .form-input:focus, .fsel:focus {
+    outline: 3px solid var(--mems-focus) !important;
+    outline-offset: 0 !important;
+    border-color: #0b7e89 !important;
+    box-shadow: none !important;
+  }
+  input[type="checkbox"], input[type="radio"] { accent-color: var(--mems-primary); }
+  label, .form-label, .field label, .ab-label { color: var(--mems-text) !important; }
+
+  /* Primary actions */
+  .save-btn, .submit-btn, #submitBtn, .add-btn, .ward-confirm-btn,
+  .btn-action, .add-row-btn, .add-equip-btn, .btn-print,
+  .wkl-btn-pdf, .wkl-btn-refresh, .reset-btn {
+    background: var(--mems-primary) !important;
+    color: #fff !important;
+    border-color: var(--mems-primary) !important;
+    border-radius: 12px !important;
+    box-shadow: none !important;
+  }
+  .save-btn:hover, .submit-btn:hover, #submitBtn:hover, .add-btn:hover,
+  .ward-confirm-btn:hover, .btn-action:hover, .add-row-btn:hover,
+  .add-equip-btn:hover, .btn-print:hover, .wkl-btn-pdf:hover,
+  .wkl-btn-refresh:hover, .reset-btn:hover {
+    background: var(--mems-primary-hover) !important;
+    border-color: var(--mems-primary-hover) !important;
+  }
+  button:focus-visible, a:focus-visible {
+    outline-color: rgba(13,135,144,.38) !important;
+  }
+
+  /* Choice controls and navigation cards */
+  .type-chip.active, .mode-btn.active, .role-btn.active,
+  .action-btn.active, .reason-btn.active {
+    background: var(--mems-primary) !important;
+    border-color: var(--mems-primary) !important;
+    color: #fff !important;
+  }
+  .type-chip:not(.active), .mode-btn:not(.active), .role-btn:not(.active),
+  .action-btn:not(.active), .reason-btn:not(.active), .info-chip {
+    background: #fff !important;
+    border-color: var(--mems-line) !important;
+    color: var(--mems-text) !important;
+  }
+  .menu-card:hover, .nav-card:hover, .action-card:hover {
+    border-color: rgba(13,135,144,.55) !important;
+    box-shadow: 0 14px 34px rgba(20,43,64,.11) !important;
+  }
+  .menu-icon, .nav-icon, .action-card-icon {
+    background: var(--mems-soft) !important;
+    color: var(--mems-brand) !important;
+  }
+  .menu-arrow, .nav-arrow { color: var(--mems-primary) !important; }
+
+  /* Tables */
+  .tbl-wrap, .table-wrap {
+    background: #fff !important;
+    border-color: var(--mems-line) !important;
+  }
+  table th {
+    background: var(--mems-soft) !important;
+    color: var(--mems-brand-deep) !important;
+    border-color: var(--mems-line) !important;
+  }
+  table td { color: var(--mems-text); border-color: #e6eef0 !important; }
+  table tbody tr:hover { background: #f7fbfb !important; }
+
+  /* Main page */
+  body.mems-home { background: var(--mems-bg) !important; color: var(--mems-text) !important; }
+  .mems-home .header { background: var(--mems-brand) !important; border-bottom-color: var(--mems-primary) !important; }
+  .mems-home .header .hosp-badge { color: #e5f5f5 !important; }
+  .mems-home .header .icon-btn,
+  .mems-home .home-account > summary {
+    background: rgba(255,255,255,.1) !important;
+    border-color: rgba(255,255,255,.24) !important;
+  }
+  .mems-home .home-account small { color: #c7e6e7 !important; }
+  .mems-home .home-account > summary:hover,
+  .mems-home .home-account[open] > summary { background: rgba(255,255,255,.18) !important; }
+  .mems-home .menu-card { border-color: var(--mems-line) !important; border-radius: 16px !important; }
+  .mems-home .menu-card.primary-action {
+    background: #fff !important;
+    border-color: var(--mems-line) !important;
+    border-left: 5px solid var(--mems-primary) !important;
+  }
+  .mems-home .primary-action .menu-icon {
+    background: var(--mems-primary) !important;
+    color: #fff !important;
+  }
+
+  /* Dashboard */
+  .mems-dashboard { background: var(--mems-bg) !important; }
+  .mems-dashboard .dash-sidebar {
+    background: var(--mems-brand) !important;
+    color: #e5f5f5 !important;
+  }
+  .mems-dashboard .dash-brand small, .mems-dashboard .dash-nav-label,
+  .mems-dashboard .dash-sidebar-foot { color: #c7e6e7 !important; }
+  .mems-dashboard .dash-nav button, .mems-dashboard .dash-nav a { color: #e5f5f5 !important; }
+  .mems-dashboard .dash-nav button:hover, .mems-dashboard .dash-nav a:hover {
+    background: rgba(255,255,255,.11) !important;
+  }
+  .mems-dashboard .dash-nav button[aria-current="page"] {
+    background: var(--mems-primary) !important;
+    box-shadow: inset 3px 0 #a9f0ea !important;
+  }
+  .mems-dashboard > .header {
+    background: #fff !important;
+    color: var(--mems-text) !important;
+    border-color: var(--mems-line) !important;
+  }
+  .mems-dashboard > .header h1 {
+    color: var(--mems-text) !important;
+    -webkit-text-fill-color: var(--mems-text) !important;
+  }
+  .mems-dashboard > .header .sub,
+  .mems-dashboard > .header #lastUpdated { color: var(--mems-muted) !important; }
+  .mems-dashboard > .header .btn-back,
+  .mems-dashboard > .header button {
+    background: var(--mems-soft) !important;
+    color: var(--mems-brand) !important;
+    border-color: var(--mems-line) !important;
+  }
+  .mems-dashboard .dash-stat:first-child,
+  .mems-dashboard .dash-stat:nth-child(2),
+  .mems-dashboard .dash-stat:nth-child(3),
+  .mems-dashboard .dash-stat:nth-child(4) {
+    border-top-color: var(--mems-primary) !important;
+  }
+  .mems-dashboard .dash-refresh {
+    background: #fff !important;
+    border-color: var(--mems-line) !important;
+    color: var(--mems-brand) !important;
+  }
+
+  /* Modals and menus */
+  .modal-overlay { background: rgba(20,43,64,.58) !important; }
+  .modal-head { background: var(--mems-brand) !important; color: #fff !important; }
+  .nav-menu, .home-account-menu {
+    background: #fff !important;
+    border-color: var(--mems-line) !important;
+    box-shadow: 0 18px 42px rgba(20,43,64,.18) !important;
+  }
+
+  @media (max-width: 720px) {
+    .card, .menu-card, .nav-card, .action-card, .history-card,
+    .filter-bar, .ki-panel, .ward-block, .panel, .modal-box {
+      border-radius: 14px !important;
+    }
+  }
+}
