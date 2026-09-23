@@ -412,7 +412,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 <script src="vendor/jspdf.plugin.autotable.min.js"></script>
 <script src="supabase-client.js"></script>
 <script src="auth.js"></script>
-<script src="reports.js?v=20260923-pdf-logo-1"></script>
+<script src="reports.js?v=20260923-pdf-c2-1"></script>
 <script>
   window.addEventListener('DOMContentLoaded', () => { memsGuard('dashboard'); });
 </script>
@@ -781,30 +781,34 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     const d = window._c2mPrintData;
     if (!d) return;
     const doc = await newThaiPdf();
-    doc.setFontSize(20); doc.text(HOSPITAL_NAME, 40, 44);
-    doc.setFontSize(18); doc.text('สถิติการใช้งาน C2 รายเดือน — ' + d.monthTH, 40, 66);
     const genAt = new Intl.DateTimeFormat('th-TH-u-ca-gregory', { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date());
-    doc.setFontSize(12); doc.text((d.ward ? 'หน่วยงาน: ' + d.ward : 'ทุกหน่วยงาน') + '   วันที่พิมพ์: ' + genAt, 40, 84);
-
-    thaiTable(doc, {
-      startY: 100,
-      body: [
-        ['ยืมทั้งหมด', d.totalBorrow + ' ครั้ง'],
-        ['คืนทั้งหมด', d.totalReturn + ' ครั้ง'],
-        ['รวมชั่วโมงใช้งาน', rptFmtDuration(d.totalMsAll)]
-      ],
-      styles: { fontSize: 13 }
-    });
-    let y = doc.lastAutoTable.finalY + 24;
+    const scope = d.ward ? 'หน่วยงาน ' + d.ward : 'ทุกหน่วยงาน';
+    let y = rptPdfHeader(doc, 'สถิติการใช้งาน C2 รายเดือน', d.monthTH + ' | ' + scope, genAt);
+    y = rptPdfMetricCards(doc, [
+      ['ยืมทั้งหมด', d.totalBorrow + ' ครั้ง'],
+      ['คืนทั้งหมด', d.totalReturn + ' ครั้ง'],
+      ['รวมเวลาการใช้งาน', rptFmtDuration(d.totalMsAll)]
+    ], y);
+    y = rptPdfSectionTitle(doc, 'รายละเอียดการใช้งานรายเครื่อง', y);
 
     thaiTable(doc, {
       startY: y,
       head: [['No.', 'ยืม (ครั้ง)', 'คืน (ครั้ง)', 'รวม', 'รายละเอียดแต่ละครั้ง']],
       body: d.rows.map(r => [r.no, r.borrows, r.returns, rptFmtDuration(r.totalMs), r.sessions.map((ms,i)=>`ครั้งที่${i+1}: ${rptFmtDuration(ms)}`).join(' · ')||'—']),
-      styles: { fontSize: 10 }
+      styles: { fontSize: 10 },
+      margin: { top: 55 },
+      didDrawPage: data => {
+        if (data.pageNumber > 1) rptPdfContinuationHeader(doc, 'สถิติการใช้งาน C2 รายเดือน ' + d.monthTH);
+      },
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 40 },
+        1: { halign: 'right', cellWidth: 55 },
+        2: { halign: 'right', cellWidth: 55 },
+        3: { halign: 'right', cellWidth: 90 }
+      }
     });
-
-    doc.save('C2_Monthly_' + d.month.replace('-', '_') + (d.ward ? '_' + d.ward.replace(/\s+/g, '') : '') + '.pdf');
+    rptPdfFooter(doc);
+    return rptDeliverPdf(doc, 'C2_Monthly_' + d.month.replace('-', '_') + (d.ward ? '_' + d.ward.replace(/\s+/g, '') : '') + '.pdf', { preview: true });
   }
 
   // ── INIT ───────────────────────────────────────────────────
