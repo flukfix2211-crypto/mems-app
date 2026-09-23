@@ -256,84 +256,85 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     </div>
   </section>
 
-  <!-- ── ACTION CARDS ── -->
-  <div class="section-label">เครื่องมือสร้างรายงาน</div>
-  <div class="action-grid">
+  <!-- ── PRIMARY REPORTS ── -->
+  <div class="section-label">รายงานหลัก</div>
+  <div class="report-workflow" aria-label="ขั้นตอนการออกรายงาน">
+    <span><b>1</b> เลือกรูปแบบรายงาน</span>
+    <span><b>2</b> ตรวจสอบในหน้าพรีวิว</span>
+    <span><b>3</b> ดาวน์โหลดหรือพิมพ์</span>
+  </div>
+  <div class="action-grid report-actions">
 
-    <!-- การ์ด 1: สร้างรายงานประจำเดือน -->
-    <div class="action-card">
-      <div class="action-card-icon teal">📊</div>
-      <div class="action-card-title">สร้างรายงานประจำเดือน</div>
-      <div class="action-card-desc">
-        ดึงข้อมูลการยืม-คืนของเดือนที่ผ่านมา เพื่อสรุปสถิติการใช้งาน
-        อัตราการใช้งานเครื่องมือ และหน่วยงานที่มีการยืมสูงสุด
+    <article class="action-card report-primary">
+      <div class="action-card-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 19V5m0 14h16M8 16v-5m4 5V7m4 9V4"/>
+        </svg>
       </div>
-      <button class="btn-action teal" id="btnMonthly" onclick="runAction('monthly')">
-        <span id="iconMonthly">📊</span>
-        <span id="labelMonthly">สร้างรายงานประจำเดือน</span>
-      </button>
-    </div>
-
-    <!-- การ์ด 2: Export PDF -->
-    <div class="action-card">
-      <div class="action-card-icon orange">📄</div>
-      <div class="action-card-title">Export PDF</div>
+      <div class="report-card-kicker">รายงานมาตรฐาน</div>
+      <div class="action-card-title">รายงานประจำเดือน</div>
       <div class="action-card-desc">
-        แปลงรายงานล่าสุดที่สร้างไว้ (รายงานประจำเดือน/สรุปผู้บริหาร/C2)
-        ให้เป็นไฟล์ PDF จัดรูปแบบขนาด A4 พร้อมดาวน์โหลดลงเครื่องได้ทันที
+        สรุปการยืม-คืน อัตราการใช้งาน ระยะเวลายืมเฉลี่ย หน่วยงานที่ใช้สูงสุด
+        และการเตรียมเครื่องในเดือนที่ผ่านมา
       </div>
-      <button class="btn-action orange" id="btnPDF" onclick="runAction('pdf')">
-        <span id="iconPDF">📄</span>
-        <span id="labelPDF">Export PDF</span>
+      <button class="btn-action" id="btnMonthly" onclick="runAction('monthly')">
+        <span id="iconMonthly"></span>
+        <span id="labelMonthly">สร้างและพรีวิว PDF</span>
       </button>
-    </div>
+    </article>
 
-    <!-- การ์ด 3: สรุปผู้บริหาร -->
-    <div class="action-card">
-      <div class="action-card-icon green">🏆</div>
+    <article class="action-card">
+      <div class="action-card-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 3h14v18H5zM8 8h8M8 12h8M8 16h5"/>
+        </svg>
+      </div>
+      <div class="report-card-kicker">สำหรับผู้บริหาร</div>
       <div class="action-card-title">สรุปผู้บริหาร</div>
       <div class="action-card-desc">
-        สรุปข้อมูลสำคัญในรูปแบบเอกสาร 1 หน้า สำหรับการทบทวนอย่างรวดเร็ว
-        ประกอบด้วยยอดรวมการใช้งาน อุปกรณ์ที่มีการยืมสูงสุด
-        หน่วยงานที่มีการใช้งานมาก และรายการเครื่องมือที่ยังไม่ได้คืน
+        สรุปตัวเลขสำคัญแบบกระชับ 1 หน้า เหมาะสำหรับนำเสนอ ติดตามภาพรวม
+        และใช้ประกอบการประชุม
       </div>
-      <button class="btn-action green" id="btnExec" onclick="runAction('exec')">
-        <span id="iconExec">🏆</span>
-        <span id="labelExec">สรุปผู้บริหาร</span>
+      <button class="btn-action" id="btnExec" onclick="runAction('exec')">
+        <span id="iconExec"></span>
+        <span id="labelExec">สร้างและพรีวิว PDF</span>
       </button>
-    </div>
+    </article>
 
-    <!-- การ์ด 4: รายงาน C2 รายเครื่อง -->
-    <div class="action-card">
-      <div class="action-card-icon teal">🔧</div>
-      <div class="action-card-title">รายงาน C2 รายเครื่อง</div>
+    <article class="action-card">
+      <div class="action-card-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 3h12v14H6zM9 7h6M9 11h3m0 6v4m-4 0h8"/>
+        </svg>
+      </div>
+      <div class="report-card-kicker">วิเคราะห์รายเครื่อง</div>
+      <div class="action-card-title">รายงานเครื่อง C2</div>
       <div class="action-card-desc">
-        แสดงสถิติการใช้งานเชิงลึกของเครื่อง C2 หมายเลข 1-58
-        นับตั้งแต่เริ่มใช้งาน ได้แก่ หน่วยงานที่นำไปใช้ จำนวนครั้ง
-        ระยะเวลาการใช้งานสะสม (วัน/ชั่วโมง) ระยะเวลาว่างพร้อมใช้งาน
-        และเครื่องที่มีการใช้งานบ่อยที่สุด พร้อมจัดทำเป็นรายงาน PDF หลายหน้า
+        วิเคราะห์จำนวนครั้ง ระยะเวลาการใช้งาน เวลาว่าง สถานะปัจจุบัน
+        และรายละเอียดการใช้งานแยกตามหน่วยงาน
       </div>
-      <button class="btn-action teal" id="btnC2" onclick="runAction('c2')">
-        <span id="iconC2">🔧</span>
-        <span id="labelC2">สร้างรายงาน C2</span>
+      <button class="btn-action" id="btnC2" onclick="runAction('c2')">
+        <span id="iconC2"></span>
+        <span id="labelC2">สร้างและพรีวิว PDF</span>
       </button>
-    </div>
+    </article>
+  </div>
 
-    <!-- การ์ด 5: ส่งแจ้งเตือน Telegram ตอนนี้ -->
-    <div class="action-card">
-      <div class="action-card-icon orange">🔔</div>
-      <div class="action-card-title">ส่งแจ้งเตือน Telegram ตอนนี้</div>
-      <div class="action-card-desc">
-        สั่งส่งสรุปรายการยืม C2 ที่เกินกำหนดคืน และครุภัณฑ์ที่ใกล้หมดสต็อก
-        เข้าสู่ Telegram ได้ทันที (รูปแบบเดียวกับที่ระบบส่งอัตโนมัติทุกวันเวลา 08.00 น.)
-        โดยไม่ต้องรอรอบการแจ้งเตือนถัดไป
-      </div>
-      <button class="btn-action orange" id="btnDigest" onclick="runAction('digest')">
-        <span id="iconDigest">🔔</span>
-        <span id="labelDigest">ส่งแจ้งเตือนตอนนี้</span>
-      </button>
+  <div class="section-label report-tools-label">เครื่องมือระบบ</div>
+  <div class="report-utility">
+    <div class="report-utility-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>
+      </svg>
     </div>
-
+    <div class="report-utility-copy">
+      <strong>ส่งแจ้งเตือน Telegram</strong>
+      <span>ส่งรายการ C2 เกินกำหนดและครุภัณฑ์ใกล้หมดทันที</span>
+    </div>
+    <button class="report-utility-button" id="btnDigest" onclick="runAction('digest')">
+      <span id="iconDigest"></span>
+      <span id="labelDigest">ส่งแจ้งเตือน</span>
+    </button>
   </div>
 
   <!-- ── C2 MONTHLY STATS ── -->
@@ -472,29 +473,25 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     const configs = {
       monthly: {
         btn: 'btnMonthly', icon: 'iconMonthly', label: 'labelMonthly',
-        loadingText: 'กำลังสร้างรายงาน...', doneLabel: 'สร้างรายงานประจำเดือน',
+        loadingText: 'กำลังสร้างรายงาน...', doneLabel: 'สร้างและพรีวิว PDF',
         tagClass: 'report', tagLabel: 'รายงานเดือน',
         run: computeMonthlyReport, exportPdf: exportMonthlyReportPDF, fileName: d => 'Monthly_Report_' + d.monthTH.replace(' ', '_') + '.pdf'
       },
-      pdf: {
-        btn: 'btnPDF', icon: 'iconPDF', label: 'labelPDF',
-        loadingText: 'กำลัง Export PDF...', doneLabel: 'Export PDF', skipHistory: true
-      },
       exec: {
         btn: 'btnExec', icon: 'iconExec', label: 'labelExec',
-        loadingText: 'กำลังสร้างสรุปผู้บริหาร...', doneLabel: 'สรุปผู้บริหาร',
+        loadingText: 'กำลังสร้างสรุปผู้บริหาร...', doneLabel: 'สร้างและพรีวิว PDF',
         tagClass: 'exec', tagLabel: 'สรุปผู้บริหาร',
         run: computeExecutiveSummary, exportPdf: exportExecSummaryPDF, fileName: d => 'ExecSummary_' + d.monthTH.replace(' ', '_') + '.pdf'
       },
       c2: {
         btn: 'btnC2', icon: 'iconC2', label: 'labelC2',
-        loadingText: 'กำลังประมวลผลรายเครื่อง...', doneLabel: 'สร้างรายงาน C2',
+        loadingText: 'กำลังประมวลผลรายเครื่อง...', doneLabel: 'สร้างและพรีวิว PDF',
         tagClass: 'report', tagLabel: 'รายงาน C2',
         run: computeC2Report, exportPdf: exportC2ReportPDF, fileName: () => 'C2_Report.pdf'
       },
       digest: {
         btn: 'btnDigest', icon: 'iconDigest', label: 'labelDigest',
-        loadingText: 'กำลังส่งแจ้งเตือน...', doneLabel: 'ส่งแจ้งเตือนตอนนี้',
+        loadingText: 'กำลังส่งแจ้งเตือน...', doneLabel: 'ส่งแจ้งเตือน',
         tagClass: 'exec', tagLabel: 'ส่งแจ้งเตือน', skipHistory: true
       }
     };
@@ -505,21 +502,6 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 
     try {
       let res;
-      if (type === 'pdf') {
-        if (!_lastReportForPdf) {
-          setLoading(cfg, false);
-          showResult('error', '❌ ยังไม่มีรายงาน', `<p style="color:var(--red);font-size:14px">กรุณาสร้างรายงาน (ประจำเดือน / สรุปผู้บริหาร / C2) อย่างน้อย 1 รายการก่อน</p>`);
-          toast('❌ ยังไม่มีรายงานให้ export');
-          return;
-        }
-        const rc = configs[_lastReportForPdf.type];
-        await rc.exportPdf(_lastReportForPdf.data, { preview: true });
-        setLoading(cfg, false);
-        showResult('success', 'เปิดตัวอย่าง PDF แล้ว', `<p style="font-size:14px;color:var(--muted)">ตรวจสอบเอกสารก่อนเลือกดาวน์โหลดหรือพิมพ์: ${rc.fileName(_lastReportForPdf.data)}</p>`);
-        toast('เปิดตัวอย่าง PDF แล้ว');
-        return;
-      }
-
       if (type === 'digest') {
         res = await notifyTelegram({ type: 'digest', manual: true });
       } else {
@@ -546,6 +528,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
         localHistory.unshift(entry);
         sessionStorage.setItem('memsReportHistory', JSON.stringify(localHistory.slice(0, 20)));
         renderHistory();
+        await cfg.exportPdf(res, { preview: true });
       }
 
       if (type === 'digest') {
@@ -553,7 +536,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
           : res.sent ? '✅ ส่งแจ้งเตือนสำเร็จ'
           : (res.configured ? '❌ ส่งไม่สำเร็จ' : '⚠️ ยังไม่ได้ตั้งค่า Telegram'));
       } else {
-        toast('✅ ' + (res.message || 'สำเร็จ'));
+        toast('สร้างรายงานและเปิดพรีวิวแล้ว');
       }
 
     } catch (err) {
@@ -570,7 +553,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     const exporters = { monthly: exportMonthlyReportPDF, exec: exportExecSummaryPDF, c2: exportC2ReportPDF };
     const fn = exporters[h.reportType];
     if (!fn) return;
-    try { await fn(h.data); } catch (e) { toast('❌ สร้าง PDF ไม่สำเร็จ: ' + e.message); }
+    try { await fn(h.data, { preview: true }); } catch (e) { toast('❌ สร้าง PDF ไม่สำเร็จ: ' + e.message); }
   }
 
   // ── แสดงผลลัพธ์ตามประเภท ───────────────────────────────────
@@ -580,7 +563,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
         <div class="result-row"><span class="result-key">เดือน</span><span class="result-val">${res.monthTH}</span></div>
         <div class="result-row"><span class="result-key">รายการยืมทั้งหมด</span><span class="result-val">${res.total} ครั้ง</span></div>
         <div class="result-row"><span class="result-key">รายการคืนทั้งหมด</span><span class="result-val">${res.totalReturn} ครั้ง</span></div>
-        <p style="margin-top:8px;font-size:13px;color:var(--muted)">กด "Export PDF" ด้านบนเพื่อดาวน์โหลดรายงานฉบับเต็ม</p>`;
+        <p style="margin-top:8px;font-size:13px;color:var(--muted)">ระบบเปิดพรีวิว PDF แล้ว กรุณาตรวจสอบก่อนดาวน์โหลดหรือพิมพ์</p>`;
       showResult('success', '✅ สร้างรายงานสำเร็จ', html);
     }
     else if (type === 'exec') {
@@ -597,7 +580,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
         <div class="result-row"><span class="result-key">เครื่องที่ยืมบ่อยสุด</span><span class="result-val">No. ${res.mostUsed.no} (${res.mostUsed.borrowCount} ครั้ง)</span></div>
         <div class="result-row"><span class="result-key">เครื่องที่ใช้นานสุด</span><span class="result-val">No. ${res.longest.no} (${rptFmtDuration(res.longest.borrowedMs)})</span></div>
         <div class="result-row"><span class="result-key">เครื่องที่กำลังถูกยืมอยู่</span><span class="result-val">${res.activeNow} เครื่อง</span></div>
-        <p style="margin-top:8px;font-size:13px;color:var(--muted)">กด "Export PDF" ด้านบนเพื่อดาวน์โหลดรายงานฉบับเต็ม (หลายหน้า)</p>`;
+        <p style="margin-top:8px;font-size:13px;color:var(--muted)">ระบบเปิดพรีวิว PDF แล้ว กรุณาตรวจสอบก่อนดาวน์โหลดหรือพิมพ์ (หลายหน้า)</p>`;
       showResult('success', '✅ สร้างรายงาน C2 รายเครื่องสำเร็จ', html);
     }
     else if (type === 'digest') {
