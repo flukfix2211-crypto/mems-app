@@ -170,6 +170,18 @@ function rptPdfFooter(doc) {
   }
 }
 
+function rptDeliverPdf(doc, filename, options) {
+  if (options && options.preview) {
+    const blob = doc.output('blob');
+    if (typeof window.memsOpenPdfPreview === 'function') {
+      window.memsOpenPdfPreview(blob, filename);
+      return { previewed: true, filename };
+    }
+  }
+  doc.save(filename);
+  return { previewed: false, filename };
+}
+
 /* ============================================================ THAI HOLIDAYS ============================================================ */
 let _thaiHolidaySetCache = null;
 async function fetchThaiHolidayDates() {
@@ -496,7 +508,7 @@ async function computeMonthlyReport() {
   };
 }
 
-async function exportMonthlyReportPDF(d) {
+async function exportMonthlyReportPDF(d, options) {
   const doc = await newThaiPdf();
   let y = rptPdfHeader(doc, 'รายงานประจำเดือน', d.monthTH, d.generatedAt);
   y = rptPdfMetricCards(doc, [
@@ -561,7 +573,7 @@ async function exportMonthlyReportPDF(d) {
   }
 
   rptPdfFooter(doc);
-  doc.save('Monthly_Report_' + d.monthTH.replace(' ', '_') + '.pdf');
+  return rptDeliverPdf(doc, 'Monthly_Report_' + d.monthTH.replace(' ', '_') + '.pdf', options);
 }
 
 /* ============================================================ EXECUTIVE SUMMARY (เทียบเท่า generateExecutiveSummary()) ============================================================ */
@@ -607,7 +619,7 @@ async function computeExecutiveSummary() {
   };
 }
 
-async function exportExecSummaryPDF(d) {
+async function exportExecSummaryPDF(d, options) {
   const doc = await newThaiPdf();
   let y = rptPdfHeader(doc, 'สรุปผู้บริหาร', d.monthTH, d.generatedAt);
   y = rptPdfMetricCards(doc, [
@@ -639,7 +651,7 @@ async function exportExecSummaryPDF(d) {
   doc.setFontSize(11);
   doc.text('ข้อมูลฉบับนี้สร้างจากระบบ MEMs อัตโนมัติ โปรดตรวจสอบรายการผิดปกติก่อนนำเสนอหรือเผยแพร่', 54, noteY + 42);
   rptPdfFooter(doc);
-  doc.save('ExecSummary_' + d.monthTH.replace(' ', '_') + '.pdf');
+  return rptDeliverPdf(doc, 'ExecSummary_' + d.monthTH.replace(' ', '_') + '.pdf', options);
 }
 
 /* ============================================================ C2 REPORT (เทียบเท่า generateC2Report()) ============================================================ */
@@ -724,7 +736,7 @@ async function computeC2Report() {
   };
 }
 
-async function exportC2ReportPDF(d) {
+async function exportC2ReportPDF(d, options) {
   const doc = await newThaiPdf();
   let y = rptPdfHeader(doc, 'รายงานสถิติเครื่อง C2 รายเครื่อง', 'ข้อมูลสะสมตั้งแต่เริ่มใช้งาน', d.generatedAt);
   y = rptPdfMetricCards(doc, [
@@ -766,5 +778,5 @@ async function exportC2ReportPDF(d) {
   }
 
   rptPdfFooter(doc);
-  doc.save('C2_Report.pdf');
+  return rptDeliverPdf(doc, 'C2_Report.pdf', options);
 }
