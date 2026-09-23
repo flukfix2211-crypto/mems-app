@@ -1,0 +1,321 @@
+/* MEMs operational pages — shared formal interface */
+@media screen {
+  :root {
+    --ops-navy: #142b40;
+    --ops-teal: #0b666c;
+    --ops-teal-2: #0b7e89;
+    --ops-bg: #f2f7f8;
+    --ops-card: #ffffff;
+    --ops-text: #172f3d;
+    --ops-muted: #617586;
+    --ops-line: #d6e3e7;
+    --ops-soft: #eaf5f5;
+    --ops-shadow: 0 12px 34px rgba(20, 43, 64, .08);
+  }
+
+  body.mems-operation {
+    min-height: 100vh;
+    background: var(--ops-bg) !important;
+    color: var(--ops-text);
+  }
+
+  body.mems-operation::before {
+    content: "";
+    position: fixed;
+    inset: 0 0 auto;
+    height: 250px;
+    z-index: 0;
+    pointer-events: none;
+    background: linear-gradient(135deg, #0b5e65 0%, #0b7179 58%, #0b7e89 100%);
+    display: block !important;
+  }
+
+  .mems-operation .header {
+    width: min(100% - 48px, 1180px);
+    margin: 0 auto;
+    padding: 26px 0 82px !important;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    overflow: visible;
+  }
+  .mems-operation .header::before,
+  .mems-operation .header::after { display: none !important; }
+  .mems-operation .header-top { margin-bottom: 32px !important; }
+  .mems-operation .hosp-badge {
+    padding: 7px 12px !important;
+    border: 1px solid rgba(255,255,255,.22) !important;
+    border-radius: 999px !important;
+    background: rgba(255,255,255,.1) !important;
+    color: #effbfb !important;
+    font-size: 12px !important;
+    letter-spacing: 0 !important;
+  }
+  .mems-operation .btn-back,
+  .mems-operation .header-top a,
+  .mems-operation .header-top button {
+    min-height: 38px;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 12px !important;
+    border: 1px solid rgba(255,255,255,.24) !important;
+    border-radius: 10px !important;
+    background: rgba(255,255,255,.11) !important;
+    color: #fff !important;
+    font-size: 13px !important;
+  }
+  .mems-operation .header h1 {
+    margin: 0 !important;
+    color: #fff !important;
+    background: none !important;
+    -webkit-text-fill-color: #fff !important;
+    font-size: clamp(28px, 4vw, 42px) !important;
+    letter-spacing: .06em !important;
+    filter: none !important;
+  }
+  .mems-operation .page-title {
+    margin-top: 10px !important;
+    color: #fff !important;
+    font-size: clamp(20px, 2.8vw, 28px) !important;
+    font-weight: 800 !important;
+    opacity: 1 !important;
+    letter-spacing: 0 !important;
+  }
+  .mems-operation .header .sub,
+  .mems-operation .header .clock { color: #d4eeee !important; }
+
+  .mems-operation .content {
+    width: min(100% - 48px, 1180px) !important;
+    max-width: 1180px !important;
+    margin: -50px auto 0 !important;
+    padding: 0 0 80px !important;
+    position: relative;
+    z-index: 2;
+  }
+  .mems-operation .card {
+    margin-bottom: 18px !important;
+    padding: 24px !important;
+    border: 1px solid var(--ops-line) !important;
+    border-radius: 18px !important;
+    background: var(--ops-card) !important;
+    box-shadow: var(--ops-shadow) !important;
+  }
+  .mems-operation .sec-label,
+  .mems-operation .form-label {
+    margin-bottom: 11px !important;
+    color: #365464 !important;
+    font-size: 14px !important;
+    font-weight: 800 !important;
+    line-height: 1.45;
+    letter-spacing: 0 !important;
+    text-transform: none !important;
+  }
+  .mems-operation .req-dot {
+    width: 7px !important;
+    height: 7px !important;
+    background: #d34b52 !important;
+    box-shadow: 0 0 0 4px #fdecee;
+  }
+
+  .mems-operation .field,
+  .mems-operation .form-input,
+  .mems-operation .fsel,
+  .mems-operation input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  .mems-operation select,
+  .mems-operation textarea {
+    min-height: 50px;
+    border: 1px solid #b7ccd4 !important;
+    border-radius: 11px !important;
+    background-color: #fbfdfd !important;
+    color: var(--ops-text) !important;
+    box-shadow: inset 0 1px 2px rgba(20,43,64,.025);
+  }
+  .mems-operation textarea { min-height: 110px; resize: vertical; }
+  .mems-operation .field:focus,
+  .mems-operation .form-input:focus,
+  .mems-operation input:focus,
+  .mems-operation select:focus,
+  .mems-operation textarea:focus {
+    outline: 3px solid rgba(11,126,137,.14) !important;
+    border-color: var(--ops-teal-2) !important;
+    background: #fff !important;
+  }
+
+  .mems-operation .save-btn,
+  .mems-operation .add-btn,
+  .mems-operation .add-row-btn,
+  .mems-operation .ward-confirm-btn,
+  .mems-operation .submit-btn,
+  .mems-operation #submitBtn {
+    min-height: 52px !important;
+    border: 0 !important;
+    border-radius: 12px !important;
+    background: linear-gradient(135deg, var(--ops-teal-2), var(--ops-teal)) !important;
+    color: #fff !important;
+    font-weight: 800 !important;
+    box-shadow: 0 9px 20px rgba(11,102,108,.2) !important;
+  }
+  .mems-operation .save-btn:hover,
+  .mems-operation .add-btn:hover,
+  .mems-operation .add-row-btn:hover,
+  .mems-operation .ward-confirm-btn:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.04);
+  }
+  .mems-operation .reset-btn,
+  .mems-operation .mode-btn,
+  .mems-operation .equip-btn,
+  .mems-operation .equip-chip,
+  .mems-operation .type-chip,
+  .mems-operation .st-btn,
+  .mems-operation .role-btn,
+  .mems-operation .preset-btn {
+    min-height: 46px;
+    border: 1px solid var(--ops-line) !important;
+    border-radius: 11px !important;
+    background: #f8fbfc !important;
+    color: #46606e !important;
+    box-shadow: none !important;
+  }
+  .mems-operation .mode-btn.active,
+  .mems-operation .equip-btn.active,
+  .mems-operation .equip-chip.active,
+  .mems-operation .type-chip.active,
+  .mems-operation .st-btn.active,
+  .mems-operation .role-btn.active,
+  .mems-operation .preset-btn.active {
+    border-color: var(--ops-teal-2) !important;
+    background: var(--ops-soft) !important;
+    color: var(--ops-teal) !important;
+    box-shadow: inset 0 0 0 1px var(--ops-teal-2) !important;
+  }
+
+  .mems-operation .stats-row,
+  .mems-operation .info-row,
+  .mems-operation .summary-bar { gap: 12px !important; }
+  .mems-operation .stat-chip,
+  .mems-operation .info-chip,
+  .mems-operation .sum-chip,
+  .mems-operation .suc-chip {
+    border: 1px solid var(--ops-line) !important;
+    border-radius: 14px !important;
+    background: #fff !important;
+    box-shadow: 0 5px 16px rgba(20,43,64,.05);
+  }
+  .mems-operation .stat-num { color: var(--ops-teal) !important; }
+
+  .mems-operation .tbl-wrap,
+  .mems-operation .table-wrap {
+    border: 1px solid var(--ops-line) !important;
+    border-radius: 14px !important;
+    background: #fff;
+    overflow: auto;
+  }
+  .mems-operation table { border-collapse: separate !important; border-spacing: 0 !important; }
+  .mems-operation th {
+    padding: 13px 12px !important;
+    background: #edf5f6 !important;
+    color: #345361 !important;
+    font-weight: 800 !important;
+    border-color: #dce8eb !important;
+  }
+  .mems-operation td { padding: 13px 12px !important; border-color: #e7eff1 !important; }
+  .mems-operation tbody tr:hover td { background: #f8fbfb; }
+
+  .mems-operation .modal-overlay { backdrop-filter: blur(5px); }
+  .mems-operation .modal-box {
+    border: 1px solid var(--ops-line) !important;
+    border-radius: 18px !important;
+    box-shadow: 0 24px 70px rgba(20,43,64,.25) !important;
+  }
+  .mems-operation .modal-head {
+    background: var(--ops-navy) !important;
+    color: #fff !important;
+  }
+
+  .mems-operation .empty,
+  .mems-operation .empty-row {
+    color: var(--ops-muted) !important;
+  }
+
+  .mems-operation .footer-link,
+  .mems-operation .footer-link a,
+  body.mems-fixjob .content > a {
+    color: var(--ops-muted) !important;
+  }
+
+  body.mems-assets .type-chips {
+    margin-bottom: 16px !important;
+    padding: 12px !important;
+    border: 1px solid var(--ops-line);
+    border-radius: 15px;
+    background: #fff;
+    box-shadow: var(--ops-shadow);
+  }
+  body.mems-round .steps {
+    margin: 0 0 18px !important;
+    padding: 14px 18px !important;
+    border: 1px solid var(--ops-line);
+    border-radius: 15px;
+    background: #fff;
+    box-shadow: var(--ops-shadow);
+  }
+  body.mems-round .step { color: #708592 !important; }
+  body.mems-round .step.active { color: var(--ops-teal) !important; }
+  body.mems-round .step-num { background: #dfecee !important; color: #46606e !important; }
+  body.mems-round .step.active .step-num { background: var(--ops-teal-2) !important; color: #fff !important; }
+
+  body.mems-prepare .content,
+  body.mems-fixjob .content {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+    align-items: start;
+  }
+  body.mems-prepare .content > .card,
+  body.mems-fixjob .content > .card { margin: 0 !important; }
+  body.mems-prepare .content > .save-btn,
+  body.mems-prepare .content > .card:last-child,
+  body.mems-fixjob .content > .save-btn,
+  body.mems-fixjob .content > .card:last-of-type { grid-column: 1 / -1; }
+  body.mems-assets .content,
+  body.mems-settings .content { max-width: 1240px !important; }
+  body.mems-round .submit-bar,
+  body.mems-borrow .submit-bar {
+    background: linear-gradient(to top, var(--ops-bg) 78%, rgba(242,247,248,0)) !important;
+  }
+
+  @media (max-width: 760px) {
+    body.mems-operation::before { height: 220px; }
+    .mems-operation .header {
+      width: min(100% - 28px, 1180px);
+      padding: 18px 0 72px !important;
+    }
+    .mems-operation .header-top { margin-bottom: 24px !important; gap: 8px; }
+    .mems-operation .hosp-badge { max-width: 58%; overflow: hidden; text-overflow: ellipsis; }
+    .mems-operation .content {
+      width: min(100% - 24px, 1180px) !important;
+      margin-top: -42px !important;
+      padding-bottom: 54px !important;
+    }
+    .mems-operation .card { padding: 18px !important; border-radius: 15px !important; }
+    body.mems-prepare .content,
+    body.mems-fixjob .content { grid-template-columns: 1fr; gap: 12px; }
+    body.mems-prepare .content > .save-btn,
+    body.mems-prepare .content > .card:last-child,
+    body.mems-fixjob .content > .save-btn,
+    body.mems-fixjob .content > .card:last-of-type { grid-column: auto; }
+    .mems-operation .stats-row,
+    .mems-operation .info-row { overflow-x: auto; padding-bottom: 5px; }
+    .mems-operation .stat-chip,
+    .mems-operation .info-chip { min-width: 130px; }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mems-operation *, .mems-operation *::before, .mems-operation *::after {
+    animation-duration: .01ms !important;
+    transition-duration: .01ms !important;
+  }
+}
