@@ -412,3 +412,156 @@
     .pdf-preview-primary { grid-column: 1 / -1; grid-row: 1; }
   }
 }
+
+
+/* Formal report tool hierarchy: three primary report types and one separate system utility. */
+@media screen {
+  .report-workflow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: -2px 0 16px;
+    padding: 11px 14px;
+    border: 1px solid var(--mems-line);
+    border-radius: 12px;
+    background: #fff;
+    color: var(--mems-muted);
+    font-size: .82rem;
+  }
+  .report-workflow span {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .report-workflow span + span::before {
+    content: "›";
+    margin-right: 3px;
+    color: #9db1bd;
+    font-size: 1rem;
+  }
+  .report-workflow b {
+    display: inline-grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--mems-soft);
+    color: var(--mems-brand);
+    font-size: .75rem;
+  }
+  .mems-report .report-actions {
+    grid-template-columns: repeat(3,minmax(0,1fr));
+    align-items: stretch;
+  }
+  .mems-report .report-actions .action-card,
+  .mems-report .report-actions .action-card:first-child,
+  .mems-report .report-actions .action-card:nth-child(2) {
+    grid-column: auto;
+    min-height: 318px;
+  }
+  .mems-report .report-actions .report-primary {
+    background: linear-gradient(145deg,#fff 0%,#f0f9f9 100%) !important;
+    border-color: #a9d5d8 !important;
+    box-shadow: 0 13px 32px rgba(11,102,108,.10) !important;
+  }
+  .mems-report .action-card-icon svg {
+    width: 27px;
+    height: 27px;
+  }
+  .mems-report .report-primary .action-card-icon {
+    background: var(--mems-primary) !important;
+    color: #fff !important;
+  }
+  .report-card-kicker {
+    margin: 1px 0 7px;
+    color: var(--mems-primary);
+    font-size: .72rem;
+    font-weight: 800;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+  }
+  .report-tools-label { margin-top: 2px !important; }
+  .report-utility {
+    display: grid;
+    grid-template-columns: auto minmax(0,1fr) auto;
+    gap: 15px;
+    align-items: center;
+    margin-bottom: 34px;
+    padding: 18px 20px;
+    border: 1px solid var(--mems-line);
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: var(--mems-shadow);
+  }
+  .report-utility-icon {
+    display: grid;
+    place-items: center;
+    width: 46px;
+    height: 46px;
+    border-radius: 13px;
+    background: var(--mems-soft);
+    color: var(--mems-brand);
+  }
+  .report-utility-icon svg { width: 24px; height: 24px; }
+  .report-utility-copy {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .report-utility-copy strong {
+    color: var(--mems-text);
+    font-size: .95rem;
+  }
+  .report-utility-copy span {
+    margin-top: 3px;
+    color: var(--mems-muted);
+    font-size: .82rem;
+  }
+  .report-utility-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 10px 16px;
+    border: 1px solid #c9e2e4;
+    border-radius: 10px;
+    background: var(--mems-soft);
+    color: var(--mems-brand);
+    font: 700 .86rem 'Sarabun',sans-serif;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .report-utility-button:hover {
+    background: var(--mems-primary);
+    border-color: var(--mems-primary);
+    color: #fff;
+  }
+  @media (max-width: 900px) {
+    .mems-report .report-actions { grid-template-columns: 1fr 1fr; }
+    .mems-report .report-actions .report-primary { grid-column: 1 / -1; }
+  }
+  @media (max-width: 640px) {
+    .report-workflow {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .report-workflow span + span::before { display: none; }
+    .mems-report .report-actions { grid-template-columns: 1fr; }
+    .mems-report .report-actions .action-card,
+    .mems-report .report-actions .action-card:first-child,
+    .mems-report .report-actions .action-card:nth-child(2),
+    .mems-report .report-actions .report-primary {
+      grid-column: auto;
+      min-height: 0;
+    }
+    .report-utility {
+      grid-template-columns: auto minmax(0,1fr);
+      padding: 16px;
+    }
+    .report-utility-button {
+      grid-column: 1 / -1;
+      width: 100%;
+    }
+  }
+}
