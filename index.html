@@ -198,13 +198,14 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   font-family:'Sarabun',sans-serif;
 }
 #loginOverlay .mems-auth-shell {
-  width:min(1150px,100%); min-height:656px; display:grid; grid-template-columns:47.5% 52.5%;
-  overflow:hidden; border:1px solid #d2e0e5; border-radius:30px; background:#fff;
+  width:min(1150px,100%)!important; max-width:1150px!important; min-height:656px; display:grid; grid-template-columns:47.5% 52.5%;
+  column-gap:0!important; row-gap:0!important; padding:0!important; overflow:hidden;
+  border:1px solid #d2e0e5; border-radius:30px; background:#fff;
   box-shadow:0 26px 70px rgba(20,43,64,.14); text-align:left;
 }
 #loginOverlay .mems-auth-shell::before { display:none!important; content:none!important; }
-#loginOverlay .mems-auth-brand {
-  display:flex; flex-direction:column; justify-content:center; align-items:flex-start;
+#loginOverlay > .mems-auth-shell > .mems-auth-brand {
+  display:flex!important; grid-column:1!important; flex-direction:column; justify-content:center; align-items:flex-start;
   padding:64px 60px; box-sizing:border-box; background:#0b666c; color:#fff;
 }
 #loginOverlay .mems-auth-brand img {
@@ -217,8 +218,9 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   width:100%; margin-top:44px; padding-top:31px; border-top:1px solid rgba(255,255,255,.22);
   color:#eefafa; font-size:17px; font-weight:600; line-height:1.85;
 }
-#loginOverlay .mems-auth-form {
-  display:flex; flex-direction:column; justify-content:center; padding:58px 50px; box-sizing:border-box;
+#loginOverlay > .mems-auth-shell > .mems-auth-form {
+  display:flex!important; grid-column:2!important; flex-direction:column; justify-content:center;
+  padding:58px 50px; box-sizing:border-box;
 }
 #loginOverlay .mems-auth-heading h2 { margin:0; color:#142b40; font-size:34px; line-height:1.3; }
 #loginOverlay .mems-auth-heading p { margin:8px 0 28px; color:#617586; font-size:17px; }
@@ -246,7 +248,8 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 @media(max-width:720px) {
   #loginOverlay.mems-auth-screen { padding:16px; align-items:flex-start; }
   #loginOverlay .mems-auth-shell { min-height:0; grid-template-columns:1fr; border-radius:22px; margin:auto; }
-  #loginOverlay .mems-auth-brand { padding:25px 24px; display:grid; grid-template-columns:58px 1fr; column-gap:16px; }
+  #loginOverlay > .mems-auth-shell > .mems-auth-brand { grid-column:1!important; padding:25px 24px; display:grid!important; grid-template-columns:58px 1fr; column-gap:16px!important; }
+  #loginOverlay > .mems-auth-shell > .mems-auth-form { grid-column:1!important; }
   #loginOverlay .mems-auth-brand img { grid-row:1/3; width:58px; height:58px; padding:6px; border-radius:14px; margin:0; }
   #loginOverlay .mems-auth-brand h1 { font-size:30px; align-self:end; }
   #loginOverlay .mems-auth-brand>p { margin:1px 0 0; font-size:15px; align-self:start; }
