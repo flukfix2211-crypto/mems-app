@@ -368,6 +368,16 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       <div class="card-body" id="homeAlertBody"></div>
     </div>
 
+    <div class="card dash-avail" style="margin-bottom:16px">
+      <div class="card-head"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v13H4zM8 21h8m-4-4v4"/></svg> ความพร้อมใช้แยกประเภทเครื่อง</div>
+      <div class="card-body">
+        <div class="dash-asset-summary" id="homeAssetSummary"></div>
+        <div class="dash-avail-list" id="homeAvailList"><div class="dash-avail-empty">กำลังโหลด…</div></div>
+        <div class="dash-avail-legend"><span><i class="seg-avail"></i>พร้อมใช้</span><span><i class="seg-borrowed"></i>ยืมอยู่</span><span><i class="seg-repair"></i>ชำรุด / ส่งซ่อม</span></div>
+        <details class="dash-repair-list" id="homeRepairList" hidden><summary></summary><div class="dash-repair-items"></div></details>
+      </div>
+    </div>
+
     <div class="card dash-trend" style="margin-bottom:16px">
       <div class="card-head"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18M6 15l5-5 4 3 6-8"/></svg> แนวโน้มยืม-คืน 30 วันล่าสุด</div>
       <div class="card-body">
@@ -1239,6 +1249,7 @@ async function loadAll() {
     assetRows   = assets;
     applyFilters();
     renderAlertBanner();
+    renderHomeAvailability();
     renderHomeTrend();
     renderDashboardSummary();
     note.textContent = '';
@@ -1262,48 +1273,68 @@ function renderDashboardSummary() {
 
 /* ============================================================ HOME: แจ้งเตือน & แนวโน้ม ============================================================ */
 const OVERDUE_C2_DAYS = 14;
+// เกณฑ์ "ยืมนานเกินกำหนด" (วัน) แยกตามประเภทเครื่อง — C2 ผูกกับรอบเปลี่ยน Circuit, ประเภทที่ไม่ได้ระบุใช้ OVERDUE_DEFAULT_DAYS
+const OVERDUE_DAYS_BY_TYPE = { 'c2': OVERDUE_C2_DAYS, 'high flow': 14, 'brid เขียว': 14, 'monnal t60': 14, 't1': 14 };
+const OVERDUE_DEFAULT_DAYS = 30;
 const SHORTAGE_MAX = 2;
 const TREND_DAYS = 30;
+const REPAIR_STATUSES = ['ชำรุด', 'ส่งซ่อม'];
+
+const equipKey = name => String(name || '').trim().toLowerCase();
+const isC2 = name => String(name || '').includes('C2');
+function overdueLimitFor(equipment) {
+  if (isC2(equipment)) return OVERDUE_C2_DAYS;
+  return OVERDUE_DAYS_BY_TYPE[equipKey(equipment)] ?? OVERDUE_DEFAULT_DAYS;
+}
+
+// ความพร้อมใช้ต่อประเภท: นับเครื่องจริงจากทะเบียนครุภัณฑ์ (assets) — ไม่ใช่แค่เครื่องที่เคยมีประวัติยืม-คืนใน equipment_status
+// total ไม่นับเครื่องที่จำหน่ายแล้ว, เครื่องที่ยืมอยู่นับเป็น "ยืมอยู่" แม้ในทะเบียนจะเป็นชำรุด/ส่งซ่อม (จะได้ไม่นับซ้ำ)
+function computeTypeAvailability() {
+  const borrowedByType = {};
+  equipStatus.forEach(e => {
+    if (!e.equipment || !e.isBorrowed) return;
+    const k = equipKey(e.equipment);
+    (borrowedByType[k] = borrowedByType[k] || new Set()).add(String(e.number ?? ''));
+  });
+
+  const byType = {};
+  assetRows.forEach(a => {
+    if (!a.type) return;
+    const k = equipKey(a.type);
+    const t = byType[k] || (byType[k] = { equipment: a.type, total: 0, borrowed: 0, repair: 0, broken: 0, sendRepair: 0, sold: 0, available: 0, repairUnits: [] });
+    const status = a.status || 'ใช้งานได้';
+    if (status === 'จำหน่าย') { t.sold++; return; }
+    t.total++;
+    if (!REPAIR_STATUSES.includes(status)) return;
+    if (borrowedByType[k] && borrowedByType[k].has(String(a.no ?? ''))) return;
+    t.repair++;
+    if (status === 'ชำรุด') t.broken++; else t.sendRepair++;
+    t.repairUnits.push({ no: a.no, status });
+  });
+
+  return Object.entries(byType).map(([k, t]) => {
+    t.borrowed = Math.min(borrowedByType[k] ? borrowedByType[k].size : 0, t.total - t.repair);
+    t.available = Math.max(0, t.total - t.borrowed - t.repair);
+    return t;
+  }).sort((a, b) => b.total - a.total || a.equipment.localeCompare(b.equipment, 'th'));
+}
 
 // รวมโค้ดคำนวณ alert ไว้จุดเดียว ใช้ทั้ง Home banner และ KPI Display slide
 function computeAlerts() {
   const now = new Date();
 
   const overdue = equipStatus
-    .filter(e => e.isBorrowed && String(e.equipment).includes('C2'))
+    .filter(e => e.isBorrowed && e.equipment)
     .map(e => {
       const dt = parseThaiTimestampStr(e.lastUpdate);
       const days = dt ? Math.floor((now - dt) / 86400000) : null;
-      return { number: e.number, ward: e.ward, days };
+      return { equipment: e.equipment, number: e.number, ward: e.ward, days, limit: overdueLimitFor(e.equipment), isC2: isC2(e.equipment) };
     })
-    .filter(e => e.days !== null && e.days >= OVERDUE_C2_DAYS)
-    .sort((a, b) => b.days - a.days);
+    .filter(e => e.days !== null && e.days >= e.limit)
+    .sort((a, b) => (b.days - b.limit) - (a.days - a.limit));
 
-  // นับจำนวนเครื่อง "ใช้งานได้" ทั้งหมดต่อประเภท จากทะเบียนครุภัณฑ์ (assets) — ไม่ใช่แค่เครื่องที่เคยมีประวัติยืม-คืนใน equipment_status
-  // (เดิมนับจาก equipStatus อย่างเดียว ทำให้เครื่องที่ยังไม่เคยถูกยืม/คืนเลยไม่ถูกนับว่า "พร้อมใช้" เลย ตัวเลขจึงต่ำกว่าความจริง)
-  const totalByType = {};
-  assetRows.forEach(a => {
-    if (!a.type) return;
-    if (!(a.type in totalByType)) totalByType[a.type] = { total: 0, usable: 0 };
-    totalByType[a.type].total++;
-    const status = a.status || 'ใช้งานได้';
-    if (status !== 'จำหน่าย' && status !== 'ชำรุด' && status !== 'ส่งซ่อม') totalByType[a.type].usable++;
-  });
-
-  const borrowedByType = {};
-  equipStatus.forEach(e => {
-    if (!e.equipment || !e.isBorrowed) return;
-    borrowedByType[e.equipment] = (borrowedByType[e.equipment] || 0) + 1;
-  });
-
-  const shortage = Object.entries(totalByType)
-    .map(([equipment, t]) => ({
-      equipment,
-      total: t.total,
-      borrowed: borrowedByType[equipment] || 0,
-      available: Math.max(0, t.usable - (borrowedByType[equipment] || 0))
-    }))
-    .filter(s => s.available <= SHORTAGE_MAX)
+  const shortage = computeTypeAvailability()
+    .filter(s => s.total > 0 && s.available <= SHORTAGE_MAX)
     .sort((a, b) => a.available - b.available);
 
   return { overdue, shortage };
@@ -1330,6 +1361,9 @@ function computeDailyTrend(days) {
   return out;
 }
 
+const escHtml = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const jsArg = value => escHtml(String(value ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'"));
+
 function renderAlertBanner() {
   const banner = document.getElementById('homeAlertBanner');
   const body = document.getElementById('homeAlertBody');
@@ -1338,20 +1372,74 @@ function renderAlertBanner() {
   if (!overdue.length && !shortage.length) { banner.style.display = 'none'; return; }
   banner.style.display = 'block';
   body.innerHTML = `<div class="equip-grid">${
-    overdue.map(o => `
-      <div class="equip-card borrowed clickable" onclick="openCircuitModal('${String(o.number).replace(/'/g,"\\'")}','${String(o.ward||'').replace(/'/g,"\\'")}',${o.days})" title="กดเพื่อบันทึกการเปลี่ยน Circuit">
+    overdue.map(o => o.isC2 ? `
+      <div class="equip-card borrowed clickable" onclick="openCircuitModal('${jsArg(o.number)}','${jsArg(o.ward)}',${o.days})" title="กดเพื่อบันทึกการเปลี่ยน Circuit">
         <div class="equip-name">⏰ C2 ยืมเกินกำหนด</div>
-        <div class="equip-num" style="font-size:16px">No.${o.number}</div>
-        <div class="equip-ward">📍 ${o.ward || '—'}</div>
+        <div class="equip-num" style="font-size:16px">No.${escHtml(o.number)}</div>
+        <div class="equip-ward">📍 ${escHtml(o.ward || '—')}</div>
+        <div class="equip-who">ยืมมาแล้ว ${o.days} วัน</div>
+      </div>` : `
+      <div class="equip-card borrowed">
+        <div class="equip-name">⏰ ยืมนานเกิน ${o.limit} วัน</div>
+        <div class="equip-num" style="font-size:16px">${escHtml(o.equipment)}${o.number ? ' No.' + escHtml(o.number) : ''}</div>
+        <div class="equip-ward">📍 ${escHtml(o.ward || '—')}</div>
         <div class="equip-who">ยืมมาแล้ว ${o.days} วัน</div>
       </div>`).join('') +
     shortage.map(s => `
       <div class="equip-card warn">
         <div class="equip-name">⚠️ ใกล้หมด</div>
-        <div class="equip-num" style="font-size:16px">${s.equipment}</div>
-        <div class="equip-who">เหลือว่าง ${s.available} · ยืมอยู่ ${s.borrowed} · ทั้งหมด ${s.total} เครื่อง</div>
+        <div class="equip-num" style="font-size:16px">${escHtml(s.equipment)}</div>
+        <div class="equip-who">เหลือว่าง ${s.available} · ยืมอยู่ ${s.borrowed}${s.repair ? ' · ซ่อม ' + s.repair : ''} · ทั้งหมด ${s.total} เครื่อง</div>
       </div>`).join('')
   }</div>`;
+}
+
+// HOME: ความพร้อมใช้แยกประเภท + สรุปสถานะครุภัณฑ์ (ชำรุด/ส่งซ่อม)
+function renderHomeAvailability() {
+  const list = document.getElementById('homeAvailList');
+  const summary = document.getElementById('homeAssetSummary');
+  const repairBox = document.getElementById('homeRepairList');
+  if (!list || !summary || !repairBox) return;
+  const types = computeTypeAvailability();
+  if (!types.length) {
+    summary.innerHTML = '';
+    list.innerHTML = '<div class="dash-avail-empty">ยังไม่มีข้อมูลทะเบียนครุภัณฑ์ (เพิ่มได้ที่หน้าจัดการครุภัณฑ์)</div>';
+    repairBox.hidden = true;
+    return;
+  }
+
+  const sum = key => types.reduce((n, t) => n + t[key], 0);
+  const chip = (cls, label, value) => `<div class="dash-asset-chip ${cls}"><span>${label}</span><strong>${value.toLocaleString('th-TH')}</strong></div>`;
+  summary.innerHTML =
+    chip('is-total', 'ครุภัณฑ์ทั้งหมด', sum('total')) +
+    chip('is-avail', 'พร้อมใช้', sum('available')) +
+    chip('is-borrowed', 'ยืมอยู่', sum('borrowed')) +
+    chip('is-broken', 'ชำรุด', sum('broken')) +
+    chip('is-repair', 'ส่งซ่อม', sum('sendRepair'));
+
+  const pct = (n, t) => t ? (n / t * 100).toFixed(2) + '%' : '0%';
+  list.innerHTML = types.map(t => {
+    const low = t.available <= SHORTAGE_MAX;
+    return `
+    <div class="dash-avail-row${low ? ' is-low' : ''}">
+      <div class="dash-avail-name">${escHtml(t.equipment)}</div>
+      <div class="dash-avail-bar" role="img" aria-label="${escHtml(t.equipment)} พร้อมใช้ ${t.available} ยืมอยู่ ${t.borrowed} ชำรุดหรือส่งซ่อม ${t.repair} จาก ${t.total} เครื่อง">
+        <span class="seg-avail" style="width:${pct(t.available, t.total)}"></span><span class="seg-borrowed" style="width:${pct(t.borrowed, t.total)}"></span><span class="seg-repair" style="width:${pct(t.repair, t.total)}"></span>
+      </div>
+      <div class="dash-avail-count"><strong>${t.available}</strong>/${t.total} พร้อมใช้</div>
+      <div class="dash-avail-detail">ยืมอยู่ ${t.borrowed}${t.repair ? ' · ซ่อม ' + t.repair : ''}</div>
+    </div>`;
+  }).join('');
+
+  const repairUnits = types.flatMap(t => t.repairUnits.map(u => ({ ...u, equipment: t.equipment })))
+    .sort((a, b) => a.equipment.localeCompare(b.equipment, 'th') || (parseInt(a.no, 10) || 0) - (parseInt(b.no, 10) || 0));
+  repairBox.hidden = !repairUnits.length;
+  if (repairUnits.length) {
+    repairBox.querySelector('summary').textContent = `รายการเครื่องชำรุด / ส่งซ่อม (${repairUnits.length})`;
+    repairBox.querySelector('.dash-repair-items').innerHTML = repairUnits.map(u =>
+      `<span class="dash-repair-item ${u.status === 'ชำรุด' ? 'is-broken' : 'is-repair'}">${escHtml(u.equipment)}${u.no != null && u.no !== '' ? ' No.' + escHtml(u.no) : ''} · ${escHtml(u.status)}</span>`
+    ).join('') + '<a class="dash-repair-link" href="assets.html">จัดการทะเบียนครุภัณฑ์ ›</a>';
+  }
 }
 
 // ── C2 CIRCUIT CHANGE MODAL ─────────────────────────────────
@@ -2618,19 +2706,19 @@ function renderKpiAlerts() {
   }
   wrap.innerHTML = [
     ...overdue.map(o => `
-      <div onclick="openCircuitModal('${String(o.number).replace(/'/g,"\\'")}','${String(o.ward||'').replace(/'/g,"\\'")}',${o.days})" title="กดเพื่อบันทึกการเปลี่ยน Circuit" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#0f172a;border-radius:12px;border-left:3px solid #ef4444;cursor:pointer">
+      <div ${o.isC2 ? `onclick="openCircuitModal('${jsArg(o.number)}','${jsArg(o.ward)}',${o.days})" title="กดเพื่อบันทึกการเปลี่ยน Circuit" ` : ''}style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#0f172a;border-radius:12px;border-left:3px solid #ef4444${o.isC2 ? ';cursor:pointer' : ''}">
         <div style="font-size:18px"><svg class="mems-icon kpi-icon-4" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v5l3 2M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0"/></svg></div>
         <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:700;color:#e2e8f0">C2 No.${o.number} · ${o.ward || '—'}</div>
-          <div style="font-size:11px;color:#64748b">ยืมมาแล้ว ${o.days} วัน (เกิน ${OVERDUE_C2_DAYS} วัน)</div>
+          <div style="font-size:13px;font-weight:700;color:#e2e8f0">${escHtml(o.equipment)}${o.number ? ' No.' + escHtml(o.number) : ''} · ${escHtml(o.ward || '—')}</div>
+          <div style="font-size:11px;color:#64748b">ยืมมาแล้ว ${o.days} วัน (เกิน ${o.limit} วัน)</div>
         </div>
       </div>`),
     ...shortage.map(s => `
       <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#0f172a;border-radius:12px;border-left:3px solid #f59e0b">
         <div style="font-size:18px"><svg class="mems-icon kpi-icon-5" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 10 18H2zM12 9v5m0 3v.1"/></svg></div>
         <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:700;color:#e2e8f0">${s.equipment}</div>
-          <div style="font-size:11px;color:#64748b">เหลือว่าง ${s.available} · ยืมอยู่ ${s.borrowed} · ทั้งหมด ${s.total} เครื่อง</div>
+          <div style="font-size:13px;font-weight:700;color:#e2e8f0">${escHtml(s.equipment)}</div>
+          <div style="font-size:11px;color:#64748b">เหลือว่าง ${s.available} · ยืมอยู่ ${s.borrowed}${s.repair ? ' · ซ่อม ' + s.repair : ''} · ทั้งหมด ${s.total} เครื่อง</div>
         </div>
       </div>`)
   ].join('');
