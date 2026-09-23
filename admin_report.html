@@ -194,7 +194,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 </style>
   <link rel="stylesheet" href="mems-ui.css">
   <link rel="stylesheet" href="mems-auth-theme.css?v=20260923-app-2">
-  <link rel="stylesheet" href="report-office.css?v=20260923-report-1">
+  <link rel="stylesheet" href="report-office.css?v=20260923-report-2">
 </head>
 <body class="mems-report">
 
@@ -381,6 +381,28 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 
 </main>
 
+<!-- PDF PREVIEW -->
+<div id="pdfPreviewModal" class="pdf-preview-modal" role="dialog" aria-modal="true" aria-labelledby="pdfPreviewTitle" hidden>
+  <div class="pdf-preview-shell">
+    <div class="pdf-preview-head">
+      <div>
+        <div class="pdf-preview-eyebrow">ตรวจสอบก่อนบันทึกหรือพิมพ์</div>
+        <h2 id="pdfPreviewTitle">ตัวอย่างรายงาน PDF</h2>
+        <div id="pdfPreviewFilename" class="pdf-preview-filename"></div>
+      </div>
+      <button type="button" class="pdf-preview-close" onclick="closePdfPreview()" aria-label="ปิดตัวอย่าง">×</button>
+    </div>
+    <div class="pdf-preview-body">
+      <iframe id="pdfPreviewFrame" title="ตัวอย่างเอกสาร PDF"></iframe>
+    </div>
+    <div class="pdf-preview-actions">
+      <button type="button" class="pdf-preview-secondary" onclick="closePdfPreview()">ปิด</button>
+      <button type="button" class="pdf-preview-secondary" onclick="printPdfPreview()">พิมพ์</button>
+      <button type="button" class="pdf-preview-primary" onclick="downloadPdfPreview()">ดาวน์โหลด PDF</button>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div id="toast"></div>
 
@@ -389,7 +411,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 <script src="vendor/jspdf.plugin.autotable.min.js"></script>
 <script src="supabase-client.js"></script>
 <script src="auth.js"></script>
-<script src="reports.js?v=20260923-pdf-1"></script>
+<script src="reports.js?v=20260923-pdf-2"></script>
 <script>
   window.addEventListener('DOMContentLoaded', () => { memsGuard('dashboard'); });
 </script>
@@ -397,6 +419,53 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   // ── ประวัติในหน่วยความจำ (เซสชัน) ────────────────────────
   const localHistory = JSON.parse(sessionStorage.getItem('memsReportHistory') || '[]');
   let _lastReportForPdf = null; // { type, data } — รายงานล่าสุดที่สร้าง ใช้โดยปุ่ม Export PDF
+  let _pdfPreviewUrl = '';
+  let _pdfPreviewName = '';
+
+  window.memsOpenPdfPreview = function(blob, filename) {
+    if (_pdfPreviewUrl) URL.revokeObjectURL(_pdfPreviewUrl);
+    _pdfPreviewUrl = URL.createObjectURL(blob);
+    _pdfPreviewName = filename || 'MEMs_Report.pdf';
+    document.getElementById('pdfPreviewFilename').textContent = _pdfPreviewName;
+    document.getElementById('pdfPreviewFrame').src = _pdfPreviewUrl;
+    const modal = document.getElementById('pdfPreviewModal');
+    modal.hidden = false;
+    document.body.classList.add('pdf-preview-open');
+    modal.querySelector('.pdf-preview-close').focus();
+  };
+
+  function closePdfPreview() {
+    const modal = document.getElementById('pdfPreviewModal');
+    modal.hidden = true;
+    document.body.classList.remove('pdf-preview-open');
+    document.getElementById('pdfPreviewFrame').src = 'about:blank';
+    if (_pdfPreviewUrl) URL.revokeObjectURL(_pdfPreviewUrl);
+    _pdfPreviewUrl = '';
+  }
+
+  function downloadPdfPreview() {
+    if (!_pdfPreviewUrl) return;
+    const link = document.createElement('a');
+    link.href = _pdfPreviewUrl;
+    link.download = _pdfPreviewName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }
+
+  function printPdfPreview() {
+    const frame = document.getElementById('pdfPreviewFrame');
+    if (!frame.src || frame.src === 'about:blank') return;
+    frame.contentWindow.focus();
+    frame.contentWindow.print();
+  }
+
+  document.getElementById('pdfPreviewModal').addEventListener('click', e => {
+    if (e.target.id === 'pdfPreviewModal') closePdfPreview();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !document.getElementById('pdfPreviewModal').hidden) closePdfPreview();
+  });
 
   // ── MAIN ACTION HANDLER ─────────────────────────────────────
   async function runAction(type) {
@@ -444,10 +513,10 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
           return;
         }
         const rc = configs[_lastReportForPdf.type];
-        await rc.exportPdf(_lastReportForPdf.data);
+        await rc.exportPdf(_lastReportForPdf.data, { preview: true });
         setLoading(cfg, false);
-        showResult('success', '✅ ดาวน์โหลด PDF แล้ว', `<p style="font-size:14px;color:var(--muted)">ไฟล์: ${rc.fileName(_lastReportForPdf.data)}</p>`);
-        toast('✅ ดาวน์โหลด PDF สำเร็จ');
+        showResult('success', 'เปิดตัวอย่าง PDF แล้ว', `<p style="font-size:14px;color:var(--muted)">ตรวจสอบเอกสารก่อนเลือกดาวน์โหลดหรือพิมพ์: ${rc.fileName(_lastReportForPdf.data)}</p>`);
+        toast('เปิดตัวอย่าง PDF แล้ว');
         return;
       }
 
