@@ -106,7 +106,14 @@
 
     /* ALERT BANNER (หน้าแรก) */
     .alert-banner { background: var(--card); border-radius: var(--r); box-shadow: var(--sh); margin-bottom: 16px; overflow: hidden; }
-    .alert-banner .card-head { background: #FDEAEA; color: #B82E2E; }
+    .alert-banner .card-head { background: #FDEAEA; color: #B82E2E; flex-wrap: wrap; }
+    .alert-filter { margin-left: auto; display: flex; flex-wrap: wrap; gap: 6px; }
+    .alert-filter button { font: inherit; font-size: 12px; font-weight: 600; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--border); background: #fff; color: #475569; cursor: pointer; transition: background .15s, color .15s, border-color .15s; }
+    .alert-filter button:hover { border-color: #94a3b8; }
+    .alert-filter button.active { background: #1e293b; border-color: #1e293b; color: #fff; }
+    .alert-filter button .cnt { display: inline-block; min-width: 18px; margin-left: 4px; padding: 0 5px; border-radius: 999px; background: rgba(148,163,184,.25); font-size: 11px; text-align: center; }
+    .alert-filter button.active .cnt { background: rgba(255,255,255,.2); }
+    .alert-empty { color: var(--muted); font-size: 13px; text-align: center; padding: 12px 0; }
     .trend-bar-row { display: flex; align-items: flex-end; gap: 3px; height: 90px; }
     .trend-bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 2px; height: 100%; }
 
@@ -365,7 +372,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   <!-- HOME VIEW: NAV CARDS -->
   <div id="viewHome" class="view active"><div class="dash-page-heading"><div><div class="dash-eyebrow">MEDICAL EQUIPMENT MANAGEMENT</div><h2>ภาพรวมเครื่องมือแพทย์</h2><p>ติดตามสถานะเครื่องมือและการยืม–คืนระหว่างหน่วยงาน</p></div><button id="dashRefresh" class="dash-refresh" onclick="loadAll()" type="button">↻ อัปเดตข้อมูล</button></div><section class="dash-summary" aria-label="สรุปการใช้งาน"><article class="dash-stat"><div class="dash-stat-label">อยู่ระหว่างยืม</div><div class="dash-stat-value"><strong id="dash-borrowed">—</strong><span>เครื่อง</span></div><small>สถานะล่าสุดในระบบ</small></article><article class="dash-stat"><div class="dash-stat-label">หน่วยงานที่ยืม</div><div class="dash-stat-value"><strong id="dash-wards">—</strong><span>หน่วยงาน</span></div><small>มีเครื่องมืออยู่ระหว่างยืม</small></article><article class="dash-stat"><div class="dash-stat-label">รายการยืมวันนี้</div><div class="dash-stat-value"><strong id="dash-borrow">—</strong><span>รายการ</span></div><small>รายการที่บันทึกในวันนี้</small></article><article class="dash-stat"><div class="dash-stat-label">รายการคืนวันนี้</div><div class="dash-stat-value"><strong id="dash-return">—</strong><span>รายการ</span></div><small>รายการที่บันทึกในวันนี้</small></article></section><div id="dashLoadNote" class="dash-load-note" role="status">กำลังโหลดข้อมูล…</div>
     <div id="homeAlertBanner" class="alert-banner" style="display:none">
-      <div class="card-head"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0 1 12 0v6l2 3H4l2-3zM10 21h4"/></svg> แจ้งเตือน</div>
+      <div class="card-head"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0 1 12 0v6l2 3H4l2-3zM10 21h4"/></svg> แจ้งเตือน<div class="alert-filter" id="homeAlertFilter" role="tablist" aria-label="เลือกหัวข้อแจ้งเตือน"></div></div>
       <div class="card-body" id="homeAlertBody"></div>
     </div>
 
@@ -1331,28 +1338,55 @@ function computeDailyTrend(days) {
   return out;
 }
 
+// หัวข้อแจ้งเตือนที่เลือกไว้ (จำไว้ในเบราว์เซอร์นี้)
+const ALERT_TOPICS = [
+  { key: 'all',      label: 'ทั้งหมด' },
+  { key: 'overdue',  label: '⏰ C2 ยืมเกินกำหนด' },
+  { key: 'shortage', label: '⚠️ ใกล้หมด' }
+];
+let alertTopic = (() => { try { return localStorage.getItem('memsAlertTopic') || 'all'; } catch (_) { return 'all'; } })();
+
+function setAlertTopic(key) {
+  alertTopic = key;
+  try { localStorage.setItem('memsAlertTopic', key); } catch (_) {}
+  renderAlertBanner();
+}
+
 function renderAlertBanner() {
   const banner = document.getElementById('homeAlertBanner');
   const body = document.getElementById('homeAlertBody');
+  const filter = document.getElementById('homeAlertFilter');
   if (!banner || !body) return;
   const { overdue, shortage } = computeAlerts();
   if (!overdue.length && !shortage.length) { banner.style.display = 'none'; return; }
   banner.style.display = 'block';
-  body.innerHTML = `<div class="equip-grid">${
-    overdue.map(o => `
+  if (!ALERT_TOPICS.some(t => t.key === alertTopic)) alertTopic = 'all';
+
+  const counts = { all: overdue.length + shortage.length, overdue: overdue.length, shortage: shortage.length };
+  if (filter) {
+    filter.innerHTML = ALERT_TOPICS.map(t => `
+      <button type="button" role="tab" aria-selected="${t.key === alertTopic}" class="${t.key === alertTopic ? 'active' : ''}" onclick="setAlertTopic('${t.key}')">${t.label}<span class="cnt">${counts[t.key]}</span></button>`).join('');
+  }
+
+  const showOverdue = alertTopic === 'all' || alertTopic === 'overdue';
+  const showShortage = alertTopic === 'all' || alertTopic === 'shortage';
+  const cards =
+    (showOverdue ? overdue.map(o => `
       <div class="equip-card borrowed clickable" onclick="openCircuitModal('${String(o.number).replace(/'/g,"\\'")}','${String(o.ward||'').replace(/'/g,"\\'")}',${o.days})" title="กดเพื่อบันทึกการเปลี่ยน Circuit">
         <div class="equip-name">⏰ C2 ยืมเกินกำหนด</div>
         <div class="equip-num" style="font-size:16px">No.${o.number}</div>
         <div class="equip-ward">📍 ${o.ward || '—'}</div>
         <div class="equip-who">ยืมมาแล้ว ${o.days} วัน</div>
-      </div>`).join('') +
-    shortage.map(s => `
+      </div>`).join('') : '') +
+    (showShortage ? shortage.map(s => `
       <div class="equip-card warn">
         <div class="equip-name">⚠️ ใกล้หมด</div>
         <div class="equip-num" style="font-size:16px">${s.equipment}</div>
         <div class="equip-who">เหลือว่าง ${s.available} · ยืมอยู่ ${s.borrowed} · ทั้งหมด ${s.total} เครื่อง</div>
-      </div>`).join('')
-  }</div>`;
+      </div>`).join('') : '');
+  body.innerHTML = cards
+    ? `<div class="equip-grid">${cards}</div>`
+    : `<div class="alert-empty">ไม่มีรายการในหัวข้อนี้</div>`;
 }
 
 // ── C2 CIRCUIT CHANGE MODAL ─────────────────────────────────
