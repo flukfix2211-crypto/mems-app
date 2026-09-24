@@ -150,7 +150,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 .submit-bar{background:linear-gradient(to top,#0c6173 72%,transparent)!important}
 }
 </style>
-  <link rel="stylesheet" href="mems-ui.css">
+  <link rel="stylesheet" href="mems-ui.css?v=20260924-clock-1">
   <link rel="stylesheet" href="mems-auth-theme.css?v=20260923-app-2">
   <link rel="stylesheet" href="operations-office.css?v=20260923-ops-2">
 </head>
@@ -201,7 +201,10 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     <div style="display:flex;align-items:center;gap:10px">
       <a href="index.html" style="font-size:11px;font-weight:700;background:rgba(255,255,255,0.18);color:#fff;padding:4px 10px;border-radius:20px;text-decoration:none;border:1px solid rgba(255,255,255,0.3)">🏠 หน้าหลัก</a>
       <span id="memsUserBadge" style="font-size:11px;color:#fff"></span>
-      <span class="clock" id="clock"></span>
+      <span class="mems-clock clock" id="clock" aria-label="วันและเวลาปัจจุบัน">
+        <span class="mems-clock-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg></span>
+        <span class="mems-clock-copy"><span class="mems-clock-date" id="clockDate"></span><strong class="mems-clock-time"><span id="clockTime">--:--</span><span class="mems-clock-seconds" id="clockSeconds">:--</span></strong></span>
+      </span>
     </div>
   </div>
   <a href="index.html" style="text-decoration:none"><h1>MEMs</h1></a>
@@ -384,8 +387,11 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 
   (function tick() {
     const now = new Date();
-    document.getElementById('clock').textContent =
-      now.toLocaleTimeString('th-TH', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+    document.getElementById('clockDate').textContent =
+      now.toLocaleDateString('th-TH', { weekday:'short', day:'numeric', month:'short' });
+    document.getElementById('clockTime').textContent =
+      now.toLocaleTimeString('th-TH', { hour:'2-digit', minute:'2-digit', hour12:false });
+    document.getElementById('clockSeconds').textContent = ':' + String(now.getSeconds()).padStart(2, '0');
     setTimeout(tick, 1000);
   })();
 
