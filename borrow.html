@@ -570,7 +570,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 .submit-bar{background:linear-gradient(to top,#0c6173 72%,transparent)!important}
 }
 </style>
-<link rel="stylesheet" href="mems-ui.css">
+<link rel="stylesheet" href="mems-ui.css?v=20260924-clock-1">
 <link rel="stylesheet" href="mems-auth-theme.css?v=20260923-app-2">
 <link rel="stylesheet" href="operations-office.css?v=20260923-ops-2">
 </head>
@@ -613,7 +613,10 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       <a href="index.html" style="font-size:11px;font-weight:700;background:rgba(255,255,255,0.18);color:#fff;padding:4px 10px;border-radius:20px;text-decoration:none;border:1px solid rgba(255,255,255,0.3)"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10 12 3l9 7M5 9v12h5v-7h4v7h5V9"/></svg> หน้าหลัก</a>
       <a href="dashboard.html" style="font-size:11px;font-weight:700;background:rgba(255,255,255,0.18);color:#fff;padding:4px 10px;border-radius:20px;text-decoration:none;border:1px solid rgba(255,255,255,0.3)"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3v18h17M8 16v-5m5 5V7m5 9V4"/></svg> แดชบอร์ด</a>
       <span id="memsUserBadge" style="font-size:11px;color:#fff"></span>
-      <span class="clock" id="clock"></span>
+      <span class="mems-clock clock" id="clock" aria-label="วันและเวลาปัจจุบัน">
+        <span class="mems-clock-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg></span>
+        <span class="mems-clock-copy"><span class="mems-clock-date" id="clockDate"></span><strong class="mems-clock-time"><span id="clockTime">--:--</span><span class="mems-clock-seconds" id="clockSeconds">:--</span></strong></span>
+      </span>
       <button onclick="document.getElementById('helpModal').style.display='flex'" style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.4);color:#fff;font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">?</button>
     </div>
   </div>
@@ -809,8 +812,11 @@ let S = { action: null, shift: null, equip: null };
 /* ====== CLOCK ====== */
 (function tick() {
   const now = new Date();
-  document.getElementById('clock').textContent =
-    now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+  document.getElementById('clockDate').textContent =
+    now.toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short' });
+  document.getElementById('clockTime').textContent =
+    now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false });
+  document.getElementById('clockSeconds').textContent = ':' + String(now.getSeconds()).padStart(2, '0');
   setTimeout(tick, 1000);
 })();
 
