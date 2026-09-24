@@ -37,8 +37,9 @@
     border-radius: 9px; background: #fff; color: #075c65;
   }
   .mems-clock-icon svg { width: 17px; height: 17px; }
-  .mems-clock-copy { display: grid; gap: 2px; text-align: left; white-space: nowrap; }
+  .mems-clock-copy { display: grid; gap: 1px; text-align: left; white-space: nowrap; }
   .mems-clock-date { color: #cce8eb; font-size: .625rem; font-weight: 600; letter-spacing: .015em; }
+  .mems-clock-date-en { color: #9ed4d8; font-size: .5625rem; font-weight: 600; letter-spacing: .02em; }
   .mems-clock-time { color: #fff; font-size: 1rem; font-weight: 800; letter-spacing: .045em; }
   .mems-clock-seconds { color: #91d8d6; font-size: .7em; font-weight: 700; }
   .content, .main { min-width: 0; }
@@ -132,7 +133,9 @@
     .mems-home .menu-title, .mems-home .primary-action .menu-title { font-size: 1.0625rem !important; }
     .mems-home .menu-arrow { width: 26px; height: 26px; }
     .header .mems-clock { min-height: 38px; padding: 5px 9px; border-radius: 11px; }
-    .mems-clock-icon, .mems-clock-date { display: none; }
+    .mems-clock-icon { display: none; }
+    .mems-clock-date { font-size: .5625rem; }
+    .mems-clock-date-en { font-size: .5rem; }
     .mems-clock-time { font-size: .875rem; }
     .mems-login { padding: 16px !important; }
     .mems-login .shell { max-width: 440px; grid-template-columns: 1fr; border-radius: 20px; }
