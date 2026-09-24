@@ -83,7 +83,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 }
 </style>
   <link rel="stylesheet" href="professional.css">
-  <link rel="stylesheet" href="mems-ui.css?v=20260924-clock-2">
+  <link rel="stylesheet" href="mems-ui.css?v=20260924-clock-status-1">
   <link rel="stylesheet" href="home-office.css">
 <style id="mems-login-theme">
 /* Shared sign-in overlay: official MEMs identity, retaining existing auth controls. */
@@ -193,7 +193,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 </style>
 <style id="mems-login-reference">
 #loginOverlay.mems-auth-screen {
-  position:fixed; inset:0; z-index:9999; display:none; align-items:center; justify-content:center;
+  position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center;
   padding:32px; box-sizing:border-box; overflow:auto; background:#f2f7f8!important;
   font-family:'Sarabun',sans-serif;
 }
@@ -307,7 +307,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       </details>
       <span class="mems-clock clock-badge" id="clock" aria-label="วันและเวลาปัจจุบัน">
         <span class="mems-clock-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg></span>
-        <span class="mems-clock-copy"><span class="mems-clock-date" id="clockDateTh"></span><span class="mems-clock-date-en" id="clockDateEn"></span><strong class="mems-clock-time"><span id="clockTime">--:--</span><span class="mems-clock-seconds" id="clockSeconds">:--</span></strong></span>
+        <span class="mems-clock-copy"><span class="mems-clock-date" id="clockDateTh"></span><span class="mems-clock-date-en" id="clockDateEn"></span><strong class="mems-clock-time"><span id="clockTime">--:--</span><span class="mems-clock-seconds" id="clockSeconds">:--</span></strong><span class="mems-clock-status" id="clockStatus"></span></span>
       </span>
       <button class="icon-btn" style="width:28px;height:28px;font-size:13px;font-weight:800;border-radius:50%;line-height:1" onclick="document.getElementById('helpModal').style.display='flex'">?</button>
     </div>
@@ -396,19 +396,8 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 <script src="vendor/supabase.js"></script>
 <script src="supabase-client.js"></script>
 <script src="auth.js"></script>
+<script src="mems-clock.js?v=20260924-clock-status-1"></script>
 <script>
-  function tick() {
-    const now = new Date();
-    document.getElementById('clockDateTh').textContent =
-      now.toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short' , year: 'numeric' });
-    document.getElementById('clockDateEn').textContent =
-      now.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
-    document.getElementById('clockTime').textContent =
-      now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false });
-    document.getElementById('clockSeconds').textContent = ':' + String(now.getSeconds()).padStart(2, '0');
-  }
-  tick(); setInterval(tick, 1000);
-
   window.addEventListener('DOMContentLoaded', async () => {
     const profile = await memsGuard(null); // แค่ login พอ ไม่บังคับสิทธิ์หน้าใดหน้าหนึ่ง
     if (!profile) return;
