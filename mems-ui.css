@@ -42,6 +42,15 @@
   .mems-clock-date-en { color: #9ed4d8; font-size: .5625rem; font-weight: 600; letter-spacing: .02em; }
   .mems-clock-time { color: #fff; font-size: 1rem; font-weight: 800; letter-spacing: .045em; }
   .mems-clock-seconds { color: #91d8d6; font-size: .7em; font-weight: 700; }
+  .mems-clock-status {
+    display: inline-flex; align-items: center; gap: 5px; width: max-content; max-width: 100%;
+    margin-top: 2px; padding: 3px 7px; border-radius: 999px;
+    font-size: .5625rem; font-weight: 700; letter-spacing: .01em;
+  }
+  .mems-clock-status::before { content: ''; width: 6px; height: 6px; flex: 0 0 6px; border-radius: 50%; background: currentColor; }
+  .mems-clock-status.is-working { color: #bff5d5; background: rgba(45,190,112,.18); }
+  .mems-clock-status.is-offhours { color: #ffe0a3; background: rgba(244,166,38,.17); }
+  .mems-clock-status.is-holiday { color: #ffc3c8; background: rgba(226,77,91,.18); }
   .content, .main { min-width: 0; }
   .card, .filter-bar, .ki-panel, .ward-block, .history-card, .panel {
     border: 1px solid #d6e5e9 !important; border-radius: 16px !important;
@@ -137,6 +146,7 @@
     .mems-clock-date { font-size: .5625rem; }
     .mems-clock-date-en { font-size: .5rem; }
     .mems-clock-time { font-size: .875rem; }
+    .mems-clock-status { font-size: .5rem; padding: 2px 6px; }
     .mems-login { padding: 16px !important; }
     .mems-login .shell { max-width: 440px; grid-template-columns: 1fr; border-radius: 20px; }
     .mems-login .brand { padding: 24px; display: grid; grid-template-columns: 56px 1fr; column-gap: 16px; }

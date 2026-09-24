@@ -570,7 +570,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 .submit-bar{background:linear-gradient(to top,#0c6173 72%,transparent)!important}
 }
 </style>
-<link rel="stylesheet" href="mems-ui.css?v=20260924-clock-2">
+<link rel="stylesheet" href="mems-ui.css?v=20260924-clock-status-1">
 <link rel="stylesheet" href="mems-auth-theme.css?v=20260923-app-2">
 <link rel="stylesheet" href="operations-office.css?v=20260923-ops-2">
 </head>
@@ -615,7 +615,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       <span id="memsUserBadge" style="font-size:11px;color:#fff"></span>
       <span class="mems-clock clock" id="clock" aria-label="วันและเวลาปัจจุบัน">
         <span class="mems-clock-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg></span>
-        <span class="mems-clock-copy"><span class="mems-clock-date" id="clockDateTh"></span><span class="mems-clock-date-en" id="clockDateEn"></span><strong class="mems-clock-time"><span id="clockTime">--:--</span><span class="mems-clock-seconds" id="clockSeconds">:--</span></strong></span>
+        <span class="mems-clock-copy"><span class="mems-clock-date" id="clockDateTh"></span><span class="mems-clock-date-en" id="clockDateEn"></span><strong class="mems-clock-time"><span id="clockTime">--:--</span><span class="mems-clock-seconds" id="clockSeconds">:--</span></strong><span class="mems-clock-status" id="clockStatus"></span></span>
       </span>
       <button onclick="document.getElementById('helpModal').style.display='flex'" style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.4);color:#fff;font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">?</button>
     </div>
@@ -805,22 +805,11 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 <script src="vendor/supabase.js"></script>
 <script src="supabase-client.js"></script>
 <script src="auth.js"></script>
+<script src="mems-clock.js?v=20260924-clock-status-1"></script>
 <script>
 /* ====== STATE ====== */
 let S = { action: null, shift: null, equip: null };
 
-/* ====== CLOCK ====== */
-(function tick() {
-  const now = new Date();
-  document.getElementById('clockDateTh').textContent =
-    now.toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short' , year: 'numeric' });
-  document.getElementById('clockDateEn').textContent =
-    now.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
-  document.getElementById('clockTime').textContent =
-    now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false });
-  document.getElementById('clockSeconds').textContent = ':' + String(now.getSeconds()).padStart(2, '0');
-  setTimeout(tick, 1000);
-})();
 
 /* ====== BACKGROUND PARTICLE ANIMATION ====== */
 (function () {
