@@ -1,154 +1,255 @@
-/* MEMs articulated bitmap mascot. Decorative only: no app data or input interception. */
+/* MEMs animated guide. It never intercepts clicks or reads form data. */
 (function () {
   'use strict';
-  const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
-  if (motion.matches || document.getElementById('mems-mascot')) return;
-  const source = new URL('img/mascot/mascot-idle.png', document.currentScript.src).href;
-  const image = new Image();
-  image.src = source;
-  image.onload = function () {
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, {once:true});
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+  if (reduce.matches || document.getElementById('mems-mascot')) return;
+
+  const scriptUrl = document.currentScript?.src || document.baseURI;
+  const images = {};
+  Promise.all(['idle', 'blink', 'wave', 'welcome'].map(name => new Promise(resolve => {
+    const image = new Image();
+    image.onload = () => { images[name] = image; resolve(); };
+    image.onerror = resolve;
+    image.src = new URL(`img/mascot/mascot-${name}.png`, scriptUrl).href;
+  }))).then(() => {
+    if (!images.idle) return;
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
     else init();
-  };
+  });
+
   function init() {
-    if (motion.matches) return;
+    if (reduce.matches || document.getElementById('mems-mascot')) return;
+
+    const tips = {
+      index: ['เริ่มยืม–คืนเครื่องมือได้จากเมนูแรกเลยครับ', 'เลือกเมนูที่ต้องการได้เลย ผมอยู่ช่วยตรงนี้ครับ'],
+      dashboard: ['ดูสถานะเครื่องและงานที่ต้องติดตามได้ในหน้านี้ครับ', 'กดอัปเดตข้อมูล เพื่อดูสถานะล่าสุดก่อนเริ่มงานนะครับ'],
+      borrow: ['ตรวจหมายเลขเครื่องและหน่วยงานก่อนบันทึกทุกครั้งนะครับ', 'ถ้าเป็นการคืนเครื่อง อย่าลืมตรวจสภาพก่อนรับคืนครับ'],
+      prepare: ['เตรียมหลายเครื่องได้ โดยคั่นหมายเลขด้วยจุลภาคครับ', 'ตรวจรายการให้ครบ แล้วค่อยเปลี่ยนเป็น “พร้อมส่ง” นะครับ'],
+      assets: ['ค้นหาได้จาก No. เลขครุภัณฑ์ หรือ S/N ครับ', 'ตรวจสถานะเครื่องก่อนแก้ไขข้อมูล เพื่อป้องกันรายการซ้ำครับ'],
+      fixjob: ['ระบุอาการและวิธีแก้ไขให้ครบ จะค้นประวัติย้อนหลังง่ายขึ้นครับ', 'บันทึกวันที่และผู้รับผิดชอบให้ครบก่อนปิดงานนะครับ'],
+      round: ['เลือก Ward ก่อน แล้วตรวจเครื่องทีละรายการได้เลยครับ', 'พบความผิดปกติ บันทึกรายละเอียดไว้ได้ทันทีครับ'],
+      admin_report: ['ตรวจรายงานในหน้าพรีวิว ก่อนดาวน์โหลดหรือพิมพ์นะครับ', 'เลือกช่วงวันที่ให้ครบ เพื่อให้รายงานตรงกับงานที่ต้องการครับ'],
+      settings: ['ตรวจสิทธิ์ผู้ใช้ก่อนบันทึกการเปลี่ยนแปลงนะครับ', 'บัญชีผู้ใช้และสิทธิ์เข้าถึง จัดการได้จากหน้านี้ครับ']
+    };
+    const page = (location.pathname.split('/').pop() || 'index.html').replace('.html', '') || 'index';
+    const pageTips = tips[page] || tips.index;
+
     const stage = document.createElement('div');
     stage.id = 'mems-mascot';
-    stage.setAttribute('aria-hidden', 'true');
-    stage.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:340;overflow:hidden;';
+    stage.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:340;overflow:hidden;font-family:inherit';
+    const bubble = document.createElement('div');
+    bubble.className = 'mems-mascot-bubble';
+    bubble.setAttribute('role', 'status');
+    bubble.setAttribute('aria-live', 'polite');
+    bubble.style.cssText = 'position:absolute;box-sizing:border-box;max-width:calc(100vw - 32px);padding:11px 14px;border:1px solid rgba(8,111,123,.22);border-radius:14px;background:#fff;box-shadow:0 12px 34px rgba(8,45,57,.16);color:#123342;font-size:14px;line-height:1.55;font-weight:600;opacity:0;visibility:hidden;transform:translateY(8px) scale(.97);transition:opacity .22s ease,transform .22s ease,visibility .22s;text-align:left';
     const canvas = document.createElement('canvas');
-    canvas.style.cssText = 'position:absolute;width:150px;height:160px;pointer-events:none;';
-    stage.appendChild(canvas);
+    canvas.setAttribute('aria-hidden', 'true');
+    canvas.style.cssText = 'position:absolute;width:130px;height:139px;pointer-events:none;will-change:transform';
+    stage.append(bubble, canvas);
     document.body.appendChild(stage);
+
     const ctx = canvas.getContext('2d');
-    if (!ctx) {stage.remove();return;}
-    const ratio = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = 300 * ratio; canvas.height = 320 * ratio;
-    let frame = 0, state = 'hidden', since = 0, lastInput = performance.now();
-    let x = 0, y = 0, from = 0, to = 0, direction = 1, greeting = true;
-    let logoRect = null, greetingAnchor = null, cooldown = 0;
-    const width = () => window.innerWidth < 500 ? 106 : 130;
+    if (!ctx) { stage.remove(); return; }
+    const ratio = Math.min(devicePixelRatio || 1, 2);
+    canvas.width = 300 * ratio;
+    canvas.height = 320 * ratio;
+
+    let state = 'hidden', since = 0, lastActivity = performance.now(), cooldown = 0;
+    let x = 0, y = 0, from = 0, to = 0, direction = 1, speechUntil = 0;
+    let welcomed = false, tipIndex = Math.floor(Math.random() * pageTips.length);
+    let nextBlink = performance.now() + 2300, blinkUntil = 0, frame = 0;
+    const duration = { enter: 2100, welcome: 4800, wave: 2500, leave: 2200, patrol: 6800 };
+    const width = () => innerWidth < 540 ? 96 : 130;
     const height = () => width() * 320 / 300;
-    const ease = t => t*t*(3-2*t);
-    const lerp = (a,b,t) => a+(b-a)*t;
-    const duration = {enter:2200,wave:2300,retreat:2200,coffeeEnter:3500,sip:6500,coffeeExit:3500};
-    function anchor() {
-      return document.querySelector('.mems-logo') || document.querySelector('.header h1') || document.querySelector('img[alt*="โลโก้"]');
-    }
+    const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+    const smooth = t => t * t * (3 - 2 * t);
+    const lerp = (a, b, t) => a + (b - a) * t;
+
     function blocked() {
-      return document.hidden || motion.matches || !!document.querySelector('dialog[open]') ||
-        ['loginOverlay','helpModal','editModal'].some(id => {const el=document.getElementById(id);return el && getComputedStyle(el).display!=='none';}) ||
-        /^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement?.tagName || '');
+      const active = document.activeElement?.tagName || '';
+      const namedModal = ['loginOverlay', 'helpModal', 'editModal'].some(id => {
+        const el = document.getElementById(id);
+        return el && getComputedStyle(el).display !== 'none' && getComputedStyle(el).visibility !== 'hidden';
+      });
+      return document.hidden || reduce.matches || /^(INPUT|SELECT|TEXTAREA)$/.test(active) ||
+        !!document.querySelector('dialog[open], [role="dialog"][aria-hidden="false"]') || namedModal;
     }
-    function change(next, now) { state=next;since=now; }
-    function hide() { state='hidden';canvas.style.visibility='hidden';stage.style.clipPath='none';logoRect=null; }
-    function greet(now) {
-      greetingAnchor=anchor();if(!greetingAnchor)return false;
-      logoRect=greetingAnchor.getBoundingClientRect();
-      if(!logoRect.width || logoRect.bottom<0 || logoRect.top>innerHeight)return false;
-      // The logo's right edge is an occlusion plane: the robot walks out from behind it.
-      const edge=Math.min(logoRect.right-12,innerWidth-width()-18);
-      if(edge<10)return false;
-      from=edge-width();to=Math.min(innerWidth-width()-12,edge+12);
-      x=from;y=Math.max(6,Math.min(innerHeight-height()-12,logoRect.bottom-height()+20));
-      stage.style.clipPath='inset(0 0 0 '+edge+'px)';
-      direction=1;change('enter',now);return true;
+
+    function safeBottom() {
+      const bar = document.querySelector('.submit-bar');
+      if (!bar) return 14;
+      const rect = bar.getBoundingClientRect();
+      return rect.top < innerHeight && rect.bottom > 0 ? rect.height + 16 : 14;
     }
-    function coffee(now) {
-      stage.style.clipPath='none';logoRect=null;direction=1;
-      from=-width()-15;to=Math.min(innerWidth*.22,innerWidth-width()-20);
-      x=from;
-      const submit=document.querySelector('.submit-bar');
-      const safe=submit?submit.getBoundingClientRect().height:20;
-      y=Math.max(8,innerHeight-height()-safe-16);
-      change('coffeeEnter',now);
+
+    function setState(next, now) { state = next; since = now; }
+    function greeting() {
+      const hour = new Date().getHours();
+      if (hour < 12) return 'สวัสดีตอนเช้าครับ 👋 พร้อมเริ่มงานกันไหมครับ';
+      if (hour < 17) return 'สวัสดีตอนบ่ายครับ 👋 มีอะไรให้ MEMs ช่วยไหมครับ';
+      return 'สวัสดีตอนเย็นครับ 👋 วันนี้เหนื่อยไหมครับ';
     }
-    // Each body part retains the original MEMs bitmap; joints move independently.
-    function part(sx,sy,sw,sh,px,py,angle) {
-      ctx.save();ctx.translate(px,py);ctx.rotate(angle);
-      ctx.drawImage(image,sx,sy,sw,sh,sx-px,sy-py,sw,sh);ctx.restore();
+
+    function positionBubble() {
+      if (bubble.style.visibility === 'hidden') return;
+      const bw = Math.min(innerWidth < 540 ? 190 : 250, innerWidth - 32);
+      const left = direction > 0
+        ? clamp(x + width() * .62, 16, innerWidth - bw - 16)
+        : clamp(x - bw + width() * .35, 16, innerWidth - bw - 16);
+      bubble.style.width = `${bw}px`;
+      bubble.style.left = `${left}px`;
+      bubble.style.top = `${clamp(y - 58, 16, innerHeight - 120)}px`;
+      bubble.style.transformOrigin = direction > 0 ? 'bottom left' : 'bottom right';
     }
+
+    function speak(text, ms = 4200) {
+      bubble.textContent = text;
+      bubble.style.visibility = 'visible';
+      bubble.style.opacity = '1';
+      bubble.style.transform = 'translateY(0) scale(1)';
+      speechUntil = performance.now() + ms;
+      positionBubble();
+    }
+
+    function silence() {
+      speechUntil = 0;
+      bubble.style.opacity = '0';
+      bubble.style.transform = 'translateY(8px) scale(.97)';
+      bubble.style.visibility = 'hidden';
+    }
+
+    function hide() {
+      state = 'hidden';
+      canvas.style.visibility = 'hidden';
+      silence();
+    }
+
+    function startWelcome(now) {
+      direction = 1;
+      from = -width() - 18;
+      to = innerWidth < 540 ? 14 : 32;
+      x = from;
+      y = Math.max(10, innerHeight - height() - safeBottom());
+      setState('enter', now);
+    }
+
+    function startPatrol(now) {
+      const left = Math.random() > .5;
+      direction = left ? 1 : -1;
+      from = left ? -width() - 18 : innerWidth + 18;
+      to = left ? innerWidth + 18 : -width() - 18;
+      x = from;
+      y = Math.max(10, innerHeight - height() - safeBottom());
+      setState('patrol', now);
+    }
+
+    function part(sx, sy, sw, sh, px, py, angle) {
+      ctx.save(); ctx.translate(px, py); ctx.rotate(angle);
+      ctx.drawImage(images.idle, sx, sy, sw, sh, sx - px, sy - py, sw, sh);
+      ctx.restore();
+    }
+
     function arm(left, angle, elbow) {
-      ctx.save();const px=left?92:185,py=120;
-      ctx.translate(px,py);ctx.rotate(angle);ctx.translate(-px,-py);
-      if(left) {
-        part(62,112,39,51,92,120,0);
-        part(51,160,43,66,77,160,elbow);
+      ctx.save();
+      const px = left ? 92 : 185, py = 120;
+      ctx.translate(px, py); ctx.rotate(angle); ctx.translate(-px, -py);
+      if (left) {
+        part(62, 112, 39, 51, 92, 120, 0); part(51, 160, 43, 66, 77, 160, elbow);
       } else {
-        part(179,112,36,52,185,120,0);
-        part(185,162,40,67,199,162,elbow);
+        part(179, 112, 36, 52, 185, 120, 0); part(185, 162, 40, 67, 199, 162, elbow);
       }
       ctx.restore();
     }
-    function mug(t) {
-      const lift=(1-Math.cos(t*Math.PI*2))/2;
-      ctx.save();ctx.translate(185-27*lift,171-61*lift);ctx.rotate(-.18-.32*lift);
-      ctx.fillStyle='#fff';ctx.strokeStyle='#075763';ctx.lineWidth=3;
-      ctx.beginPath();ctx.roundRect(0,0,29,29,5);ctx.fill();ctx.stroke();
-      ctx.beginPath();ctx.arc(32,13,8,-Math.PI/2,Math.PI/2);ctx.stroke();
-      ctx.fillStyle='#764b31';ctx.fillRect(4,3,21,4);
-      ctx.strokeStyle='#9ebdc4';ctx.lineWidth=2;
-      for(let i=0;i<2;i++){ctx.beginPath();ctx.moveTo(8+i*12,-6);ctx.quadraticCurveTo(1+i*12,-14,10+i*12,-22);ctx.stroke();}
-      ctx.restore();return lift;
-    }
-    function draw(now, phase) {
-      const walking=['enter','retreat','coffeeEnter','coffeeExit'].includes(state);
-      const cycle=(now-since)/150;
-      const stride=walking?Math.sin(cycle):0;
-      const sipping=state==='sip';
-      const lift=sipping?(1-Math.cos(phase*Math.PI*4))/2:0;
-      ctx.setTransform(ratio,0,0,ratio,0,0);ctx.clearRect(0,0,300,320);
-      ctx.save();ctx.translate(150,0);ctx.scale(direction,1);ctx.translate(-140,5);
-      ctx.fillStyle='rgba(7,50,60,.12)';ctx.beginPath();ctx.ellipse(139,295,55,6,0,0,Math.PI*2);ctx.fill();
-      ctx.translate(0,walking?-Math.abs(stride)*3:Math.sin(now/700)*1.1);
-      part(88,187,52,108,120,191,stride*.24);
-      part(140,187,53,108,158,191,-stride*.24);
-      arm(false,sipping?.4+lift*.7:stride*.28,sipping?-1.5-lift*.6:0);
-      part(99,109,82,84,140,151,walking?stride*.025:0);
-      let wave=state==='wave'?2.25+Math.sin(phase*Math.PI*10)*.2:-stride*.28;
-      arm(true,wave,state==='wave'?.2+Math.sin(phase*Math.PI*10)*.12:0);
-      part(68,0,141,111,140,107,state==='wave'?-.06:stride*.035);
-      if(sipping)mug(phase*2);
+
+    function drawWalking(now) {
+      const cycle = ((now - since) % 560) / 560 * Math.PI * 2;
+      const stride = Math.sin(cycle), bob = -Math.abs(stride) * 5, sway = stride * .035;
+      ctx.save(); ctx.translate(150, 0); ctx.scale(direction, 1); ctx.translate(-140, 5 + bob);
+      ctx.fillStyle = 'rgba(7,50,60,.13)'; ctx.beginPath();
+      ctx.ellipse(139, 300 - bob, 54 - Math.abs(stride) * 4, 7, 0, 0, Math.PI * 2); ctx.fill();
+      part(88, 187, 52, 108, 120, 191, stride * .27);
+      part(140, 187, 53, 108, 158, 191, -stride * .27);
+      arm(false, stride * .30, -stride * .08);
+      part(99, 109, 82, 84, 140, 151, -sway * .55);
+      arm(true, -stride * .30, stride * .08);
+      part(68, 0, 141, 111, 140, 107, sway);
       ctx.restore();
-      canvas.style.width=width()+'px';canvas.style.height=height()+'px';
-      canvas.style.transform='translate3d('+x+'px,'+y+'px,0)';canvas.style.visibility='visible';
     }
+
+    function drawPose(now) {
+      let pose = state === 'welcome' ? 'welcome' : state === 'wave' ? 'wave' : 'idle';
+      if (pose === 'idle' && now >= nextBlink) {
+        blinkUntil = now + 170;
+        nextBlink = now + 2600 + Math.random() * 2600;
+      }
+      if (pose === 'idle' && now < blinkUntil && images.blink) pose = 'blink';
+      const image = images[pose] || images.idle;
+      const breath = Math.sin(now / 620), bob = state === 'wave' ? Math.sin(now / 170) * 1.2 : breath * 1.4;
+      ctx.save(); ctx.translate(150, 0); ctx.scale(direction, 1); ctx.translate(-150, bob);
+      ctx.fillStyle = 'rgba(7,50,60,.12)'; ctx.beginPath();
+      ctx.ellipse(150, 302 - bob, 54 + breath * 2, 7, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.drawImage(image, 0, 0, 300, 320); ctx.restore();
+    }
+
+    function draw(now) {
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0); ctx.clearRect(0, 0, 300, 320);
+      if (['enter', 'leave', 'patrol'].includes(state)) drawWalking(now); else drawPose(now);
+      canvas.style.width = `${width()}px`; canvas.style.height = `${height()}px`;
+      canvas.style.transform = `translate3d(${x}px,${y}px,0)`;
+      canvas.style.visibility = 'visible'; positionBubble();
+    }
+
     function tick(now) {
-      if(blocked()) {hide();lastInput=now;}
-      else if(state==='hidden') {
-        if(greeting && now-lastInput>1800){greeting=false;greet(now);}
-        else if(now-lastInput>45000 && now>cooldown)coffee(now);
+      if (blocked()) {
+        if (state !== 'hidden') hide();
+        lastActivity = now;
+      } else if (state === 'hidden') {
+        if (!welcomed && now - lastActivity > 1400) {
+          welcomed = true; startWelcome(now);
+        } else if (welcomed && now - lastActivity > 32000 && now > cooldown) startPatrol(now);
       }
-      if(state!=='hidden') {
-        const phase=Math.min(1,(now-since)/duration[state]);
-        if(state==='enter'||state==='coffeeEnter')x=lerp(from,to,phase);
-        if(state==='retreat')x=lerp(to,from,phase);
-        if(state==='coffeeExit')x=lerp(from,-width()-20,phase);
-        draw(now,phase);
-        if(phase>=1){
-          if(state==='enter')change('wave',now);
-          else if(state==='wave'){direction=-1;change('retreat',now);}
-          else if(state==='coffeeEnter')change('sip',now);
-          else if(state==='sip'){from=x;direction=-1;change('coffeeExit',now);}
-          else {hide();cooldown=now+90000;}
+
+      if (state !== 'hidden') {
+        const phase = clamp((now - since) / (duration[state] || 3000), 0, 1);
+        if (state === 'enter') x = lerp(from, to, smooth(phase));
+        if (state === 'leave') x = lerp(from, -width() - 20, smooth(phase));
+        if (state === 'patrol') x = lerp(from, to, smooth(phase));
+        if (state === 'enter' && phase > .7 && !speechUntil) speak(greeting(), 4300);
+        if (state === 'patrol' && phase > .3 && phase < .72 && !speechUntil) {
+          speak(pageTips[tipIndex++ % pageTips.length], 4200);
+        }
+        if (speechUntil && now >= speechUntil) silence();
+        draw(now);
+
+        if (phase >= 1) {
+          if (state === 'enter') setState('welcome', now);
+          else if (state === 'welcome') {
+            speak(pageTips[tipIndex++ % pageTips.length], 3900); setState('wave', now);
+          } else if (state === 'wave') {
+            silence(); from = x; direction = -1; setState('leave', now);
+          } else {
+            const finishedPatrol = state === 'patrol';
+            hide(); cooldown = now + (finishedPatrol ? 85000 : 65000); lastActivity = now;
+          }
         }
       }
-      frame=requestAnimationFrame(tick);
+      frame = requestAnimationFrame(tick);
     }
-    function activity(){
-      const now=performance.now();lastInput=now;
-      if(state==='sip'||state==='coffeeEnter'){from=x;direction=-1;change('coffeeExit',now);}
-      else if(state==='wave'||state==='enter')hide();
+
+    function activity() {
+      lastActivity = performance.now();
+      if (state !== 'hidden') { hide(); cooldown = lastActivity + 25000; }
     }
-    ['pointerdown','keydown','wheel','touchstart'].forEach(name=>document.addEventListener(name,activity,{passive:true}));
-    document.addEventListener('pointermove',activity,{passive:true});
-    window.addEventListener('resize',()=>{hide();lastInput=performance.now();});
-    window.addEventListener('scroll',()=>{if(logoRect)hide();lastInput=performance.now();},{passive:true});
-    document.addEventListener('visibilitychange',()=>{hide();lastInput=performance.now();});
-    motion.addEventListener('change',()=>{hide();lastInput=performance.now();});
-    window.addEventListener('pagehide',()=>{cancelAnimationFrame(frame);hide();});
-    window.addEventListener('pageshow',event=>{if(event.persisted){lastInput=performance.now();frame=requestAnimationFrame(tick);}});
-    hide();frame=requestAnimationFrame(tick);
+    ['pointerdown', 'keydown', 'wheel', 'touchstart'].forEach(name => document.addEventListener(name, activity, { passive: true }));
+    addEventListener('resize', activity);
+    addEventListener('scroll', activity, { passive: true });
+    document.addEventListener('visibilitychange', activity);
+    reduce.addEventListener('change', activity);
+    addEventListener('pagehide', () => { cancelAnimationFrame(frame); hide(); });
+    addEventListener('pageshow', event => {
+      if (event.persisted) { lastActivity = performance.now(); frame = requestAnimationFrame(tick); }
+    });
+    hide(); frame = requestAnimationFrame(tick);
   }
 })();
 
