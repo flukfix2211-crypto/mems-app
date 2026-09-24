@@ -570,14 +570,14 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 .submit-bar{background:linear-gradient(to top,#0c6173 72%,transparent)!important}
 }
 </style>
-  <link rel="stylesheet" href="mems-ui.css?v=20260924-clock-status-1">
+<link rel="stylesheet" href="mems-ui.css?v=20260924-clock-status-1">
 <link rel="stylesheet" href="mems-auth-theme.css?v=20260923-app-2">
 <link rel="stylesheet" href="operations-office.css?v=20260923-ops-2">
 </head>
 <body class="mems-operation mems-borrow">
 
 <!-- LOGIN OVERLAY -->
-<div id="loginOverlay" style="position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#0A6478 0%,#0E7D94 100%);display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box">
+<div id="loginOverlay" style="position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#0A6478 0%,#0E7D94 100%);display:none;align-items:center;justify-content:center;padding:20px;box-sizing:border-box">
   <div style="background:#fff;border-radius:20px;padding:36px 32px;width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,0.25);text-align:center;box-sizing:border-box">
     <div style="font-size:40px;margin-bottom:12px">🔒</div>
     <div style="font-size:18px;font-weight:800;color:#192D35;margin-bottom:4px">MEMs</div>
@@ -809,6 +809,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 <script>
 /* ====== STATE ====== */
 let S = { action: null, shift: null, equip: null };
+
 
 /* ====== BACKGROUND PARTICLE ANIMATION ====== */
 (function () {
@@ -1659,4 +1660,3 @@ function resetForm() {
 <script src="mascot.js?v=20260923-mascot-2"></script>
 </body>
 </html>
-
