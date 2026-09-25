@@ -573,6 +573,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 <link rel="stylesheet" href="mems-ui.css?v=20260924-clock-status-1">
 <link rel="stylesheet" href="mems-auth-theme.css?v=20260923-app-2">
 <link rel="stylesheet" href="operations-office.css?v=20260923-ops-2">
+<link rel="stylesheet" href="borrow-success.css?v=20260925-1">
 </head>
 <body class="mems-operation mems-borrow">
 
@@ -795,11 +796,18 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 
 <!-- ====== SUCCESS SCREEN ====== -->
 <div id="successScreen">
-  <div class="suc-icon" id="sIcon"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg></div>
-  <div class="suc-title" id="sTitle">บันทึกสำเร็จ!</div>
-  <div class="suc-detail" id="sDetail"></div>
-  <div class="suc-tag" id="sTag"></div>
-  <button class="reset-btn" onclick="resetForm()">ทำรายการใหม่</button>
+  <div class="suc-shell" role="status" aria-live="polite">
+    <div class="suc-brand"><img src="icon.png" alt="" width="38" height="38"><span>MEMs <small>ระบบจัดการเครื่องมือแพทย์</small></span></div>
+    <div class="suc-card">
+      <div class="suc-icon" id="sIcon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg></div>
+      <div class="suc-eyebrow">บันทึกรายการเรียบร้อย</div>
+      <h2 class="suc-title" id="sTitle">บันทึกสำเร็จ!</h2>
+      <p class="suc-intro">ตรวจสอบข้อมูลรายการด้านล่าง</p>
+      <div class="suc-detail" id="sDetail"></div>
+      <div class="suc-tag" id="sTag"></div>
+      <button type="button" class="reset-btn" onclick="resetForm()">ทำรายการใหม่ <span aria-hidden="true">→</span></button>
+    </div>
+  </div>
 </div>
 
 <script src="vendor/supabase.js"></script>
@@ -1526,19 +1534,40 @@ async function handleSubmit() {
 
 function showSuccess(d) {
   const isBorrow = d.action.includes('ยืม');
-  document.getElementById('sIcon').textContent  = isBorrow ? '✅' : '🔄';
-  document.getElementById('sTitle').textContent = isBorrow ? 'บันทึกการยืมสำเร็จ!' : 'บันทึกการคืนสำเร็จ!';
   const nums = d.equipmentNumbers || [d.equipmentNumber];
-  const numStr = nums.map((n, i) => `เครื่องที่ ${i+1}: <strong>#${n}</strong>`).join('<br>');
-  const savedNote = (d.savedCount !== undefined && d.savedCount < nums.length)
-    ? `<br><small style="color:#c0392b">⚠️ บันทึกได้ ${d.savedCount}/${nums.length} รายการ</small>`
-    : '';
-  document.getElementById('sDetail').innerHTML  =
-    `<strong>${d.equipment}</strong><br>${numStr}<br>` +
-    `ตึก: <strong>${d.ward}</strong><br>` +
-    `โดย: <strong>${d.name}</strong>${savedNote}`;
+  const partial = d.savedCount !== undefined && d.savedCount < nums.length;
+  const screen = document.getElementById('successScreen');
+  screen.classList.toggle('is-partial', partial);
+  screen.classList.toggle('is-return', !isBorrow);
+  document.getElementById('sTitle').textContent = partial
+    ? (d.savedCount === 0 ? 'บันทึกไม่สำเร็จ' : 'บันทึกได้บางรายการ')
+    : (isBorrow ? 'บันทึกการยืมสำเร็จ' : 'บันทึกการคืนสำเร็จ');
+  const detail = document.getElementById('sDetail');
+  detail.replaceChildren();
+  const addRow = (label, value) => {
+    const row = document.createElement('div');
+    row.className = 'suc-row';
+    const key = document.createElement('span');
+    key.className = 'suc-key';
+    key.textContent = label;
+    const val = document.createElement('strong');
+    val.className = 'suc-value';
+    val.textContent = String(value ?? '');
+    row.append(key, val);
+    detail.append(row);
+  };
+  addRow('เครื่องมือ', d.equipment);
+  nums.forEach((n, i) => addRow(`เครื่องที่ ${i + 1}`, `#${n}`));
+  addRow('ตึก', d.ward);
+  addRow('ผู้ทำรายการ', d.name);
+  if (partial) {
+    const note = document.createElement('p');
+    note.className = 'suc-warning';
+    note.textContent = `บันทึกได้ ${d.savedCount}/${nums.length} รายการ กรุณาตรวจสอบรายการก่อนทำซ้ำ`;
+    detail.append(note);
+  }
   document.getElementById('sTag').textContent = d.shift + '  ·  ' + new Date().toLocaleDateString('th-TH', { day:'numeric', month:'short', year:'numeric' });
-  document.getElementById('successScreen').classList.add('show');
+  screen.classList.add('show');
 }
 
 function resetForm() {
@@ -1556,6 +1585,7 @@ function resetForm() {
   document.getElementById('wardSel').value = '';
   document.getElementById('otherWrap').classList.add('hidden');
   document.getElementById('successScreen').classList.remove('show');
+  document.getElementById('successScreen').classList.remove('is-partial', 'is-return');
   // เคลียร์แบนเนอร์เครื่องที่เตรียม + ข้อความยืนยัน
   const pb = document.getElementById('preparedBanner');
   if (pb) { pb.style.display = 'none'; pb.innerHTML = ''; }
