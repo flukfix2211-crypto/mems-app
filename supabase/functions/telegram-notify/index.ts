@@ -3,7 +3,7 @@
 // old Google Apps Script backend (gas/Code.gs). Request shapes:
 //   POST { type: "borrow_return", record: {...} }  -> instant borrow/return notify
 //   POST { type: "digest", manual?: boolean }       -> compute + send daily alert digest (cron 08:00)
-//   POST { type: "shift_summary" }                  -> ยืม-คืนของเวร ช/บ/ด ล่าสุด (cron 08:30, วันละครั้ง)
+//   POST { type: "shift_summary" }                  -> ยืม-คืน + แก้ไขหน้างาน ของเวร ช/บ/ด ล่าสุด (cron 08:30, วันละครั้ง)
 //
 // Secrets required (set via Supabase Dashboard > Edge Functions > telegram-notify > Secrets,
 // or `supabase secrets set TELEGRAM_TOKEN=... TELEGRAM_CHAT_ID=...`):
@@ -220,30 +220,68 @@ function groupLines(rows: BorrowRow[]): string[] {
     });
 }
 
+type FixJobRow = {
+  ward: string | null;
+  topic: string | null;
+  detail: string | null;
+  solution: string | null;
+  staff: string | null;
+  recorded_at: string;
+};
+
+// ตัดข้อความยาวให้สั้นพอสำหรับบรรทัดสรุป
+function clip(s: unknown, max: number): string {
+  const t = String(s ?? "").replace(/\s+/g, " ").trim();
+  return t.length > max ? t.slice(0, max - 1) + "…" : t;
+}
+
+// แก้ไขหน้างาน 1 รายการ = 1 บรรทัด: หัวข้อ · ตึก — ปัญหา → วิธีแก้ (ผู้แก้)
+function fixJobLine(f: FixJobRow): string {
+  const staff = String(f.staff || "").replace(/\s*เจ้าหน้าที่ศูนย์เครื่องมือแพทย์\s*$/, "").trim();
+  let line = `   • ${escHtml(clip(f.topic || "—", 40))} · ${escHtml(f.ward || "—")}`;
+  if (f.detail) line += ` — ${escHtml(clip(f.detail, 80))}`;
+  if (f.solution) line += ` → ${escHtml(clip(f.solution, 80))}`;
+  if (staff) line += ` (${escHtml(staff)})`;
+  return line;
+}
+
 async function buildShiftSummaryMessage(supabase: ReturnType<typeof createClient>, now: Date): Promise<string> {
   const end = latestShiftCycleEnd(now);
   const start = new Date(end.getTime() - 3 * SHIFT_HOURS * 3600000);
 
-  const { data, error } = await supabase
-    .from("borrow_records")
-    .select("action, equipment_name, equipment_number, ward, recorded_at")
-    .gte("recorded_at", start.toISOString())
-    .lt("recorded_at", end.toISOString())
-    .order("recorded_at", { ascending: true })
-    .limit(5000);
-  if (error) throw error;
-  const rows = (data ?? []) as BorrowRow[];
+  const [borrowRes, fixRes] = await Promise.all([
+    supabase
+      .from("borrow_records")
+      .select("action, equipment_name, equipment_number, ward, recorded_at")
+      .gte("recorded_at", start.toISOString())
+      .lt("recorded_at", end.toISOString())
+      .order("recorded_at", { ascending: true })
+      .limit(5000),
+    supabase
+      .from("fixjob_records")
+      .select("ward, topic, detail, solution, staff, recorded_at")
+      .gte("recorded_at", start.toISOString())
+      .lt("recorded_at", end.toISOString())
+      .order("recorded_at", { ascending: true })
+      .limit(1000),
+  ]);
+  if (borrowRes.error) throw borrowRes.error;
+  if (fixRes.error) throw fixRes.error;
+  const rows = (borrowRes.data ?? []) as BorrowRow[];
+  const fixRows = (fixRes.data ?? []) as FixJobRow[];
 
-  let msg = `📋 <b>สรุปยืม-คืนรายเวร</b>\n${escHtml(fmtDayMonthTime(start))} – ${escHtml(fmtDayMonthTime(end))}\n`;
-  const totals = { borrow: 0, return: 0, move: 0 };
+  let msg = `📋 <b>สรุปยืม-คืน และแก้ไขหน้างาน รายเวร</b>\n${escHtml(fmtDayMonthTime(start))} – ${escHtml(fmtDayMonthTime(end))}\n`;
+  const totals = { borrow: 0, return: 0, move: 0, fix: 0 };
+  const inRange = (iso: string, from: number, to: number) => {
+    const t = new Date(iso).getTime();
+    return t >= from && t < to;
+  };
 
   SHIFTS.forEach((s, i) => {
     const from = start.getTime() + i * SHIFT_HOURS * 3600000;
     const to = from + SHIFT_HOURS * 3600000;
-    const inShift = rows.filter(r => {
-      const t = new Date(r.recorded_at).getTime();
-      return t >= from && t < to;
-    });
+    const inShift = rows.filter(r => inRange(r.recorded_at, from, to));
+    const fixes = fixRows.filter(f => inRange(f.recorded_at, from, to));
     const byKind = { borrow: [] as BorrowRow[], return: [] as BorrowRow[], move: [] as BorrowRow[] };
     for (const r of inShift) {
       const k = actionKind(r.action);
@@ -252,19 +290,25 @@ async function buildShiftSummaryMessage(supabase: ReturnType<typeof createClient
     totals.borrow += byKind.borrow.length;
     totals.return += byKind.return.length;
     totals.move += byKind.move.length;
+    totals.fix += fixes.length;
 
-    const counts = `ยืม ${byKind.borrow.length} · คืน ${byKind.return.length}${byKind.move.length ? " · ย้ายวอร์ด " + byKind.move.length : ""}`;
+    const counts = `ยืม ${byKind.borrow.length} · คืน ${byKind.return.length}`
+      + (byKind.move.length ? " · ย้ายวอร์ด " + byKind.move.length : "")
+      + (fixes.length ? " · แก้ไขหน้างาน " + fixes.length : "");
     msg += `\n${s.icon} <b>${s.label}</b> ${escHtml(fmtDayMonthTime(new Date(from)).slice(0, 5))} — ${counts}\n`;
-    if (!byKind.borrow.length && !byKind.return.length && !byKind.move.length) {
+    if (!byKind.borrow.length && !byKind.return.length && !byKind.move.length && !fixes.length) {
       msg += "   ไม่มีรายการ\n";
       return;
     }
     if (byKind.borrow.length) msg += `  🟩 ยืม\n${groupLines(byKind.borrow).join("\n")}\n`;
     if (byKind.return.length) msg += `  🟥 คืน\n${groupLines(byKind.return).join("\n")}\n`;
     if (byKind.move.length) msg += `  🔁 ย้ายวอร์ด (ไปที่)\n${groupLines(byKind.move).join("\n")}\n`;
+    if (fixes.length) msg += `  🛠 แก้ไขหน้างาน\n${fixes.map(fixJobLine).join("\n")}\n`;
   });
 
-  msg += `\n<b>รวม 3 เวร</b>: ยืม ${totals.borrow} · คืน ${totals.return}${totals.move ? " · ย้ายวอร์ด " + totals.move : ""}\n`;
+  msg += `\n<b>รวม 3 เวร</b>: ยืม ${totals.borrow} · คืน ${totals.return}`
+    + (totals.move ? " · ย้ายวอร์ด " + totals.move : "")
+    + ` · แก้ไขหน้างาน ${totals.fix}\n`;
 
   // เครื่องที่ยังยืมอยู่ ณ ตอนส่ง แยกตามประเภท
   const status = await fetchEquipmentStatus(supabase);
@@ -345,8 +389,10 @@ Deno.serve(async (req: Request) => {
     }
 
     if (type === "shift_summary") {
-      // dryRun: คืนข้อความโดยไม่ส่ง Telegram (ใช้ทดสอบ)
-      const message = await buildShiftSummaryMessage(supabase, new Date());
+      // dryRun: คืนข้อความโดยไม่ส่ง Telegram (ใช้ทดสอบ) — ใส่ asOf (ISO) เพื่อดูสรุปของช่วงเวลาอื่นได้เฉพาะตอน dryRun
+      const asOf = payload.dryRun && payload.asOf ? new Date(payload.asOf) : new Date();
+      if (isNaN(asOf.getTime())) return json({ ok: false, error: "invalid asOf" }, 400);
+      const message = await buildShiftSummaryMessage(supabase, asOf);
       if (payload.dryRun) return json({ ok: true, sent: false, dryRun: true, message });
       const results = [];
       for (const part of splitMessage(message)) results.push(await sendTelegramMessage(part));
