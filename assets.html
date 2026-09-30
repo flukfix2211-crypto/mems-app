@@ -346,7 +346,11 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   // แปลง error จากฐานข้อมูลเป็นข้อความที่อ่านเข้าใจ
   function assetErrorText(err) {
     const code = err && err.code;
-    if (code === '23505') return 'เลขครุภัณฑ์นี้มีในทะเบียนแล้ว';
+    if (code === '23505') {
+      return String(err.message || '').includes('assets_type_no_unique')
+        ? 'No. นี้มีในทะเบียนของประเภทนี้แล้ว'
+        : 'เลขครุภัณฑ์นี้มีในทะเบียนแล้ว';
+    }
     if (code === '42501') return 'ไม่มีสิทธิ์แก้ไขทะเบียน (ต้องเป็นแอดมินหรือมีสิทธิ์หน้าจัดการเครื่องมือ) — ลองออกจากระบบแล้วเข้าใหม่';
     return 'เกิดข้อผิดพลาด: ' + ((err && err.message) || err);
   }
