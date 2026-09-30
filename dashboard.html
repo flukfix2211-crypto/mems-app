@@ -1258,6 +1258,7 @@ async function loadAll() {
     note.textContent = '';
     document.getElementById('lastUpdated').textContent =
       'อัพเดต ' + new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+    initDashboardRealtime();
   } catch (err) {
     console.error(err);
     note.textContent = 'โหลดข้อมูลไม่สำเร็จ กรุณากดอัปเดตข้อมูลเพื่อลองอีกครั้ง';
@@ -1265,6 +1266,29 @@ async function loadAll() {
   } finally {
     refresh.disabled = false;
   }
+}
+
+/* ============================================================ REALTIME ============================================================
+   เมื่อมีการยืม/คืน/เตรียมเครื่อง หรือแก้ทะเบียน จากอุปกรณ์เครื่องไหนก็ตาม Supabase จะ push แจ้งมาทันทีผ่าน WebSocket
+   แทนที่จะรอ poll ทุก 60 วินาที แล้วรีโหลด + รีเรนเดอร์เฉพาะวิวที่กำลังเปิดอยู่ ณ ตอนนั้น
+   (หน้าภาพรวมตึกไม่รีเรนเดอร์อัตโนมัติ เพื่อไม่ให้ตึกที่เลือกไว้หายระหว่างใช้งาน) */
+let _realtimeChannel = null;
+function initDashboardRealtime() {
+  if (_realtimeChannel) return;
+  _realtimeChannel = subscribeRealtime(['borrow_records', 'assets', 'prepare_records'], async () => {
+    await loadAll();
+    if (currentView === 'kpi') {
+      kpiRefreshCountdown = 60;
+      renderKpiData();
+      goToSlide(kpiSlideIdx, false);
+    } else if (currentView === 'records') {
+      renderTable();
+    } else if (currentView === 'search') {
+      renderSearchToolResults();
+    } else {
+      refreshEqStatusViewIfActive();
+    }
+  });
 }
 
 function renderDashboardSummary() {
