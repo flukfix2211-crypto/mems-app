@@ -347,6 +347,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   <link rel="stylesheet" href="professional.css">
   <link rel="stylesheet" href="mems-ui.css">
   <link rel="stylesheet" href="dashboard-office.css">
+  <link rel="stylesheet" href="equipment-status.css">
   <link rel="stylesheet" href="mems-auth-theme.css?v=20260923-app-2">
 </head>
 <body class="mems-dashboard">
@@ -550,14 +551,14 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     <!-- C2 SUB-VIEW -->
     <div id="eqStatusC2">
       <!-- Summary -->
-      <div id="c2DashSummary" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px"></div>
+      <div id="c2DashSummary" class="eq-status-summary"></div>
       <!-- Two-column on desktop -->
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;align-items:start">
+      <div class="eq-status-layout">
         <div class="card" style="margin-bottom:0">
           <div class="card-head">สถานะปัจจุบัน</div>
           <div class="card-body">
             <div id="c2DashMsg" style="font-size:13px;color:var(--muted)"></div>
-            <div id="c2DashGrid" style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:8px"></div>
+            <div id="c2DashGrid" class="eq-status-grid"></div>
           </div>
         </div>
         <!-- Circuit due dates -->
@@ -572,12 +573,12 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 
     <!-- HIGH FLOW / BRID SUB-VIEW -->
     <div id="eqStatusEquip2" style="display:none">
-      <div id="equip2Summary" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px"></div>
+      <div id="equip2Summary" class="eq-status-summary"></div>
       <div class="card">
         <div class="card-head">สถานะปัจจุบัน</div>
         <div class="card-body">
           <div id="equip2Msg" style="font-size:13px;color:var(--muted)"></div>
-          <div id="equip2Grid" style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:8px"></div>
+          <div id="equip2Grid" class="eq-status-grid"></div>
         </div>
       </div>
     </div>
@@ -895,6 +896,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 <script src="vendor/jspdf.plugin.autotable.min.js"></script>
 <script src="supabase-client.js"></script>
 <script src="auth.js"></script>
+<script src="equipment-status.js"></script>
 <script src="reports.js?v=20260923-pdf-2"></script>
 <script>
 /* ============================================================ RECORD MAPPING (borrow_records -> shape เดิมจาก GAS getRecords()) ============================================================ */
@@ -2313,36 +2315,12 @@ async function renderC2Dashboard() {
     window._c2AssetMap = assetMap;
 
     const { items, counts } = computeC2Summary(units, assetMap);
-    const CLS = { sold: 'c2d-sold', repair: 'c2d-repair', borrowed: 'c2d-borrowed', avail: 'c2d-avail' };
-    const SUB = {
-      sold: () => '<div style="font-size:13px">❌</div>',
-      repair: () => '<div style="font-size:13px">🔧</div>',
-      borrowed: u => `<div style="font-size:9px">${u.ward||''}</div>`,
-      avail: () => ''
-    };
-    const TIP = {
-      sold: () => 'จำหน่ายแล้ว',
-      repair: u => u.assetStatus,
-      borrowed: u => (u.ward||'') + ' ' + (u.borrowedBy||'') + ' · กดเพื่อบันทึกการเปลี่ยน Circuit',
-      avail: () => 'พร้อมใช้'
-    };
-    const now = new Date();
-    grid.innerHTML = items.map(u => {
-      const clickable = u.status === 'borrowed';
-      let onclick = '';
-      if (clickable) {
-        const dt = parseThaiTimestampStr(u.lastUpdate);
-        const days = dt ? Math.floor((now - dt) / 86400000) : 0;
-        onclick = ` onclick="openCircuitModal('${String(u.number).replace(/'/g,"\\'")}','${String(u.ward||'').replace(/'/g,"\\'")}',${days})"`;
-      }
-      return `<div class="c2d-btn ${CLS[u.status]}${clickable ? ' clickable' : ''}" title="${TIP[u.status](u)}"${onclick}><div>No.${u.number}</div>${SUB[u.status](u)}</div>`;
-    }).join('');
-
-    document.getElementById('c2DashSummary').innerHTML = `
-      <span class="rs-badge rs-use">🟢 พร้อมใช้ ${counts.avail}</span>
-      <span class="rs-badge rs-lost">🔴 ยืมอยู่ ${counts.borrowed}</span>
-      <span class="rs-badge" style="background:#F0F0F0;color:#555;border-radius:20px;padding:4px 12px;font-size:13px;font-weight:700">🔧 ซ่อม ${counts.repair}</span>
-      <span class="rs-badge" style="background:#FDEAEA;color:#B82E2E;border-radius:20px;padding:4px 12px;font-size:13px;font-weight:700">❌ จำหน่าย ${counts.sold}</span>`;
+    renderEquipmentStatusGrid(grid, items, 'C2', u => {
+      const dt = parseThaiTimestampStr(u.lastUpdate);
+      const days = dt ? Math.floor((new Date() - dt) / 86400000) : 0;
+      openCircuitModal(String(u.number), u.ward || '', days);
+    });
+    document.getElementById('c2DashSummary').innerHTML = equipmentStatusSummary(counts);
     document.getElementById('navEqStatusDesc').textContent =
       `C2 — พร้อมใช้ ${counts.avail} · ยืมอยู่ ${counts.borrowed} · ซ่อม ${counts.repair} · จำหน่าย ${counts.sold}`;
 
@@ -2480,28 +2458,8 @@ async function renderEquip2Dashboard() {
       return { ...u, status };
     });
 
-    const CLS = { sold: 'c2d-sold', repair: 'c2d-repair', borrowed: 'c2d-borrowed', avail: 'c2d-avail' };
-    const SUB = {
-      sold: () => '<div style="font-size:13px">❌</div>',
-      repair: () => '<div style="font-size:13px">🔧</div>',
-      borrowed: u => `<div style="font-size:9px">${u.ward || ''}</div>`,
-      avail: () => ''
-    };
-    const TIP = {
-      sold: () => 'จำหน่ายแล้ว',
-      repair: u => u.assetStatus,
-      borrowed: u => (u.ward || '') + ' ' + (u.borrowedBy || ''),
-      avail: () => 'พร้อมใช้'
-    };
-    grid.innerHTML = finalItems.map(u =>
-      `<div class="c2d-btn ${CLS[u.status]}" title="${TIP[u.status](u)}"><div>No.${u.number}</div>${SUB[u.status](u)}</div>`
-    ).join('');
-
-    summary.innerHTML = `
-      <span class="rs-badge rs-use">🟢 พร้อมใช้ ${finalCounts.avail}</span>
-      <span class="rs-badge rs-lost">🔴 ยืมอยู่ ${finalCounts.borrowed}</span>
-      <span class="rs-badge" style="background:#F0F0F0;color:#555;border-radius:20px;padding:4px 12px;font-size:13px;font-weight:700">🔧 ซ่อม ${finalCounts.repair}</span>
-      <span class="rs-badge" style="background:#FDEAEA;color:#B82E2E;border-radius:20px;padding:4px 12px;font-size:13px;font-weight:700">❌ จำหน่าย ${finalCounts.sold}</span>`;
+    renderEquipmentStatusGrid(grid, finalItems, type);
+    summary.innerHTML = equipmentStatusSummary(finalCounts);
     document.getElementById('navEqStatusDesc').textContent =
       `${type} — พร้อมใช้ ${finalCounts.avail} · ยืมอยู่ ${finalCounts.borrowed} · ซ่อม ${finalCounts.repair} · จำหน่าย ${finalCounts.sold}`;
   } catch (e) {
