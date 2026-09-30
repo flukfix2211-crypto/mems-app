@@ -101,6 +101,10 @@
     .activity-icon { width: 30px; height: 30px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; background: var(--al); }
     .activity-icon.prepare { background: #E8F0FE; }
     .activity-icon.fixjob { background: #EDE9F8; }
+    .activity-icon.add { background: #E6F4EA; }
+    .activity-icon.edit { background: #FFF4E0; }
+    .activity-icon.delete { background: #FDEAEA; }
+    .activity-icon.account { background: #EEF0F3; }
     .activity-main { flex: 1; min-width: 0; }
     .activity-title { font-size: 13px; font-weight: 700; color: var(--txt); }
     .activity-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
@@ -510,6 +514,90 @@ function memsFmtDateTime(iso) {
     d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
 }
 
+// ── audit_log → รายการในประวัติการใช้งาน (เพิ่ม/แก้ไข/ลบ ทุกตาราง + จัดการบัญชี) ──
+const AUDIT_TABLE_LABEL = {
+  assets: 'ครุภัณฑ์', borrow_records: 'รายการยืม-คืน', prepare_records: 'รายการเตรียม', fixjob_records: 'แก้ไขหน้างาน'
+};
+const AUDIT_FIELD_LABEL = {
+  no: 'No.', type: 'ประเภท', status: 'สถานะ', note: 'หมายเหตุ', asset_code: 'เลขครุภัณฑ์', serial_number: 'S/N', asset_id: 'ID',
+  action: 'ประเภทรายการ', equipment_name: 'เครื่อง', equipment_number: 'หมายเลข', equipment_type: 'เครื่อง',
+  ward: 'ตึก', shift: 'เวร', staff_name: 'ผู้บันทึก', prepared_by: 'ผู้เตรียม', round_status: 'สถานะ Round',
+  record_date: 'วันที่', record_time: 'เวลา', recorded_at: 'วัน-เวลา',
+  topic: 'หัวข้อ', detail: 'รายละเอียด', solution: 'วิธีแก้', staff: 'ผู้แก้', photo_urls: 'รูป'
+};
+const AUDIT_SKIP_FIELDS = ['id', 'created_at', 'updated_at', 'actor_user_id'];
+// รายการ "เพิ่ม" ของตารางเหล่านี้แสดงจากตารางจริงอยู่แล้ว (res.borrow/prepare/fixjob) — ไม่แสดงซ้ำ
+const AUDIT_INSERT_SHOWN_ELSEWHERE = ['borrow_records', 'prepare_records', 'fixjob_records'];
+const ACCOUNT_OP_LABEL = {
+  create: 'สร้างบัญชี', update: 'แก้ไขบัญชี', reset_password: 'รีเซ็ตรหัสผ่านบัญชี',
+  enable: 'เปิดใช้งานบัญชี', disable: 'ปิดใช้งานบัญชี', delete: 'ลบบัญชี'
+};
+
+function auditValue(key, v) {
+  if (v === null || v === undefined || v === '') return '—';
+  if (key === 'permissions' && Array.isArray(v)) {
+    return v.length ? v.map(p => (typeof MEMS_PAGE_LABELS !== 'undefined' && MEMS_PAGE_LABELS[p]) || p).join(', ') : '—';
+  }
+  if (key === 'role') return v === 'admin' ? 'แอดมิน' : 'ผู้ใช้';
+  if (Array.isArray(v)) return v.length ? (key === 'photo_urls' ? v.length + ' รูป' : v.join(', ')) : '—';
+  if (key === 'recorded_at') return memsFmtDateTime(v);
+  const s = String(v).replace(/\s+/g, ' ').trim();
+  return s.length > 40 ? s.slice(0, 39) + '…' : s;
+}
+
+// ระบุว่าเป็นรายการไหน เช่น "C2 No.54"
+function auditSubject(table, row) {
+  if (!row) return '';
+  if (table === 'assets') return (row.type || '') + (row.no != null ? ' No.' + row.no : '');
+  if (table === 'borrow_records') return [row.action, row.equipment_name, row.equipment_number ? 'No.' + row.equipment_number : ''].filter(Boolean).join(' ');
+  if (table === 'prepare_records') return [row.equipment_type, row.equipment_number ? 'No.' + row.equipment_number : '', row.ward].filter(Boolean).join(' ');
+  if (table === 'fixjob_records') return [row.topic, row.ward].filter(Boolean).join(' · ');
+  return '';
+}
+
+function auditActivityItem(a) {
+  if (a.action === 'account') {
+    const d = a.new_data || {};
+    const who = d.username ? d.username + (d.display_name ? ' (' + d.display_name + ')' : '') : '';
+    let sub = '';
+    if (d.op === 'update' && d.before && d.after) {
+      const label = { role: 'สิทธิ์', display_name: 'ชื่อที่แสดง', permissions: 'หน้าที่เข้าได้' };
+      sub = Object.keys(d.after).map(k =>
+        (label[k] || k) + ': ' + auditValue(k, d.before[k]) + ' → ' + auditValue(k, d.after[k])).join(' · ');
+    } else if (d.op === 'create') {
+      sub = 'สิทธิ์: ' + auditValue('role', d.role) + (d.role !== 'admin' ? ' · หน้าที่เข้าได้: ' + auditValue('permissions', d.permissions || []) : '');
+    }
+    return { type: 'account', icon: '👤', ts: a.at, title: (ACCOUNT_OP_LABEL[d.op] || 'จัดการบัญชี') + ' ' + who, sub };
+  }
+
+  const table = AUDIT_TABLE_LABEL[a.table_name] || a.table_name;
+  if (a.action === 'insert') {
+    if (AUDIT_INSERT_SHOWN_ELSEWHERE.includes(a.table_name)) return null;
+    const n = a.new_data || {};
+    return {
+      type: 'add', icon: '➕', ts: a.at,
+      title: 'เพิ่ม' + table + ' ' + auditSubject(a.table_name, n),
+      sub: [n.asset_code, n.status].filter(Boolean).join(' · ')
+    };
+  }
+  if (a.action === 'delete') {
+    const o = a.old_data || {};
+    return {
+      type: 'delete', icon: '🗑️', ts: a.at,
+      title: 'ลบ' + table + ' ' + auditSubject(a.table_name, o),
+      sub: [o.asset_code, o.ward, o.recorded_at ? memsFmtDateTime(o.recorded_at) : ''].filter(Boolean).join(' · ')
+    };
+  }
+  // update: แสดงเฉพาะช่องที่เปลี่ยน "ช่อง: เดิม → ใหม่"
+  const o = a.old_data || {}, n = a.new_data || {};
+  const fields = (a.changed || []).filter(k => !AUDIT_SKIP_FIELDS.includes(k));
+  return {
+    type: 'edit', icon: '✏️', ts: a.at,
+    title: 'แก้ไข' + table + ' ' + auditSubject(a.table_name, n),
+    sub: fields.map(k => (AUDIT_FIELD_LABEL[k] || k) + ': ' + auditValue(k, o[k]) + ' → ' + auditValue(k, n[k])).join(' · ')
+  };
+}
+
 async function openActivityModal(id) {
   const u = allUsers.find(x => x.id === id);
   if (!u) return;
@@ -538,7 +626,8 @@ async function openActivityModal(id) {
         type: 'fixjob', icon: '🛠️', ts: r.recorded_at,
         title: 'แก้ไขหน้างาน: ' + (r.topic || '—'),
         sub: [r.ward, r.detail].filter(Boolean).join(' · ')
-      }))
+      })),
+      ...(res.audit || []).map(auditActivityItem).filter(Boolean)
     ].sort((a, b) => new Date(b.ts) - new Date(a.ts));
 
     const body = document.getElementById('activityBody');
