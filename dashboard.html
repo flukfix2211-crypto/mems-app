@@ -1283,7 +1283,7 @@ const TREND_DAYS = 30;
 // (anon key สาธารณะชุดเดียวกับที่หน้า Round ใช้ อ่านได้อย่างเดียว)
 const ROUND_SUPABASE_URL = 'https://xbwrawrdnygcfctnxezq.supabase.co';
 const ROUND_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhid3Jhd3JkbnlnY2ZjdG54ZXpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk5NzE3MzUsImV4cCI6MjEwNTU0NzczNX0.CgPsQ19JBw-4QzwWiuCxYB3p0mmlPsF2CxA7rmJDKdA';
-const ROUND_ACTIVE_DAYS = 7;   // เหมือนหน้า Round: นับเฉพาะเครื่องที่พบในราวด์ภายใน 7 วันก่อนราวด์ล่าสุด
+const ROUND_ACTIVE_DAYS = 0;   // นับเฉพาะเครื่องที่พบในราวด์วันล่าสุดเท่านั้น — ราวด์วันก่อนหน้าไม่ใช้ (เครื่องอาจคืนศูนย์ไปแล้ว)
 const CIRCUIT_SOON_DAYS = 2;   // แจ้งเตือนล่วงหน้าเมื่อวันเปลี่ยน (อังคาร/พฤหัส) ถึงภายใน 2 วัน
 let roundC2 = null;            // null = โหลดไม่ได้ → ใช้เกณฑ์เดิม (ยืมเกิน 14 วัน)
 
@@ -1393,8 +1393,18 @@ function computeAlerts() {
       const diff = isoDaysBetween(todayISO, changeISO);
       if (diff <= CIRCUIT_SOON_DAYS) circuit.push({ ...base, roundWard: r.ward, bed: r.bed, dueISO: r.dueISO, changeISO, diff });
     });
+    // เวลาบันทึกล่าสุดใน MEMs ของ C2 แต่ละเครื่อง — ถ้าบันทึกคืนหลังเวลาราวด์ แปลว่าเครื่องกลับศูนย์แล้ว ไม่ต้องเตือนให้บันทึกยืม
+    const lastMemsAt = {};
+    equipStatus.forEach(e => {
+      if (!String(e.equipment).includes('C2')) return;
+      const no = roundMachineNo(e.number);
+      const dt = parseThaiTimestampStr(e.lastUpdate);
+      if (no && dt && (!lastMemsAt[no] || dt > lastMemsAt[no])) lastMemsAt[no] = dt;
+    });
     Object.entries(round.byNumber).forEach(([no, r]) => {
       if (r.roundDate < round.activeSince || borrowedNos.has(no)) return;
+      const seenAt = parseThaiTimestampStr(r.recordedAt);
+      if (seenAt && lastMemsAt[no] && lastMemsAt[no] > seenAt) return;
       notBorrowed.push({ number: no, roundWard: r.ward, bed: r.bed, roundDate: r.roundDate });
     });
     const byNo = (a, b) => (parseInt(a.number, 10) || 0) - (parseInt(b.number, 10) || 0);
