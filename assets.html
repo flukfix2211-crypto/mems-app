@@ -340,6 +340,17 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 <script>
   let allAssets = [];
 
+  // ค่าที่ใช้แทนเลขครุภัณฑ์ได้หลายเครื่อง (เช่น เครื่องเช่า) — ไม่นับว่าซ้ำ ต้องตรงกับ unique index ในฐานข้อมูล
+  const ASSET_CODE_PLACEHOLDERS = ['เช่า', '-'];
+
+  // แปลง error จากฐานข้อมูลเป็นข้อความที่อ่านเข้าใจ
+  function assetErrorText(err) {
+    const code = err && err.code;
+    if (code === '23505') return 'เลขครุภัณฑ์นี้มีในทะเบียนแล้ว';
+    if (code === '42501') return 'ไม่มีสิทธิ์แก้ไขทะเบียน (ต้องเป็นแอดมินหรือมีสิทธิ์หน้าจัดการเครื่องมือ) — ลองออกจากระบบแล้วเข้าใหม่';
+    return 'เกิดข้อผิดพลาด: ' + ((err && err.message) || err);
+  }
+
   function toAssetView(row) {
     return {
       _rowIndex: row.id,
@@ -369,9 +380,9 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 
   async function loadAssets() {
     try {
-      const { data, error } = await supabase.from('assets').select('*').order('no', { ascending: true });
-      if (error) throw error;
-      allAssets = (data || []).map(toAssetView);
+      // โหลดเป็นชุด — ทะเบียนเกิน 1,000 แถวจะถูกตัดเงียบๆ ถ้าโหลดครั้งเดียว
+      const data = await fetchAllPages(() => supabase.from('assets').select('*').order('no', { ascending: true }).order('id'));
+      allAssets = data.map(toAssetView);
       updateStats();
       renderTable(allAssets);
     } catch (err) {
@@ -498,6 +509,22 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       note:   document.getElementById('fNote').value.trim()
     };
 
+    // กันลงทะเบียนซ้ำ: No. เดียวกันในประเภทเดียวกัน หรือเลขครุภัณฑ์ซ้ำกับเครื่องอื่น
+    const others = allAssets.filter(a => String(a._rowIndex) !== String(rowIndex));
+    const sameNo = others.find(a => a['ประเภท'] === fields.type && Number(a['No.']) === fields.no);
+    if (sameNo) {
+      showToast(`⚠️ ${fields.type} No.${fields.no} มีในทะเบียนแล้ว (${sameNo['เลขครุภัณฑ์'] || 'ไม่มีเลขครุภัณฑ์'})`);
+      return;
+    }
+    const code = String(fields.asset || '').trim();
+    if (code && !ASSET_CODE_PLACEHOLDERS.includes(code)) {
+      const sameCode = others.find(a => String(a['เลขครุภัณฑ์'] || '').trim() === code);
+      if (sameCode) {
+        showToast(`⚠️ เลขครุภัณฑ์ ${code} มีในทะเบียนแล้ว (${sameCode['ประเภท']} No.${sameCode['No.']})`);
+        return;
+      }
+    }
+
     const btn = document.getElementById('saveBtn');
     btn.disabled = true; btn.textContent = '⏳ กำลังบันทึก...';
 
@@ -525,7 +552,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       closeModal();
       setTimeout(loadAssets, 1200);
     } catch (err) {
-      showToast('❌ เกิดข้อผิดพลาด: ' + err.message);
+      showToast('❌ ' + assetErrorText(err));
     } finally {
       btn.disabled = false; btn.textContent = '💾 บันทึก';
     }
@@ -539,7 +566,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       showToast('🗑️ ลบสำเร็จ');
       setTimeout(loadAssets, 1200);
     } catch (err) {
-      showToast('❌ ลบไม่ได้: ' + err.message);
+      showToast('❌ ลบไม่ได้: ' + assetErrorText(err));
     }
   }
 

@@ -1483,6 +1483,20 @@ async function handleSubmit() {
     return;
   }
 
+  // ยืมได้เฉพาะเครื่องที่อยู่ในทะเบียนครุภัณฑ์และสถานะ "ใช้งานได้"
+  // (ประเภทที่ยังไม่มีในทะเบียน หรือโหลดทะเบียนไม่ได้ -> ไม่บล็อค)
+  if (S.action === 'borrow') {
+    const reg = await checkNumbersAgainstRegistry(finalEquip, nums);
+    if (reg && (reg.missing.length || reg.unusable.length)) {
+      const lines = [];
+      if (reg.missing.length) lines.push('• No. ' + reg.missing.join(', ') + ' ไม่มีในทะเบียนครุภัณฑ์ ' + finalEquip);
+      reg.unusable.forEach(u => lines.push('• No. ' + u.no + ' สถานะในทะเบียนคือ "' + u.status + '"'));
+      alert('⚠️ ยืมไม่ได้\n' + lines.join('\n') +
+            '\n\nตรวจเลขเครื่องอีกครั้ง หรือให้แอดมินเพิ่ม/แก้สถานะในทะเบียนครุภัณฑ์ก่อน');
+      return;
+    }
+  }
+
   // กันยืมซ้ำ: ถ้าเครื่อง No. นั้นถูกยืมอยู่และยังไม่คืน ห้ามยืมซ้ำ
   if (S.action === 'borrow') {
     try {
@@ -1491,7 +1505,7 @@ async function handleSubmit() {
       equipment.forEach(e => {
         statusMap[String(e.equipment) + '__' + String(e.number)] = e.isBorrowed;
       });
-      const dup = nums.filter(n => statusMap[finalEquip + '__' + String(n)] === true);
+      const dup = nums.filter(n => statusMap[finalEquip + '__' + (normalizeMachineNo(n) || String(n))] === true);
       if (dup.length) {
         alert('⚠️ เครื่อง ' + finalEquip + ' No. ' + dup.join(', ') +
               ' ถูกยืมอยู่แล้ว\nต้องคืนเครื่องนั้นก่อน จึงจะยืมซ้ำได้');
