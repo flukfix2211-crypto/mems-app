@@ -2299,7 +2299,7 @@ async function renderC2Dashboard() {
     ]);
     msg.textContent = '';
     const assetMap = {};
-    assetRows.forEach(a => { if (a.no) assetMap[String(a.no)] = a.status || 'ใช้งานได้'; });
+    assetRows.forEach(a => { const k = normalizeMachineNo(a.no); if (k) assetMap[k] = a.status || 'ใช้งานได้'; });
     window._c2AssetMap = assetMap;
 
     const { items, counts } = computeC2Summary(units, assetMap);
@@ -2445,22 +2445,23 @@ async function renderEquip2Dashboard() {
 
     const borrowedMap = {};
     equipStatus.forEach(e => {
-      if (e.equipment === type && e.isBorrowed) borrowedMap[String(e.number)] = e;
+      if (e.equipment === type && e.isBorrowed) borrowedMap[normalizeMachineNo(e.number)] = e;
     });
 
     const units = rows
-      .filter(a => a.no !== null && a.no !== undefined)
+      .filter(a => normalizeMachineNo(a.no))
       .map(a => {
-        const b = borrowedMap[String(a.no)];
+        const b = borrowedMap[normalizeMachineNo(a.no)];
         return {
-          number: String(a.no),
+          number: normalizeMachineNo(a.no),
           assetStatus: a.status || 'ใช้งานได้',
           isBorrowed: !!b,
           ward: b ? b.ward : '',
           borrowedBy: b ? b.borrowedBy : ''
         };
-      })
-      .sort((a, b) => parseInt(a.number, 10) - parseInt(b.number, 10));
+      });
+    const order = sortMachineNumbers(units.map(u => u.number));
+    units.sort((a, b) => order.indexOf(a.number) - order.indexOf(b.number));
 
     const finalCounts = { avail: 0, borrowed: 0, repair: 0, sold: 0 };
     const finalItems = units.map(u => {
@@ -2702,14 +2703,14 @@ function startKpiClock() {
 }
 
 async function renderKpiData() {
-  if (!window._c2AssetMap) {
-    try {
-      const { data } = await supabase.from('assets').select('no, status').eq('type', 'C2');
-      const m = {};
-      (data || []).forEach(a => { if (a.no) m[String(a.no)] = a.status || 'ใช้งานได้'; });
-      window._c2AssetMap = m;
-    } catch(e) { window._c2AssetMap = {}; }
-  }
+  // โหลดทะเบียน C2 ใหม่ทุกครั้ง — เพิ่ม/แก้เครื่องในทะเบียนครุภัณฑ์แล้วจำนวนเครื่องบนจอจะอัปเดตตาม
+  try {
+    const { data, error } = await supabase.from('assets').select('no, status').eq('type', 'C2');
+    if (error) throw error;
+    const m = {};
+    (data || []).forEach(a => { const k = normalizeMachineNo(a.no); if (k) m[k] = a.status || 'ใช้งานได้'; });
+    window._c2AssetMap = m;
+  } catch(e) { if (!window._c2AssetMap) window._c2AssetMap = {}; }
   const today = new Date();
   const dd = String(today.getDate()).padStart(2,'0');
   const mm = String(today.getMonth()+1).padStart(2,'0');
@@ -2761,10 +2762,13 @@ async function renderKpiData() {
     </div>`).join('') : '<div style="color:#475569;font-size:14px">ไม่มีข้อมูล</div>';
 
   // C2 grid
-  const c2Borrowed = new Set(equipStatus.filter(e => e.isBorrowed && String(e.equipment).includes('C2')).map(e => String(e.number)));
+  const c2Borrowed = new Set(equipStatus.filter(e => e.isBorrowed && String(e.equipment).includes('C2')).map(e => normalizeMachineNo(e.number)).filter(Boolean));
   const assetMap = window._c2AssetMap || {};
-  const c2Units = [];
-  for (let i = 1; i <= 58; i++) c2Units.push({ number: String(i), isBorrowed: c2Borrowed.has(String(i)) });
+  // ใช้ No. เครื่องตามทะเบียนครุภัณฑ์ (เหมือนหน้าสถานะเครื่องมือ) — ถ้าทะเบียนยังว่างใช้ 1-58 เดิม
+  let c2Nos = sortMachineNumbers(Object.keys(assetMap));
+  if (!c2Nos.length) for (let i = 1; i <= C2_FALLBACK_COUNT; i++) c2Nos.push(String(i));
+  c2Nos = sortMachineNumbers(c2Nos.concat([...c2Borrowed]));
+  const c2Units = c2Nos.map(n => ({ number: n, isBorrowed: c2Borrowed.has(n) }));
   const { items: c2Items, counts: c2Counts } = computeC2Summary(c2Units, assetMap);
   const C2_STYLE = {
     sold:     { bg:'rgba(239,68,68,.18)', border:'rgba(239,68,68,.35)', shadow:'', color:'rgba(239,68,68,.5)', inner:i=>`${i}<br><span style="font-size:9px">✕</span>` },
