@@ -1286,7 +1286,9 @@ const TREND_DAYS = 30;
 // (anon key สาธารณะชุดเดียวกับที่หน้า Round ใช้ อ่านได้อย่างเดียว)
 const ROUND_SUPABASE_URL = 'https://xbwrawrdnygcfctnxezq.supabase.co';
 const ROUND_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhid3Jhd3JkbnlnY2ZjdG54ZXpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk5NzE3MzUsImV4cCI6MjEwNTU0NzczNX0.CgPsQ19JBw-4QzwWiuCxYB3p0mmlPsF2CxA7rmJDKdA';
-const ROUND_ACTIVE_DAYS = 0;   // นับเฉพาะเครื่องที่พบในราวด์วันล่าสุดเท่านั้น — ราวด์วันก่อนหน้าไม่ใช้ (เครื่องอาจคืนศูนย์ไปแล้ว)
+// ใช้เฉพาะราวด์วันล่าสุดของ "แต่ละตึก" — ถ้าตึกนั้นราวด์ใหม่แล้วไม่เจอเครื่อง แปลว่าเครื่องออกจากตึกไปแล้ว
+// ตึกที่ยังไม่ได้ราวด์วันนี้ ใช้ราวด์ครั้งล่าสุดของตึกนั้นแทน แต่ไม่เก่ากว่า ROUND_ACTIVE_DAYS วันก่อนราวด์ล่าสุดของทั้งหมด
+const ROUND_ACTIVE_DAYS = 7;
 const CIRCUIT_SOON_DAYS = 2;   // แจ้งเตือนล่วงหน้าเมื่อวันเปลี่ยน (อังคาร/พฤหัส) ถึงภายใน 2 วัน
 let roundC2 = null;            // null = โหลดไม่ได้ → ใช้เกณฑ์เดิม (ยืมเกิน 14 วัน)
 
@@ -1325,6 +1327,8 @@ function circuitChangeDay(dueISO, todayISO) {
   if (isoWeekday(iso) === 2 && todayISO > iso) iso = isoAddDays(iso, 2);
   return iso;
 }
+// ชื่อตึกในราวด์เป็นข้อความอิสระ — ตัดช่องว่าง/ตัวพิมพ์ให้ "Med ญ" กับ "med  ญ" เป็นตึกเดียวกัน
+function roundWardKey(w) { return String(w || '').trim().toLowerCase().replace(/\s+/g, ' '); }
 // เลขเครื่องเป็นข้อความอิสระ ("25", "No.25", "C2-25") → "25"
 function roundMachineNo(raw) {
   const m = String(raw || '').match(/\d+/);
@@ -1340,11 +1344,14 @@ async function fetchRoundC2() {
   if (!res.ok) throw new Error('HTTP ' + res.status);
   const rows = await res.json();
   let latestRoundDate = null;
+  const wardLatest = {};
   const byNumber = {};
   rows.forEach(r => {
     const date = String(r.round_date || '').slice(0, 10);
     if (!date) return;
     if (!latestRoundDate || date > latestRoundDate) latestRoundDate = date;   // วันราวด์ล่าสุด (ทุกประเภทเครื่อง)
+    const wk = roundWardKey(r.ward);
+    if (wk && (!wardLatest[wk] || date > wardLatest[wk])) wardLatest[wk] = date;   // วันราวด์ล่าสุดของแต่ละตึก (ทุกประเภทเครื่อง)
     if (!String(r.vent_type || '').trim().toLowerCase().startsWith('c2')) return;
     const no = roundMachineNo(r.machine_no);
     if (!no) return;
@@ -1356,7 +1363,11 @@ async function fetchRoundC2() {
     };
   });
   const activeSince = latestRoundDate ? isoAddDays(latestRoundDate, -ROUND_ACTIVE_DAYS) : null;
-  return { latestRoundDate, activeSince, byNumber };
+  // เครื่องนับว่า "อยู่ที่ตึก" เมื่อพบในราวด์วันล่าสุดของตึกนั้น และราวด์นั้นไม่เก่าเกิน activeSince
+  Object.values(byNumber).forEach(r => {
+    r.active = !!activeSince && r.roundDate >= activeSince && r.roundDate === wardLatest[roundWardKey(r.ward)];
+  });
+  return { latestRoundDate, activeSince, byNumber, wardLatest };
 }
 
 // รวมโค้ดคำนวณ alert ไว้จุดเดียว ใช้ทั้ง Home banner และ KPI Display slide
@@ -1378,7 +1389,7 @@ function computeAlerts() {
       .filter(e => e.days !== null && e.days >= OVERDUE_C2_DAYS)
       .sort((a, b) => b.days - a.days);
   } else {
-    const active = no => { const r = round.byNumber[no]; return r && r.roundDate >= round.activeSince ? r : null; };
+    const active = no => { const r = round.byNumber[no]; return r && r.active ? r : null; };
     const borrowedNos = new Set();
     borrowedC2.forEach(e => {
       const no = roundMachineNo(e.number);
@@ -1405,7 +1416,7 @@ function computeAlerts() {
       if (no && dt && (!lastMemsAt[no] || dt > lastMemsAt[no])) lastMemsAt[no] = dt;
     });
     Object.entries(round.byNumber).forEach(([no, r]) => {
-      if (r.roundDate < round.activeSince || borrowedNos.has(no)) return;
+      if (!r.active || borrowedNos.has(no)) return;
       const seenAt = parseThaiTimestampStr(r.recordedAt);
       if (seenAt && lastMemsAt[no] && lastMemsAt[no] > seenAt) return;
       notBorrowed.push({ number: no, roundWard: r.ward, bed: r.bed, roundDate: r.roundDate });
@@ -2346,7 +2357,7 @@ function renderC2CircuitDue(items) {
       const daysBorrowed = Math.floor((now - dt) / 86400000);
       // ถ้ามีวันครบเปลี่ยนจากราวด์หน้างาน (Round Ventilator) ให้ใช้วันนั้น (ปัดเป็นวันอังคาร/พฤหัส) — ไม่งั้นนับ 14 วันจากวันยืมเหมือนเดิม
       const r = roundC2 && roundC2.activeSince && roundC2.byNumber[roundMachineNo(u.number)];
-      if (r && r.dueISO && r.roundDate >= roundC2.activeSince) {
+      if (r && r.dueISO && r.active) {
         const todayISO = bkkDateStr(now);
         const changeISO = circuitChangeDay(r.dueISO, todayISO);
         return { number: u.number, ward: u.ward, daysBorrowed, dueDate: new Date(changeISO + 'T00:00:00+07:00'), daysLeft: isoDaysBetween(todayISO, changeISO) };

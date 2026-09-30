@@ -783,6 +783,17 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     <input type="text" class="field" id="staffName" placeholder="กรุณาใส่ชื่อจริง">
   </div>
 
+  <!-- บันทึกย้อนหลัง: ระบุวัน-เวลาที่ยืม/คืนจริง เพื่อให้นับวันยืมและวันครบเปลี่ยน Circuit ถูกต้อง -->
+  <div class="card">
+    <details id="backdateBox">
+      <summary class="sec-label" style="cursor:pointer;margin-bottom:0">บันทึกย้อนหลัง (ระบุเวลาที่ยืม/คืนจริง)</summary>
+      <div style="margin-top:10px">
+        <input type="datetime-local" class="field" id="actualTime">
+        <div style="font-size:12px;color:var(--muted);margin-top:6px">เว้นว่างไว้ = ใช้เวลาปัจจุบัน · ย้อนหลังได้ไม่เกิน 30 วัน</div>
+      </div>
+    </details>
+  </div>
+
   <div style="text-align:center;padding:8px 0 4px;opacity:0.38;font-size:11px;color:var(--muted)">
     พัฒนาโดย Pawarit Somchipeng
   </div>
@@ -1517,6 +1528,9 @@ async function handleSubmit() {
     }
   }
 
+  const actualTime = readActualTime();
+  if (actualTime === false) return;
+
   const btn = document.getElementById('submitBtn');
   btn.disabled = true;
   btn.textContent = `กำลังบันทึก… (0/${nums.length})`;
@@ -1527,7 +1541,7 @@ async function handleSubmit() {
     equipment: finalEquip,
     ward     : finalWard,
     name     : name,
-    timestamp: new Date().toISOString()
+    timestamp: (actualTime || new Date()).toISOString()
   };
 
   // submit one record per equipment number
@@ -1584,8 +1598,25 @@ function showSuccess(d) {
   screen.classList.add('show');
 }
 
+// เวลาที่ยืม/คืนจริง (บันทึกย้อนหลัง) — คืน null = ใช้เวลาปัจจุบัน, false = ค่าไม่ถูกต้อง (แจ้งเตือนแล้ว)
+const BACKDATE_MAX_DAYS = 30;
+function readActualTime() {
+  const v = document.getElementById('actualTime').value;
+  if (!v) return null;
+  const dt = new Date(v);
+  const now = new Date();
+  if (isNaN(dt)) { alert('⚠️ วัน-เวลาที่ระบุไม่ถูกต้อง'); return false; }
+  if (dt > now) { alert('⚠️ เวลาที่ยืม/คืนจริงต้องไม่เป็นเวลาในอนาคต'); return false; }
+  if (now - dt > BACKDATE_MAX_DAYS * 86400000) {
+    alert('⚠️ บันทึกย้อนหลังได้ไม่เกิน ' + BACKDATE_MAX_DAYS + ' วัน'); return false;
+  }
+  return dt;
+}
+
 function resetForm() {
   S = { action: null, shift: null, equip: null };
+  document.getElementById('actualTime').value = '';
+  document.getElementById('backdateBox').open = false;
   document.querySelectorAll('.action-btn, .equip-btn').forEach(b => b.classList.remove('active'));
   ['otherWard','staffName','otherEquipName'].forEach(id => { document.getElementById(id).value = ''; });
   resetEquipFields();
