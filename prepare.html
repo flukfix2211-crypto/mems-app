@@ -324,17 +324,30 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     const origText = btn.textContent;
     btn.disabled = true; btn.textContent = 'กำลังตรวจสอบ…';
 
+    // เตรียม/ส่งได้เฉพาะเครื่องที่อยู่ในทะเบียนครุภัณฑ์และสถานะ "ใช้งานได้" (เหมือนหน้ายืม-คืน)
+    // ประเภทที่ยังไม่มีในทะเบียน หรือโหลดทะเบียนไม่ได้ -> ไม่บล็อค
+    const reg = await checkNumbersAgainstRegistry(equipName, numbers);
+    if (reg && (reg.missing.length || reg.unusable.length)) {
+      const lines = [];
+      if (reg.missing.length) lines.push('• No. ' + reg.missing.join(', ') + ' ไม่มีในทะเบียนครุภัณฑ์ ' + equipName);
+      reg.unusable.forEach(u => lines.push('• No. ' + u.no + ' สถานะในทะเบียนคือ "' + u.status + '"'));
+      alert('⚠️ ' + (prepareMode === 'deliver' ? 'ส่ง' : 'เตรียม') + 'ไม่ได้\n' + lines.join('\n') +
+            '\n\nตรวจเลขเครื่องอีกครั้ง หรือเพิ่ม/แก้สถานะในทะเบียนครุภัณฑ์ก่อน');
+      btn.disabled = false; btn.textContent = origText;
+      return;
+    }
+
     // กันทำซ้ำ: เครื่องที่ถูกเตรียมไว้แล้ว หรือถูกยืมอยู่ ทำซ้ำไม่ได้
     try {
       const [prepared, equipment] = await Promise.all([
         fetchPreparedList().catch(() => []),
         fetchEquipmentStatus().catch(() => [])
       ]);
-      const activePrep = new Set(prepared.map(p => p.equipment + '__' + p.number));
-      const borrowed = new Set(equipment.filter(e => e.isBorrowed).map(e => e.equipment + '__' + e.number));
+      const activePrep = new Set(prepared.map(p => p.equipment + '__' + normalizeMachineNo(p.number)));
+      const borrowed = new Set(equipment.filter(e => e.isBorrowed).map(e => e.equipment + '__' + normalizeMachineNo(e.number)));
       const dups = [];
       numbers.forEach(num => {
-        const key = equipName + '__' + num;
+        const key = equipName + '__' + (normalizeMachineNo(num) || num);
         if (borrowed.has(key)) dups.push(num + ' (ถูกยืมอยู่)');
         else if (prepareMode === 'prepare' && activePrep.has(key)) dups.push(num + ' (เตรียมไว้แล้ว)');
       });
@@ -367,7 +380,8 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       resetPrepareForm();
       setTimeout(loadList, 800);
     } catch (e) {
-      toast('❌ บันทึกไม่สำเร็จ');
+      // ฐานข้อมูลปฏิเสธ (เช่น เลขไม่มีในทะเบียน) -> แสดงเหตุผลจากฐานข้อมูล
+      toast('❌ บันทึกไม่สำเร็จ' + (e && e.message && e.code === 'P0001' ? ': ' + e.message : ''));
     }
     btn.disabled = false; btn.textContent = origText;
   }
