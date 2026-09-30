@@ -56,28 +56,71 @@ async function fetchEquipmentStatus() {
   }));
 }
 
-/** สถานะเครื่อง C2 ทั้ง 58 เครื่อง (No.1-58) — เทียบเท่า getC2Status()/buildC2Units() เดิม */
+/**
+ * หมายเลขเครื่อง C2 ตามทะเบียนครุภัณฑ์ (ตาราง assets, type = 'C2') เรียงจากน้อยไปมาก
+ * ใช้กำหนดว่าหน้าสถานะมีเครื่อง No. อะไรบ้าง/กี่เครื่อง — ถ้าโหลดไม่ได้หรือทะเบียนยังว่าง คืน [] (ผู้เรียกใช้ค่าเดิม 1-58 แทน)
+ */
+const C2_FALLBACK_COUNT = 58;
+async function fetchC2AssetNumbers() {
+  try {
+    const { data, error } = await supabase.from('assets').select('no').eq('type', 'C2');
+    if (error) throw error;
+    return sortMachineNumbers((data || []).map(a => a.no));
+  } catch (e) {
+    return [];
+  }
+}
+
+// ทำเลขเครื่องให้อยู่รูปเดียวกัน (" 01", "1.0" → "1") — คืน '' ถ้าว่าง
+function normalizeMachineNo(v) {
+  if (v === null || v === undefined) return '';
+  const s = String(v).trim();
+  if (!s) return '';
+  const n = Number(s);
+  return Number.isInteger(n) ? String(n) : s;
+}
+
+// ตัดค่าว่าง/ซ้ำ แล้วเรียงเลขเครื่องแบบตัวเลข (เลขที่ไม่ใช่ตัวเลขไปต่อท้าย)
+function sortMachineNumbers(list) {
+  const set = new Set();
+  list.forEach(v => {
+    const k = normalizeMachineNo(v);
+    if (k) set.add(k);
+  });
+  return [...set].sort((a, b) => {
+    const na = Number(a), nb = Number(b);
+    const ia = Number.isInteger(na), ib = Number.isInteger(nb);
+    if (ia && ib) return na - nb;
+    if (ia !== ib) return ia ? -1 : 1;
+    return a.localeCompare(b);
+  });
+}
+
+/** สถานะเครื่อง C2 ทุกเครื่องตาม No. ในทะเบียนครุภัณฑ์ — เทียบเท่า getC2Status()/buildC2Units() เดิม */
 async function fetchC2Status() {
-  const all = await fetchEquipmentStatus();
+  const [all, assetNos] = await Promise.all([fetchEquipmentStatus(), fetchC2AssetNumbers()]);
   const map = {};
   all.forEach(e => {
     if (!String(e.equipment).includes('C2')) return;
-    const n = parseInt(e.number, 10);
-    if (isNaN(n) || n < 1 || n > 58) return;
-    map[String(n)] = {
-      number: String(n),
+    const k = normalizeMachineNo(e.number);
+    if (!k) return;
+    map[k] = {
+      number: k,
       isBorrowed: e.isBorrowed,
       ward: e.isBorrowed ? e.ward : '',
       borrowedBy: e.isBorrowed ? e.borrowedBy : '',
       lastUpdate: e.lastUpdate
     };
   });
-  const units = [];
-  for (let i = 1; i <= 58; i++) {
-    const k = String(i);
-    units.push(map[k] || { number: k, isBorrowed: false, ward: '', borrowedBy: '', lastUpdate: '' });
+  let numbers = assetNos;
+  if (!numbers.length) {
+    numbers = [];
+    for (let i = 1; i <= C2_FALLBACK_COUNT; i++) numbers.push(String(i));
   }
-  return units;
+  // เครื่องที่ยังถูกยืมอยู่แต่ไม่มีในทะเบียน ยังต้องแสดง เพื่อให้คืนเครื่องได้
+  const extra = Object.values(map).filter(u => u.isBorrowed && !numbers.includes(u.number)).map(u => u.number);
+  if (extra.length) numbers = sortMachineNumbers(numbers.concat(extra));
+  return numbers.map(k => map[k] || { number: k, isBorrowed: false, ward: '', borrowedBy: '', lastUpdate: '' });
 }
 
 /** รายการเครื่องที่เตรียมไว้และยังไม่ถูกยืม — เทียบเท่า getPrepareList() เดิม */
