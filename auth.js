@@ -56,6 +56,11 @@ function memsHasPermission(profile, pageKey) {
   return Array.isArray(profile.permissions) && profile.permissions.includes(pageKey);
 }
 
+/** ผู้ใช้ที่ล็อกอินอยู่เป็นแอดมินหรือไม่ (เช่น สิทธิ์บันทึกยืม-คืนย้อนหลัง) */
+function memsIsAdmin() {
+  return !!(MEMS_USER && MEMS_USER.active && MEMS_USER.role === 'admin');
+}
+
 /** จัดการบัญชีผู้ใช้ (settings.html) ได้เฉพาะแอดมินหลักเท่านั้น — role='admin' ทั่วไปไม่นับ */
 function memsIsSuperAdmin(profile) {
   return !!(profile && profile.active && profile.is_super_admin);

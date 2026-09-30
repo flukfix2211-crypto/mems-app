@@ -783,8 +783,8 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     <input type="text" class="field" id="staffName" placeholder="กรุณาใส่ชื่อจริง">
   </div>
 
-  <!-- บันทึกย้อนหลัง: ระบุวัน-เวลาที่ยืม/คืนจริง เพื่อให้นับวันยืมและวันครบเปลี่ยน Circuit ถูกต้อง -->
-  <div class="card">
+  <!-- บันทึกย้อนหลัง: ระบุวัน-เวลาที่ยืม/คืนจริง เพื่อให้นับวันยืมและวันครบเปลี่ยน Circuit ถูกต้อง (เฉพาะแอดมิน — แสดงหลังตรวจสิทธิ์) -->
+  <div class="card" id="backdateCard" style="display:none">
     <details id="backdateBox">
       <summary class="sec-label" style="cursor:pointer;margin-bottom:0">บันทึกย้อนหลัง (ระบุเวลาที่ยืม/คืนจริง)</summary>
       <div style="margin-top:10px">
@@ -972,6 +972,7 @@ function setShift(s) {
 window.addEventListener('DOMContentLoaded', async () => {
   const profile = await memsGuard('borrow');
   if (!profile) return;
+  if (memsIsAdmin()) document.getElementById('backdateCard').style.display = '';
   setShift(detectShift());
   const mode = new URLSearchParams(location.search).get('mode');
   if (mode === 'borrow' || mode === 'return') setAction(mode);
@@ -1601,6 +1602,7 @@ function showSuccess(d) {
 // เวลาที่ยืม/คืนจริง (บันทึกย้อนหลัง) — คืน null = ใช้เวลาปัจจุบัน, false = ค่าไม่ถูกต้อง (แจ้งเตือนแล้ว)
 const BACKDATE_MAX_DAYS = 30;
 function readActualTime() {
+  if (!memsIsAdmin()) return null;   // บันทึกย้อนหลังได้เฉพาะแอดมิน (ฐานข้อมูลบังคับซ้ำอีกชั้น)
   const v = document.getElementById('actualTime').value;
   if (!v) return null;
   const dt = new Date(v);

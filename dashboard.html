@@ -2008,7 +2008,11 @@ function openEditModal(rowIndex, context) {
   const editDateInput = document.getElementById('editDate');
   editDateInput.max   = bkkDateStr(new Date()); // เลือกวันที่ในอนาคตไม่ได้
   editDateInput.value = rec['Timestamp (ISO)'] ? bkkDateStr(new Date(rec['Timestamp (ISO)'])) : '';
-  document.getElementById('editShift').value       = rec['เวร']         || '';
+  // แก้วันที่ของรายการยืม-คืน = บันทึกย้อนหลัง → เฉพาะแอดมิน (ฐานข้อมูลบังคับซ้ำอีกชั้น)
+  const canEditDate = memsIsAdmin() || !isBorrowOrReturnAction(rec['ประเภท (ยืม/คืน)']);
+  editDateInput.disabled = !canEditDate;
+  editDateInput.title = canEditDate ? '' : 'แก้วันที่ของรายการยืม-คืนได้เฉพาะแอดมิน';
+  document.getElementById('editShift').value      = rec['เวร']         || '';
   document.getElementById('editRoundStatus').value = rec['สถานะ Round'] || 'ใช้งานอยู่';
   document.getElementById('editName').value        = rec['ชื่อผู้ยืม']  || '';
   document.getElementById('editNote').value        = rec['หมายเหตุ']    || '';
@@ -2055,15 +2059,19 @@ async function saveEdit() {
     // เปลี่ยนแค่วันที่ แต่คงเวลาเดิมไว้ ไม่ให้ลำดับก่อน-หลังกับรายการอื่นในวันเดียวกันเพี้ยน
     const newRecordedAt = new Date(`${dateStr}T${bkkTimeStr(origDt)}+07:00`);
 
-    const { error } = await supabase.from('borrow_records').update({
-      record_date: dateStr,
-      recorded_at: newRecordedAt.toISOString(),
+    const update = {
       ward: fields.ward,
       shift: fields.shift,
       round_status: fields.roundStatus,
       staff_name: fields.name,
       note: fields.note
-    }).eq('id', editRowIndex);
+    };
+    // ช่องวันที่ถูกล็อก (ไม่ใช่แอดมิน + รายการยืม-คืน) → ไม่ส่งวันที่/เวลาไปแก้
+    if (!dateInput.disabled) {
+      update.record_date = dateStr;
+      update.recorded_at = newRecordedAt.toISOString();
+    }
+    const { error } = await supabase.from('borrow_records').update(update).eq('id', editRowIndex);
     if (error) throw error;
 
     closeEditModal();
@@ -2477,6 +2485,12 @@ async function renderEquip2Dashboard() {
   } catch (e) {
     msg.textContent = '⚠️ โหลดไม่ได้';
   }
+}
+
+// รายการยืม/คืน (รวมย้ายวอร์ด) — ตรงกับเงื่อนไขใน trigger ฐานข้อมูล borrow_records_backdate_guard
+function isBorrowOrReturnAction(action) {
+  const a = String(action || '');
+  return a.includes('ยืม') || a.includes('คืน') || a.includes('ย้าย');
 }
 
 // parse "dd/MM/yyyy HH:mm[:ss]" (หรือ ISO string ทั่วไป) เป็น Date — ใช้ร่วมกันหลายจุด
