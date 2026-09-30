@@ -1244,7 +1244,8 @@ async function loadAll() {
     const [records, equipment, assets] = await Promise.all([
       fetchRecords(),
       fetchEquipmentStatus(),
-      supabase.from('assets').select('no, type, status').then(r => r.data || []).catch(() => []),
+      // โหลดเป็นชุด — ทะเบียนเกิน 1,000 แถวจะถูกตัดเงียบๆ ถ้าโหลดครั้งเดียว
+      fetchAllPages(() => supabase.from('assets').select('no, type, status').order('id')).catch(() => []),
       fetchRoundC2().catch(err => { console.warn('Round Ventilator โหลดไม่สำเร็จ', err); return null; })
     ]).then(([rec, eq, ast, round]) => { roundC2 = round; return [rec, eq, ast]; });
     allRecords  = records;

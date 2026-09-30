@@ -230,7 +230,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       record_date: bkkDateStr(now),
       record_time: bkkTimeStr(now),
       equipment_type: equipment,
-      equipment_number: String(num).trim(),
+      equipment_number: normalizeMachineNo(num) || String(num).trim(),   // "054" → "54" ให้ตรงกับตอนบันทึกยืม
       ward,
       prepared_by: preparedBy,
       recorded_at: now.toISOString(),

@@ -96,6 +96,35 @@ function sortMachineNumbers(list) {
   });
 }
 
+/**
+ * ตรวจเลขเครื่องกับทะเบียนครุภัณฑ์ก่อนบันทึกยืม
+ * คืน { missing: [...เลขที่ไม่มีในทะเบียน], unusable: [{ no, status }...เครื่องที่สถานะไม่ใช่ "ใช้งานได้"] }
+ * คืน null ถ้าประเภทนี้ยังไม่มีในทะเบียน หรือโหลดทะเบียนไม่ได้ (ไม่บล็อคการบันทึก)
+ */
+async function checkNumbersAgainstRegistry(type, nums) {
+  try {
+    const { data, error } = await supabase.from('assets').select('no, status').eq('type', type);
+    if (error) throw error;
+    if (!data || !data.length) return null;
+    const statusByNo = {};
+    data.forEach(a => {
+      const k = normalizeMachineNo(a.no);
+      if (!k) return;
+      // เลขซ้ำในทะเบียน: ถ้ามีแถวไหน "ใช้งานได้" ถือว่าใช้ได้
+      if (statusByNo[k] !== 'ใช้งานได้') statusByNo[k] = a.status || 'ใช้งานได้';
+    });
+    const missing = [], unusable = [];
+    nums.forEach(n => {
+      const k = normalizeMachineNo(n);
+      if (!(k in statusByNo)) missing.push(k || String(n));
+      else if (statusByNo[k] !== 'ใช้งานได้') unusable.push({ no: k, status: statusByNo[k] });
+    });
+    return { missing, unusable };
+  } catch (e) {
+    return null;
+  }
+}
+
 /** สถานะเครื่อง C2 ทุกเครื่องตาม No. ในทะเบียนครุภัณฑ์ — เทียบเท่า getC2Status()/buildC2Units() เดิม */
 async function fetchC2Status() {
   const [all, assetNos] = await Promise.all([fetchEquipmentStatus(), fetchC2AssetNumbers()]);
@@ -151,7 +180,8 @@ async function saveBorrowRecord(payload) {
     shift: payload.shift || null,
     action: payload.action || '',
     equipment_name: payload.equipment || null,
-    equipment_number: payload.equipmentNumber != null ? String(payload.equipmentNumber) : null,
+    // เก็บเลขเครื่องรูปเดียวกันเสมอ ("054" → "54") ไม่งั้นระบบนับเป็นคนละเครื่อง
+    equipment_number: payload.equipmentNumber != null ? (normalizeMachineNo(payload.equipmentNumber) || String(payload.equipmentNumber)) : null,
     ward: payload.ward || null,
     staff_name: payload.name || null,
     recorded_at: now.toISOString(),
