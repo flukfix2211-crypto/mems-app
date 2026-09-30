@@ -391,7 +391,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       renderTable(allAssets);
     } catch (err) {
       document.getElementById('assetBody').innerHTML =
-        `<tr class="empty-row"><td colspan="8">⚠️ โหลดข้อมูลไม่ได้: ${err.message}</td></tr>`;
+        `<tr class="empty-row"><td colspan="8">⚠️ โหลดข้อมูลไม่ได้: ${memsEsc(err.message)}</td></tr>`;
     }
   }
 
@@ -447,17 +447,17 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       const icon = STATUS_ICON[a.สถานะ]  || '✅';
       const ri   = a._rowIndex;
       return `<tr>
-        <td class="no-col">${a['No.']}</td>
-        <td class="asset-col">${a.เลขครุภัณฑ์ || '—'}</td>
-        <td class="sn-col">${a['S/N'] || '—'}</td>
-        <td class="sn-col">${a.ID || '—'}</td>
-        <td style="font-size:13px">${a.ประเภท || '—'}</td>
-        <td><span class="badge ${cls}">${icon} ${a.สถานะ || '—'}</span></td>
-        <td style="font-size:13px;color:var(--muted)">${a.หมายเหตุ || ''}</td>
+        <td class="no-col">${memsEsc(a['No.'])}</td>
+        <td class="asset-col">${memsEsc(a.เลขครุภัณฑ์ || '—')}</td>
+        <td class="sn-col">${memsEsc(a['S/N'] || '—')}</td>
+        <td class="sn-col">${memsEsc(a.ID || '—')}</td>
+        <td style="font-size:13px">${memsEsc(a.ประเภท || '—')}</td>
+        <td><span class="badge ${cls}">${icon} ${memsEsc(a.สถานะ || '—')}</span></td>
+        <td style="font-size:13px;color:var(--muted)">${memsEsc(a.หมายเหตุ || '')}</td>
         <td>
           <div class="act-wrap">
-            <button class="act-btn act-edit" onclick="openModal(${ri})">✏️ แก้ไข</button>
-            <button class="act-btn act-del"  onclick="confirmDelete(${ri}, 'No.${a['No.']} ${a.เลขครุภัณฑ์||''}')">🗑️</button>
+            <button class="act-btn act-edit" onclick="openModal(${Number(ri)})">✏️ แก้ไข</button>
+            <button class="act-btn act-del"  onclick="confirmDelete(${Number(ri)})">🗑️</button>
           </div>
         </td>
       </tr>`;
@@ -562,7 +562,10 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     }
   }
 
-  async function confirmDelete(rowIndex, label) {
+  async function confirmDelete(rowIndex) {
+    // หาข้อความยืนยันจากข้อมูลที่โหลดไว้ ไม่ส่งผ่าน onclick (ค่าที่มี ' หรือ " จะทำให้ปุ่มพัง)
+    const a = allAssets.find(x => x._rowIndex === rowIndex) || {};
+    const label = 'No.' + (a['No.'] ?? '') + ' ' + (a.เลขครุภัณฑ์ || '');
     if (!confirm(`ลบรายการ: ${label}\n\nยืนยันการลบ?`)) return;
     try {
       const { error } = await supabase.from('assets').delete().eq('id', rowIndex);

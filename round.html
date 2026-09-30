@@ -362,11 +362,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
      เวรดึก  : 00:30 – 08:30
      ================================== */
   function detectShift() {
-    const now = new Date();
-    const t = now.getHours() * 60 + now.getMinutes();
-    if (t >= 510 && t < 990) return 'morning';
-    if (t >= 990 || t < 30)  return 'afternoon';
-    return 'night';
+    return bkkShiftKey(); // ตามเวลาไทย ไม่ขึ้นกับ timezone ของเครื่อง
   }
 
   let currentShift = 'morning';
@@ -480,11 +476,11 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
         <span class="pump-seq">${id}</span>
         <div class="pump-no-wrap">
           <input class="pump-no-input" id="pno_${id}" type="text"
-            placeholder="เครื่อง No. / หมายเลข" value="${no}">
+            placeholder="เครื่อง No. / หมายเลข" value="${memsEsc(no)}">
           ${prevStatusLabel ? `
           <div style="margin-top:5px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-            <span class="prev-badge ${prevBadgeClass}">ครั้งก่อน: ${prevText}</span>
-            <span class="prev-date">${dateText}</span>
+            <span class="prev-badge ${prevBadgeClass}">ครั้งก่อน: ${memsEsc(prevText)}</span>
+            <span class="prev-date">${memsEsc(dateText)}</span>
           </div>` : ''}
         </div>
         <button class="rm-btn" id="rmBtn_${id}" onclick="removeRow(${id})">✕</button>
@@ -575,7 +571,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     const shiftTH = { morning: 'เวรเช้า', afternoon: 'เวรบ่าย', night: 'เวรดึก' };
     const note = document.getElementById('noteField').value.trim();
 
-    await Promise.all(items.map(item =>
+    const results = await Promise.allSettled(items.map(item =>
       saveBorrowRecord({
         action: '🔵 Round', shift: shiftTH[currentShift], ward,
         equipment: 'Infusion Pump',
@@ -583,8 +579,19 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
         roundStatus: item.stLabel,
         note, name,
         timestamp: now.toISOString()
-      }).catch(() => {})
+      })
     ));
+    // เดิมกลืน error ทิ้ง ทำให้ขึ้น "บันทึกสำเร็จ" แม้บันทึกไม่ได้เลย (เช่น session หมดอายุ/เน็ตหลุด)
+    const failedNos = items.filter((it, i) => results[i].status === 'rejected').map(it => it.no || '(ไม่ระบุเลข)');
+    if (failedNos.length === items.length) {
+      alert('⚠️ บันทึกไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตหรือเข้าสู่ระบบใหม่ แล้วลองอีกครั้ง');
+      btn.disabled = false; btn.textContent = '💉 บันทึก Round Infusion Pump';
+      return;
+    }
+    if (failedNos.length) {
+      alert('⚠️ บันทึกได้ ' + (items.length - failedNos.length) + '/' + items.length + ' เครื่อง\n' +
+            'เครื่องที่บันทึกไม่สำเร็จ: ' + failedNos.join(', ') + '\nกรุณาบันทึกเครื่องเหล่านี้ใหม่');
+    }
 
     const cnt = { use:0, idle:0, broken:0, lost:0 };
     items.forEach(i => cnt[i.stKey]++);

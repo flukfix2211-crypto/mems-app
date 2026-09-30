@@ -510,7 +510,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       setLoading(cfg, false);
 
       if (!res.ok) {
-        showResult('error', '❌ เกิดข้อผิดพลาด', `<p style="color:var(--red);font-size:14px">${res.error || 'ไม่ทราบสาเหตุ'}</p>`);
+        showResult('error', '❌ เกิดข้อผิดพลาด', `<p style="color:var(--red);font-size:14px">${memsEsc(res.error || 'ไม่ทราบสาเหตุ')}</p>`);
         toast('❌ ' + (res.error || 'เกิดข้อผิดพลาด'));
         return;
       }
@@ -541,7 +541,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 
     } catch (err) {
       setLoading(cfg, false);
-      showResult('error', '❌ เกิดข้อผิดพลาด', `<p style="color:var(--red);font-size:14px">${err.message}</p>`);
+      showResult('error', '❌ เกิดข้อผิดพลาด', `<p style="color:var(--red);font-size:14px">${memsEsc(err.message)}</p>`);
       toast('❌ เกิดข้อผิดพลาด: ' + err.message);
     }
   }
@@ -571,8 +571,8 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
         <div class="result-row"><span class="result-key">เดือน</span><span class="result-val">${res.monthTH}</span></div>
         <div class="result-row"><span class="result-key">ยอดยืมทั้งหมด</span><span class="result-val">${res.totalBorrowLastMonth} ครั้ง</span></div>
         <div class="result-row"><span class="result-key">เครื่องค้างอยู่</span><span class="result-val">${res.stillBorrowed} เครื่อง</span></div>
-        <div class="result-row"><span class="result-key">อุปกรณ์ยอดนิยม</span><span class="result-val">${res.topEquipName} (${res.topEquipCount} ครั้ง)</span></div>
-        <div class="result-row"><span class="result-key">หน่วยงานยืมมากสุด</span><span class="result-val">${res.topWardName} (${res.topWardCount} ครั้ง)</span></div>`;
+        <div class="result-row"><span class="result-key">อุปกรณ์ยอดนิยม</span><span class="result-val">${memsEsc(res.topEquipName)} (${res.topEquipCount} ครั้ง)</span></div>
+        <div class="result-row"><span class="result-key">หน่วยงานยืมมากสุด</span><span class="result-val">${memsEsc(res.topWardName)} (${res.topWardCount} ครั้ง)</span></div>`;
       showResult('success', '✅ สร้างสรุปผู้บริหารสำเร็จ', html);
     }
     else if (type === 'c2') {
@@ -596,7 +596,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
         <div class="result-row"><span class="result-key">ใกล้หมด</span><span class="result-val">${res.shortageCount} รายการ</span></div>
         ${!res.configured
           ? `<p style="margin-top:8px;font-size:13px;color:var(--muted)">ยังไม่ได้ตั้งค่า Telegram — เปิด Apps Script editor แล้วรัน <code>setupTelegram('โทเคน','chatId')</code> หนึ่งครั้งก่อน</p>`
-          : (!res.sent ? `<p style="margin-top:8px;font-size:13px;color:var(--red)">${res.errorDetail || 'ส่งไม่สำเร็จ ไม่ทราบสาเหตุ'}</p>` : '')}
+          : (!res.sent ? `<p style="margin-top:8px;font-size:13px;color:var(--red)">${memsEsc(res.errorDetail || 'ส่งไม่สำเร็จ ไม่ทราบสาเหตุ')}</p>` : '')}
         <div style="margin-top:10px;font-size:12px;color:var(--muted)">ข้อความที่ส่ง:</div>
         <pre style="white-space:pre-wrap;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;font-family:inherit;font-size:13px;margin-top:4px">${res.message}</pre>`;
       showResult(res.sent ? 'success' : 'error', res.sent ? '✅ ส่งแจ้งเตือนสำเร็จ' : '⚠️ ส่งแจ้งเตือนไม่สำเร็จ', html);
@@ -687,7 +687,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
         ts: new Date(r.recorded_at),
         isBorrow: (r.action || '').includes('ยืม'),
         isReturn: (r.action || '').includes('คืน')
-      })).filter(r => !isNaN(r.no) && r.no >= 1 && r.no <= 58 && !isNaN(r.ts) && (r.isBorrow || r.isReturn));
+      })).filter(r => !isNaN(r.no) && r.no >= 1 && !isNaN(r.ts) && (r.isBorrow || r.isReturn));
 
       const months = [...new Set(_c2mRaw.map(r => `${r.ts.getFullYear()}-${String(r.ts.getMonth()+1).padStart(2,'0')}`))].sort().reverse();
       const wards  = [...new Set(_c2mRaw.map(r => r.ward))].sort();
@@ -695,7 +695,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       monthSel.innerHTML = '<option value="">— เลือกเดือน —</option>' +
         months.map(m => `<option value="${m}">${rptThaiMonthYear(new Date(+m.split('-')[0], +m.split('-')[1]-1, 1))}</option>`).join('');
       wardSel.innerHTML = '<option value="">— ทั้งหมด —</option>' +
-        wards.map(w => `<option value="${w}">${w}</option>`).join('');
+        wards.map(w => `<option value="${memsEsc(w)}">${memsEsc(w)}</option>`).join('');
     } catch (e) {
       monthSel.innerHTML = '<option value="">— โหลดไม่สำเร็จ —</option>';
     }

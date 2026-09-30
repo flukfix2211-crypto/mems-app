@@ -240,7 +240,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     if (error) throw error;
   }
 
-  const EQUIPS = ['C2', 'Infusion Pump', 'Syringe pump', 'High Flow', 'Brid เขียว', 'T1', 'Monnal t60',
+  const EQUIPS = ['C2', 'Infusion Pump', 'Syringe Pump', 'High Flow', 'Brid เขียว', 'T1', 'Monnal t60',
     'Patient Monitor', 'NIBP', 'Defibrillator', 'เครื่องมืออื่นๆ'];
   const ASSET_LABEL_EQUIPS = new Set(['Defibrillator', 'เครื่องมืออื่นๆ']);
   const WARDS = ['ER','อายุรกรรมหญิง (M.ญ)','EENT','ศัลยกรรมหญิง','ศัลยกรรมกระดูก','ศัลยกรรมชาย',
@@ -262,11 +262,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 
   // เวรตามเวลา (ตรงกับ borrow.html)
   function detectShiftTH() {
-    const d = new Date();
-    const t = d.getHours() * 60 + d.getMinutes();
-    if (t >= 510 && t < 990) return 'เวรเช้า';
-    if (t >= 990 || t < 30)  return 'เวรบ่าย';
-    return 'เวรดึก';
+    return bkkShiftTH(); // ตามเวลาไทย ไม่ขึ้นกับ timezone ของเครื่อง
   }
 
   // build equip chips
@@ -308,8 +304,16 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     const bySel   = document.getElementById('preparedBySel').value;
     const byOther = document.getElementById('preparedByOther').value.trim();
     const byName  = bySel === 'อื่นๆ' ? byOther : bySel;
+    // ตัดเลขซ้ำในช่องเดียวกัน ("5, 05" คือเครื่องเดียวกัน) — เดิมได้ 2 รายการของเครื่องเดียว
+    const seenNos = new Set();
     const numbers = document.getElementById('numbersInput').value
-      .split(',').map(s => s.trim()).filter(s => s !== '');
+      .split(',').map(s => s.trim()).filter(s => s !== '')
+      .filter(s => {
+        const k = normalizeMachineNo(s) || s;
+        if (seenNos.has(k)) return false;
+        seenNos.add(k);
+        return true;
+      });
     const otherEquipName = document.getElementById('otherEquipName').value.trim();
     const equipName = selectedEquip === 'เครื่องมืออื่นๆ' ? otherEquipName : selectedEquip;
 
@@ -359,6 +363,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     } catch (e) { /* เช็คไม่ได้ -> ปล่อยผ่าน ไม่บล็อค */ }
 
     btn.textContent = 'กำลังบันทึก…';
+    const delivered = [];
     try {
       if (prepareMode === 'deliver') {
         // โหมดพร้อมส่ง = ยืมแทนหน่วยงานทันที (1 record ต่อ 1 หมายเลข)
@@ -369,6 +374,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
             shift, action: '🟩 ยืม', equipment: equipName, equipmentNumber: num,
             ward, name: by, timestamp: ts, note: 'เตรียมพร้อมส่ง (แอดมินนำส่ง)'
           });
+          delivered.push(num);
         }
         toast('🚚 ส่ง ' + equipName + ' No.' + numbers.join(', ') + ' ให้ ' + ward + ' (ยืมแล้ว)');
       } else {
@@ -381,7 +387,19 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       setTimeout(loadList, 800);
     } catch (e) {
       // ฐานข้อมูลปฏิเสธ (เช่น เลขไม่มีในทะเบียน) -> แสดงเหตุผลจากฐานข้อมูล
-      toast('❌ บันทึกไม่สำเร็จ' + (e && e.message && e.code === 'P0001' ? ': ' + e.message : ''));
+      const reason = (e && e.message && e.code === 'P0001' ? ': ' + e.message : '');
+      if (delivered.length) {
+        // บางเครื่องบันทึกยืมไปแล้ว — ต้องบอกให้ชัด ไม่งั้นผู้ใช้กดซ้ำแล้วได้รายการยืมซ้ำ
+        const rest = numbers.filter(n => !delivered.includes(n));
+        alert('⚠️ ส่งสำเร็จ ' + delivered.length + '/' + numbers.length + ' เครื่อง\n' +
+              'สำเร็จแล้ว: No. ' + delivered.join(', ') + '\n' +
+              'ยังไม่สำเร็จ: No. ' + rest.join(', ') + reason + '\n\n' +
+              'กรุณาส่งเฉพาะเครื่องที่ยังไม่สำเร็จอีกครั้ง');
+        document.getElementById('numbersInput').value = rest.join(', ');
+        setTimeout(loadList, 800);
+      } else {
+        toast('❌ บันทึกไม่สำเร็จ' + reason);
+      }
     }
     btn.disabled = false; btn.textContent = origText;
   }
@@ -410,12 +428,12 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       items.forEach(it => { (byWard[it.ward] = byWard[it.ward] || []).push(it); });
       let html = '';
       Object.keys(byWard).sort().forEach(w => {
-        html += `<div class="group-ward">📍 ${w}</div>`;
+        html += `<div class="group-ward">📍 ${memsEsc(w)}</div>`;
         byWard[w].forEach(it => {
           const when = (it.date || '') + (it.time ? ' ' + it.time : '');
           html += `<div class="prep-item">
-            <div class="prep-info"><span class="prep-eq">${it.equipment} No.${it.number}</span><div class="prep-sub">โดย ${it.preparedBy}${when ? ' · 🕒 ' + when : ''}</div></div>
-            <button class="del-btn" onclick="openCancelModal(${it._rowIndex})">ลบ</button>
+            <div class="prep-info"><span class="prep-eq">${memsEsc(it.equipment)} No.${memsEsc(it.number)}</span><div class="prep-sub">โดย ${memsEsc(it.preparedBy)}${when ? ' · 🕒 ' + memsEsc(when) : ''}</div></div>
+            <button class="del-btn" onclick="openCancelModal(${Number(it._rowIndex)})">ลบ</button>
           </div>`;
         });
       });

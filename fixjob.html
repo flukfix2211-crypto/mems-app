@@ -211,9 +211,11 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       if (error) throw error;
       const topics = Array.from(new Set((data || []).map(r => (r.topic || '').trim()).filter(Boolean)))
         .sort((a, b) => a.localeCompare(b, 'th'));
+      // ลบหัวข้อที่โหลดไว้รอบก่อน (เดิมโหลดซ้ำหลังบันทึกทุกครั้ง ทำให้ตัวเลือกซ้ำเพิ่มขึ้นเรื่อยๆ)
+      topicSel.querySelectorAll('option[data-loaded]').forEach(o => o.remove());
       topics.forEach(t => {
         const o = document.createElement('option');
-        o.value = t; o.textContent = t;
+        o.value = t; o.textContent = t; o.dataset.loaded = '1';
         topicSel.insertBefore(o, topicSel.querySelector('option[value="__new"]'));
       });
     } catch (e) { /* โหลดหัวข้อไม่ได้ -> ยังพิมพ์หัวข้อใหม่เองได้ */ }
@@ -268,9 +270,10 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   }
   function removePhoto(i) { selectedPhotos.splice(i, 1); renderPhotos(); }
 
-  /** อัปโหลดรูปขึ้น Supabase Storage (bucket: fixjob-photos) แล้วคืน array ของ public URL — เทียบเท่า _uploadFixJobPhotos() เดิม */
+  /** อัปโหลดรูปขึ้น Supabase Storage (bucket: fixjob-photos) แล้วคืน { urls: public URL ที่อัปโหลดสำเร็จ, failed: จำนวนรูปที่ไม่สำเร็จ } — เทียบเท่า _uploadFixJobPhotos() เดิม */
   async function uploadFixJobPhotos(photos) {
     const urls = [];
+    let failed = 0;
     for (const p of photos) {
       try {
         const bytes = Uint8Array.from(atob(p.data), c => c.charCodeAt(0));
@@ -280,9 +283,13 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
         if (error) throw error;
         const { data } = supabase.storage.from('fixjob-photos').getPublicUrl(path);
         urls.push(data.publicUrl);
-      } catch (e) { /* รูปเสีย/อัปโหลดไม่สำเร็จ -> ข้ามรูปนี้ ไม่ให้กระทบการบันทึกหลัก */ }
+      } catch (e) {
+        // รูปเสีย/อัปโหลดไม่สำเร็จ -> ข้ามรูปนี้ ไม่ให้กระทบการบันทึกหลัก แต่ต้องแจ้งผู้ใช้ (เดิมเงียบ ผู้ใช้คิดว่าแนบรูปแล้ว)
+        failed++;
+        console.warn('อัปโหลดรูปไม่สำเร็จ:', e);
+      }
     }
-    return urls;
+    return { urls, failed };
   }
 
   function toast(msg) {
@@ -336,7 +343,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     btn.disabled = true; btn.textContent = 'กำลังบันทึก…';
 
     try {
-      const photoUrls = await uploadFixJobPhotos(selectedPhotos);
+      const { urls: photoUrls, failed: photoFailed } = await uploadFixJobPhotos(selectedPhotos);
       const now = new Date();
       const { error } = await supabase.from('fixjob_records').insert({
         record_date: bkkDateStr(now),
@@ -348,6 +355,10 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       });
       if (error) throw error;
       toast('✅ บันทึกการแก้ไข "' + topic + '" ที่ ' + ward + ' แล้ว');
+      if (photoFailed) {
+        alert('⚠️ บันทึกรายการแล้ว แต่แนบรูปไม่สำเร็จ ' + photoFailed + ' จาก ' + selectedPhotos.length + ' รูป\n' +
+              'รูปเหล่านี้ไม่ได้ถูกบันทึก กรุณาแจ้งแอดมิน');
+      }
       resetForm();
       loadTopics();
     } catch (e) {

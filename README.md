@@ -15,13 +15,20 @@ C2 · High Flow · Brid เขียว · Infusion Pump · Syringe Pump · Monn
 - Animated background
 
 ## สถาปัตยกรรม
-ทุกหน้าเป็น static HTML (เปิดผ่าน GitHub Pages ได้เลย ไม่ต้อง build) เชื่อมต่อ Supabase โดยตรงผ่าน `supabase-js` (ไม่มี login — ใช้ RLS policy แบบ public เหมือนพฤติกรรมเดิมของ Apps Script "Anyone" access):
+ทุกหน้าเป็น static HTML (เปิดผ่าน GitHub Pages ได้เลย ไม่ต้อง build) เชื่อมต่อ Supabase โดยตรงผ่าน `supabase-js`
+ผู้ใช้ต้องเข้าสู่ระบบ (Supabase Auth) และแต่ละบัญชีเข้าได้เฉพาะหน้าที่ได้รับสิทธิ์:
 
-- **`supabase-client.js`** — Supabase client + ฟังก์ชันร่วม (บันทึกยืม/คืน, สถานะเครื่อง, แจ้งเตือน Telegram ฯลฯ)
+- **`supabase-client.js`** — Supabase client + ฟังก์ชันร่วม (บันทึกยืม/คืน, สถานะเครื่อง, เวรตามเวลาไทย, แจ้งเตือน Telegram ฯลฯ)
+- **`auth.js`** — ล็อกอิน/ออกจากระบบ, ตรวจสิทธิ์รายหน้า (`memsGuard`), `memsEsc` สำหรับ escape ข้อความก่อนใส่ HTML
 - **`reports.js`** — คำนวณรายงาน (ภาระงาน, รายงานประจำเดือน, สรุปผู้บริหาร, สถิติ C2) + สร้าง PDF ด้วย jsPDF ในเบราว์เซอร์
-- **ตาราง Postgres**: `borrow_records`, `assets`, `prepare_records`, `fixjob_records`
+- **ตาราง Postgres**: `borrow_records`, `assets`, `prepare_records`, `fixjob_records`, `user_profiles` (บัญชี + สิทธิ์รายหน้า), `audit_log` (ประวัติเพิ่ม/แก้ไข/ลบ)
 - **Storage bucket**: `fixjob-photos` (รูปแนบการแก้ไขหน้างาน)
-- **Edge Functions**: `telegram-notify` (แจ้งเตือนยืม/คืน + สรุปประจำวัน), `thai-holidays` (ดึงวันหยุดราชการไทยสำหรับคำนวณภาระงาน) — ตั้งเวลาส่งสรุปทุกวัน 08:00 ผ่าน `pg_cron`
+- **Edge Functions**: `telegram-notify` (แจ้งเตือนยืม/คืน + สรุปประจำวัน + สรุปรายเวร), `thai-holidays` (ดึงวันหยุดราชการไทยสำหรับคำนวณภาระงาน), `mems-user-admin` (จัดการบัญชีผู้ใช้ เฉพาะแอดมินหลัก)
+- **ตั้งเวลา (`pg_cron`)**: 08:00 สรุปแจ้งเตือนประจำวัน, 08:30 สรุปยืม-คืนรายเวร
+
+> ⚠️ โครงสร้างฐานข้อมูล (ตาราง, RLS policy, trigger, view) และซอร์สของ `thai-holidays` ยังไม่ได้เก็บไว้ใน repo นี้ — อยู่บน Supabase เท่านั้น
+
+**ข้อความที่ผู้ใช้กรอก** (ชื่อ, ตึก, หมายเหตุ ฯลฯ) ต้อง escape ด้วย `memsEsc()` ทุกครั้งก่อนใส่ใน `innerHTML` และค่าที่ส่งเข้า `onclick="fn('...')"` ในแดชบอร์ดต้องผ่าน `jsq()`
 
 โค้ด Google Apps Script เดิม (`gas/`) เก็บไว้เป็นข้อมูลอ้างอิงเชิงประวัติเท่านั้น ระบบไม่ได้ใช้งานแล้ว
 

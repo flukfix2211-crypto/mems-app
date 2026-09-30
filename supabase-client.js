@@ -19,6 +19,21 @@ function bkkTimeStr(d) {
 }
 
 /**
+ * เวรของเวลาที่ระบุ ตามเวลาไทย (ไม่ขึ้นกับ timezone ของเครื่อง)
+ * เช้า 08:30–16:30 · บ่าย 16:30–00:30 · ดึก 00:30–08:30
+ * คืน 'morning' | 'afternoon' | 'night'
+ */
+function bkkShiftKey(d = new Date()) {
+  const [h, m] = bkkTimeStr(d).split(':').map(Number);
+  const t = h * 60 + m;
+  if (t >= 510 && t < 990) return 'morning';
+  if (t >= 990 || t < 30)  return 'afternoon';
+  return 'night';
+}
+const SHIFT_TH = { morning: 'เวรเช้า', afternoon: 'เวรบ่าย', night: 'เวรดึก' };
+function bkkShiftTH(d = new Date()) { return SHIFT_TH[bkkShiftKey(d)]; }
+
+/**
  * ดึงข้อมูลทั้งหมดแบบแบ่งหน้า — PostgREST จำกัดผลลัพธ์สูงสุด 1,000 แถวต่อครั้ง
  * ถ้าไม่แบ่งหน้า ข้อมูลจะถูกตัดเงียบๆ เมื่อประวัติเกิน 1,000 แถว
  * buildQuery: () => supabase.from(...).select(...).order(...)  (ต้อง order ให้คงที่)
@@ -198,7 +213,7 @@ async function saveBorrowRecord(payload) {
         .update({ status: 'ยืมแล้ว' })
         .eq('status', 'เตรียม')
         .eq('equipment_type', payload.equipment)
-        .eq('equipment_number', String(payload.equipmentNumber));
+        .eq('equipment_number', row.equipment_number); // เลขรูปเดียวกับที่บันทึก ("054" → "54")
     } catch (e) { /* ไม่ให้กระทบการบันทึกหลัก */ }
   }
 

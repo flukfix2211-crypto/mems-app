@@ -234,7 +234,7 @@ const WORKLOAD_SERVICE_ROWS = [
   { key: 'bird', label: 'ให้บริการเครื่องช่วยหายใจ (Bird)', equips: ['Brid เขียว'] },
   { key: 'highflow', label: 'ให้บริการ High Flow', equips: ['High Flow'] },
   { key: 'infusion', label: 'ให้บริการ Infusion Pump', equips: ['Infusion Pump'] },
-  { key: 'syringe', label: 'ให้บริการ Syringe Pump', equips: ['Syringe pump'] },
+  { key: 'syringe', label: 'ให้บริการ Syringe Pump', equips: ['Syringe Pump', 'Syringe pump'] }, // ชื่อในทะเบียนคือ 'Syringe Pump' — เก็บตัวสะกดเดิมไว้เผื่อข้อมูลเก่า
   { key: 'monitor', label: 'ให้บริการ Monitor', equips: ['Patient Monitor', 'NIBP'] },
   { key: 'defib', label: 'ให้บริการ Defibrillator', equips: ['Defibrillator'] },
   { key: 'other', label: 'ให้บริการเครื่องมือแพทย์อื่นๆ', equips: null }
@@ -316,13 +316,14 @@ async function computeWorkloadCalendar(monthLabel) {
     staffByDay[day][shift][name] = (staffByDay[day][shift][name] || 0) + 1;
   }
 
-  const [{ data: borrowRows }, { data: prepRows }, { data: fixRows }] = await Promise.all([
-    supabase.from('borrow_records').select('action, equipment_name, staff_name, note, recorded_at, shift')
-      .gte('record_date', monthStart).lt('record_date', monthEndExclusive),
-    supabase.from('prepare_records').select('equipment_type, prepared_by, status, recorded_at')
-      .gte('record_date', monthStart).lt('record_date', monthEndExclusive),
-    supabase.from('fixjob_records').select('recorded_at')
-      .gte('record_date', monthStart).lt('record_date', monthEndExclusive)
+  // แบ่งหน้า: เดิมดึงครั้งเดียว ข้อมูลเกิน 1,000 แถว/เดือนจะถูกตัดเงียบๆ และ error ถูกมองข้าม (ได้รายงานไม่ครบโดยไม่รู้ตัว)
+  const [borrowRows, prepRows, fixRows] = await Promise.all([
+    fetchAllPages(() => supabase.from('borrow_records').select('action, equipment_name, staff_name, note, recorded_at, shift')
+      .gte('record_date', monthStart).lt('record_date', monthEndExclusive).order('recorded_at').order('id')),
+    fetchAllPages(() => supabase.from('prepare_records').select('equipment_type, prepared_by, status, recorded_at')
+      .gte('record_date', monthStart).lt('record_date', monthEndExclusive).order('recorded_at').order('id')),
+    fetchAllPages(() => supabase.from('fixjob_records').select('recorded_at')
+      .gte('record_date', monthStart).lt('record_date', monthEndExclusive).order('recorded_at').order('id'))
   ]);
 
   (borrowRows || []).forEach(r => {
@@ -480,8 +481,8 @@ function rptCalcAvgBorrowDays(borrowRows, returnRows) {
 
 async function rptGatherPrepareStats(start, end) {
   const res = { total: 0, used: 0, waiting: 0, cancelled: 0, byEquip: [], byPreparer: [] };
-  const { data } = await supabase.from('prepare_records').select('equipment_type, prepared_by, status, recorded_at')
-    .gte('recorded_at', start.toISOString()).lt('recorded_at', end.toISOString());
+  const data = await fetchAllPages(() => supabase.from('prepare_records').select('equipment_type, prepared_by, status, recorded_at')
+    .gte('recorded_at', start.toISOString()).lt('recorded_at', end.toISOString()).order('recorded_at').order('id'));
   const equipCount = {}, prepCount = {};
   (data || []).forEach(r => {
     res.total++;
@@ -505,9 +506,9 @@ async function computeMonthlyReport() {
   const lastOfLastMonth = new Date(firstOfThisMonth - 1);
   const monthTH = rptThaiMonthYear(firstOfLastMonth);
 
-  const { data: raw, error } = await supabase.from('borrow_records').select('*')
-    .gte('recorded_at', firstOfLastMonth.toISOString()).lte('recorded_at', lastOfLastMonth.toISOString());
-  if (error) throw error;
+  const raw = await fetchAllPages(() => supabase.from('borrow_records').select('*')
+    .gte('recorded_at', firstOfLastMonth.toISOString()).lte('recorded_at', lastOfLastMonth.toISOString())
+    .order('recorded_at').order('id'));
   if (!raw || !raw.length) return { ok: false, error: 'ไม่มีข้อมูลในเดือนที่แล้ว' };
 
   const rows = raw.filter(r => (r.action || '').includes('ยืม') || (r.action || '').includes('คืน'));
@@ -715,7 +716,8 @@ async function computeC2Report() {
     const isBorrow = action.includes('ยืม'), isReturn = action.includes('คืน');
     if (!isBorrow && !isReturn) return;
     const no = parseInt(r.equipment_number, 10);
-    if (isNaN(no) || no < 1 || no > 58) return;
+    // ไม่จำกัดเลขสูงสุด — ทะเบียน C2 มีเกิน 58 เครื่องแล้ว (เดิมตัด No.59+ ทิ้งจากสถิติ)
+    if (isNaN(no) || no < 1) return;
     const ts = new Date(r.recorded_at);
     if (isNaN(ts) || ts.getTime() <= 0) return;
     (events[no] = events[no] || []).push({ ts, isBorrow, ward: r.ward || 'ไม่ระบุ' });

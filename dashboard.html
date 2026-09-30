@@ -1000,15 +1000,15 @@ function renderSearchToolResults() {
     return;
   }
 
-  const jsStr = v => String(v || '').replace(/'/g, "\\'");
+  const jsStr = v => jsq(v || '');
 
   body.innerHTML = `<div class="equip-grid">${matches.map(e => {
     const when = formatThaiDateTime(e.lastUpdate);
     if (!e.isBorrowed) {
       return `<div class="equip-card returned">
-          <div class="equip-name">${e.equipment}${e.number ? ' No.' + e.number : ''}</div>
+          <div class="equip-name">${escHtml(e.equipment)}${e.number ? ' No.' + escHtml(e.number) : ''}</div>
           <div class="equip-num" style="font-size:14px">🟢 พร้อมใช้</div>
-          <div class="equip-ward">${e.ward ? '📍 คืนล่าสุด ' + e.ward : ''}</div>
+          <div class="equip-ward">${e.ward ? '📍 คืนล่าสุด ' + escHtml(e.ward) : ''}</div>
           <div class="equip-who">${when ? 'อัปเดต ' + when : ''}</div>
         </div>`;
     }
@@ -1024,10 +1024,10 @@ function renderSearchToolResults() {
         </div>`;
     }
     return `<div class="equip-card borrowed">
-          <div class="equip-name">${e.equipment}${e.number ? ' No.' + e.number : ''}</div>
+          <div class="equip-name">${escHtml(e.equipment)}${e.number ? ' No.' + escHtml(e.number) : ''}</div>
           <div class="equip-num" style="font-size:14px">🔴 ยืมอยู่</div>
-          <div class="equip-ward">📍 ${e.ward || '—'}</div>
-          <div class="equip-who">${e.borrowedBy || ''}${when ? ' · ' + when : ''}</div>
+          <div class="equip-ward">📍 ${escHtml(e.ward || '—')}</div>
+          <div class="equip-who">${escHtml(e.borrowedBy || '')}${when ? ' · ' + escHtml(when) : ''}</div>
           ${actions}
         </div>`;
   }).join('')}</div>`;
@@ -1129,7 +1129,7 @@ function renderWorkloadTable(d) {
     for (let day = 1; day <= N; day++) {
       if (shift === 'เวรเช้า' && !offHoursMorning[day]) { body += `<td class="wkl-num wkl-na" title="${NA_TITLE}"></td>`; continue; }
       const name = (d.staffByDay[day] && d.staffByDay[day][shift]) || '';
-      body += `<td class="wkl-num">${name || '·'}</td>`;
+      body += `<td class="wkl-num">${escHtml(name || '·')}</td>`;
     }
     if (si === 0) body += '<td class="wkl-rowtotal" rowspan="3"></td>';
     body += '</tr>';
@@ -1170,16 +1170,16 @@ async function renderPrepareHistory() {
       if (st === 'ยืมแล้ว') {
         badge = '<span style="background:#DCF2E5;color:#14612D;font-size:11px;font-weight:700;border-radius:20px;padding:2px 9px">ยืมแล้ว</span>';
       } else if (st.indexOf('ยกเลิก') === 0) {
-        badge = '<span style="background:#FDEAEA;color:#B82E2E;font-size:11px;font-weight:700;border-radius:20px;padding:2px 9px">' + st + '</span>';
+        badge = '<span style="background:#FDEAEA;color:#B82E2E;font-size:11px;font-weight:700;border-radius:20px;padding:2px 9px">' + escHtml(st) + '</span>';
       } else {
         badge = '<span style="background:#FFF3CD;color:#8B5000;font-size:11px;font-weight:700;border-radius:20px;padding:2px 9px">เตรียม</span>';
       }
       const when = (it.date || '') + (it.time ? ' ' + it.time : '');
       return `<tr>
-        <td style="font-weight:800;color:var(--a)">${it.equipment} No.${it.number}</td>
-        <td>${it.ward}</td>
-        <td style="font-size:12px">${it.preparedBy}</td>
-        <td style="white-space:nowrap;font-size:12px">${when}</td>
+        <td style="font-weight:800;color:var(--a)">${escHtml(it.equipment)} No.${escHtml(it.number)}</td>
+        <td>${escHtml(it.ward)}</td>
+        <td style="font-size:12px">${escHtml(it.preparedBy)}</td>
+        <td style="white-space:nowrap;font-size:12px">${escHtml(when)}</td>
         <td>${badge}</td>
       </tr>`;
     }).join('');
@@ -1209,15 +1209,15 @@ async function renderFixJobHistory() {
     const rows = items.map(it => {
       const when = (it.date || '') + (it.time ? ' ' + it.time : '');
       const photos = (it.photos || []).length
-        ? it.photos.map(u => `<a href="${u}" target="_blank" rel="noopener"><img src="${u}" style="width:36px;height:36px;object-fit:cover;border-radius:6px;border:1px solid var(--border);margin-right:4px"></a>`).join('')
+        ? it.photos.filter(isHttpUrl).map(u => `<a href="${escHtml(u)}" target="_blank" rel="noopener"><img src="${escHtml(u)}" style="width:36px;height:36px;object-fit:cover;border-radius:6px;border:1px solid var(--border);margin-right:4px"></a>`).join('')
         : '<span style="color:var(--muted)">—</span>';
       return `<tr>
-        <td style="white-space:nowrap;font-size:12px">${when}</td>
-        <td style="font-weight:800;color:var(--a)">${it.ward}</td>
-        <td>${it.topic}</td>
-        <td style="font-size:12px;max-width:220px;white-space:normal">${it.detail}</td>
-        <td style="font-size:12px;max-width:220px;white-space:normal">${it.solution}</td>
-        <td style="font-size:12px">${it.staff}</td>
+        <td style="white-space:nowrap;font-size:12px">${escHtml(when)}</td>
+        <td style="font-weight:800;color:var(--a)">${escHtml(it.ward)}</td>
+        <td>${escHtml(it.topic)}</td>
+        <td style="font-size:12px;max-width:220px;white-space:normal">${escHtml(it.detail)}</td>
+        <td style="font-size:12px;max-width:220px;white-space:normal">${escHtml(it.solution)}</td>
+        <td style="font-size:12px">${escHtml(it.staff)}</td>
         <td>${photos}</td>
       </tr>`;
     }).join('');
@@ -1316,6 +1316,8 @@ const TREND_DAYS = 30;
 const REPAIR_STATUSES = ['ชำรุด', 'ส่งซ่อม'];
 
 const escHtml = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// ลิงก์รูปต้องเป็น http(s) เท่านั้น — กัน javascript: URL ที่ถูกแก้ใส่ในฐานข้อมูล
+const isHttpUrl = u => /^https?:\/\//i.test(String(u || ''));
 
 // ความพร้อมใช้ต่อประเภท: นับเครื่องจริงจากทะเบียนครุภัณฑ์ (assets) — ไม่ใช่แค่เครื่องที่เคยมีประวัติยืม-คืนใน equipment_status
 // total ไม่นับเครื่องที่จำหน่ายแล้ว, เครื่องที่ยืมอยู่นับเป็น "ยืมอยู่" แม้ในทะเบียนจะเป็นชำรุด/ส่งซ่อม (จะได้ไม่นับซ้ำ)
@@ -1592,7 +1594,11 @@ function setAlertTopic(key) {
   renderAlertBanner();
 }
 
-const jsq = v => String(v ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+// ค่าที่ใส่ใน onclick="fn('...')": escape เป็น JS string ก่อน แล้ว escape HTML attribute อีกชั้น
+// (เดิม escape แค่ ' ทำให้ค่าที่มี " หรือ < หลุดออกจาก attribute ได้)
+function jsq(v) {
+  return escHtml(String(v ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r?\n/g, '\\n'));
+}
 function circuitWhen(c) {
   if (c.diff < 0) return `เลยกำหนด ${-c.diff} วัน (ควรเปลี่ยน ${thaiWeekdayName(c.changeISO)} ${thaiDateShort(c.changeISO)})`;
   if (c.diff === 0) return 'เปลี่ยนวันนี้';
@@ -1604,35 +1610,35 @@ function alertCardsHTML(a) {
     circuit: a.circuit.map(c => `
       <div class="equip-card ${c.diff < 0 ? 'borrowed' : 'warn'} clickable" onclick="openCircuitModal('${jsq(c.number)}','${jsq(c.ward)}',${c.days})" title="กดเพื่อบันทึกการเปลี่ยน Circuit">
         <div class="equip-name">🔁 ครบเปลี่ยน Circuit</div>
-        <div class="equip-num" style="font-size:16px">No.${c.number}</div>
-        <div class="equip-ward">📍 ${c.roundWard || c.ward || '—'}${c.bed ? ' · เตียง ' + c.bed : ''}</div>
+        <div class="equip-num" style="font-size:16px">No.${escHtml(c.number)}</div>
+        <div class="equip-ward">📍 ${escHtml(c.roundWard || c.ward || '—')}${c.bed ? ' · เตียง ' + escHtml(c.bed) : ''}</div>
         <div class="equip-who">${circuitWhen(c)}</div>
       </div>`).join(''),
     overdue: a.overdue.map(o => `
       <div class="equip-card borrowed clickable" onclick="openCircuitModal('${jsq(o.number)}','${jsq(o.ward)}',${o.days})" title="กดเพื่อบันทึกการเปลี่ยน Circuit">
         <div class="equip-name">⏰ C2 ยืมเกินกำหนด</div>
-        <div class="equip-num" style="font-size:16px">No.${o.number}</div>
-        <div class="equip-ward">📍 ${o.ward || '—'}</div>
+        <div class="equip-num" style="font-size:16px">No.${escHtml(o.number)}</div>
+        <div class="equip-ward">📍 ${escHtml(o.ward || '—')}</div>
         <div class="equip-who">ยืมมาแล้ว ${o.days} วัน</div>
       </div>`).join(''),
     notInRound: a.notInRound.map(n => `
       <div class="equip-card returned clickable" onclick="openToolReturnModal('${jsq(n.equipment)}','${jsq(n.number)}','${jsq(n.ward)}')" title="ตรวจสอบแล้วเครื่องอยู่ที่ศูนย์ → กดเพื่อบันทึกคืน">
         <div class="equip-name">🏠 ไม่พบในราวด์</div>
-        <div class="equip-num" style="font-size:16px">No.${n.number}</div>
-        <div class="equip-ward">📍 MEMs: ${n.ward || '—'}</div>
-        <div class="equip-who">${n.lastRound ? `พบล่าสุด ${thaiDateShort(n.lastRound)}${n.lastRoundWard ? ' · ' + n.lastRoundWard : ''}` : 'ไม่พบในราวด์ 60 วันล่าสุด'} — ถ้าอยู่ที่ศูนย์แล้ว กดบันทึกคืน</div>
+        <div class="equip-num" style="font-size:16px">No.${escHtml(n.number)}</div>
+        <div class="equip-ward">📍 MEMs: ${escHtml(n.ward || '—')}</div>
+        <div class="equip-who">${n.lastRound ? `พบล่าสุด ${thaiDateShort(n.lastRound)}${n.lastRoundWard ? ' · ' + escHtml(n.lastRoundWard) : ''}` : 'ไม่พบในราวด์ 60 วันล่าสุด'} — ถ้าอยู่ที่ศูนย์แล้ว กดบันทึกคืน</div>
       </div>`).join(''),
     notBorrowed: a.notBorrowed.map(n => `
       <div class="equip-card warn">
         <div class="equip-name">📋 ไม่มีรายการยืม</div>
-        <div class="equip-num" style="font-size:16px">No.${n.number}</div>
-        <div class="equip-ward">📍 ราวด์: ${n.roundWard || '—'}${n.bed ? ' · เตียง ' + n.bed : ''}</div>
+        <div class="equip-num" style="font-size:16px">No.${escHtml(n.number)}</div>
+        <div class="equip-ward">📍 ราวด์: ${escHtml(n.roundWard || '—')}${n.bed ? ' · เตียง ' + escHtml(n.bed) : ''}</div>
         <div class="equip-who">พบในราวด์ ${thaiDateShort(n.roundDate)} แต่ MEMs ไม่มีรายการยืมค้าง — ควรบันทึกยืม</div>
       </div>`).join(''),
     shortage: a.shortage.map(s => `
       <div class="equip-card warn">
         <div class="equip-name">⚠️ ใกล้หมด</div>
-        <div class="equip-num" style="font-size:16px">${s.equipment}</div>
+        <div class="equip-num" style="font-size:16px">${escHtml(s.equipment)}</div>
         <div class="equip-who">เหลือว่าง ${s.available} · ยืมอยู่ ${s.borrowed}${s.repair ? ' · ซ่อม ' + s.repair : ''} · ทั้งหมด ${s.total} เครื่อง</div>
       </div>`).join('')
   };
@@ -1674,17 +1680,13 @@ function renderAlertBanner() {
 let _circuitCtx = null; // { number, ward, days, equip }
 
 function detectShiftTH() {
-  const now = new Date();
-  const t = now.getHours() * 60 + now.getMinutes();
-  if (t >= 510 && t < 990) return 'เวรเช้า';
-  if (t >= 990 || t < 30)  return 'เวรบ่าย';
-  return 'เวรดึก';
+  return bkkShiftTH(); // ตามเวลาไทย ไม่ขึ้นกับ timezone ของเครื่อง
 }
 
 function openCircuitModal(number, ward, days, equip = 'C2') {
   _circuitCtx = { number, ward, days, equip };
   document.getElementById('circuitInfo').innerHTML =
-    `<strong>${equip} No.${number}</strong><br><span style="font-weight:500;color:var(--muted);font-size:12px">📍 ${ward || '—'} · ยืมมาแล้ว ${days} วัน</span>`;
+    `<strong>${escHtml(equip)} No.${escHtml(number)}</strong><br><span style="font-weight:500;color:var(--muted);font-size:12px">📍 ${escHtml(ward || '—')} · ยืมมาแล้ว ${escHtml(days)} วัน</span>`;
   document.getElementById('circuitStaffName').value = '';
   const dateInput = document.getElementById('circuitDate');
   dateInput.max = bkkDateStr(new Date()); // เลือกวันที่ในอนาคตไม่ได้
@@ -1774,10 +1776,10 @@ let _toolTransferCtx = null; // { equip, number, fromWard }
 function openToolTransferModal(equip, number, fromWard) {
   _toolTransferCtx = { equip, number, fromWard };
   document.getElementById('toolTransferInfo').innerHTML =
-    `<strong>${equip} No.${number}</strong><br><span style="font-weight:500;color:var(--muted);font-size:12px">ปัจจุบันอยู่ที่วอร์ด ${fromWard || '—'}</span>`;
+    `<strong>${escHtml(equip)} No.${escHtml(number)}</strong><br><span style="font-weight:500;color:var(--muted);font-size:12px">ปัจจุบันอยู่ที่วอร์ด ${escHtml(fromWard || '—')}</span>`;
   const sel = document.getElementById('toolTransferWardSel');
   sel.innerHTML = '<option value="">— เลือกวอร์ดปลายทาง —</option>' +
-    WARDS_ALL.filter(w => w !== fromWard).map(w => `<option>${w}</option>`).join('');
+    WARDS_ALL.filter(w => w !== fromWard).map(w => `<option value="${escHtml(w)}">${escHtml(w)}</option>`).join('');
   document.getElementById('toolTransferStaffName').value = '';
   document.getElementById('toolTransferModal').style.display = 'flex';
 }
@@ -1825,7 +1827,7 @@ let _toolReturnCtx = null; // { equip, number, ward }
 function openToolReturnModal(equip, number, ward) {
   _toolReturnCtx = { equip, number, ward };
   document.getElementById('toolReturnInfo').innerHTML =
-    `<strong>${equip} No.${number}</strong><br><span style="font-weight:500;color:var(--muted);font-size:12px">📍 ${ward || '—'}</span>`;
+    `<strong>${escHtml(equip)} No.${escHtml(number)}</strong><br><span style="font-weight:500;color:var(--muted);font-size:12px">📍 ${escHtml(ward || '—')}</span>`;
   document.getElementById('toolReturnStaffName').value = '';
   document.getElementById('toolReturnModal').style.display = 'flex';
 }
@@ -1906,7 +1908,7 @@ async function initWardView() {
   const wards = [...new Set(equipStatus.filter(e => e.isBorrowed).map(e => e.ward).filter(Boolean))].sort();
   const prev = sel.value;
   sel.innerHTML = '<option value="">— เลือกตึก/Ward —</option>' +
-    wards.map(w => `<option value="${w}"${w === prev ? ' selected' : ''}>${w}</option>`).join('');
+    wards.map(w => `<option value="${escHtml(w)}"${w === prev ? ' selected' : ''}>${escHtml(w)}</option>`).join('');
   if (!wards.length) {
     body.innerHTML = '<div class="card"><div class="card-body"><div class="empty">ไม่พบข้อมูลหน่วยงาน (equipStatus: ' + equipStatus.length + ', records: ' + allRecords.length + ')</div></div></div>';
     return;
@@ -1924,12 +1926,12 @@ function renderWardBlocks() {
       .sort((a, b) => String(a.equipment).localeCompare(String(b.equipment), 'th') || String(a.number).localeCompare(String(b.number)));
     const empty = items.length === 0;
     return `
-      <div class="ward-block ${empty ? 'ward-block-empty' : 'ward-block-active'}" onclick="selectWardBlock('${ward.replace(/'/g, "\\'")}')">
+      <div class="ward-block ${empty ? 'ward-block-empty' : 'ward-block-active'}" onclick="selectWardBlock('${jsq(ward)}')">
         <div class="ward-block-head">
-          <span>${ward}</span>
+          <span>${escHtml(ward)}</span>
           <span class="ward-block-badge">${empty ? 'ว่าง' : items.length + ' เครื่อง'}</span>
         </div>
-        ${empty ? '' : `<div class="ward-block-list">${items.map(e => `<div class="ward-block-item">${e.equipment} No.${e.number || '—'}</div>`).join('')}</div>`}
+        ${empty ? '' : `<div class="ward-block-list">${items.map(e => `<div class="ward-block-item">${escHtml(e.equipment)} No.${escHtml(e.number || '—')}</div>`).join('')}</div>`}
       </div>`;
   }).join('');
 }
@@ -1937,7 +1939,7 @@ function renderWardBlocks() {
 function selectWardBlock(ward) {
   const sel = document.getElementById('wardViewSel');
   if (![...sel.options].some(o => o.value === ward)) {
-    sel.insertAdjacentHTML('beforeend', `<option value="${ward}">${ward}</option>`);
+    sel.insertAdjacentHTML('beforeend', `<option value="${escHtml(ward)}">${escHtml(ward)}</option>`);
   }
   sel.value = ward;
   renderWardDetail();
@@ -1987,15 +1989,15 @@ function renderWardDetail() {
       return `
       <div class="card" style="margin-bottom:12px">
         <div class="card-head" style="background:var(--al);font-size:14px">
-          📟 ${eq} <span style="font-size:12px;font-weight:400;color:var(--muted);margin-left:6px">${items.length} เครื่อง</span>
+          📟 ${escHtml(eq)} <span style="font-size:12px;font-weight:400;color:var(--muted);margin-left:6px">${items.length} เครื่อง</span>
         </div>
         <div class="card-body" style="display:flex;flex-direction:column;gap:8px">
           ${withIdx.map(({ e, rowIdx }) => `
             <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--bg);border-radius:10px;border:1.5px solid var(--border)">
-              <div style="flex:1;font-weight:700;font-size:14px">No.${e.number || '—'}</div>
+              <div style="flex:1;font-weight:700;font-size:14px">No.${escHtml(e.number || '—')}</div>
               <div style="font-size:11px;font-weight:700;color:#DC2626;background:#FEF2F2;padding:4px 8px;border-radius:20px;white-space:nowrap">ยืมอยู่</div>
-              <button onclick="${rowIdx?`openEditModal(${rowIdx},'ward')`:'void 0'}" ${!rowIdx?'disabled title="Deploy GAS ใหม่ก่อน"':''} style="padding:4px 10px;background:#DAF0F5;color:#0A6478;border:1.5px solid #C5E3ED;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;opacity:${rowIdx?1:.4}" onmouseover="if(${rowIdx?1:0})this.style.background='#0A6478',this.style.color='#fff'" onmouseout="this.style.background='#DAF0F5',this.style.color='#0A6478'">แก้ไข</button>
-              <button onclick="${rowIdx?`confirmDeleteWard(${rowIdx},'${eq} No.${e.number}')`:'void 0'}" ${!rowIdx?'disabled title="Deploy GAS ใหม่ก่อน"':''} style="padding:4px 10px;background:#FDEAEA;color:#B82E2E;border:1.5px solid #f8c8c8;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;opacity:${rowIdx?1:.4}" onmouseover="if(${rowIdx?1:0})this.style.background='#B82E2E',this.style.color='#fff'" onmouseout="this.style.background='#FDEAEA',this.style.color='#B82E2E'">ลบ</button>
+              <button onclick="${rowIdx?`openEditModal(${rowIdx},'ward')`:'void 0'}" ${!rowIdx?'disabled title="ไม่พบรายการล่าสุดของเครื่องนี้ กดรีเฟรชแล้วลองใหม่"':''} style="padding:4px 10px;background:#DAF0F5;color:#0A6478;border:1.5px solid #C5E3ED;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;opacity:${rowIdx?1:.4}" onmouseover="if(${rowIdx?1:0})this.style.background='#0A6478',this.style.color='#fff'" onmouseout="this.style.background='#DAF0F5',this.style.color='#0A6478'">แก้ไข</button>
+              <button onclick="${rowIdx?`confirmDeleteWard(${rowIdx},'${jsq(eq + ' No.' + e.number)}')`:'void 0'}" ${!rowIdx?'disabled title="ไม่พบรายการล่าสุดของเครื่องนี้ กดรีเฟรชแล้วลองใหม่"':''} style="padding:4px 10px;background:#FDEAEA;color:#B82E2E;border:1.5px solid #f8c8c8;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;opacity:${rowIdx?1:.4}" onmouseover="if(${rowIdx?1:0})this.style.background='#B82E2E',this.style.color='#fff'" onmouseout="this.style.background='#FDEAEA',this.style.color='#B82E2E'">ลบ</button>
             </div>`).join('')}
         </div>
       </div>`;
@@ -2051,17 +2053,17 @@ function renderTable() {
       const rowIdx = r['_rowIndex'];
       return `<tr id="rec-row-${rowIdx}">
         <td>${start+i+1}</td>
-        <td>${fmtDate(r['วันที่'])}</td>
-        <td>${fmtTime(r['เวลา'])}</td>
-        <td>${r['เวร']||''}</td>
-        <td><span class="badge ${act.cls}">${act.label}</span></td>
-        <td><strong>${r['ชื่อเครื่อง']||''}</strong></td>
-        <td>${r['หมายเลขเครื่อง']||''}</td>
-        <td>${r['ตึก/Ward']||''}</td>
-        <td>${r['ชื่อผู้ยืม']||''}</td>
+        <td>${escHtml(fmtDate(r['วันที่']))}</td>
+        <td>${escHtml(fmtTime(r['เวลา']))}</td>
+        <td>${escHtml(r['เวร']||'')}</td>
+        <td><span class="badge ${act.cls}">${escHtml(act.label)}</span></td>
+        <td><strong>${escHtml(r['ชื่อเครื่อง']||'')}</strong></td>
+        <td>${escHtml(r['หมายเลขเครื่อง']||'')}</td>
+        <td>${escHtml(r['ตึก/Ward']||'')}</td>
+        <td>${escHtml(r['ชื่อผู้ยืม']||'')}</td>
         <td style="display:flex;gap:4px;align-items:center">
           <button onclick="openEditModal(${rowIdx},'records')" style="padding:4px 10px;background:#DAF0F5;color:#0A6478;border:1.5px solid #C5E3ED;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s" onmouseover="this.style.background='#0A6478';this.style.color='#fff'" onmouseout="this.style.background='#DAF0F5';this.style.color='#0A6478'">แก้ไข</button>
-          <button onclick="confirmDelete(${rowIdx},'${(r['ชื่อเครื่อง']||'').replace(/'/g,"\\'")} ${r['หมายเลขเครื่อง']||''}')" style="padding:4px 10px;background:#FDEAEA;color:#B82E2E;border:1.5px solid #f8c8c8;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s" onmouseover="this.style.background='#B82E2E';this.style.color='#fff'" onmouseout="this.style.background='#FDEAEA';this.style.color='#B82E2E'">ลบ</button>
+          <button onclick="confirmDelete(${rowIdx},'${jsq((r['ชื่อเครื่อง']||'') + ' ' + (r['หมายเลขเครื่อง']||''))}')" style="padding:4px 10px;background:#FDEAEA;color:#B82E2E;border:1.5px solid #f8c8c8;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s" onmouseover="this.style.background='#B82E2E';this.style.color='#fff'" onmouseout="this.style.background='#FDEAEA';this.style.color='#B82E2E'">ลบ</button>
         </td>
       </tr>`;
     }).join('')}</tbody></table>`;
@@ -2102,7 +2104,7 @@ function openEditModal(rowIndex, context) {
   // Populate ward options
   const wardSel = document.getElementById('editWard');
   const wards   = [...new Set(allRecords.map(r => r['ตึก/Ward']).filter(Boolean))].sort((a,b) => a.localeCompare(b,'th'));
-  wardSel.innerHTML = wards.map(w => `<option value="${w}" ${w === rec['ตึก/Ward'] ? 'selected' : ''}>${w}</option>`).join('');
+  wardSel.innerHTML = wards.map(w => `<option value="${escHtml(w)}" ${w === rec['ตึก/Ward'] ? 'selected' : ''}>${escHtml(w)}</option>`).join('');
 
   // Set current values
   const editDateInput = document.getElementById('editDate');
@@ -2268,7 +2270,7 @@ async function bulkDelete(mode) {
   const targets = allRecords.filter(matchFn);
   if (targets.length === 0) { showToast('ไม่พบรายการใน' + label); return; }
 
-  if (!confirm(`ลบ ${targets.length} รายการใน${label} ?\n\nข้อมูลจะถูกลบออกจาก Google Sheets ถาวร`)) return;
+  if (!confirm(`ลบ ${targets.length} รายการใน${label} ?\n\nข้อมูลจะถูกลบออกจากระบบถาวร`)) return;
 
   // แสดง loading toast
   showToast(`⏳ กำลังลบ ${targets.length} รายการ…`);
@@ -2324,12 +2326,12 @@ function populateRoundFilters() {
   const wardSel = document.getElementById('roundWardSel');
   const curWard = wardSel.value;
   wardSel.innerHTML = '<option value="">— ทั้งหมด —</option>' +
-    wards.map(w => `<option value="${w}"${w===curWard?' selected':''}>${w}</option>`).join('');
+    wards.map(w => `<option value="${escHtml(w)}"${w===curWard?' selected':''}>${escHtml(w)}</option>`).join('');
   const dates = [...new Set(records.map(r => fmtDate(r['วันที่'])).filter(Boolean))].sort((a,b) => b.localeCompare(a));
   const dateSel = document.getElementById('roundDateSel');
   const curDate = dateSel.value;
   dateSel.innerHTML = '<option value="">— ทั้งหมด —</option>' +
-    dates.map(d => `<option value="${d}"${d===curDate?' selected':''}>${d}</option>`).join('');
+    dates.map(d => `<option value="${escHtml(d)}"${d===curDate?' selected':''}>${escHtml(d)}</option>`).join('');
   renderRoundTable();
 }
 
@@ -2366,18 +2368,17 @@ function renderRoundTable() {
       const s = getRoundStatus(r);
       const cls = s.includes('ใช้งานอยู่')?'rs-use': s.includes('ไม่ได้ใช้งาน')?'rs-idle': s.includes('ชำรุด')?'rs-broken': s.includes('สูญหาย')?'rs-lost':'';
       const rowIdx = r['_rowIndex'] || 0;
-      const dateLabel = (fmtDate(r['วันที่'])||'').replace(/'/g,"\\'");
-      const wardLabel = (r['ตึก/Ward']||'').replace(/'/g,"\\'");
+      const delLabel = jsq((fmtDate(r['วันที่'])||'') + ' ' + (r['ตึก/Ward']||''));
       return `<tr>
-        <td>${fmtDate(r['วันที่'])}</td>
-        <td>${r['ตึก/Ward']||''}</td>
-        <td><strong>${r['หมายเลขเครื่อง']||'-'}</strong></td>
-        <td><span class="rs-badge ${cls}">${s||'-'}</span></td>
-        <td>${r['ชื่อผู้ยืม']||''}</td>
-        <td style="font-size:12px;color:var(--muted)">${r['หมายเหตุ']||''}</td>
+        <td>${escHtml(fmtDate(r['วันที่']))}</td>
+        <td>${escHtml(r['ตึก/Ward']||'')}</td>
+        <td><strong>${escHtml(r['หมายเลขเครื่อง']||'-')}</strong></td>
+        <td><span class="rs-badge ${cls}">${escHtml(s||'-')}</span></td>
+        <td>${escHtml(r['ชื่อผู้ยืม']||'')}</td>
+        <td style="font-size:12px;color:var(--muted)">${escHtml(r['หมายเหตุ']||'')}</td>
         <td style="display:flex;gap:4px;align-items:center;min-width:110px">
-          <button onclick="openEditModal(${rowIdx},'round')" ${!rowIdx?'disabled title="Deploy GAS ใหม่ก่อน"':''} style="padding:4px 10px;background:#DAF0F5;color:#0A6478;border:1.5px solid #C5E3ED;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;opacity:${rowIdx?1:.4}" onmouseover="if(${rowIdx})this.style.background='#0A6478',this.style.color='#fff'" onmouseout="this.style.background='#DAF0F5',this.style.color='#0A6478'">แก้ไข</button>
-          <button onclick="confirmDeleteRound(${rowIdx},'${dateLabel} ${wardLabel}')" ${!rowIdx?'disabled title="Deploy GAS ใหม่ก่อน"':''} style="padding:4px 10px;background:#FDEAEA;color:#B82E2E;border:1.5px solid #f8c8c8;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;opacity:${rowIdx?1:.4}" onmouseover="if(${rowIdx})this.style.background='#B82E2E',this.style.color='#fff'" onmouseout="this.style.background='#FDEAEA',this.style.color='#B82E2E'">ลบ</button>
+          <button onclick="openEditModal(${rowIdx},'round')" ${!rowIdx?'disabled title="ไม่พบรายการล่าสุดของเครื่องนี้ กดรีเฟรชแล้วลองใหม่"':''} style="padding:4px 10px;background:#DAF0F5;color:#0A6478;border:1.5px solid #C5E3ED;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;opacity:${rowIdx?1:.4}" onmouseover="if(${rowIdx})this.style.background='#0A6478',this.style.color='#fff'" onmouseout="this.style.background='#DAF0F5',this.style.color='#0A6478'">แก้ไข</button>
+          <button onclick="confirmDeleteRound(${rowIdx},'${delLabel}')" ${!rowIdx?'disabled title="ไม่พบรายการล่าสุดของเครื่องนี้ กดรีเฟรชแล้วลองใหม่"':''} style="padding:4px 10px;background:#FDEAEA;color:#B82E2E;border:1.5px solid #f8c8c8;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;opacity:${rowIdx?1:.4}" onmouseover="if(${rowIdx})this.style.background='#B82E2E',this.style.color='#fff'" onmouseout="this.style.background='#FDEAEA',this.style.color='#B82E2E'">ลบ</button>
         </td>
       </tr>`;
     }).join('')}</tbody></table>`;
@@ -2489,9 +2490,9 @@ function renderC2CircuitDue(items) {
       : `เหลือ ${u.daysLeft} วัน`;
     const color = overdue ? '#B82E2E' : (u.daysLeft <= 3 ? '#D97706' : '#1A7B4A');
     return `
-      <div onclick="openCircuitModal('${String(u.number).replace(/'/g,"\\'")}','${String(u.ward||'').replace(/'/g,"\\'")}',${u.daysBorrowed})" title="กดเพื่อบันทึกการเปลี่ยน Circuit" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 10px;border-radius:10px;border:1.5px solid var(--border);margin-bottom:6px;cursor:pointer">
+      <div onclick="openCircuitModal('${jsq(u.number)}','${jsq(u.ward||'')}',${Number(u.daysBorrowed) || 0})" title="กดเพื่อบันทึกการเปลี่ยน Circuit" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 10px;border-radius:10px;border:1.5px solid var(--border);margin-bottom:6px;cursor:pointer">
         <div>
-          <div style="font-weight:800;color:var(--a)">No.${u.number} <span style="font-weight:600;color:var(--muted);font-size:12px">${u.ward||''}</span></div>
+          <div style="font-weight:800;color:var(--a)">No.${escHtml(u.number)} <span style="font-weight:600;color:var(--muted);font-size:12px">${escHtml(u.ward||'')}</span></div>
           <div style="font-size:11px;color:var(--muted)">ครบกำหนด ${fmtDate(u.dueDate)}</div>
         </div>
         <div style="font-size:12px;font-weight:800;color:${color};white-space:nowrap">${label}</div>
@@ -2628,14 +2629,14 @@ function printRoundReport() {
   if (!area) { area = document.createElement('div'); area.id = 'printArea'; document.body.appendChild(area); }
   area.innerHTML = `
     <div class="print-title">💉 รายงาน Round เครื่อง Infusion Pump</div>
-    <div class="print-meta">${meta}</div>
+    <div class="print-meta">${escHtml(meta)}</div>
     <div class="print-meta" style="font-weight:700">ใช้งานอยู่ ${cnt.use}  |  ไม่ได้ใช้งาน ${cnt.idle}  |  ชำรุด ${cnt.broken}  |  สูญหาย ${cnt.lost}</div>
     <table>
       <thead><tr><th>วันที่</th><th>หน่วยงาน</th><th>เครื่อง No.</th><th>สถานะ</th><th>ผู้บันทึก</th><th>หมายเหตุ</th></tr></thead>
       <tbody>${rows.map(r => `<tr>
-        <td>${fmtDate(r['วันที่'])}</td><td>${r['ตึก/Ward']||''}</td>
-        <td>${r['หมายเลขเครื่อง']||'-'}</td><td>${getRoundStatus(r)||'-'}</td>
-        <td>${r['ชื่อผู้ยืม']||''}</td><td>${r['หมายเหตุ']||''}</td>
+        <td>${escHtml(fmtDate(r['วันที่']))}</td><td>${escHtml(r['ตึก/Ward']||'')}</td>
+        <td>${escHtml(r['หมายเลขเครื่อง']||'-')}</td><td>${escHtml(getRoundStatus(r)||'-')}</td>
+        <td>${escHtml(r['ชื่อผู้ยืม']||'')}</td><td>${escHtml(r['หมายเหตุ']||'')}</td>
       </tr>`).join('')}</tbody>
     </table>
     <div style="margin-top:30px;font-size:11px;color:#999">
@@ -2827,11 +2828,11 @@ async function renderKpiData() {
   borrowed.forEach(e => { equipBreak[e.equipment] = (equipBreak[e.equipment] || 0) + 1; });
   const ebSorted = Object.entries(equipBreak).sort((a,b) => b[1]-a[1]);
   const maxEb = ebSorted[0]?.[1] || 1;
-  const ECOLS = { 'C2':'#ef4444','Infusion Pump':'#0ea5e9','High Flow':'#f59e0b','Brid เขียว':'#10b981','T1':'#8b5cf6','Monnal t60':'#ec4899','Syringe pump':'#06b6d4' };
+  const ECOLS = { 'C2':'#ef4444','Infusion Pump':'#0ea5e9','High Flow':'#f59e0b','Brid เขียว':'#10b981','T1':'#8b5cf6','Monnal t60':'#ec4899','Syringe Pump':'#06b6d4','Syringe pump':'#06b6d4' };
   document.getElementById('kpiEquipBreak').innerHTML = ebSorted.length ? ebSorted.map(([name, cnt]) => {
     const col = ECOLS[name] || '#94a3b8';
     return `<div style="display:flex;align-items:center;gap:12px">
-      <div style="width:130px;font-size:14px;font-weight:700;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name}</div>
+      <div style="width:130px;font-size:14px;font-weight:700;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(name)}</div>
       <div style="flex:1;background:#0f172a;border-radius:20px;height:14px;overflow:hidden">
         <div style="width:${Math.round(cnt/maxEb*100)}%;height:100%;background:${col};border-radius:20px"></div>
       </div>
@@ -2848,7 +2849,7 @@ async function renderKpiData() {
   document.getElementById('kpiWardRank').innerHTML = wardSorted.length ? wardSorted.map(([name, cnt], i) => `
     <div style="display:flex;align-items:center;gap:12px">
       <div style="width:26px;height:26px;border-radius:50%;background:${RCOLS[i]||'#475569'};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0">${i+1}</div>
-      <div style="width:120px;font-size:14px;font-weight:700;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name}</div>
+      <div style="width:120px;font-size:14px;font-weight:700;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(name)}</div>
       <div style="flex:1;background:#0f172a;border-radius:20px;height:12px;overflow:hidden">
         <div style="width:${Math.round(cnt/maxW*100)}%;height:100%;background:${RCOLS[i]||'#475569'};border-radius:20px"></div>
       </div>
@@ -2872,7 +2873,7 @@ async function renderKpiData() {
   };
   document.getElementById('kpiC2Grid').innerHTML = c2Items.map(u => {
     const s = C2_STYLE[u.status];
-    return `<div style="aspect-ratio:1;border-radius:6px;background:${s.bg};border:1px solid ${s.border};box-shadow:${s.shadow};display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:${s.color};line-height:1.1">${s.inner(u.number)}</div>`;
+    return `<div style="aspect-ratio:1;border-radius:6px;background:${s.bg};border:1px solid ${s.border};box-shadow:${s.shadow};display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:${s.color};line-height:1.1">${s.inner(escHtml(u.number))}</div>`;
   }).join('');
   const c2s = document.getElementById('kpiC2Summary');
   if (c2s) c2s.innerHTML =
@@ -2890,8 +2891,8 @@ async function renderKpiData() {
     return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#0f172a;border-radius:12px;border-left:3px solid ${b?'#0ea5e9':'#10b981'}">
       <div style="font-size:18px">${b?'<svg class="mems-icon kpi-icon-0" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V3m-5 5 5-5 5 5M4 14v7h16v-7"/></svg>':'<svg class="mems-icon kpi-icon-1" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13m-5-5 5 5 5-5M4 14v7h16v-7"/></svg>'}</div>
       <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:700;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r['ชื่อเครื่อง']||''} ${r['หมายเลขเครื่อง']?'#'+r['หมายเลขเครื่อง']:''}</div>
-        <div style="font-size:11px;color:#64748b">${r['ตึก/Ward']||''} • ${r['ชื่อผู้ยืม']||''}</div>
+        <div style="font-size:13px;font-weight:700;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(r['ชื่อเครื่อง']||'')} ${r['หมายเลขเครื่อง']?'#'+escHtml(r['หมายเลขเครื่อง']):''}</div>
+        <div style="font-size:11px;color:#64748b">${escHtml(r['ตึก/Ward']||'')} • ${escHtml(r['ชื่อผู้ยืม']||'')}</div>
       </div>
       <div style="text-align:right;flex-shrink:0">
         <div style="font-size:12px;font-weight:700;color:${b?'#0ea5e9':'#10b981'}">${b?'ยืม':'คืน'}</div>
@@ -2914,8 +2915,8 @@ function renderKpiAlerts() {
       <div ${onclick ? `onclick="${onclick}"` : ''} style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#0f172a;border-radius:12px;border-left:3px solid ${color};${onclick ? 'cursor:pointer' : ''}">
         <div style="font-size:18px">${icon}</div>
         <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:700;color:#e2e8f0">${title}</div>
-          <div style="font-size:11px;color:#64748b">${sub}</div>
+          <div style="font-size:13px;font-weight:700;color:#e2e8f0">${escHtml(title)}</div>
+          <div style="font-size:11px;color:#64748b">${escHtml(sub)}</div>
         </div>
       </div>`;
   const items = [
@@ -3145,7 +3146,7 @@ showView = function(name) {
         <div style="font-size:15px;font-weight:800;color:#0A6478;margin-bottom:10px"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3v18h17M8 16v-5m5 5V7m5 9V4"/></svg> แดชบอร์ด</div>
         <div style="font-size:13px;color:#192D35;line-height:1.8">
           <b>การใช้งานแต่ละหน่วยงาน:</b> ดูเครื่องที่ยืมอยู่ แยกตามประเภทเครื่อง<br>
-          <b>สถานะ C2:</b> ดูสถานะเครื่อง C2 ทั้ง 60 เครื่องแบบ real-time<br>
+          <b>สถานะ C2:</b> ดูสถานะเครื่อง C2 ทุกเครื่องตามทะเบียนครุภัณฑ์แบบ real-time<br>
           <b>รายงาน/สถิติ:</b> ดูสถิติการยืม-คืนรายเดือน แยกตามหน่วยงาน<br>
           <b>รายการทั้งหมด:</b> ดูประวัติการยืม-คืนย้อนหลัง<br>
           <b>KPI Display:</b> โหมดแสดงผลบนจอขนาดใหญ่ เปลี่ยนสไลด์อัตโนมัติทุก 10 วินาที
@@ -3165,7 +3166,7 @@ showView = function(name) {
         <div style="font-size:13px;color:#192D35;line-height:1.8">
           • High Flow: ถ้า <b>ER หรือ ICU</b> เป็นผู้ยืม หน่วยงานใดก็สามารถคืนได้<br>
           • บันทึกหน้าเว็บเป็น Shortcut บน iPhone หรือ Desktop เพื่อใช้งานเหมือนแอป<br>
-          • ข้อมูลบันทึกลง Google Sheets อัตโนมัติ
+          • ข้อมูลบันทึกลงฐานข้อมูลของระบบอัตโนมัติ ต้องเข้าสู่ระบบก่อนใช้งาน
         </div>
       </div>
     </div>
