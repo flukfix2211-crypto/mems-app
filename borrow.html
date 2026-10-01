@@ -715,8 +715,8 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   <!-- แบนเนอร์เครื่องที่เตรียมไว้ (โหมดยืม) -->
   <div id="preparedBanner" style="display:none"></div>
 
-  <!-- เครื่องมือ -->
-  <div class="card">
+  <!-- เครื่องมือ (ใช้เฉพาะโหมดคืน) -->
+  <div class="card" id="equipCard">
     <div class="sec-label"><span class="req-dot"></span>เครื่องมือ</div>
     <div class="equip-grid">
       <button class="equip-btn" data-e="C2" onclick="pickEquip(this,'C2')">
@@ -1137,7 +1137,17 @@ function renderPreparedBanner() {
   if (S.action !== 'borrow') { el.style.display = 'none'; el.innerHTML = ''; return; }
   const ward = document.getElementById('wardSel').value;
   const items = ward ? preparedList.filter(p => p.ward === ward) : [];
-  if (!items.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  if (!ward) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  if (!items.length) {
+    if (selectedPrepared.size) clearPreparedSelection();
+    el.innerHTML = `
+      <div class="prepared-panel">
+        <div class="prepared-title">🔧 เครื่องที่เตรียมไว้สำหรับ ${ward}</div>
+        <div class="prepared-hint" style="margin-bottom:0">⚠️ หน่วยงานนี้ยังไม่มีเครื่องที่เตรียมไว้</div>
+      </div>`;
+    el.style.display = '';
+    return;
+  }
 
   el.innerHTML = `
     <div class="prepared-panel">
@@ -1206,6 +1216,15 @@ function filterEquipButtons() {
     hint.style.cssText = 'font-size:13px;color:var(--muted);text-align:center;padding:10px 4px';
     card.appendChild(hint);
   }
+
+  // โหมดยืมใช้ปุ่มจากรายการที่เตรียมไว้โดยตรง ไม่ต้องแสดงการเลือกประเภทเครื่องมือซ้ำ
+  if (S.action === 'borrow') {
+    if (card) card.style.display = 'none';
+    grid.style.display = 'none';
+    if (hint) hint.style.display = 'none';
+    return;
+  }
+  if (card) card.style.display = '';
 
   // ยังไม่เลือกโหมด -> แสดงทุกปุ่ม
   if (!S.action) {
