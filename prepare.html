@@ -44,6 +44,15 @@
     .equip-chip { padding: 11px 16px; border: 2px solid var(--border); border-radius: 14px; font-family: 'Sarabun', sans-serif; font-size: 15px; font-weight: 700; background: var(--card); color: var(--muted); cursor: pointer; transition: all .18s; -webkit-tap-highlight-color: transparent; }
     .equip-chip.active { background: var(--a); border-color: var(--a); color: #fff; box-shadow: 0 3px 10px rgba(10,100,120,.3); }
 
+    .number-list { display: flex; flex-direction: column; gap: 10px; }
+    .number-row { display: flex; align-items: center; gap: 8px; }
+    .number-row .field { flex: 1; min-width: 0; }
+    .number-remove-btn { width: 48px; min-width: 48px; height: 48px; border: 2px solid #F2C5C5; border-radius: var(--rs); background: #FFF7F7; color: #B82E2E; font-family: 'Sarabun', sans-serif; font-size: 20px; font-weight: 800; cursor: pointer; transition: all .18s; }
+    .number-remove-btn:hover { background: #FDE9E9; border-color: #E9A7A7; }
+    .number-add-btn { width: 100%; margin-top: 10px; padding: 12px 14px; border: 2px dashed var(--a); border-radius: var(--rs); background: var(--al); color: var(--a); font-family: 'Sarabun', sans-serif; font-size: 15px; font-weight: 800; cursor: pointer; transition: all .18s; }
+    .number-add-btn:hover { background: #CDEAF0; }
+    .number-help { margin-top: 8px; color: var(--muted); font-size: 12px; }
+
     .save-btn { width: 100%; padding: 16px; background: linear-gradient(135deg, var(--a), var(--a2)); color: #fff; border: none; border-radius: var(--rs); font-family: 'Sarabun', sans-serif; font-size: 17px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 18px rgba(10,100,120,.25); transition: all .2s; -webkit-tap-highlight-color: transparent; }
     .save-btn:disabled { opacity: .55; cursor: default; }
 
@@ -157,9 +166,17 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 
   <!-- หมายเลข -->
   <div class="card">
-    <div class="sec-label"><span class="req-dot"></span><span id="numbersLabelText">หมายเลขเครื่อง</span> <span style="font-weight:500;color:var(--muted);text-transform:none;letter-spacing:0">(คั่นหลายเครื่องด้วย , )</span></div>
-    <input type="text" class="field" id="numbersInput" placeholder="เช่น 5, 6, 7"
-           inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9,\s]/g,'')">
+    <div class="sec-label"><span class="req-dot"></span><span id="numbersLabelText">หมายเลขเครื่อง</span></div>
+    <div class="number-list" id="numberInputs">
+      <div class="number-row">
+        <input type="text" class="field number-input" placeholder="หมายเลขเครื่อง เช่น 5"
+               inputmode="numeric" aria-label="หมายเลขเครื่องลำดับที่ 1"
+               oninput="sanitizeNumberInput(this)" onkeydown="handleNumberKeydown(event, this)">
+        <button type="button" class="number-remove-btn" onclick="removeNumberField(this)" aria-label="ลบหมายเลขนี้" hidden>×</button>
+      </div>
+    </div>
+    <button type="button" class="number-add-btn" id="addNumberBtn" onclick="addNumberField()">＋ เพิ่มหมายเลขเครื่อง</button>
+    <div class="number-help">กรอก 1 หมายเลขต่อ 1 ช่อง หากมีหลายเครื่องให้กดเพิ่ม</div>
   </div>
 
   <!-- ward -->
@@ -269,6 +286,82 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     return 'เวรดึก';
   }
 
+  function sanitizeNumberInput(input) {
+    input.value = input.value.replace(/[^0-9]/g, '');
+  }
+
+  function refreshNumberFieldUI() {
+    const isAssetNumber = selectedEquip && ASSET_LABEL_EQUIPS.has(selectedEquip);
+    const label = isAssetNumber ? 'เลขครุภัณฑ์' : 'หมายเลขเครื่อง';
+    const inputs = [...document.querySelectorAll('.number-input')];
+    document.getElementById('numbersLabelText').textContent = label;
+    document.getElementById('addNumberBtn').textContent = '＋ เพิ่ม' + label;
+    inputs.forEach((input, index) => {
+      input.placeholder = label + ' เช่น ' + (index + 5);
+      input.setAttribute('aria-label', label + 'ลำดับที่ ' + (index + 1));
+    });
+    document.querySelectorAll('.number-remove-btn').forEach(btn => {
+      btn.hidden = inputs.length === 1;
+    });
+  }
+
+  function addNumberField(value = '', shouldFocus = true) {
+    const row = document.createElement('div');
+    row.className = 'number-row';
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'field number-input';
+    input.inputMode = 'numeric';
+    input.value = String(value).replace(/[^0-9]/g, '');
+    input.addEventListener('input', () => sanitizeNumberInput(input));
+    input.addEventListener('keydown', event => handleNumberKeydown(event, input));
+
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'number-remove-btn';
+    removeBtn.textContent = '×';
+    removeBtn.setAttribute('aria-label', 'ลบหมายเลขนี้');
+    removeBtn.addEventListener('click', () => removeNumberField(removeBtn));
+
+    row.append(input, removeBtn);
+    document.getElementById('numberInputs').appendChild(row);
+    refreshNumberFieldUI();
+    if (shouldFocus) input.focus();
+  }
+
+  function removeNumberField(button) {
+    const rows = [...document.querySelectorAll('.number-row')];
+    if (rows.length === 1) {
+      const input = rows[0].querySelector('.number-input');
+      input.value = '';
+      input.focus();
+      return;
+    }
+    const row = button.closest('.number-row');
+    const nextFocus = row.nextElementSibling?.querySelector('.number-input') || row.previousElementSibling?.querySelector('.number-input');
+    row.remove();
+    refreshNumberFieldUI();
+    if (nextFocus) nextFocus.focus();
+  }
+
+  function handleNumberKeydown(event, input) {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    if (input.value.trim()) addNumberField();
+  }
+
+  function getNumberValues() {
+    return [...document.querySelectorAll('.number-input')]
+      .map(input => input.value.trim())
+      .filter(Boolean);
+  }
+
+  function resetNumberFields() {
+    document.getElementById('numberInputs').innerHTML = '';
+    addNumberField('', false);
+  }
+
   // build equip chips
   const grid = document.getElementById('equipGrid');
   EQUIPS.forEach(e => {
@@ -280,7 +373,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       document.querySelectorAll('.equip-chip').forEach(x => x.classList.remove('active'));
       b.classList.add('active');
       document.getElementById('otherEquipNameCard').style.display = e === 'เครื่องมืออื่นๆ' ? '' : 'none';
-      document.getElementById('numbersLabelText').textContent = ASSET_LABEL_EQUIPS.has(e) ? 'เลขครุภัณฑ์' : 'หมายเลขเครื่อง';
+      refreshNumberFieldUI();
     };
     grid.appendChild(b);
   });
@@ -308,8 +401,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     const bySel   = document.getElementById('preparedBySel').value;
     const byOther = document.getElementById('preparedByOther').value.trim();
     const byName  = bySel === 'อื่นๆ' ? byOther : bySel;
-    const numbers = document.getElementById('numbersInput').value
-      .split(',').map(s => s.trim()).filter(s => s !== '');
+    const numbers = getNumberValues();
     const otherEquipName = document.getElementById('otherEquipName').value.trim();
     const equipName = selectedEquip === 'เครื่องมืออื่นๆ' ? otherEquipName : selectedEquip;
 
@@ -389,10 +481,10 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   function resetPrepareForm() {
     selectedEquip = null;
     document.querySelectorAll('.equip-chip').forEach(x => x.classList.remove('active'));
-    document.getElementById('numbersInput').value = '';
+    resetNumberFields();
     document.getElementById('otherEquipName').value = '';
     document.getElementById('otherEquipNameCard').style.display = 'none';
-    document.getElementById('numbersLabelText').textContent = 'หมายเลขเครื่อง';
+    refreshNumberFieldUI();
     wardSel.value = '';
     document.getElementById('otherWard').value = '';
     document.getElementById('otherWrap').style.display = 'none';
