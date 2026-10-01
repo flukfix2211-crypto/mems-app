@@ -28,6 +28,18 @@
 
     .content { max-width: 560px; margin: 0 auto; padding: 0 14px 100px; position: relative; z-index: 1; }
     .card { background: var(--card); border-radius: var(--r); box-shadow: var(--sh); padding: 18px; margin-bottom: 12px; }
+    .set-date-card { grid-column: 1 / -1; display: grid; grid-template-columns: auto minmax(0,1fr) auto minmax(0,1fr); align-items: center; gap: 12px; }
+    .set-date-icon { width: 50px; height: 50px; display: grid; place-items: center; border-radius: 14px; background: #E6F5EC; font-size: 25px; }
+    .set-date-block { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .set-date-label { color: var(--muted); font-size: 12px; font-weight: 700; }
+    .set-date-value { color: var(--txt); font-size: 17px; font-weight: 800; line-height: 1.35; }
+    .set-date-result .set-date-label, .set-date-result .set-date-value { color: #14612D; }
+    .set-date-arrow { color: var(--a); font-size: 24px; font-weight: 800; }
+    @media (max-width: 560px) {
+      .set-date-card { grid-template-columns: auto minmax(0,1fr); }
+      .set-date-arrow { display: none; }
+      .set-date-result { grid-column: 2; }
+    }
     .sec-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin-bottom: 12px; display: flex; align-items: center; gap: 5px; }
     .req-dot { width: 6px; height: 6px; background: #E53935; border-radius: 50%; }
     .field { width: 100%; padding: 13px 15px; border: 2px solid var(--border); border-radius: var(--rs); font-family: 'Sarabun', sans-serif; font-size: 16px; color: var(--txt); background: #FAFCFD; outline: none; transition: border-color 0.2s; -webkit-appearance: none; appearance: none; }
@@ -137,6 +149,20 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 </header>
 
 <div class="content">
+  <!-- วันเปลี่ยนเซ็ต -->
+  <div class="card set-date-card" role="status" aria-live="polite">
+    <div class="set-date-icon" aria-hidden="true">🗓️</div>
+    <div class="set-date-block">
+      <span class="set-date-label">หากยืมวันนี้</span>
+      <span class="set-date-value" id="borrowTodayDate">กำลังคำนวณ...</span>
+    </div>
+    <div class="set-date-arrow" aria-hidden="true">→</div>
+    <div class="set-date-block set-date-result">
+      <span class="set-date-label">วันเปลี่ยนเซ็ต (อีก 14 วัน)</span>
+      <span class="set-date-value" id="setChangeDate">กำลังคำนวณ...</span>
+    </div>
+  </div>
+
   <!-- โหมดการเตรียม -->
   <div class="card">
     <div class="sec-label"><span class="req-dot"></span>รูปแบบการเตรียม</div>
@@ -267,6 +293,28 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 
   let selectedEquip = null;
   let prepareMode = 'prepare';
+
+  function getBangkokCalendarDate(baseDate = new Date()) {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Bangkok', year: 'numeric', month: '2-digit', day: '2-digit'
+    }).formatToParts(baseDate);
+    const value = type => Number(parts.find(part => part.type === type).value);
+    return new Date(Date.UTC(value('year'), value('month') - 1, value('day'), 12));
+  }
+
+  function formatThaiDate(date) {
+    return new Intl.DateTimeFormat('th-TH', {
+      timeZone: 'Asia/Bangkok', day: 'numeric', month: 'long', year: 'numeric'
+    }).format(date);
+  }
+
+  function renderSetChangeDate() {
+    const today = getBangkokCalendarDate();
+    const changeDate = new Date(today.getTime());
+    changeDate.setUTCDate(changeDate.getUTCDate() + 14);
+    document.getElementById('borrowTodayDate').textContent = formatThaiDate(today);
+    document.getElementById('setChangeDate').textContent = formatThaiDate(changeDate);
+  }
 
   function setMode(m) {
     prepareMode = m;
@@ -541,6 +589,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   }
 
   window.addEventListener('DOMContentLoaded', async () => {
+    renderSetChangeDate();
     const profile = await memsGuard('prepare');
     if (profile) loadList();
   });
