@@ -301,6 +301,14 @@
       -webkit-tap-highlight-color: transparent;
     }
     .prepared-chip:active { transform: scale(.98); }
+    .prepared-chip.active {
+      background: #1A7B4A !important;
+      border-color: #14612D !important;
+      color: #fff !important;
+      box-shadow: 0 4px 12px rgba(20,97,45,.22);
+    }
+    .prepared-chip.active .prepared-thumb { background: #fff; }
+    .prepared-chip.active .prepared-chip-arrow { opacity: 1; }
     .prepared-thumb {
       width: 42px;
       height: 42px;
@@ -926,6 +934,7 @@ function detectShift() {
 
 /* ====== SETTERS ====== */
 function setAction(a) {
+  if (a !== 'borrow' && selectedPrepared.size) clearPreparedSelection();
   S.action = a;
   document.querySelectorAll('.action-btn').forEach(b => b.classList.remove('active'));
   document.querySelector('.action-btn.' + a).classList.add('active');
@@ -980,6 +989,10 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 function pickEquip(btn, e) {
+  if (S.action === 'borrow' && selectedPrepared.size &&
+      [...selectedPrepared.values()].some(item => item.equipment !== e)) {
+    clearPreparedSelection();
+  }
   S.equip = e;
   document.querySelectorAll('.equip-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
@@ -1005,6 +1018,7 @@ function pickEquip(btn, e) {
 }
 
 async function onWardChange(sel) {
+  if (selectedPrepared.size) clearPreparedSelection();
   document.getElementById('otherWrap').classList.toggle('hidden', sel.value !== 'อื่นๆ โปรดระบุชื่อตึก');
   if (GRID_EQUIPS.has(S.equip) && S.action === 'return') {
     c2SelectedNums.clear();
@@ -1033,6 +1047,76 @@ async function computeWardReturnTypes(ward) {
 
 /* ====== เครื่องที่เตรียมไว้ (จากฝั่งแอดมิน) ====== */
 let preparedList = [];
+let selectedPrepared = new Map();
+
+function preparedSelectionKey(equip, number) {
+  return String(equip) + '__' + (normalizeMachineNo(number) || String(number).trim());
+}
+
+function updatePreparedSelectionUI() {
+  document.querySelectorAll('.prepared-chip').forEach(button => {
+    const active = selectedPrepared.has(button.dataset.preparedKey);
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', active ? 'true' : 'false');
+    const mark = button.querySelector('.prepared-chip-arrow');
+    if (mark) mark.textContent = active ? '✓' : '';
+  });
+
+  const info = document.getElementById('prepSelInfo');
+  if (!info) return;
+  const items = [...selectedPrepared.values()];
+  if (!items.length) {
+    info.textContent = '';
+    info.style.display = 'none';
+    return;
+  }
+  info.textContent = '✓ เลือกแล้ว ' + items.length + ' เครื่อง: ' +
+    items.map(item => item.equipment + ' No.' + item.number).join(', ');
+  info.style.display = '';
+}
+
+function clearPreparedSelection() {
+  selectedPrepared.clear();
+  c2SelectedNums.clear();
+  const borrowInput = document.getElementById('c2BorrowInput');
+  if (borrowInput) borrowInput.value = '';
+  resetEquipFields();
+  S.equip = null;
+  document.querySelectorAll('.equip-btn').forEach(button => button.classList.remove('active'));
+  document.getElementById('normalNumCard').style.display = 'none';
+  document.getElementById('c2BorrowCard').style.display = 'none';
+  document.getElementById('c2GridCard').style.display = 'none';
+  document.getElementById('otherEquipNameCard').style.display = 'none';
+  updatePreparedSelectionUI();
+}
+
+function syncPreparedNumbersToForm() {
+  const items = [...selectedPrepared.values()];
+  if (!items.length) {
+    clearPreparedSelection();
+    return;
+  }
+
+  const equip = items[0].equipment;
+  const numbers = items.map(item => String(item.number));
+  S.equip = equip;
+
+  if (GRID_EQUIPS.has(equip)) {
+    c2SelectedNums.clear();
+    numbers.forEach(number => c2SelectedNums.add(number));
+    const input = document.getElementById('c2BorrowInput');
+    if (input) input.value = numbers[0] || '';
+  } else {
+    resetEquipFields();
+    const inputs = () => [...document.querySelectorAll('#enumRows .enum-input')];
+    if (inputs()[0]) inputs()[0].value = numbers[0] || '';
+    for (let i = 1; i < numbers.length; i++) {
+      addEquipField();
+      if (inputs()[i]) inputs()[i].value = numbers[i];
+    }
+  }
+  updatePreparedSelectionUI();
+}
 
 async function loadPreparedList() {
   try {
@@ -1054,7 +1138,7 @@ function renderPreparedBanner() {
   el.innerHTML = `
     <div class="prepared-panel">
       <div class="prepared-title"></div>
-      <div class="prepared-hint">กดเพื่อเติมประเภทและหมายเลขให้อัตโนมัติ</div>
+      <div class="prepared-hint">เลือกได้มากกว่า 1 เครื่อง · กดซ้ำเพื่อยกเลิก</div>
       <div class="prepared-list"></div>
       <div id="prepSelInfo" class="prepared-selected"></div>
     </div>`;
@@ -1065,6 +1149,8 @@ function renderPreparedBanner() {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'prepared-chip';
+    button.dataset.preparedKey = preparedSelectionKey(p.equipment, p.number);
+    button.setAttribute('aria-pressed', selectedPrepared.has(button.dataset.preparedKey) ? 'true' : 'false');
     button.addEventListener('click', () => applyPrepared(p.equipment, p.number));
 
     const sourceImage = Array.from(document.querySelectorAll('.equip-btn')).find(
@@ -1093,11 +1179,12 @@ function renderPreparedBanner() {
 
     const arrow = document.createElement('span');
     arrow.className = 'prepared-chip-arrow';
-    arrow.textContent = '›';
+    arrow.textContent = selectedPrepared.has(button.dataset.preparedKey) ? '✓' : '';
     arrow.setAttribute('aria-hidden', 'true');
     button.appendChild(arrow);
     list.appendChild(button);
   });
+  updatePreparedSelectionUI();
   el.style.display = '';
 }
 
@@ -1162,18 +1249,31 @@ function filterEquipButtons() {
 
 function applyPrepared(equip, number) {
   if (S.action !== 'borrow') setAction('borrow');
-  const btn = document.querySelector('.equip-btn[data-e="' + equip + '"]');
-  if (btn) pickEquip(btn, equip);
-  if (GRID_EQUIPS.has(equip)) {
-    const inp = document.getElementById('c2BorrowInput');
-    if (inp) { inp.value = number; onC2BorrowInput(); }
+  const key = preparedSelectionKey(equip, number);
+
+  if (selectedPrepared.has(key)) {
+    selectedPrepared.delete(key);
   } else {
-    const inp = document.getElementById('equipNum1');
-    if (inp) inp.value = number;
+    // แบบฟอร์มหนึ่งรายการรองรับหลายหมายเลขของเครื่องมือประเภทเดียวกัน
+    const selectedTypes = new Set([...selectedPrepared.values()].map(item => item.equipment));
+    if (selectedTypes.size && !selectedTypes.has(equip)) selectedPrepared.clear();
+
+    if (S.equip !== equip) {
+      const equipButton = document.querySelector('.equip-btn[data-e="' + equip + '"]');
+      if (equipButton) pickEquip(equipButton, equip);
+    }
+    selectedPrepared.set(key, { equipment: equip, number: String(number) });
   }
-  // ยืนยันว่าเลือกแล้ว (เพราะช่องกรอกเลขถูกซ่อนในโหมดยืม)
-  const info = document.getElementById('prepSelInfo');
-  if (info) { info.textContent = '✓ เลือกแล้ว: ' + equip + ' No.' + number; info.style.display = ''; }
+
+  if (selectedPrepared.size) {
+    const selectedEquip = [...selectedPrepared.values()][0].equipment;
+    const equipButton = document.querySelector('.equip-btn[data-e="' + selectedEquip + '"]');
+    document.querySelectorAll('.equip-btn').forEach(button => button.classList.remove('active'));
+    if (equipButton) equipButton.classList.add('active');
+    syncPreparedNumbersToForm();
+  } else {
+    clearPreparedSelection();
+  }
 }
 
 /* ====== GRID EQUIPS ====== */
@@ -1225,6 +1325,9 @@ function updateAddBtn() {
 }
 
 function getEquipNumbers() {
+  if (S.action === 'borrow' && selectedPrepared.size) {
+    return [...selectedPrepared.values()].map(item => String(item.number));
+  }
   if (GRID_EQUIPS.has(S.equip)) return [...c2SelectedNums].sort((a,b) => +a - +b);
   const nums = [];
   document.querySelectorAll('#enumRows .enum-input').forEach(inp => {
@@ -1634,6 +1737,7 @@ function resetForm() {
   document.getElementById('successScreen').classList.remove('show');
   document.getElementById('successScreen').classList.remove('is-partial', 'is-return');
   // เคลียร์แบนเนอร์เครื่องที่เตรียม + ข้อความยืนยัน
+  selectedPrepared.clear();
   const pb = document.getElementById('preparedBanner');
   if (pb) { pb.style.display = 'none'; pb.innerHTML = ''; }
   setShift(detectShift()); // re-detect shift after reset
