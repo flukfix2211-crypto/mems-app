@@ -1412,23 +1412,21 @@ function renderC2Grid() {
       updateC2SelInfo();
       return;
     }
-    // แสดงเฉพาะ No. ที่หน่วยงานนั้นยืมไป
-    const borrowed = [];
-    for (let i = 1; i <= 60; i++) {
-      const unit = c2Status?.[String(i)];
-      if (unit && unit.isBorrowed && unit.ward === ward) borrowed.push({ i, unit });
-    }
+    // ใช้เลขจากสถานะจริง/ทะเบียน ไม่จำกัดไว้ที่ No.60
+    const borrowed = sortMachineNumbers(Object.keys(c2Status || {}))
+      .map(num => c2Status[num])
+      .filter(unit => unit.isBorrowed && unit.ward === ward);
     if (!borrowed.length) {
       grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:14px 0;font-size:13px;color:var(--muted)">ไม่มีเครื่องที่ยืมโดยหน่วยงานนี้</div>';
       updateC2SelInfo();
       return;
     }
-    borrowed.forEach(({ i, unit }) => {
-      const num = String(i);
+    borrowed.forEach(unit => {
+      const num = String(unit.number);
       const btn = document.createElement('button');
       btn.type = 'button'; btn.dataset.num = num;
       btn.className = 'c2-btn ret-able';
-      btn.innerHTML = `<div>No.${i}</div>`;
+      btn.textContent = `No.${num}`;
       btn.onclick = () => {
         if (!c2SelectedNums.has(num) && c2SelectedNums.size >= maxUnits()) {
           alert('เลือกได้สูงสุด ' + maxUnits() + ' หมายเลขพร้อมกัน'); return;
@@ -1438,14 +1436,19 @@ function renderC2Grid() {
       grid.appendChild(btn);
     });
   } else {
-    for (let i = 1; i <= 60; i++) {
-      const num  = String(i);
-      const unit = c2Status?.[num] || { isBorrowed: false, ward: '' };
+    for (const num of sortMachineNumbers(Object.keys(c2Status || {}))) {
+      const unit = c2Status[num];
       const btn  = document.createElement('button');
       btn.type = 'button'; btn.dataset.num = num;
       btn.disabled  = unit.isBorrowed;
       btn.className = 'c2-btn ' + (unit.isBorrowed ? 'borrowed' : 'avail');
-      btn.innerHTML = `<div>No.${i}</div>${unit.isBorrowed ? `<div style="font-size:9px">${unit.ward||''}</div>` : ''}`;
+      btn.textContent = `No.${num}`;
+      if (unit.isBorrowed) {
+        const wardLabel = document.createElement('div');
+        wardLabel.style.fontSize = '9px';
+        wardLabel.textContent = unit.ward || '';
+        btn.appendChild(wardLabel);
+      }
       if (!btn.disabled) btn.onclick = () => toggleC2Num(num, btn);
       grid.appendChild(btn);
     }
