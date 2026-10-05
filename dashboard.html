@@ -10,7 +10,6 @@
   <link rel="icon" type="image/png" href="icon.png">
   <title>MEMs Dashboard — แดชบอร์ดการใช้งาน</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Orbitron:wght@700&display=swap" rel="stylesheet">
   
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -228,14 +227,13 @@
   </style>
 <style id="mems-approved-theme">
 /* MEMs approved visual theme. Presentation only; existing DOM and scripts are unchanged. */
-@import url('https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&display=swap');
 @media screen {
 :root{--a:#086572;--a2:#075763;--al:#eef8f9;--bg:#b1d2d9;--card:#fff;--txt:#1e293b;--muted:#526875;--border:#dce6ec;--r:16px;--rs:12px;--sh:0 1px 3px rgba(15,23,42,.07)}
-body{font-family:'Prompt','Sarabun',sans-serif;background:#8bbcc5;background-image:linear-gradient(135deg,#70aab6 0%,#b1d2d9 55%,#83b7c1 100%);background-attachment:fixed;color:var(--txt)}
-button,input,select,textarea{font-family:'Prompt','Sarabun',sans-serif!important}
+body{font-family:var(--mems-font-family);background:#8bbcc5;background-image:linear-gradient(135deg,#70aab6 0%,#b1d2d9 55%,#83b7c1 100%);background-attachment:fixed;color:var(--txt)}
+button,input,select,textarea{font-family:var(--mems-font-family)!important}
 .header{background:#fff;color:#1e293b;border-top:4px solid #075763;border-bottom:1px solid #dce6ec;box-shadow:var(--sh)}
 .header::before{background:none}
-.header h1{color:#075763!important;-webkit-text-fill-color:#075763!important;background:none!important;filter:none!important;font-family:'Prompt','Sarabun',sans-serif!important;letter-spacing:0!important}
+.header h1{color:#075763!important;-webkit-text-fill-color:#075763!important;background:none!important;filter:none!important;font-family:var(--mems-font-family)!important;letter-spacing:0!important}
 .header .sub{color:#526875;opacity:1}
 .header a:not(:has(h1)),.header button{color:#075763!important;background:#eef8f9!important;border:1px solid #b3d7dd!important}
 .card,.filter-bar,.nav-card,.alert-banner{background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:var(--sh)}
@@ -345,7 +343,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 }
 </style>
   <link rel="stylesheet" href="professional.css">
-  <link rel="stylesheet" href="mems-ui.css">
+  <link rel="stylesheet" href="mems-ui.css?v=20261005-font-1">
   <link rel="stylesheet" href="dashboard-office.css">
   <link rel="stylesheet" href="equipment-status.css">
   <link rel="stylesheet" href="mems-auth-theme.css?v=20260923-app-2">
