@@ -4,28 +4,26 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="MEMs C2 Statistics">
+  <meta name="apple-mobile-web-app-title" content="MEMs Equipment Statistics">
   <link rel="apple-touch-icon" href="icon.png">
   <link rel="icon" type="image/png" href="icon.png">
-  <title>MEMs — สถิติเครื่อง C2</title>
+  <title>MEMs — สถิติการใช้เครื่องช่วยหายใจ</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="mems-ui.css">
   <link rel="stylesheet" href="mems-auth-theme.css?v=20260923-app-2">
   <link rel="stylesheet" href="report-office.css?v=20260923-report-3">
-  <link rel="stylesheet" href="c2-statistics.css?v=20261005-c2-stats-1">
+  <link rel="stylesheet" href="c2-statistics.css?v=20261005-usage-stats-1">
 </head>
 <body class="mems-report mems-c2-stats">
 
 <div id="loginOverlay" class="auth-overlay" style="display:none">
   <div class="auth-dialog">
     <div class="auth-symbol">🔒</div>
-    <h2>สถิติเครื่อง C2</h2>
+    <h2>สถิติการใช้เครื่องช่วยหายใจ</h2>
     <p>เข้าสู่ระบบเพื่อใช้งาน</p>
-    <input id="authUser" type="text" placeholder="ชื่อผู้ใช้" autocomplete="username" autofocus
-      onkeydown="if(event.key==='Enter'){document.getElementById('authPass').focus()}">
-    <input id="authPass" type="password" placeholder="รหัสผ่าน" autocomplete="current-password"
-      onkeydown="if(event.key==='Enter')memsHandleLogin()">
+    <input id="authUser" type="text" placeholder="ชื่อผู้ใช้" autocomplete="username" autofocus onkeydown="if(event.key==='Enter'){document.getElementById('authPass').focus()}">
+    <input id="authPass" type="password" placeholder="รหัสผ่าน" autocomplete="current-password" onkeydown="if(event.key==='Enter')memsHandleLogin()">
     <div id="authErr" class="auth-error" style="display:none">เข้าสู่ระบบไม่สำเร็จ</div>
     <button id="authBtn" onclick="memsHandleLogin()">เข้าสู่ระบบ</button>
   </div>
@@ -43,8 +41,8 @@
 <header class="header">
   <div class="header-inner">
     <div>
-      <h1>สถิติเครื่อง C2</h1>
-      <div class="sub">วิเคราะห์การใช้งานรายเดือนและรายเครื่อง</div>
+      <h1>สถิติการใช้เครื่องช่วยหายใจ</h1>
+      <div class="sub">C2 · High Flow · Bird — รายวัน รายเดือน และปีงบประมาณ</div>
       <div class="hosp-sub">โรงพยาบาลพหลพลพยุหเสนา จ.กาญจนบุรี</div>
     </div>
     <div class="header-right">
@@ -58,402 +56,80 @@
 <main class="stats-main">
   <section class="stats-intro" aria-labelledby="statsTitle">
     <div>
-      <div class="stats-eyebrow">C2 EQUIPMENT ANALYTICS</div>
-      <h2 id="statsTitle">ภาพรวมและสถิติการใช้งาน C2</h2>
-      <p>ติดตามจำนวนเครื่อง สถานะปัจจุบัน ความถี่การยืม–คืน และระยะเวลาใช้งานแยกตามเดือนหรือหน่วยงาน</p>
+      <div class="stats-eyebrow">RESPIRATORY EQUIPMENT LEDGER</div>
+      <h2 id="statsTitle">การใช้งานเครื่องและผู้ป่วยจากรอบยืม–คืน</h2>
+      <p>หนึ่งรอบยืมและคืนที่สมบูรณ์นับเป็นผู้ป่วย 1 ราย ส่วนเครื่องที่ยังไม่คืนจะแสดงเป็นกำลังใช้งานและนับเวลาแบบสด</p>
     </div>
-    <button id="refreshBtn" class="btn-secondary" type="button" onclick="loadStatistics()">อัปเดตข้อมูล</button>
+    <button id="refreshBtn" class="btn-secondary" type="button">อัปเดตข้อมูล</button>
   </section>
 
   <section aria-labelledby="currentStatusTitle">
     <div class="section-heading">
-      <div><span class="section-index">01</span><h2 id="currentStatusTitle">สถานะปัจจุบัน</h2></div>
+      <div><span class="section-index">01</span><h2 id="currentStatusTitle">สถานะเครื่องปัจจุบัน</h2></div>
       <p id="lastUpdated" role="status">กำลังโหลดข้อมูล…</p>
     </div>
-    <div class="status-grid">
-      <article class="metric metric-total"><span>ในทะเบียน</span><strong id="metricTotal">—</strong><small>เครื่องทั้งหมด</small></article>
-      <article class="metric metric-ready"><span>พร้อมใช้</span><strong id="metricReady">—</strong><small>ใช้งานได้และไม่ถูกยืม</small></article>
-      <article class="metric metric-borrowed"><span>ยืมอยู่</span><strong id="metricBorrowed">—</strong><small>สถานะล่าสุดในระบบ</small></article>
-      <article class="metric metric-repair"><span>ซ่อม / ชำรุด</span><strong id="metricRepair">—</strong><small>ยังไม่พร้อมให้ยืม</small></article>
+    <div id="equipmentStatusGrid" class="equipment-status-grid" aria-live="polite">
+      <div class="state-panel">กำลังอ่านสถานะเครื่อง…</div>
     </div>
+    <div id="qualityBar" class="quality-bar" hidden></div>
   </section>
 
-  <section class="analysis-section" aria-labelledby="monthlyStatsTitle">
+  <section class="analysis-section" aria-labelledby="analysisTitle">
     <div class="section-heading">
-      <div><span class="section-index">02</span><h2 id="monthlyStatsTitle">สถิติรายเดือน</h2></div>
-      <p>เลือกช่วงข้อมูลที่ต้องการตรวจสอบ</p>
+      <div><span class="section-index">02</span><h2 id="analysisTitle">วิเคราะห์การใช้งาน</h2></div>
+      <p>เวลาและวันคำนวณตามเขตเวลา Asia/Bangkok</p>
     </div>
 
+    <nav class="stats-tabs" aria-label="มุมมองสถิติ" role="tablist">
+      <button class="stats-tab is-active" type="button" role="tab" aria-selected="true" data-view="daily">รายวัน</button>
+      <button class="stats-tab" type="button" role="tab" aria-selected="false" data-view="monthly">รายเดือน</button>
+      <button class="stats-tab" type="button" role="tab" aria-selected="false" data-view="fiscal">ปีงบประมาณ</button>
+      <button class="stats-tab" type="button" role="tab" aria-selected="false" data-view="machine">รายเครื่อง</button>
+    </nav>
+
     <div class="filter-panel">
-      <label>
-        <span>เดือน</span>
-        <select id="monthSelect" onchange="renderMonthlyStats()">
-          <option value="">— กำลังโหลด —</option>
-        </select>
-      </label>
-      <label>
-        <span>หน่วยงาน</span>
-        <select id="wardSelect" onchange="renderMonthlyStats()">
-          <option value="">ทุกหน่วยงาน</option>
-        </select>
-      </label>
+      <label class="filter-field"><span>ปีงบประมาณ</span><select id="fiscalSelect"></select></label>
+      <label class="filter-field view-filter" data-views="daily"><span>วันที่</span><input id="dayInput" type="date"></label>
+      <label class="filter-field view-filter" data-views="monthly machine"><span>เดือน</span><select id="monthSelect"></select></label>
+      <label class="filter-field"><span>ประเภทเครื่อง</span><select id="typeSelect"><option value="">ทุกประเภท</option><option value="C2">C2</option><option value="High Flow">High Flow</option><option value="Bird">Bird</option></select></label>
+      <label class="filter-field"><span>หน่วยงาน</span><select id="wardSelect"><option value="">ทุกหน่วยงาน</option></select></label>
+      <label class="filter-field view-filter" data-views="machine"><span>หมายเลขเครื่อง</span><input id="machineInput" type="search" inputmode="numeric" placeholder="เช่น 27"></label>
       <div class="filter-actions">
-        <button id="monthlyPdfBtn" type="button" class="btn-primary" onclick="exportMonthlyPdf()" disabled>พรีวิว PDF เดือนนี้</button>
-        <button id="fullReportBtn" type="button" class="btn-secondary" onclick="exportFullC2Report()">รายงาน C2 ฉบับเต็ม</button>
+        <button id="pdfBtn" type="button" class="btn-primary" disabled>พรีวิว PDF</button>
+        <button id="csvBtn" type="button" class="btn-secondary" disabled>ส่งออก Excel (CSV)</button>
       </div>
     </div>
 
-    <div id="monthlySummary" class="monthly-summary" aria-live="polite">
-      <div class="state-panel">กำลังโหลดข้อมูลสถิติ…</div>
-    </div>
+    <div id="summaryGrid" class="summary-grid" aria-live="polite"><div class="state-panel">กำลังคำนวณข้อมูล…</div></div>
 
     <div class="table-panel">
       <div class="table-panel-head">
-        <div>
-          <h3>รายละเอียดรายเครื่อง</h3>
-          <p id="tableCaption">เลือกเดือนเพื่อดูรายละเอียด</p>
-        </div>
-        <label class="table-search"><span class="sr-only">ค้นหาหมายเลขเครื่อง</span><input id="numberSearch" type="search" inputmode="numeric" placeholder="ค้นหา No." oninput="renderTable()"></label>
+        <div><h3 id="viewTitle">สถิติรายวัน</h3><p id="viewCaption">—</p></div>
+        <div class="legend" aria-label="คำอธิบาย"><span><i class="legend-machine"></i> เครื่อง</span><span><i class="legend-patient"></i> ผู้ป่วย</span><span><i class="legend-hours"></i> ชั่วโมง</span></div>
       </div>
-      <div id="statsTable" class="table-scroll"><div class="state-panel">ยังไม่มีข้อมูล</div></div>
+      <div id="viewOutput" class="table-scroll"><div class="state-panel">กำลังโหลดข้อมูล…</div></div>
     </div>
+
+    <section id="machineDetail" class="machine-detail" aria-live="polite" hidden></section>
   </section>
 </main>
 
 <div id="pdfPreviewModal" class="pdf-preview-modal" role="dialog" aria-modal="true" aria-labelledby="pdfPreviewTitle" hidden>
   <div class="pdf-preview-shell">
-    <div class="pdf-preview-head">
-      <div>
-        <div class="pdf-preview-eyebrow">ตรวจสอบก่อนบันทึกหรือพิมพ์</div>
-        <h2 id="pdfPreviewTitle">ตัวอย่างรายงาน PDF</h2>
-        <div id="pdfPreviewFilename" class="pdf-preview-filename"></div>
-      </div>
-      <button type="button" class="pdf-preview-close" onclick="closePdfPreview()" aria-label="ปิดตัวอย่าง">×</button>
-    </div>
+    <div class="pdf-preview-head"><div><div class="pdf-preview-eyebrow">ตรวจสอบก่อนบันทึกหรือพิมพ์</div><h2 id="pdfPreviewTitle">ตัวอย่างรายงาน PDF</h2><div id="pdfPreviewFilename" class="pdf-preview-filename"></div></div><button type="button" class="pdf-preview-close" data-close-pdf aria-label="ปิดตัวอย่าง">×</button></div>
     <div class="pdf-preview-body"><iframe id="pdfPreviewFrame" title="ตัวอย่างเอกสาร PDF"></iframe></div>
-    <div class="pdf-preview-actions">
-      <button type="button" class="pdf-preview-secondary" onclick="closePdfPreview()">ปิด</button>
-      <button type="button" class="pdf-preview-secondary" onclick="printPdfPreview()">พิมพ์</button>
-      <button type="button" class="pdf-preview-primary" onclick="downloadPdfPreview()">ดาวน์โหลด PDF</button>
-    </div>
+    <div class="pdf-preview-actions"><button type="button" class="pdf-preview-secondary" data-close-pdf>ปิด</button><button id="printPdfBtn" type="button" class="pdf-preview-secondary">พิมพ์</button><button id="downloadPdfBtn" type="button" class="pdf-preview-primary">ดาวน์โหลด PDF</button></div>
   </div>
 </div>
 
 <div id="toast"></div>
-
 <script src="vendor/supabase.js"></script>
 <script src="vendor/jspdf.umd.min.js"></script>
 <script src="vendor/jspdf.plugin.autotable.min.js"></script>
 <script src="supabase-client.js"></script>
 <script src="auth.js"></script>
 <script src="reports.js?v=20260923-pdf-c2-1"></script>
-<script>
-  const state = { raw: [], assets: [], current: [], rows: [], monthly: null };
-  let pdfPreviewUrl = '';
-  let pdfPreviewName = '';
-
-  function esc(value) {
-    return String(value ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
-  }
-
-  function monthKey(date) {
-    const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok', year: 'numeric', month: '2-digit' }).formatToParts(date);
-    const get = type => parts.find(part => part.type === type)?.value || '';
-    return get('year') + '-' + get('month');
-  }
-
-  function thaiMonth(value) {
-    const [year, month] = value.split('-').map(Number);
-    return new Intl.DateTimeFormat('th-TH', { month: 'long', year: 'numeric', timeZone: 'Asia/Bangkok' })
-      .format(new Date(Date.UTC(year, month - 1, 15, 12)));
-  }
-
-  function fmtDuration(ms) {
-    if (!Number.isFinite(ms) || ms <= 0) return '—';
-    const totalMinutes = Math.floor(ms / 60000);
-    const days = Math.floor(totalMinutes / 1440);
-    const hours = Math.floor((totalMinutes % 1440) / 60);
-    const minutes = totalMinutes % 60;
-    const parts = [];
-    if (days) parts.push(days + ' วัน');
-    if (hours) parts.push(hours + ' ชม.');
-    if (!days && minutes) parts.push(minutes + ' นาที');
-    return parts.join(' ') || '< 1 นาที';
-  }
-
-  function setLoading(loading) {
-    const button = document.getElementById('refreshBtn');
-    button.disabled = loading;
-    button.textContent = loading ? 'กำลังอัปเดต…' : 'อัปเดตข้อมูล';
-  }
-
-  async function loadStatistics() {
-    setLoading(true);
-    try {
-      const [raw, assets, current] = await Promise.all([
-        fetchAllPages(() => supabase.from('borrow_records')
-          .select('id, action, equipment_number, ward, recorded_at')
-          .ilike('equipment_name', '%C2%')
-          .not('action', 'ilike', '%Round%')
-          .order('recorded_at').order('id')),
-        fetchAllPages(() => supabase.from('assets').select('no, status').eq('type', 'C2').order('no')),
-        fetchC2Status()
-      ]);
-
-      state.raw = raw.map(row => ({
-        id: row.id,
-        no: normalizeMachineNo(row.equipment_number),
-        ward: row.ward || 'ไม่ระบุหน่วยงาน',
-        ts: new Date(row.recorded_at),
-        isBorrow: String(row.action || '').includes('ยืม'),
-        isReturn: String(row.action || '').includes('คืน')
-      })).filter(row => row.no && !Number.isNaN(row.ts.getTime()) && (row.isBorrow || row.isReturn));
-      state.assets = assets;
-      state.current = current;
-
-      renderCurrentStatus();
-      buildFilters();
-      renderMonthlyStats();
-      document.getElementById('lastUpdated').textContent = 'อัปเดตล่าสุด ' + new Intl.DateTimeFormat('th-TH', {
-        timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
-      }).format(new Date()) + ' น.';
-    } catch (error) {
-      document.getElementById('monthlySummary').innerHTML = '<div class="state-panel state-error">โหลดข้อมูลไม่สำเร็จ: ' + esc(error.message) + '</div>';
-      toast('โหลดข้อมูลไม่สำเร็จ');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function renderCurrentStatus() {
-    const statusByNo = new Map(state.assets.map(asset => [normalizeMachineNo(asset.no), asset.status || 'ใช้งานได้']));
-    const borrowed = new Set(state.current.filter(unit => unit.isBorrowed).map(unit => normalizeMachineNo(unit.number)));
-    let ready = 0, repair = 0;
-    statusByNo.forEach((status, no) => {
-      if (status === 'ส่งซ่อม' || status === 'ชำรุด') repair++;
-      else if (status === 'ใช้งานได้' && !borrowed.has(no)) ready++;
-    });
-    document.getElementById('metricTotal').textContent = statusByNo.size;
-    document.getElementById('metricReady').textContent = ready;
-    document.getElementById('metricBorrowed').textContent = [...borrowed].filter(no => statusByNo.has(no)).length;
-    document.getElementById('metricRepair').textContent = repair;
-  }
-
-  function buildFilters() {
-    const monthSelect = document.getElementById('monthSelect');
-    const wardSelect = document.getElementById('wardSelect');
-    const months = [...new Set(state.raw.map(row => monthKey(row.ts)))].sort().reverse();
-    const wards = [...new Set(state.raw.map(row => row.ward))].sort((a, b) => a.localeCompare(b, 'th'));
-    monthSelect.innerHTML = months.map(month => '<option value="' + month + '">' + thaiMonth(month) + '</option>').join('');
-    wardSelect.innerHTML = '<option value="">ทุกหน่วยงาน</option>' + wards.map(ward => '<option value="' + esc(ward) + '">' + esc(ward) + '</option>').join('');
-  }
-
-  function buildSessions() {
-    const byNo = new Map();
-    state.raw.forEach(row => {
-      if (!byNo.has(row.no)) byNo.set(row.no, []);
-      byNo.get(row.no).push(row);
-    });
-    const sessions = [];
-    byNo.forEach((events, no) => {
-      let pending = null;
-      events.sort((a, b) => a.ts - b.ts || a.id - b.id).forEach(event => {
-        if (event.isBorrow) pending = event;
-        if (event.isReturn && pending) {
-          if (event.ts > pending.ts) sessions.push({ no, ward: pending.ward, start: pending.ts, end: event.ts });
-          pending = null;
-        }
-      });
-      if (pending) sessions.push({ no, ward: pending.ward, start: pending.ts, end: new Date() });
-    });
-    return sessions;
-  }
-
-  function monthBounds(value) {
-    const [year, month] = value.split('-').map(Number);
-    const offset = 7 * 60 * 60 * 1000;
-    return {
-      start: new Date(Date.UTC(year, month - 1, 1) - offset),
-      end: new Date(Date.UTC(year, month, 1) - offset)
-    };
-  }
-
-  function renderMonthlyStats() {
-    const month = document.getElementById('monthSelect').value;
-    const ward = document.getElementById('wardSelect').value;
-    if (!month) {
-      document.getElementById('monthlySummary').innerHTML = '<div class="state-panel">ยังไม่มีประวัติยืม–คืน C2</div>';
-      state.rows = [];
-      renderTable();
-      return;
-    }
-
-    const { start, end } = monthBounds(month);
-    const events = state.raw.filter(row => row.ts >= start && row.ts < end && (!ward || row.ward === ward));
-    const sessions = buildSessions().filter(session => {
-      const overlaps = session.start < end && session.end > start;
-      return overlaps && (!ward || session.ward === ward);
-    });
-    const byNo = new Map();
-    const ensure = no => {
-      if (!byNo.has(no)) byNo.set(no, { no, borrows: 0, returns: 0, usageMs: 0, sessions: [] });
-      return byNo.get(no);
-    };
-    events.forEach(event => {
-      const row = ensure(event.no);
-      if (event.isBorrow) row.borrows++;
-      if (event.isReturn) row.returns++;
-    });
-    sessions.forEach(session => {
-      const overlapStart = Math.max(session.start.getTime(), start.getTime());
-      const overlapEnd = Math.min(session.end.getTime(), end.getTime(), Date.now());
-      const duration = Math.max(0, overlapEnd - overlapStart);
-      if (!duration) return;
-      const row = ensure(session.no);
-      row.usageMs += duration;
-      row.sessions.push({ ward: session.ward, duration });
-    });
-
-    state.rows = [...byNo.values()].sort((a, b) => Number(a.no) - Number(b.no));
-    const totalBorrow = state.rows.reduce((sum, row) => sum + row.borrows, 0);
-    const totalReturn = state.rows.reduce((sum, row) => sum + row.returns, 0);
-    const totalUsage = state.rows.reduce((sum, row) => sum + row.usageMs, 0);
-    const activeUnits = state.rows.filter(row => row.borrows || row.returns || row.usageMs).length;
-    state.monthly = { month, ward, rows: state.rows, totalBorrow, totalReturn, totalUsage, activeUnits };
-
-    document.getElementById('monthlySummary').innerHTML = [
-      ['รายการยืม', totalBorrow, 'ครั้ง'],
-      ['รายการคืน', totalReturn, 'ครั้ง'],
-      ['เครื่องที่มีการใช้งาน', activeUnits, 'เครื่อง'],
-      ['เวลาใช้งานรวม', fmtDuration(totalUsage), '']
-    ].map(([label, value, unit]) => '<article><span>' + label + '</span><strong>' + value + '</strong><small>' + unit + '</small></article>').join('');
-    document.getElementById('monthlyPdfBtn').disabled = state.rows.length === 0;
-    document.getElementById('tableCaption').textContent = thaiMonth(month) + (ward ? ' · ' + ward : ' · ทุกหน่วยงาน') + ' · ' + state.rows.length + ' เครื่อง';
-    renderTable();
-  }
-
-  function renderTable() {
-    const query = normalizeMachineNo(document.getElementById('numberSearch').value);
-    const rows = state.rows.filter(row => !query || row.no.includes(query));
-    const container = document.getElementById('statsTable');
-    if (!rows.length) {
-      container.innerHTML = '<div class="state-panel">ไม่พบข้อมูลตามตัวกรอง</div>';
-      return;
-    }
-    container.innerHTML = '<table><thead><tr><th>เครื่อง</th><th>ยืม</th><th>คืน</th><th>เวลาใช้งาน</th><th>รายละเอียด</th></tr></thead><tbody>' + rows.map(row => {
-      const details = row.sessions.map((session, index) => 'ครั้งที่ ' + (index + 1) + ': ' + esc(session.ward) + ' · ' + fmtDuration(session.duration)).join('<br>') || '—';
-      return '<tr><td><strong>No.' + esc(row.no) + '</strong></td><td>' + row.borrows + '</td><td>' + row.returns + '</td><td><strong>' + fmtDuration(row.usageMs) + '</strong></td><td class="details-cell">' + details + '</td></tr>';
-    }).join('') + '</tbody></table>';
-  }
-
-  async function exportMonthlyPdf() {
-    const data = state.monthly;
-    if (!data || !data.rows.length) return;
-    const button = document.getElementById('monthlyPdfBtn');
-    button.disabled = true;
-    button.textContent = 'กำลังสร้าง PDF…';
-    try {
-      const doc = await newThaiPdf();
-      const generatedAt = new Intl.DateTimeFormat('th-TH-u-ca-gregory', { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date());
-      const scope = data.ward ? 'หน่วยงาน ' + data.ward : 'ทุกหน่วยงาน';
-      let y = rptPdfHeader(doc, 'สถิติการใช้งาน C2 รายเดือน', thaiMonth(data.month) + ' | ' + scope, generatedAt);
-      y = rptPdfMetricCards(doc, [
-        ['รายการยืม', data.totalBorrow + ' ครั้ง'],
-        ['รายการคืน', data.totalReturn + ' ครั้ง'],
-        ['เวลาใช้งานรวม', fmtDuration(data.totalUsage)]
-      ], y);
-      y = rptPdfSectionTitle(doc, 'รายละเอียดการใช้งานรายเครื่อง', y);
-      thaiTable(doc, {
-        startY: y,
-        head: [['No.', 'ยืม', 'คืน', 'เวลาใช้งาน', 'รายละเอียด']],
-        body: data.rows.map(row => [row.no, row.borrows, row.returns, fmtDuration(row.usageMs), row.sessions.map((session, index) => 'ครั้งที่ ' + (index + 1) + ': ' + session.ward + ' · ' + fmtDuration(session.duration)).join(' | ') || '—']),
-        styles: { fontSize: 10 },
-        margin: { top: 55 },
-        didDrawPage: tableData => { if (tableData.pageNumber > 1) rptPdfContinuationHeader(doc, 'สถิติ C2 ' + thaiMonth(data.month)); }
-      });
-      rptPdfFooter(doc);
-      await rptDeliverPdf(doc, 'C2_Statistics_' + data.month.replace('-', '_') + '.pdf', { preview: true });
-    } catch (error) {
-      toast('สร้าง PDF ไม่สำเร็จ: ' + error.message);
-    } finally {
-      button.disabled = false;
-      button.textContent = 'พรีวิว PDF เดือนนี้';
-    }
-  }
-
-  async function exportFullC2Report() {
-    const button = document.getElementById('fullReportBtn');
-    button.disabled = true;
-    button.textContent = 'กำลังสร้างรายงาน…';
-    try {
-      const result = await computeC2Report();
-      if (!result.ok) throw new Error(result.error || 'ไม่สามารถสร้างรายงานได้');
-      await exportC2ReportPDF(result, { preview: true });
-    } catch (error) {
-      toast('สร้างรายงานไม่สำเร็จ: ' + error.message);
-    } finally {
-      button.disabled = false;
-      button.textContent = 'รายงาน C2 ฉบับเต็ม';
-    }
-  }
-
-  window.memsOpenPdfPreview = function(blob, filename) {
-    if (pdfPreviewUrl) URL.revokeObjectURL(pdfPreviewUrl);
-    pdfPreviewUrl = URL.createObjectURL(blob);
-    pdfPreviewName = filename || 'C2_Report.pdf';
-    document.getElementById('pdfPreviewFilename').textContent = pdfPreviewName;
-    document.getElementById('pdfPreviewFrame').src = pdfPreviewUrl;
-    const modal = document.getElementById('pdfPreviewModal');
-    modal.hidden = false;
-    document.body.classList.add('pdf-preview-open');
-    modal.querySelector('.pdf-preview-close').focus();
-  };
-
-  function closePdfPreview() {
-    const modal = document.getElementById('pdfPreviewModal');
-    modal.hidden = true;
-    document.body.classList.remove('pdf-preview-open');
-    document.getElementById('pdfPreviewFrame').src = 'about:blank';
-    if (pdfPreviewUrl) URL.revokeObjectURL(pdfPreviewUrl);
-    pdfPreviewUrl = '';
-  }
-
-  function downloadPdfPreview() {
-    if (!pdfPreviewUrl) return;
-    const link = document.createElement('a');
-    link.href = pdfPreviewUrl;
-    link.download = pdfPreviewName;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-  }
-
-  function printPdfPreview() {
-    const frame = document.getElementById('pdfPreviewFrame');
-    if (!frame.src || frame.src === 'about:blank') return;
-    frame.contentWindow.focus();
-    frame.contentWindow.print();
-  }
-
-  function toast(message) {
-    const el = document.getElementById('toast');
-    el.textContent = message;
-    el.classList.add('show');
-    setTimeout(() => el.classList.remove('show'), 3200);
-  }
-
-  document.getElementById('pdfPreviewModal').addEventListener('click', event => {
-    if (event.target.id === 'pdfPreviewModal') closePdfPreview();
-  });
-  document.addEventListener('keydown', event => {
-    if (event.key === 'Escape' && !document.getElementById('pdfPreviewModal').hidden) closePdfPreview();
-  });
-  window.addEventListener('DOMContentLoaded', async () => {
-    const profile = await memsGuard('dashboard');
-    if (profile) loadStatistics();
-  });
-</script>
+<script src="equipment-statistics.js?v=20261005-usage-stats-1"></script>
 <script src="mascot.js?v=20260923-mascot-2"></script>
 </body>
 </html>
-
