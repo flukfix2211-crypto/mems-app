@@ -6,7 +6,6 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>MEMs — การตั้งค่า / จัดการบัญชีผู้ใช้</title>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -28,7 +27,7 @@
     .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; position: relative; z-index: 1; flex-wrap: wrap; gap: 8px; }
     .hosp-badge { font-size: 10px; font-weight: 700; letter-spacing: 0.04em; background: rgba(255,255,255,0.18); padding: 4px 10px; border-radius: 20px; }
     .btn-back { font-size: 11px; font-weight: 700; background: rgba(255,255,255,.18); color: #fff; padding: 4px 10px; border-radius: 20px; text-decoration: none; border: 1px solid rgba(255,255,255,.3); }
-    .header h1 { font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 44px; letter-spacing: 0.12em; background: linear-gradient(135deg,#fff 0%,rgba(255,255,255,.65) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; line-height: 1.1; margin-bottom: 4px; position: relative; z-index: 1; }
+    .header h1 { font-family: var(--mems-font-family); font-weight: 900; font-size: 44px; letter-spacing: 0.12em; background: linear-gradient(135deg,#fff 0%,rgba(255,255,255,.65) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; line-height: 1.1; margin-bottom: 4px; position: relative; z-index: 1; }
     .header .sub { font-size: 11px; font-weight: 500; opacity: 0.6; letter-spacing: 0.18em; text-transform: uppercase; position: relative; z-index: 1; }
     .header .page-title { font-size: 16px; font-weight: 700; opacity: 0.92; margin-top: 8px; display: flex; align-items: center; gap: 8px; position: relative; z-index: 1; }
 
@@ -125,7 +124,7 @@ body{background:#0c6173!important;background-image:none!important}
 .card{background:#fff}
 }
 </style>
-  <link rel="stylesheet" href="mems-ui.css">
+  <link rel="stylesheet" href="mems-ui.css?v=20261005-font-1">
   <link rel="stylesheet" href="mems-auth-theme.css?v=20260923-app-2">
   <link rel="stylesheet" href="operations-office.css?v=20260923-ops-2">
 </head>
@@ -285,7 +284,7 @@ body{background:#0c6173!important;background-image:none!important}
       <div class="form-group">
         <div class="form-label">รหัสผ่าน</div>
         <div style="display:flex;gap:8px">
-          <input class="form-input" id="pwRevealValue" readonly style="flex:1;font-family:monospace;font-size:16px;letter-spacing:.03em">
+          <input class="form-input" id="pwRevealValue" readonly style="flex:1;font-family:var(--mems-font-family);font-size:16px;letter-spacing:.03em">
           <button type="button" class="preset-btn" style="white-space:nowrap" onclick="memsCopyPwReveal()">📋 คัดลอก</button>
         </div>
         <div class="hint" style="color:var(--red)">⚠️ ระบบจะไม่แสดงรหัสนี้ให้ดูอีก — จดหรือคัดลอกเก็บไว้ให้เรียบร้อยก่อนปิดหน้าต่างนี้</div>
