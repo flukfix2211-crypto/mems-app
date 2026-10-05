@@ -309,6 +309,17 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     }).format(date);
   }
 
+  function formatBorrowedAt(value) {
+    if (!value) return 'ไม่ทราบเวลา';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'ไม่ทราบเวลา';
+    return new Intl.DateTimeFormat('th-TH', {
+      timeZone: 'Asia/Bangkok',
+      day: 'numeric', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+    }).format(date) + ' น.';
+  }
+
   function renderSetChangeDate() {
     const today = getBangkokCalendarDate();
     const changeDate = new Date(today.getTime());
@@ -485,15 +496,25 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
         fetchEquipmentStatus().catch(() => [])
       ]);
       const activePrep = new Set(prepared.map(p => p.equipment + '__' + normalizeMachineNo(p.number)));
-      const borrowed = new Set(equipment.filter(e => e.isBorrowed).map(e => e.equipment + '__' + normalizeMachineNo(e.number)));
+      const borrowed = new Map(equipment.filter(e => e.isBorrowed).map(e => [
+        e.equipment + '__' + normalizeMachineNo(e.number),
+        e
+      ]));
       const dups = [];
       numbers.forEach(num => {
         const key = equipName + '__' + (normalizeMachineNo(num) || num);
-        if (borrowed.has(key)) dups.push(num + ' (ถูกยืมอยู่)');
-        else if (prepareMode === 'prepare' && activePrep.has(key)) dups.push(num + ' (เตรียมไว้แล้ว)');
+        const borrowedInfo = borrowed.get(key);
+        if (borrowedInfo) {
+          const borrowedWard = borrowedInfo.ward || 'ไม่ระบุหน่วยงาน';
+          const borrowedAt = formatBorrowedAt(borrowedInfo.lastUpdate);
+          dups.push('• No.' + num + ' — ยืมอยู่ที่ ' + borrowedWard + ' (ล่าสุด ' + borrowedAt + ')');
+        } else if (prepareMode === 'prepare' && activePrep.has(key)) {
+          dups.push('• No.' + num + ' — เตรียมไว้แล้ว');
+        }
       });
       if (dups.length) {
-        alert('⚠️ เครื่อง ' + equipName + ' No. ' + dups.join(', ') + '\nไม่สามารถทำซ้ำได้');
+        alert('⚠️ เครื่อง ' + equipName + ' ไม่สามารถทำซ้ำได้\n\n' + dups.join('\n') +
+              '\n\nกรณีเครื่องยืมอยู่ กรุณาบันทึกคืนก่อนเตรียมเครื่อง');
         btn.disabled = false; btn.textContent = origText;
         return;
       }
