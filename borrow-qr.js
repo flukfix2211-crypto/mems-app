@@ -5,6 +5,7 @@ let memsQrReturnAsset = null;
 let memsGlobalScannerInstalled = false;
 let memsScanIntendedAction = null;
 let memsQrScannerEnabled = true;
+let memsPromptScanTimer = null;
 const memsScannerState = {
   buffer: '',
   startedAt: 0,
@@ -77,18 +78,30 @@ function memsShowQrScanPrompt(action) {
   const prompt = document.getElementById('qrScanPrompt');
   const actionEl = document.getElementById('qrScanPromptAction');
   const hint = document.getElementById('qrScanPromptHint');
+  const input = document.getElementById('qrScanPromptInput');
   if (!prompt) return;
   if (actionEl) actionEl.textContent = action === 'borrow' ? 'ทำรายการยืมเครื่อง' : 'ทำรายการคืนเครื่อง';
   if (hint) {
     hint.textContent = 'ยิงเครื่องสแกนได้ทันที ไม่ต้องคลิกช่องกรอกข้อมูล';
     hint.classList.remove('error');
   }
+  if (memsPromptScanTimer) clearTimeout(memsPromptScanTimer);
+  memsPromptScanTimer = null;
+  if (input) input.value = '';
   prompt.classList.add('show');
+  if (input) input.focus({ preventScroll: true });
 }
 
 function memsHideQrScanPrompt(clearIntent) {
   const prompt = document.getElementById('qrScanPrompt');
+  const input = document.getElementById('qrScanPromptInput');
+  if (memsPromptScanTimer) clearTimeout(memsPromptScanTimer);
+  memsPromptScanTimer = null;
   if (prompt) prompt.classList.remove('show');
+  if (input) {
+    input.value = '';
+    input.blur();
+  }
   if (clearIntent) memsScanIntendedAction = null;
 }
 
@@ -108,6 +121,28 @@ function memsChooseActionAndScan(action) {
   setAction(action);
   memsScanIntendedAction = action;
   memsShowQrScanPrompt(action);
+}
+
+function memsHandlePromptScannerInput() {
+  if (memsPromptScanTimer) clearTimeout(memsPromptScanTimer);
+  memsPromptScanTimer = setTimeout(memsProcessPromptScan, 320);
+}
+
+async function memsProcessPromptScan() {
+  if (memsPromptScanTimer) clearTimeout(memsPromptScanTimer);
+  memsPromptScanTimer = null;
+  const input = document.getElementById('qrScanPromptInput');
+  const raw = input && input.value.trim();
+  if (!raw) return;
+  const assetId = memsAssetIdFromScan(raw);
+  if (!assetId) {
+    input.value = '';
+    memsSetQrScanPromptError('QR Code นี้ไม่ใช่ป้ายเครื่องจากระบบ MEMs — กรุณาลองอีกครั้ง');
+    input.focus({ preventScroll: true });
+    return;
+  }
+  input.value = '';
+  await memsUseQrAssetId(assetId);
 }
 
 function memsClearQrReturnContext() {
@@ -196,6 +231,7 @@ function memsFinishGlobalScan() {
 
 function memsHandleGlobalScannerKey(event) {
   if (!memsQrScannerEnabled) return;
+  if (event.target && event.target.id === 'qrScanPromptInput') return;
   if (event.ctrlKey || event.altKey || event.metaKey) return;
   const now = performance.now();
 
@@ -432,3 +468,4 @@ async function memsApplyQrReturnSelection() {
   const staffInput = document.getElementById('staffName');
   if (staffInput) staffInput.focus({ preventScroll: true });
 }
+
