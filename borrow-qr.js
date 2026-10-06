@@ -468,4 +468,3 @@ async function memsApplyQrReturnSelection() {
   const staffInput = document.getElementById('staffName');
   if (staffInput) staffInput.focus({ preventScroll: true });
 }
-
