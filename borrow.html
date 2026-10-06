@@ -127,6 +127,17 @@
     .qr-return-type { display:block;font-size:18px;font-weight:900;line-height:1.15; }
     .qr-return-no { flex-shrink:0;font-family:var(--mems-font-family);font-size:19px;font-weight:900;background:var(--a);color:#fff;border-radius:9px;padding:7px 11px; }
     .qr-return-message { font-size:12px;font-weight:700; }
+    .qr-scan-prompt { display:none;position:fixed;inset:0;z-index:10020;align-items:center;justify-content:center;padding:20px;background:rgba(12,31,38,.62);backdrop-filter:blur(5px); }
+    .qr-scan-prompt.show { display:flex; }
+    .qr-scan-prompt-box { width:min(100%,390px);padding:26px 22px 20px;text-align:center;background:#fff;border-radius:22px;box-shadow:0 24px 70px rgba(0,0,0,.28); }
+    .qr-scan-prompt-icon { width:72px;height:72px;margin:0 auto 14px;display:grid;place-items:center;border-radius:22px;background:#EAF6F8;color:var(--a);animation:qrScanPulse 1.6s ease-in-out infinite; }
+    .qr-scan-prompt-icon svg { width:42px;height:42px; }
+    .qr-scan-prompt-action { display:inline-flex;margin-bottom:9px;padding:5px 11px;border-radius:999px;background:#EAF6F8;color:var(--a);font-size:12px;font-weight:800; }
+    .qr-scan-prompt-title { margin:0;color:var(--txt);font-size:24px;font-weight:900;line-height:1.25; }
+    .qr-scan-prompt-hint { margin:9px 0 18px;color:var(--muted);font-size:13px;font-weight:600;line-height:1.55; }
+    .qr-scan-prompt-hint.error { color:#B82E2E; }
+    .qr-scan-prompt-cancel { width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:11px;background:#fff;color:var(--muted);font-family:inherit;font-size:14px;font-weight:800;cursor:pointer; }
+    @keyframes qrScanPulse { 0%,100% { transform:scale(1);box-shadow:0 0 0 0 rgba(20,118,135,.18); } 50% { transform:scale(1.04);box-shadow:0 0 0 12px rgba(20,118,135,0); } }
     .sec-label {
       font-size: 11px;
       font-weight: 700;
@@ -670,10 +681,10 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   <div class="card">
     <div class="sec-label"><span class="req-dot"></span>ประเภทการทำรายการ</div>
     <div class="action-toggle">
-      <button class="action-btn borrow" onclick="setAction('borrow')">
+      <button class="action-btn borrow" onclick="memsChooseActionAndScan('borrow')">
         <svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V3m-5 5 5-5 5 5M4 14v7h16v-7"/></svg> <span class="ab-label">ยืม</span>
       </button>
-      <button class="action-btn return" onclick="setAction('return')">
+      <button class="action-btn return" onclick="memsChooseActionAndScan('return')">
         <svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13m-5-5 5 5 5-5M4 14v7h16v-7"/></svg> <span class="ab-label">คืน</span>
       </button>
     </div>
@@ -700,6 +711,18 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       <strong id="qrReturnNo" class="qr-return-no"></strong>
     </div>
     <div id="qrReturnMessage" class="qr-return-message"></div>
+  </div>
+
+  <div id="qrScanPrompt" class="qr-scan-prompt" role="dialog" aria-modal="true" aria-labelledby="qrScanPromptTitle">
+    <div class="qr-scan-prompt-box">
+      <div class="qr-scan-prompt-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3M7 7h3v3H7zM14 7h3v3h-3zM7 14h3v3H7zM14 14h1M17 14v3h-3"/></svg>
+      </div>
+      <div id="qrScanPromptAction" class="qr-scan-prompt-action"></div>
+      <h2 id="qrScanPromptTitle" class="qr-scan-prompt-title">กรุณาสแกน QR ที่ตัวเครื่อง</h2>
+      <p id="qrScanPromptHint" class="qr-scan-prompt-hint">ยิงเครื่องสแกนได้ทันที ไม่ต้องคลิกช่องกรอกข้อมูล</p>
+      <button type="button" class="qr-scan-prompt-cancel" onclick="memsHideQrScanPrompt(true)">ปิดและกรอกแบบปกติ</button>
+    </div>
   </div>
 
   <!-- ตึก/หน่วยงาน (เลือกก่อนเป็นอันดับแรก) -->
@@ -1070,7 +1093,7 @@ async function onWardChange(sel) {
   // โหมดคืน: หาว่าหน่วยงานนี้ยืมเครื่องประเภทไหนไปบ้าง
   if (S.action === 'return') await computeWardReturnTypes(sel.value);
   filterEquipButtons();
-  if (typeof memsApplyQrReturnSelection === 'function') await memsApplyQrReturnSelection();
+  if (typeof memsApplyQrSelection === 'function') await memsApplyQrSelection();
 }
 
 /* โหมดคืน: ดึงประเภทเครื่องที่หน่วยงานนั้นยืมไป (ยังไม่คืน) */

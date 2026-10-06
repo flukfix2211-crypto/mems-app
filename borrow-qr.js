@@ -3,6 +3,7 @@
  */
 let memsQrReturnAsset = null;
 let memsGlobalScannerInstalled = false;
+let memsScanIntendedAction = null;
 const memsScannerState = {
   buffer: '',
   startedAt: 0,
@@ -51,8 +52,43 @@ function memsSyncQrScanCard(action) {
   card.style.display = action === 'return' ? '' : 'none';
 }
 
+function memsShowQrScanPrompt(action) {
+  const prompt = document.getElementById('qrScanPrompt');
+  const actionEl = document.getElementById('qrScanPromptAction');
+  const hint = document.getElementById('qrScanPromptHint');
+  if (!prompt) return;
+  if (actionEl) actionEl.textContent = action === 'borrow' ? 'ทำรายการยืมเครื่อง' : 'ทำรายการคืนเครื่อง';
+  if (hint) {
+    hint.textContent = 'ยิงเครื่องสแกนได้ทันที ไม่ต้องคลิกช่องกรอกข้อมูล';
+    hint.classList.remove('error');
+  }
+  prompt.classList.add('show');
+}
+
+function memsHideQrScanPrompt(clearIntent) {
+  const prompt = document.getElementById('qrScanPrompt');
+  if (prompt) prompt.classList.remove('show');
+  if (clearIntent) memsScanIntendedAction = null;
+}
+
+function memsSetQrScanPromptError(message) {
+  const hint = document.getElementById('qrScanPromptHint');
+  if (!hint) return;
+  hint.textContent = message;
+  hint.classList.add('error');
+}
+
+function memsChooseActionAndScan(action) {
+  memsClearQrReturnContext();
+  setAction(action);
+  memsScanIntendedAction = action;
+  memsShowQrScanPrompt(action);
+}
+
 function memsClearQrReturnContext() {
   memsQrReturnAsset = null;
+  memsScanIntendedAction = null;
+  memsHideQrScanPrompt(false);
   memsResetScannerBuffer();
   memsScannerState.lastPayload = '';
   memsScannerState.lastProcessedAt = 0;
@@ -186,7 +222,9 @@ async function memsLoadQrAsset(assetId) {
   return data[0];
 }
 
-async function memsUseQrAssetId(assetId) {
+async function memsUseQrAssetId(assetId, options) {
+  const targetAction = (options && options.action) || memsScanIntendedAction || S.action || 'return';
+  if (S.action !== targetAction) setAction(targetAction);
   memsSetQrDevice(null);
   memsSetQrBanner('กำลังตรวจสอบข้อมูลเครื่องจากทะเบียน…', 'loading');
   try {
@@ -196,25 +234,29 @@ async function memsUseQrAssetId(assetId) {
     const equipButton = Array.from(document.querySelectorAll('.equip-btn'))
       .find(button => String(button.dataset.e).toLowerCase() === requestedEquip.toLowerCase());
 
-    setAction('return');
-    memsSyncQrScanCard('return');
-    if (!equipButton) throw new Error('ไม่พบประเภทเครื่อง “' + requestedEquip + '” ในหน้าคืนเครื่อง');
+    memsSyncQrScanCard(targetAction);
+    if (!equipButton) throw new Error('ไม่พบประเภทเครื่อง “' + requestedEquip + '” ในหน้าทำรายการ');
     const equip = equipButton.dataset.e;
+    memsHideQrScanPrompt(true);
     memsSetQrDevice(asset, equip);
     pickEquip(equipButton, equip);
     memsPrimeQrNumber(equip, asset.no);
 
     const ward = document.getElementById('wardSel').value;
     if (!ward) {
-      memsSetQrBanner('สแกนแล้ว: ' + equip + ' No.' + asset.no + ' — กรุณาเลือกหน่วยงานที่นำมาคืน', 'ready');
+      const wardText = targetAction === 'borrow' ? 'หน่วยงานที่ต้องการยืม' : 'หน่วยงานที่นำมาคืน';
+      memsSetQrBanner('สแกนแล้ว: ' + equip + ' No.' + asset.no + ' — กรุณาเลือก' + wardText, 'ready');
       return;
     }
-    await memsApplyQrReturnSelection();
+    await memsApplyQrSelection();
   } catch (err) {
     console.error(err);
     memsQrReturnAsset = null;
     memsSetQrDevice(null);
     memsSetQrBanner('⚠️ อ่าน QR ไม่สำเร็จ: ' + (err.message || err), 'error');
+    if (document.getElementById('qrScanPrompt')?.classList.contains('show')) {
+      memsSetQrScanPromptError('สแกนไม่สำเร็จ: ' + (err.message || err) + ' — กรุณาลองอีกครั้ง');
+    }
   }
 }
 
@@ -241,7 +283,65 @@ async function memsProcessQrScan() {
     return;
   }
   if (input) input.value = '';
-  await memsUseQrAssetId(assetId);
+  await memsUseQrAssetId(assetId, { action: 'return' });
+}
+
+async function memsApplyQrSelection() {
+  if (S.action === 'borrow') return memsApplyQrBorrowSelection();
+  if (S.action === 'return') return memsApplyQrReturnSelection();
+}
+
+async function memsApplyQrBorrowSelection() {
+  const asset = memsQrReturnAsset;
+  if (!asset || S.action !== 'borrow') return;
+
+  const ward = document.getElementById('wardSel').value;
+  const requestedEquip = memsQrEquipmentName(asset.type);
+  const no = normalizeMachineNo(asset.no) || String(asset.no);
+  if (!ward) {
+    memsSetQrBanner('สแกนแล้ว: ' + requestedEquip + ' No.' + no + ' — กรุณาเลือกหน่วยงานที่ต้องการยืม', 'ready');
+    return;
+  }
+
+  try {
+    preparedList = await fetchPreparedList();
+    renderPreparedBanner();
+    filterEquipButtons();
+  } catch (err) {
+    console.error(err);
+    memsSetQrBanner('⚠️ ตรวจสอบรายการเครื่องที่เตรียมไว้ไม่สำเร็จ กรุณาลองใหม่', 'error');
+    return;
+  }
+
+  const prepared = preparedList.find(item =>
+    item.ward === ward &&
+    String(item.equipment || '').toLowerCase() === requestedEquip.toLowerCase() &&
+    (normalizeMachineNo(item.number) || String(item.number)) === no
+  );
+  if (!prepared) {
+    clearPreparedSelection();
+    memsSetQrBanner('⚠️ ' + requestedEquip + ' No.' + no + ' ยังไม่ได้ถูกเตรียมไว้สำหรับหน่วยงานนี้', 'error');
+    return;
+  }
+
+  const equipButton = Array.from(document.querySelectorAll('.equip-btn'))
+    .find(button => String(button.dataset.e).toLowerCase() === requestedEquip.toLowerCase());
+  if (!equipButton) {
+    memsSetQrBanner('⚠️ ไม่พบประเภทเครื่อง “' + requestedEquip + '” ในหน้าทำรายการ', 'error');
+    return;
+  }
+  const equip = equipButton.dataset.e;
+  selectedPrepared.clear();
+  selectedPrepared.set(preparedSelectionKey(equip, no), { equipment: equip, number: no });
+  document.querySelectorAll('.equip-btn').forEach(button => button.classList.remove('active'));
+  equipButton.classList.add('active');
+  syncPreparedNumbersToForm();
+  updatePreparedSelectionUI();
+  renderPreparedBanner();
+
+  memsSetQrBanner('✓ เลือกแล้ว: ' + equip + ' No.' + no + ' — กรอกชื่อผู้ยืมแล้วกดบันทึก', 'success');
+  const staffInput = document.getElementById('staffName');
+  if (staffInput) staffInput.focus({ preventScroll: true });
 }
 
 async function memsHandleQrDeepLink() {
@@ -251,7 +351,7 @@ async function memsHandleQrDeepLink() {
   const assetId = params.get('asset') || params.get('a');
   memsSyncQrScanCard(mode === 'return' ? 'return' : S.action);
   if (mode !== 'return' || !assetId) return;
-  await memsUseQrAssetId(assetId);
+  await memsUseQrAssetId(assetId, { action: 'return' });
 }
 
 async function memsApplyQrReturnSelection() {
