@@ -223,6 +223,7 @@ async function fetchPrepareHistory() {
     const d = new Date(r.recorded_at);
     return {
       _rowIndex: r.id,
+      recordDate: r.record_date,
       date: fmtThaiDate(d),
       time: fmtThaiTime(d),
       equipment: r.equipment_type,

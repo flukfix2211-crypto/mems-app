@@ -344,7 +344,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 </style>
   <link rel="stylesheet" href="professional.css">
   <link rel="stylesheet" href="mems-ui.css?v=20261005-font-1">
-<link rel="stylesheet" href="dashboard-office.css?v=20261006-env-1">
+  <link rel="stylesheet" href="dashboard-office.css?v=20261006-prepare-counts-1">
   <link rel="stylesheet" href="equipment-status.css">
   <link rel="stylesheet" href="mems-auth-theme.css?v=20260923-app-2">
 </head>
@@ -690,7 +690,31 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
         <div id="borrowMonthlySummary" class="borrow-monthly-summary" aria-live="polite">
           <div class="state-loading"><div class="spinner"></div>กำลังคำนวณสรุปรายเดือน…</div>
         </div>
+        <section class="borrow-monthly-equipment" aria-labelledby="borrowMonthlyEquipmentTitle">
+          <div class="borrow-monthly-equipment-head">
+            <h4 id="borrowMonthlyEquipmentTitle">ยอดยืมแยกตามประเภทเครื่อง</h4>
+            <span id="borrowMonthlyEquipmentTotal"></span>
+          </div>
+          <div id="borrowMonthlyEquipment" class="borrow-monthly-equipment-grid" aria-live="polite">
+            <div class="state-loading"><div class="spinner"></div>กำลังนับประเภทเครื่อง…</div>
+          </div>
+        </section>
         <div id="borrowMonthlyMeta" class="borrow-monthly-meta"></div>
+      </div>
+    </section>
+    <section class="card prepare-today-card" aria-labelledby="prepareTodayTitle">
+      <div class="card-body">
+        <div class="prepare-today-head">
+          <div>
+            <div class="borrow-monthly-eyebrow">DAILY PREPARE</div>
+            <h3 id="prepareTodayTitle">วันนี้เตรียมเครื่องอะไรบ้าง</h3>
+            <p id="prepareTodayDate"></p>
+          </div>
+          <div class="prepare-today-total"><strong id="prepareTodayTotal">0</strong><span>เครื่อง</span></div>
+        </div>
+        <div class="table-wrap" id="prepareTodayBody" aria-live="polite">
+          <div class="state-loading"><div class="spinner"></div>กำลังสรุปรายการเตรียมวันนี้…</div>
+        </div>
       </div>
     </section>
     <div class="card">
@@ -1183,9 +1207,12 @@ async function exportWorkloadPDF() {
 async function renderPrepareHistory() {
   const body = document.getElementById('prepHistBody');
   const cnt  = document.getElementById('prepHistCount');
+  const todayBody = document.getElementById('prepareTodayBody');
   body.innerHTML = '<div class="state-loading"><div class="spinner"></div>กำลังโหลด…</div>';
+  if (todayBody) todayBody.innerHTML = '<div class="state-loading"><div class="spinner"></div>กำลังสรุปรายการเตรียมวันนี้…</div>';
   try {
     const items = await fetchPrepareHistory();
+    renderPrepareTodaySummary(items);
     if (cnt) cnt.textContent = 'ทั้งหมด ' + items.length + ' รายการ';
     if (!items.length) { body.innerHTML = '<div style="text-align:center;color:var(--muted);padding:30px">ยังไม่มีประวัติการเตรียม</div>'; return; }
     const rows = items.map(it => {
@@ -1219,7 +1246,72 @@ async function renderPrepareHistory() {
     </table>`;
   } catch (e) {
     body.innerHTML = '<div style="text-align:center;color:#B82E2E;padding:30px">โหลดประวัติไม่ได้</div>';
+    if (todayBody) todayBody.innerHTML = '<div class="prepare-today-empty is-error">โหลดสรุปรายการเตรียมวันนี้ไม่ได้</div>';
   }
+}
+
+function equipmentCounts(rows, nameForRow) {
+  const counts = new Map();
+  rows.forEach(row => {
+    const name = String(nameForRow(row) || 'ไม่ระบุประเภท').trim() || 'ไม่ระบุประเภท';
+    const key = name.toLocaleLowerCase('th-TH');
+    const current = counts.get(key) || { name, count: 0 };
+    current.count++;
+    counts.set(key, current);
+  });
+  return Array.from(counts.values()).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'th'));
+}
+
+function timestampToBkkISO(value) {
+  const date = new Date(value);
+  if (!value || Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Bangkok', year: 'numeric', month: '2-digit', day: '2-digit'
+  }).format(date);
+}
+
+function renderPrepareTodaySummary(items) {
+  const body = document.getElementById('prepareTodayBody');
+  const total = document.getElementById('prepareTodayTotal');
+  const dateLabel = document.getElementById('prepareTodayDate');
+  if (!body || !total || !dateLabel) return;
+
+  const todayISO = bkkTodayISO();
+  const todayItems = items.filter(item => {
+    const itemDate = /^\d{4}-\d{2}-\d{2}$/.test(String(item.recordDate || ''))
+      ? String(item.recordDate)
+      : timestampToBkkISO(item.timestamp);
+    return itemDate === todayISO && !String(item.status || '').startsWith('ยกเลิก');
+  });
+  const groups = new Map();
+  todayItems.forEach(item => {
+    const name = String(item.equipment || 'ไม่ระบุประเภท').trim() || 'ไม่ระบุประเภท';
+    const key = name.toLocaleLowerCase('th-TH');
+    const group = groups.get(key) || { name, total: 0, waiting: 0, borrowed: 0 };
+    group.total++;
+    if (String(item.status || '') === 'ยืมแล้ว') group.borrowed++;
+    else group.waiting++;
+    groups.set(key, group);
+  });
+  const rows = Array.from(groups.values()).sort((a, b) => b.total - a.total || a.name.localeCompare(b.name, 'th'));
+
+  total.textContent = todayItems.length.toLocaleString('th-TH');
+  dateLabel.textContent = new Intl.DateTimeFormat('th-TH', {
+    timeZone: 'Asia/Bangkok', dateStyle: 'long'
+  }).format(new Date());
+  if (!rows.length) {
+    body.innerHTML = '<div class="prepare-today-empty">วันนี้ยังไม่มีรายการเตรียมเครื่อง</div>';
+    return;
+  }
+  body.innerHTML = `<table class="prepare-today-table">
+    <thead><tr><th>ประเภทเครื่อง</th><th>เตรียมทั้งหมด</th><th>รอให้ยืม</th><th>ยืมแล้ว</th></tr></thead>
+    <tbody>${rows.map(row => `<tr>
+      <td><strong>${escHtml(row.name)}</strong></td>
+      <td><b>${row.total.toLocaleString('th-TH')}</b> เครื่อง</td>
+      <td>${row.waiting.toLocaleString('th-TH')} เครื่อง</td>
+      <td>${row.borrowed.toLocaleString('th-TH')} เครื่อง</td>
+    </tr>`).join('')}</tbody>
+  </table>`;
 }
 
 function currentBkkMonth() {
@@ -1258,12 +1350,16 @@ function initPrepareHistoryView() {
 async function renderBorrowMonthlySummary() {
   const monthInput = document.getElementById('borrowMonthlyMonth');
   const summary = document.getElementById('borrowMonthlySummary');
+  const equipmentBreakdown = document.getElementById('borrowMonthlyEquipment');
+  const equipmentTotal = document.getElementById('borrowMonthlyEquipmentTotal');
   const meta = document.getElementById('borrowMonthlyMeta');
-  if (!monthInput || !summary || !meta) return;
+  if (!monthInput || !summary || !equipmentBreakdown || !equipmentTotal || !meta) return;
 
   const monthLabel = monthInput.value || currentBkkMonth();
   monthInput.value = monthLabel;
   summary.innerHTML = '<div class="state-loading"><div class="spinner"></div>กำลังคำนวณสรุปรายเดือน…</div>';
+  equipmentBreakdown.innerHTML = '<div class="state-loading"><div class="spinner"></div>กำลังนับประเภทเครื่อง…</div>';
+  equipmentTotal.textContent = '';
   meta.textContent = '';
 
   try {
@@ -1304,10 +1400,19 @@ async function renderBorrowMonthlySummary() {
       <div><strong>${card.value}</strong><b>${card.unit}</b></div>
       <small>${card.note}</small>
     </article>`).join('');
+    const counts = equipmentCounts(borrowedRows, item => item.record['ชื่อเครื่อง']);
+    equipmentTotal.textContent = counts.length ? `${counts.length.toLocaleString('th-TH')} ประเภท` : '';
+    equipmentBreakdown.innerHTML = counts.length
+      ? counts.map(item => `<article class="borrow-monthly-equipment-item">
+          <span>${escHtml(item.name)}</span>
+          <div><strong>${item.count.toLocaleString('th-TH')}</strong><small>เครื่อง</small></div>
+        </article>`).join('')
+      : '<div class="borrow-monthly-equipment-empty">เดือนนี้ยังไม่มีรายการยืม</div>';
     meta.textContent = `${thaiMonthLabel(monthLabel)} · รวมรายการยืมทั้งหมด ${borrowedRows.length.toLocaleString('th-TH')} เครื่อง`;
   } catch (error) {
     console.error(error);
     summary.innerHTML = '<div class="borrow-monthly-error">คำนวณสรุปรายเดือนไม่สำเร็จ กรุณาลองใหม่อีกครั้ง</div>';
+    equipmentBreakdown.innerHTML = '<div class="borrow-monthly-equipment-empty is-error">นับประเภทเครื่องไม่สำเร็จ</div>';
   }
 }
 
