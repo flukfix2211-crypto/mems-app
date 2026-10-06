@@ -122,6 +122,11 @@
     .qr-return-banner.loading { background:#FFF8E6;color:#8B5000;border-color:#F0D99A; }
     .qr-return-banner.success { background:#E7F7EC;color:#14612D;border-color:#B8E2C5; }
     .qr-return-banner.error { background:#FDEAEA;color:#B82E2E;border-color:#F2BDBD; }
+    .qr-return-device { display:none;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;margin-bottom:8px;border-radius:10px;background:#fff;border:1px solid currentColor; }
+    .qr-return-kicker { display:block;font-size:10px;font-weight:700;letter-spacing:.06em;opacity:.7;margin-bottom:1px; }
+    .qr-return-type { display:block;font-size:18px;font-weight:900;line-height:1.15; }
+    .qr-return-no { flex-shrink:0;font-family:var(--mems-font-family);font-size:19px;font-weight:900;background:var(--a);color:#fff;border-radius:9px;padding:7px 11px; }
+    .qr-return-message { font-size:12px;font-weight:700; }
     .sec-label {
       font-size: 11px;
       font-weight: 700;
@@ -683,11 +688,18 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
         onkeydown="if(event.key==='Enter'){event.preventDefault();memsProcessQrScan()}">
       <button class="qr-scan-btn" type="button" onclick="memsProcessQrScan()">ตรวจสอบ</button>
     </div>
-    <div style="font-size:11px;color:var(--muted);margin-top:7px">รองรับเครื่องสแกนบาร์โค้ดแบบ 2D ที่ส่งค่าเหมือนคีย์บอร์ด</div>
+    <div style="font-size:11px;color:var(--muted);margin-top:7px">พร้อมสแกนจากทุกจุดในหน้านี้ ไม่ต้องคลิกช่องก่อน · รองรับเครื่องสแกน 2D แบบคีย์บอร์ด</div>
   </div>
 
   <div id="qrReturnBanner" class="qr-return-banner" role="status" aria-live="polite">
-    <span id="qrReturnMessage"></span>
+    <div id="qrReturnDevice" class="qr-return-device">
+      <div>
+        <span class="qr-return-kicker">เครื่องที่สแกน</span>
+        <strong id="qrReturnType" class="qr-return-type"></strong>
+      </div>
+      <strong id="qrReturnNo" class="qr-return-no"></strong>
+    </div>
+    <div id="qrReturnMessage" class="qr-return-message"></div>
   </div>
 
   <!-- ตึก/หน่วยงาน (เลือกก่อนเป็นอันดับแรก) -->
