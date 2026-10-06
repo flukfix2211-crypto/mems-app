@@ -19,6 +19,24 @@ const memsScannerState = {
   lastProcessedAt: 0
 };
 
+// เครื่องสแกนแบบ keyboard wedge จะพิมพ์ตามภาษาคีย์บอร์ดของเครื่อง
+// จึงต้องแปลงอักขระ Thai Kedmanee กลับเป็นปุ่ม US ก่อนอ่าน URL จาก QR
+const memsThaiKedmaneeToAscii = Object.freeze({
+  'ๅ': '1', '/': '2', '-': '3', 'ภ': '4', 'ถ': '5', 'ุ': '6', 'ึ': '7', 'ค': '8', 'ต': '9', 'จ': '0',
+  'ข': '-', 'ช': '=',
+  'ๆ': 'q', 'ไ': 'w', 'ำ': 'e', 'พ': 'r', 'ะ': 't', 'ั': 'y', 'ี': 'u', 'ร': 'i', 'น': 'o', 'ย': 'p',
+  'บ': '[', 'ล': ']', 'ฃ': '\\',
+  'ฟ': 'a', 'ห': 's', 'ก': 'd', 'ด': 'f', 'เ': 'g', '้': 'h', '่': 'j', 'า': 'k', 'ส': 'l', 'ว': ';', 'ง': "'",
+  'ผ': 'z', 'ป': 'x', 'แ': 'c', 'อ': 'v', 'ิ': 'b', 'ื': 'n', 'ท': 'm', 'ม': ',', 'ใ': '.', 'ฝ': '/',
+  'ซ': ':', 'ฦ': '?', '฿': '&'
+});
+
+function memsNormalizeScannerText(raw) {
+  const value = String(raw || '').trim();
+  if (!/[\u0E00-\u0E7F]/.test(value)) return value;
+  return Array.from(value, character => memsThaiKedmaneeToAscii[character] || character).join('');
+}
+
 function memsQrEquipmentName(type) {
   return type === 'อื่นๆ' ? 'เครื่องมืออื่นๆ' : String(type || '');
 }
@@ -160,7 +178,7 @@ function memsClearQrReturnContext() {
 }
 
 function memsAssetIdFromScan(raw) {
-  const value = String(raw || '').trim();
+  const value = memsNormalizeScannerText(raw);
   if (!value) return '';
   const prefixed = value.match(/^MEMS(?:-QR)?:\s*(\d+)$/i);
   if (prefixed) return prefixed[1];
