@@ -674,6 +674,25 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       <button class="btn-view-back" onclick="showView('home')">← กลับ</button>
       <div class="view-title"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m3 7 9-4 9 4v13H3zM3 7l9 4 9-4M12 11v9"/></svg> บันทึกการเตรียมเครื่องมือ</div>
     </div>
+    <section class="card borrow-monthly-card" aria-labelledby="borrowMonthlyTitle">
+      <div class="card-body">
+        <div class="borrow-monthly-head">
+          <div>
+            <div class="borrow-monthly-eyebrow">MONTHLY BORROW SERVICE</div>
+            <h3 id="borrowMonthlyTitle">สรุปการให้บริการเครื่องรายเดือน</h3>
+            <p>นับจากรายการยืม โดย 1 รายการเท่ากับให้บริการเครื่อง 1 เครื่อง</p>
+          </div>
+          <label class="borrow-monthly-filter" for="borrowMonthlyMonth">
+            <span>เดือน</span>
+            <input type="month" id="borrowMonthlyMonth" onchange="renderBorrowMonthlySummary()">
+          </label>
+        </div>
+        <div id="borrowMonthlySummary" class="borrow-monthly-summary" aria-live="polite">
+          <div class="state-loading"><div class="spinner"></div>กำลังคำนวณสรุปรายเดือน…</div>
+        </div>
+        <div id="borrowMonthlyMeta" class="borrow-monthly-meta"></div>
+      </div>
+    </section>
     <div class="card">
       <div class="card-body">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
@@ -762,12 +781,19 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
         <div style="font-size:10px;color:#475569">รพ.พหลพลพยุหเสนา จ.กาญจนบุรี</div>
       </div>
     </div>
-    <div style="display:flex;align-items:center;gap:12px">
+    <div class="kpi-topbar-actions" style="display:flex;align-items:center;gap:12px">
+      <div id="kpiEnvironment" class="kpi-environment is-loading" title="กำลังโหลดข้อมูลอุณหภูมิห้อง">
+        <span class="kpi-environment-dot" aria-hidden="true"></span>
+        <span class="kpi-environment-label">อุณหภูมิห้อง</span>
+        <strong id="kpiTemperature">--.-°C</strong>
+        <span class="kpi-environment-separator">·</span>
+        <span id="kpiHumidity" class="kpi-environment-humidity">--%</span>
+      </div>
       <div style="text-align:right">
         <div id="kpiClock" style="font-size:22px;font-weight:800;color:#38bdf8;font-variant-numeric:tabular-nums;text-shadow:0 0 20px rgba(56,189,248,.4)">--:--:--</div>
         <div id="kpiDate" style="font-size:10px;color:#475569"></div>
       </div>
-      <button onclick="refreshKpi()" style="background:rgba(14,165,233,.2);border:1px solid rgba(14,165,233,.3);color:#38bdf8;font-size:13px;font-weight:700;padding:7px 14px;border-radius:16px;cursor:pointer;font-family:inherit">↻</button>
+      <button class="kpi-refresh-button" onclick="refreshKpi()" style="background:rgba(14,165,233,.2);border:1px solid rgba(14,165,233,.3);color:#38bdf8;font-size:13px;font-weight:700;padding:7px 14px;border-radius:16px;cursor:pointer;font-family:inherit">↻</button>
     </div>
   </div>
 
@@ -962,7 +988,7 @@ function showView(name) {
   if (name === 'kpi')     startKpiView();
   if (name === 'records') renderTable();
   if (name === 'equipStatus') initEqStatusView();
-  if (name === 'prepare') renderPrepareHistory();
+  if (name === 'prepare') initPrepareHistoryView();
   if (name === 'fixjob') renderFixJobHistory();
   if (name === 'workload') initWorkloadView();
   if (name === 'search') initSearchToolView();
@@ -1196,6 +1222,95 @@ async function renderPrepareHistory() {
   }
 }
 
+function currentBkkMonth() {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Bangkok', year: 'numeric', month: '2-digit'
+  }).format(new Date()).slice(0, 7);
+}
+
+function bkkTodayISO() {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Bangkok', year: 'numeric', month: '2-digit', day: '2-digit'
+  }).format(new Date());
+}
+
+function slashDateToISO(value) {
+  const match = String(value || '').match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!match) return '';
+  return `${match[3]}-${String(match[2]).padStart(2, '0')}-${String(match[1]).padStart(2, '0')}`;
+}
+
+function thaiMonthLabel(monthLabel) {
+  const [year, month] = String(monthLabel || '').split('-').map(Number);
+  if (!year || !month) return '—';
+  return new Intl.DateTimeFormat('th-TH', {
+    timeZone: 'Asia/Bangkok', month: 'long', year: 'numeric'
+  }).format(new Date(Date.UTC(year, month - 1, 1, 12)));
+}
+
+function initPrepareHistoryView() {
+  const monthInput = document.getElementById('borrowMonthlyMonth');
+  if (monthInput && !monthInput.value) monthInput.value = currentBkkMonth();
+  renderBorrowMonthlySummary();
+  renderPrepareHistory();
+}
+
+async function renderBorrowMonthlySummary() {
+  const monthInput = document.getElementById('borrowMonthlyMonth');
+  const summary = document.getElementById('borrowMonthlySummary');
+  const meta = document.getElementById('borrowMonthlyMeta');
+  if (!monthInput || !summary || !meta) return;
+
+  const monthLabel = monthInput.value || currentBkkMonth();
+  monthInput.value = monthLabel;
+  summary.innerHTML = '<div class="state-loading"><div class="spinner"></div>กำลังคำนวณสรุปรายเดือน…</div>';
+  meta.textContent = '';
+
+  try {
+    const [year, month] = monthLabel.split('-').map(Number);
+    if (!year || !month) throw new Error('เดือนไม่ถูกต้อง');
+    const holidays = await fetchThaiHolidayDates();
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const todayISO = bkkTodayISO();
+    const isCurrentMonth = monthLabel === todayISO.slice(0, 7);
+    const workingDates = [];
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const iso = `${monthLabel}-${String(day).padStart(2, '0')}`;
+      const weekday = new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+      if (weekday !== 0 && weekday !== 6 && !holidays.has(iso)) workingDates.push(iso);
+    }
+
+    const borrowedRows = allRecords
+      .filter(record => String(record['ประเภท (ยืม/คืน)'] || '').includes('ยืม'))
+      .map(record => ({ record, iso: slashDateToISO(record['วันที่']) }))
+      .filter(item => item.iso.startsWith(monthLabel));
+    const workingSet = new Set(workingDates);
+    const workingRows = borrowedRows.filter(item => workingSet.has(item.iso));
+    const offDayRows = borrowedRows.filter(item => !workingSet.has(item.iso));
+    const elapsedWorkingDays = workingDates.filter(iso => !isCurrentMonth || iso <= todayISO).length;
+    const activeWorkingDays = new Set(workingRows.map(item => item.iso)).size;
+    const average = elapsedWorkingDays ? workingRows.length / elapsedWorkingDays : 0;
+
+    const cards = [
+      { label: 'ให้บริการในวันทำการ', value: workingRows.length.toLocaleString('th-TH'), unit: 'เครื่อง', note: 'จันทร์–ศุกร์ ไม่รวมวันหยุดราชการ', tone: 'primary' },
+      { label: isCurrentMonth ? 'วันทำการที่ผ่านแล้ว' : 'วันทำการของเดือน', value: elapsedWorkingDays.toLocaleString('th-TH'), unit: 'วัน', note: `มีรายการให้บริการ ${activeWorkingDays.toLocaleString('th-TH')} วัน`, tone: 'neutral' },
+      { label: 'เฉลี่ยต่อวันทำการ', value: average.toLocaleString('th-TH', { minimumFractionDigits: 1, maximumFractionDigits: 1 }), unit: 'เครื่อง/วัน', note: 'คำนวณจากวันทำการที่ผ่านแล้ว', tone: 'success' },
+      { label: 'ให้บริการนอกวันทำการ', value: offDayRows.length.toLocaleString('th-TH'), unit: 'เครื่อง', note: 'เสาร์–อาทิตย์ และวันหยุดราชการ', tone: 'warning' }
+    ];
+
+    summary.innerHTML = cards.map(card => `<article class="borrow-monthly-stat is-${card.tone}">
+      <span>${card.label}</span>
+      <div><strong>${card.value}</strong><b>${card.unit}</b></div>
+      <small>${card.note}</small>
+    </article>`).join('');
+    meta.textContent = `${thaiMonthLabel(monthLabel)} · รวมรายการยืมทั้งหมด ${borrowedRows.length.toLocaleString('th-TH')} เครื่อง`;
+  } catch (error) {
+    console.error(error);
+    summary.innerHTML = '<div class="borrow-monthly-error">คำนวณสรุปรายเดือนไม่สำเร็จ กรุณาลองใหม่อีกครั้ง</div>';
+  }
+}
+
 async function renderFixJobHistory() {
   const body = document.getElementById('fixJobBody');
   const cnt  = document.getElementById('fixJobCount');
@@ -1264,6 +1379,7 @@ async function loadAll() {
     renderHomeAvailability();
     renderHomeTrend();
     renderDashboardSummary();
+    if (currentView === 'prepare') renderBorrowMonthlySummary();
     note.textContent = '';
     document.getElementById('lastUpdated').textContent =
       'อัพเดต ' + new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
@@ -1292,6 +1408,8 @@ function initDashboardRealtime() {
       goToSlide(kpiSlideIdx, false);
     } else if (currentView === 'records') {
       renderTable();
+    } else if (currentView === 'prepare') {
+      initPrepareHistoryView();
     } else if (currentView === 'search') {
       renderSearchToolResults();
     } else {
@@ -2648,8 +2766,11 @@ let kpiSlideIdx = 0;
 let kpiSlideTimer = null;
 let kpiRefreshTimer = null;
 let kpiClockTimer = null;
+let kpiEnvironmentTimer = null;
 let kpiRefreshCountdown = 60;
 const KPI_SLIDE_SEC = 10;
+const KPI_ENVIRONMENT_REFRESH_MS = 10000;
+const KPI_ENVIRONMENT_STALE_MS = 120000;
 let kpiSlideSec = KPI_SLIDE_SEC;
 let kpiProgressAnim = null;
 
@@ -2658,6 +2779,7 @@ function startKpiView() {
   buildKpiDots();
   goToSlide(0, false);
   startKpiClock();
+  startKpiEnvironment();
   startKpiSlideTimer();
   startKpiRefreshTimer();
   startKpiParticles();
@@ -2708,12 +2830,14 @@ function stopKpiView() {
   clearInterval(kpiSlideTimer);
   clearInterval(kpiRefreshTimer);
   clearInterval(kpiClockTimer);
+  clearInterval(kpiEnvironmentTimer);
   cancelAnimationFrame(kpiProgressAnim);
   cancelAnimationFrame(kpiParticleAnim);
 }
 
 function refreshKpi() {
   kpiRefreshCountdown = 60;
+  refreshKpiEnvironment();
   loadAll().then(() => { renderKpiData(); goToSlide(kpiSlideIdx, false); });
 }
 
@@ -2792,6 +2916,69 @@ function startKpiClock() {
   };
   tick();
   kpiClockTimer = setInterval(tick, 1000);
+}
+
+function setKpiEnvironmentState(state, temperature = null, humidity = null, observedAt = null) {
+  const badge = document.getElementById('kpiEnvironment');
+  const tempEl = document.getElementById('kpiTemperature');
+  const humidityEl = document.getElementById('kpiHumidity');
+  if (!badge || !tempEl || !humidityEl) return;
+
+  badge.classList.remove('is-loading', 'is-online', 'is-stale', 'is-offline');
+  badge.classList.add(`is-${state}`);
+
+  if (Number.isFinite(temperature) && Number.isFinite(humidity)) {
+    tempEl.textContent = `${temperature.toFixed(1)}°C`;
+    humidityEl.textContent = `${Math.round(humidity)}%`;
+  } else {
+    tempEl.textContent = '--.-°C';
+    humidityEl.textContent = '--%';
+  }
+
+  if (state === 'online') {
+    badge.title = `ข้อมูลสดจาก ESP32 · อัปเดต ${observedAt.toLocaleTimeString('th-TH')}`;
+  } else if (state === 'stale') {
+    badge.title = `ESP32 ยังไม่ส่งข้อมูลใหม่ · ล่าสุด ${observedAt.toLocaleTimeString('th-TH')}`;
+  } else if (state === 'loading') {
+    badge.title = 'กำลังโหลดข้อมูลอุณหภูมิห้อง';
+  } else {
+    badge.title = 'ยังไม่พบข้อมูลจาก ESP32';
+  }
+}
+
+async function refreshKpiEnvironment() {
+  try {
+    const { data, error } = await supabase
+      .from('environment_status')
+      .select('temperature_c, humidity_pct, observed_at')
+      .eq('device_id', 'env-monitor-1')
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) {
+      setKpiEnvironmentState('offline');
+      return;
+    }
+
+    const temperature = Number(data.temperature_c);
+    const humidity = Number(data.humidity_pct);
+    const observedAt = new Date(data.observed_at);
+    if (!Number.isFinite(temperature) || !Number.isFinite(humidity) || Number.isNaN(observedAt.getTime())) {
+      throw new Error('Invalid environment data');
+    }
+
+    const isStale = Date.now() - observedAt.getTime() > KPI_ENVIRONMENT_STALE_MS;
+    setKpiEnvironmentState(isStale ? 'stale' : 'online', temperature, humidity, observedAt);
+  } catch (error) {
+    console.warn('โหลดข้อมูลอุณหภูมิห้องไม่สำเร็จ', error);
+    setKpiEnvironmentState('offline');
+  }
+}
+
+function startKpiEnvironment() {
+  clearInterval(kpiEnvironmentTimer);
+  setKpiEnvironmentState('loading');
+  refreshKpiEnvironment();
+  kpiEnvironmentTimer = setInterval(refreshKpiEnvironment, KPI_ENVIRONMENT_REFRESH_MS);
 }
 
 async function renderKpiData() {
