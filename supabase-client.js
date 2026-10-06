@@ -10,6 +10,37 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // ทำให้ทั้งไฟล์นี้ไม่ทำงานเลย (ทุกหน้าโหลด/บันทึกข้อมูลไม่ได้) — var ประกาศซ้ำได้และแทนที่ namespace ด้วย client ที่สร้างแล้ว
 var supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+const MEMS_QR_SCANNER_SETTING_ID = 'qr_scanner_enabled';
+
+/** อ่านสวิตช์ QR ส่วนกลาง — ถ้ายังไม่มีแถวให้เปิดไว้เพื่อคงพฤติกรรมเดิม */
+async function fetchQrScannerEnabled() {
+  const { data, error } = await supabase
+    .from('app_settings')
+    .select('bool_value')
+    .eq('id', MEMS_QR_SCANNER_SETTING_ID)
+    .limit(1);
+  if (error) throw error;
+  return !data || !data.length ? true : data[0].bool_value !== false;
+}
+
+/** บันทึกสวิตช์ QR ส่วนกลาง — RLS อนุญาตเฉพาะแอดมินหลัก */
+async function saveQrScannerEnabled(enabled) {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error('กรุณาเข้าสู่ระบบใหม่');
+  const { data, error } = await supabase
+    .from('app_settings')
+    .upsert({
+      id: MEMS_QR_SCANNER_SETTING_ID,
+      bool_value: !!enabled,
+      updated_at: new Date().toISOString(),
+      updated_by: session.user.id
+    }, { onConflict: 'id' })
+    .select('bool_value')
+    .single();
+  if (error) throw error;
+  return data.bool_value !== false;
+}
+
 /** วันที่/เวลาปัจจุบันตามเขตเวลาไทย (Asia/Bangkok) โดยไม่ขึ้นกับ timezone ของอุปกรณ์ผู้ใช้ */
 function bkkDateStr(d) {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);

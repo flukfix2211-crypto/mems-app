@@ -4,6 +4,7 @@
 let memsQrReturnAsset = null;
 let memsGlobalScannerInstalled = false;
 let memsScanIntendedAction = null;
+let memsQrScannerEnabled = true;
 const memsScannerState = {
   buffer: '',
   startedAt: 0,
@@ -49,7 +50,27 @@ function memsSetQrDevice(asset, equipmentName) {
 function memsSyncQrScanCard(action) {
   const card = document.getElementById('qrScanCard');
   if (!card) return;
-  card.style.display = action === 'return' ? '' : 'none';
+  card.style.display = memsQrScannerEnabled && action === 'return' ? '' : 'none';
+}
+
+async function memsLoadQrScannerSetting() {
+  try {
+    memsQrScannerEnabled = await fetchQrScannerEnabled();
+  } catch (err) {
+    console.error('โหลดการตั้งค่า QR ไม่สำเร็จ', err);
+    memsQrScannerEnabled = true;
+  }
+  if (!memsQrScannerEnabled) memsClearQrReturnContext();
+  memsSyncQrScanCard(S.action);
+  return memsQrScannerEnabled;
+}
+
+function memsSelectAction(action) {
+  if (!memsQrScannerEnabled) {
+    setAction(action);
+    return;
+  }
+  memsChooseActionAndScan(action);
 }
 
 function memsShowQrScanPrompt(action) {
@@ -79,6 +100,10 @@ function memsSetQrScanPromptError(message) {
 }
 
 function memsChooseActionAndScan(action) {
+  if (!memsQrScannerEnabled) {
+    setAction(action);
+    return;
+  }
   memsClearQrReturnContext();
   setAction(action);
   memsScanIntendedAction = action;
@@ -170,6 +195,7 @@ function memsFinishGlobalScan() {
 }
 
 function memsHandleGlobalScannerKey(event) {
+  if (!memsQrScannerEnabled) return;
   if (event.ctrlKey || event.altKey || event.metaKey) return;
   const now = performance.now();
 
@@ -205,7 +231,7 @@ function memsHandleGlobalScannerKey(event) {
 }
 
 function memsInstallGlobalScanner() {
-  if (memsGlobalScannerInstalled) return;
+  if (!memsQrScannerEnabled || memsGlobalScannerInstalled) return;
   document.addEventListener('keydown', memsHandleGlobalScannerKey, true);
   memsGlobalScannerInstalled = true;
 }
@@ -276,6 +302,7 @@ function memsPrimeQrNumber(equip, number) {
 }
 
 async function memsProcessQrScan() {
+  if (!memsQrScannerEnabled) return;
   const input = document.getElementById('qrScanInput');
   const assetId = memsAssetIdFromScan(input && input.value);
   if (!assetId) {
@@ -345,10 +372,15 @@ async function memsApplyQrBorrowSelection() {
 }
 
 async function memsHandleQrDeepLink() {
-  memsInstallGlobalScanner();
   const params = new URLSearchParams(window.location.search);
   const mode = params.get('mode') || (params.get('m') === 'r' ? 'return' : '');
   const assetId = params.get('asset') || params.get('a');
+  if (!memsQrScannerEnabled) {
+    if (mode === 'return') setAction('return');
+    memsSyncQrScanCard(S.action);
+    return;
+  }
+  memsInstallGlobalScanner();
   memsSyncQrScanCard(mode === 'return' ? 'return' : S.action);
   if (mode !== 'return' || !assetId) return;
   await memsUseQrAssetId(assetId, { action: 'return' });
