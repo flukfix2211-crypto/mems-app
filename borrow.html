@@ -134,7 +134,9 @@
     .qr-scan-prompt-icon svg { width:42px;height:42px; }
     .qr-scan-prompt-action { display:inline-flex;margin-bottom:9px;padding:5px 11px;border-radius:999px;background:#EAF6F8;color:var(--a);font-size:12px;font-weight:800; }
     .qr-scan-prompt-title { margin:0;color:var(--txt);font-size:24px;font-weight:900;line-height:1.25; }
-    .qr-scan-prompt-hint { margin:9px 0 18px;color:var(--muted);font-size:13px;font-weight:600;line-height:1.55; }
+    .qr-scan-prompt-input { width:100%;margin:14px 0 8px;padding:12px 14px;border:2px solid var(--border);border-radius:11px;background:#F7FBFC;color:var(--txt);font-family:inherit;font-size:14px;font-weight:700;text-align:center;outline:none; }
+    .qr-scan-prompt-input:focus { border-color:var(--a);background:#fff;box-shadow:0 0 0 3px rgba(20,118,135,.13); }
+    .qr-scan-prompt-hint { margin:0 0 18px;color:var(--muted);font-size:13px;font-weight:600;line-height:1.55; }
     .qr-scan-prompt-hint.error { color:#B82E2E; }
     .qr-scan-prompt-cancel { width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:11px;background:#fff;color:var(--muted);font-family:inherit;font-size:14px;font-weight:800;cursor:pointer; }
     @keyframes qrScanPulse { 0%,100% { transform:scale(1);box-shadow:0 0 0 0 rgba(20,118,135,.18); } 50% { transform:scale(1.04);box-shadow:0 0 0 12px rgba(20,118,135,0); } }
@@ -720,6 +722,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       </div>
       <div id="qrScanPromptAction" class="qr-scan-prompt-action"></div>
       <h2 id="qrScanPromptTitle" class="qr-scan-prompt-title">กรุณาสแกน QR ที่ตัวเครื่อง</h2>
+      <input id="qrScanPromptInput" class="qr-scan-prompt-input" type="text" inputmode="none" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="รอรับข้อมูลจากเครื่องสแกน…" aria-label="ข้อมูลจากเครื่องสแกน QR" oninput="memsHandlePromptScannerInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();memsProcessPromptScan()}">
       <p id="qrScanPromptHint" class="qr-scan-prompt-hint">ยิงเครื่องสแกนได้ทันที ไม่ต้องคลิกช่องกรอกข้อมูล</p>
       <button type="button" class="qr-scan-prompt-cancel" onclick="memsHideQrScanPrompt(true)">ปิดและกรอกแบบปกติ</button>
     </div>
@@ -1931,3 +1934,4 @@ function resetForm() {
 <script src="mascot.js?v=20260923-mascot-2"></script>
 </body>
 </html>
+
