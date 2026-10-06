@@ -37,4 +37,3 @@ supabase secrets set TELEGRAM_TOKEN=xxxx TELEGRAM_CHAT_ID=xxxx
 
 ## Developed by
 Pavarit Somchipeng
-
