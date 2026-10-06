@@ -302,6 +302,33 @@ async function memsLoadQrAsset(assetId) {
   return data[0];
 }
 
+function memsSelectBorrowedWard(ward) {
+  const wardSelect = document.getElementById('wardSel');
+  if (!wardSelect || !ward) throw new Error('ไม่พบหน่วยงานที่ยืมเครื่องนี้');
+  let option = Array.from(wardSelect.options).find(item => item.value === ward);
+  if (!option) {
+    option = new Option(ward, ward);
+    option.dataset.memsAutoWard = 'true';
+    const otherOption = Array.from(wardSelect.options)
+      .find(item => item.value === 'อื่นๆ โปรดระบุชื่อตึก');
+    wardSelect.insertBefore(option, otherOption || null);
+  }
+  wardSelect.value = ward;
+  const otherWrap = document.getElementById('otherWrap');
+  const otherInput = document.getElementById('otherWard');
+  if (otherWrap) otherWrap.classList.add('hidden');
+  if (otherInput) otherInput.value = '';
+}
+
+async function memsLoadBorrowedStatus(equipment, number) {
+  const status = await fetchEquipmentStatusForMachine(equipment, number);
+  if (!status || !status.isBorrowed) {
+    throw new Error('เครื่องนี้ไม่มีรายการยืมค้างอยู่ จึงยังคืนไม่ได้');
+  }
+  if (!status.ward) throw new Error('รายการยืมล่าสุดไม่มีข้อมูลตึก/หน่วยงาน');
+  return status;
+}
+
 async function memsUseQrAssetId(assetId, options) {
   const targetAction = (options && options.action) || memsScanIntendedAction || S.action || 'return';
   if (S.action !== targetAction) setAction(targetAction);
@@ -317,6 +344,11 @@ async function memsUseQrAssetId(assetId, options) {
     memsSyncQrScanCard(targetAction);
     if (!equipButton) throw new Error('ไม่พบประเภทเครื่อง “' + requestedEquip + '” ในหน้าทำรายการ');
     const equip = equipButton.dataset.e;
+    if (targetAction === 'return') {
+      memsSetQrBanner('กำลังค้นหาหน่วยงานที่ยืมเครื่องนี้…', 'loading');
+      const borrowedStatus = await memsLoadBorrowedStatus(equip, asset.no);
+      memsSelectBorrowedWard(borrowedStatus.ward);
+    }
     memsHideQrScanPrompt(true);
     memsSetQrDevice(asset, equip);
     pickEquip(equipButton, equip);
@@ -324,8 +356,7 @@ async function memsUseQrAssetId(assetId, options) {
 
     const ward = document.getElementById('wardSel').value;
     if (!ward) {
-      const wardText = targetAction === 'borrow' ? 'หน่วยงานที่ต้องการยืม' : 'หน่วยงานที่นำมาคืน';
-      memsSetQrBanner('สแกนแล้ว: ' + equip + ' No.' + asset.no + ' — กรุณาเลือก' + wardText, 'ready');
+      memsSetQrBanner('สแกนแล้ว: ' + equip + ' No.' + asset.no + ' — กรุณาเลือกหน่วยงานที่ต้องการยืม', 'ready');
       return;
     }
     await memsApplyQrSelection();
