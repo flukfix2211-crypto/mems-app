@@ -142,6 +142,11 @@
     .qr-scan-beam-streak { stroke-dasharray:9 8;animation:qrBeamTravel .85s linear infinite; }
     .qr-target-ring { transform-box:fill-box;transform-origin:center;animation:qrTargetPulse 1.1s ease-out infinite; }
     .qr-code-sweep { animation:qrCodeSweep 1.35s ease-in-out infinite; }
+    .qr-scan-processing { display:none;min-height:126px;align-items:center;justify-content:center; }
+    .qr-processing-spinner { width:52px;height:52px;border:5px solid #DCEBED;border-top-color:var(--a);border-right-color:var(--a);border-radius:50%;animation:qrProcessingSpin .72s linear infinite; }
+    .qr-scan-prompt.processing .qr-scan-scene { display:none; }
+    .qr-scan-prompt.processing .qr-scan-processing { display:flex; }
+    .qr-scan-prompt.processing .qr-scan-prompt-cancel { opacity:.55;cursor:wait; }
     .qr-scan-prompt-hint { margin:0 0 18px;color:var(--muted);font-size:13px;font-weight:600;line-height:1.55; }
     .qr-scan-prompt-hint.error { color:#B82E2E; }
     .qr-scan-prompt-cancel { width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:11px;background:#fff;color:var(--muted);font-family:inherit;font-size:14px;font-weight:800;cursor:pointer; }
@@ -151,9 +156,11 @@
     @keyframes qrBeamTravel { to { stroke-dashoffset:-34; } }
     @keyframes qrTargetPulse { 0% { opacity:.7;transform:scale(.82); } 72%,100% { opacity:0;transform:scale(1.55); } }
     @keyframes qrCodeSweep { 0%,100% { transform:translateY(-8px);opacity:.25; } 50% { transform:translateY(9px);opacity:1; } }
+    @keyframes qrProcessingSpin { to { transform:rotate(360deg); } }
     @media (prefers-reduced-motion:reduce) {
       .qr-scan-prompt-icon,.qr-scanner-handset,.qr-scan-beam,.qr-scan-beam-streak,.qr-target-ring,.qr-code-sweep { animation:none !important; }
       .qr-scan-beam,.qr-target-ring,.qr-code-sweep { opacity:.72; }
+      .qr-processing-spinner { animation-duration:1.5s; }
     }
     .sec-label {
       font-size: 11px;
@@ -782,8 +789,11 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
           <circle class="qr-target-ring" cx="204" cy="68" r="18" stroke="#20C3DA" stroke-width="2"/>
         </svg>
       </div>
+      <div class="qr-scan-processing" aria-hidden="true">
+        <div class="qr-processing-spinner"></div>
+      </div>
       <p id="qrScanPromptHint" class="qr-scan-prompt-hint">�ԧ����ͧ�᡹��ѹ�� ����ͧ��ԡ��ͧ��͡������</p>
-      <button type="button" class="qr-scan-prompt-cancel" onclick="memsHideQrScanPrompt(true)">�Դ��С�͡Ẻ����</button>
+      <button id="qrScanPromptCancel" type="button" class="qr-scan-prompt-cancel" onclick="memsHideQrScanPrompt(true)">�Դ��С�͡Ẻ����</button>
     </div>
   </div>
 
@@ -954,7 +964,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 <script src="vendor/supabase.js"></script>
 <script src="supabase-client.js?v=20261006-qr-return-ward-1"></script>
 <script src="auth.js"></script>
-<script src="borrow-qr.js?v=20261006-qr-return-ward-1"></script>
+<script src="borrow-qr.js?v=20261006-qr-processing-2"></script>
 <script src="mems-clock.js?v=20260924-clock-status-1"></script>
 <script>
 /* ====== STATE ====== */
