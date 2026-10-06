@@ -1329,18 +1329,16 @@ async function renderFixJobHistory() {
         <td style="font-weight:800;color:var(--a)">${it.ward}</td>
         <td>${it.topic}</td>
         <td style="font-size:12px;max-width:220px;white-space:normal">${it.detail}</td>
-        <td style="font-size:12px;max-width:220px;white-space:normal">${it.solution}</td>
         <td style="font-size:12px">${it.staff}</td>
         <td>${photos}</td>
       </tr>`;
     }).join('');
-    body.innerHTML = `<table style="width:100%;border-collapse:collapse;min-width:820px">
+    body.innerHTML = `<table style="width:100%;border-collapse:collapse;min-width:700px">
       <thead><tr>
         <th style="text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:2px solid var(--border)">เวลา</th>
         <th style="text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:2px solid var(--border)">หน่วยงาน</th>
         <th style="text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:2px solid var(--border)">เรื่องที่แก้ไข</th>
         <th style="text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:2px solid var(--border)">รายละเอียดงาน</th>
-        <th style="text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:2px solid var(--border)">วิธีแก้ไข</th>
         <th style="text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:2px solid var(--border)">ผู้ปฏิบัติ</th>
         <th style="text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:2px solid var(--border)">รูปภาพ</th>
       </tr></thead>

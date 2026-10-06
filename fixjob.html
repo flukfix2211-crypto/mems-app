@@ -144,13 +144,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     <textarea class="field" id="detailText" placeholder="อธิบายอาการ/ปัญหาที่พบ..."></textarea>
   </div>
 
-  <!-- 4. วิธีแก้ไข -->
-  <div class="card">
-    <div class="sec-label"><span class="req-dot"></span>วิธีแก้ไข</div>
-    <textarea class="field" id="solutionText" placeholder="อธิบายวิธีการแก้ไข/ผลลัพธ์..."></textarea>
-  </div>
-
-  <!-- 5. ผู้ปฏิบัติ -->
+  <!-- 4. ผู้ปฏิบัติ -->
   <div class="card">
     <div class="sec-label"><span class="req-dot"></span>ผู้ปฏิบัติ</div>
     <select class="field" id="staffSel" onchange="onStaffChange()">
@@ -171,7 +165,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     <div style="font-size:11px;color:var(--muted);margin-top:6px">บันทึกลงท้ายว่า "เจ้าหน้าที่ศูนย์เครื่องมือแพทย์" อัตโนมัติ</div>
   </div>
 
-  <!-- 6. แนบรูปภาพ -->
+  <!-- 5. แนบรูปภาพ -->
   <div class="card">
     <div class="sec-label">📷 แนบรูปภาพ <span style="font-weight:500;color:var(--muted);text-transform:none;letter-spacing:0">(ไม่บังคับ)</span></div>
     <label class="photo-picker" for="photoInput">
@@ -299,7 +293,6 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     document.getElementById('otherTopic').value = '';
     document.getElementById('otherTopicWrap').style.display = 'none';
     document.getElementById('detailText').value = '';
-    document.getElementById('solutionText').value = '';
     document.getElementById('staffSel').value = '';
     document.getElementById('staffOther').value = '';
     document.getElementById('staffOtherWrap').style.display = 'none';
@@ -318,13 +311,11 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     const topic = topicSelVal === '__new' ? topicOther : topicSelVal;
 
     const detail = document.getElementById('detailText').value.trim();
-    const solution = document.getElementById('solutionText').value.trim();
-
     const staffSelVal = document.getElementById('staffSel').value;
     const staffOther = document.getElementById('staffOther').value.trim();
     const staffName = staffSelVal === 'อื่นๆ' ? staffOther : staffSelVal;
 
-    if (!ward0 || !topic || !detail || !solution || !staffName
+    if (!ward0 || !topic || !detail || !staffName
         || (ward0 === 'อื่นๆ โปรดระบุชื่อตึก' && !wardOther)
         || (topicSelVal === '__new' && !topicOther)) {
       alert('⚠️ กรุณากรอกข้อมูลให้ครบทุกช่อง');
@@ -341,7 +332,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       const { error } = await supabase.from('fixjob_records').insert({
         record_date: bkkDateStr(now),
         record_time: bkkTimeStr(now),
-        ward, topic, detail, solution,
+        ward, topic, detail, solution: '',
         staff: staffName + ' เจ้าหน้าที่ศูนย์เครื่องมือแพทย์',
         photo_urls: photoUrls,
         recorded_at: now.toISOString()
