@@ -76,7 +76,11 @@ async function fetchEquipmentStatus() {
     supabase.from('equipment_status')
       .select('equipment_name, equipment_number, ward, staff_name, action, recorded_at, is_borrowed')
       .order('equipment_name').order('equipment_number'));
-  return rows.map(r => ({
+  return rows.map(mapEquipmentStatusRow);
+}
+
+function mapEquipmentStatusRow(r) {
+  return {
     equipment: r.equipment_name,
     number: r.equipment_number,
     lastAction: r.action,
@@ -84,7 +88,20 @@ async function fetchEquipmentStatus() {
     borrowedBy: r.staff_name,
     lastUpdate: r.recorded_at,
     isBorrowed: !!r.is_borrowed
-  }));
+  };
+}
+
+/** สถานะล่าสุดของเครื่องหนึ่งตัว ใช้สแกน QR คืนแล้วเลือกหน่วยงานเดิมอัตโนมัติ */
+async function fetchEquipmentStatusForMachine(equipment, number) {
+  const machineNo = normalizeMachineNo(number);
+  if (!equipment || !machineNo) return null;
+  const { data, error } = await supabase.from('equipment_status')
+    .select('equipment_name, equipment_number, ward, staff_name, action, recorded_at, is_borrowed')
+    .eq('equipment_name', equipment)
+    .eq('equipment_number', machineNo)
+    .limit(1);
+  if (error) throw error;
+  return data && data.length ? mapEquipmentStatusRow(data[0]) : null;
 }
 
 /**
