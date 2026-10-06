@@ -33,6 +33,21 @@
 
     .content { max-width: 800px; margin: -22px auto 0; padding: 0 14px 100px; position: relative; z-index: 1; }
     .card { background: var(--card); border-radius: var(--r); box-shadow: var(--sh); padding: 18px; margin-bottom: 12px; }
+    .feature-row { display:flex;align-items:center;justify-content:space-between;gap:18px; }
+    .feature-copy { min-width:0; }
+    .feature-title { font-size:16px;font-weight:800;color:var(--txt);margin-bottom:4px; }
+    .feature-desc { font-size:13px;line-height:1.55;color:var(--muted); }
+    .feature-status { display:inline-flex;align-items:center;gap:6px;margin-top:9px;font-size:12px;font-weight:800;color:var(--muted); }
+    .feature-status::before { content:'';width:8px;height:8px;border-radius:50%;background:#A8B5BA; }
+    .feature-status.on { color:var(--green); }
+    .feature-status.on::before { background:#20A052;box-shadow:0 0 0 4px rgba(32,160,82,.12); }
+    .feature-status.off { color:var(--red); }
+    .feature-status.off::before { background:#D34A4A; }
+    .feature-switch { position:relative;flex:0 0 auto;width:62px;height:36px;border:0;border-radius:999px;background:#C8D3D7;cursor:pointer;transition:.2s;box-shadow:inset 0 1px 3px rgba(0,0,0,.12); }
+    .feature-switch::after { content:'';position:absolute;top:4px;left:4px;width:28px;height:28px;border-radius:50%;background:#fff;box-shadow:0 2px 7px rgba(0,0,0,.2);transition:.2s; }
+    .feature-switch.on { background:#20A052; }
+    .feature-switch.on::after { transform:translateX(26px); }
+    .feature-switch:disabled { opacity:.55;cursor:wait; }
 
     .ctrl-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; justify-content: space-between; }
     .add-btn { padding: 10px 18px; background: linear-gradient(135deg, var(--a), var(--a2)); color: #fff; border: none; border-radius: var(--rs); font-family: 'Sarabun', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap; box-shadow: 0 3px 12px rgba(10,100,120,.25); transition: all .2s; -webkit-tap-highlight-color: transparent; }
@@ -171,6 +186,17 @@ body{background:#0c6173!important;background-image:none!important}
 </header>
 
 <div class="content">
+  <div class="card">
+    <div class="feature-row">
+      <div class="feature-copy">
+        <div class="feature-title">สแกน QR Code</div>
+        <div class="feature-desc">เปิด popup สแกนในหน้ายืม-คืน และปุ่มสแกนด้วยกล้องในหน้าเตรียมเครื่องมือ</div>
+        <div id="qrFeatureStatus" class="feature-status">กำลังโหลดการตั้งค่า…</div>
+      </div>
+      <button id="qrFeatureSwitch" class="feature-switch" type="button" role="switch" aria-checked="false" aria-label="เปิดหรือปิดการสแกน QR Code" onclick="toggleQrFeature()" disabled></button>
+    </div>
+  </div>
+
   <div class="card">
     <div class="ctrl-row">
       <div style="font-size:14px;color:var(--muted)">บัญชีทั้งหมดในระบบ — เฉพาะแอดมินเท่านั้นที่เข้าหน้านี้ได้</div>
@@ -317,6 +343,44 @@ body{background:#0c6173!important;background-image:none!important}
 let allUsers = [];
 let editingUserId = null; // null = create mode
 let modalRole = 'user';
+let qrFeatureEnabled = true;
+
+function renderQrFeatureSetting(loading) {
+  const button = document.getElementById('qrFeatureSwitch');
+  const status = document.getElementById('qrFeatureStatus');
+  button.classList.toggle('on', qrFeatureEnabled);
+  button.setAttribute('aria-checked', qrFeatureEnabled ? 'true' : 'false');
+  button.disabled = !!loading;
+  status.className = 'feature-status ' + (qrFeatureEnabled ? 'on' : 'off');
+  status.textContent = loading ? 'กำลังบันทึก…' : (qrFeatureEnabled ? 'เปิดใช้งานอยู่' : 'ปิดใช้งานอยู่');
+}
+
+async function loadQrFeatureSetting() {
+  const button = document.getElementById('qrFeatureSwitch');
+  button.disabled = true;
+  try {
+    qrFeatureEnabled = await fetchQrScannerEnabled();
+    renderQrFeatureSetting(false);
+  } catch (err) {
+    console.error(err);
+    document.getElementById('qrFeatureStatus').textContent = 'โหลดการตั้งค่าไม่สำเร็จ';
+    toast('❌ โหลดการตั้งค่า QR ไม่สำเร็จ');
+  }
+}
+
+async function toggleQrFeature() {
+  const next = !qrFeatureEnabled;
+  renderQrFeatureSetting(true);
+  try {
+    qrFeatureEnabled = await saveQrScannerEnabled(next);
+    renderQrFeatureSetting(false);
+    toast(qrFeatureEnabled ? '✅ เปิดใช้งานสแกน QR แล้ว' : '⏸️ ปิดใช้งานสแกน QR แล้ว');
+  } catch (err) {
+    console.error(err);
+    renderQrFeatureSetting(false);
+    toast('❌ บันทึกการตั้งค่าไม่สำเร็จ');
+  }
+}
 
 function memsGenPassword() {
   const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
@@ -714,7 +778,10 @@ buildPermCheckboxes();
 
 window.addEventListener('DOMContentLoaded', async () => {
   const profile = await memsGuard('super_admin'); // เฉพาะแอดมินหลัก (is_super_admin) เท่านั้น — role='admin' ทั่วไปเข้าไม่ได้
-  if (profile) loadUsers();
+  if (profile) {
+    loadQrFeatureSetting();
+    loadUsers();
+  }
 });
 </script>
 <script src="mascot.js?v=20260923-mascot-2"></script>

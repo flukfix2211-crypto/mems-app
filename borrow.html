@@ -681,10 +681,10 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   <div class="card">
     <div class="sec-label"><span class="req-dot"></span>ประเภทการทำรายการ</div>
     <div class="action-toggle">
-      <button class="action-btn borrow" onclick="memsChooseActionAndScan('borrow')">
+      <button class="action-btn borrow" onclick="memsSelectAction('borrow')">
         <svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V3m-5 5 5-5 5 5M4 14v7h16v-7"/></svg> <span class="ab-label">ยืม</span>
       </button>
-      <button class="action-btn return" onclick="memsChooseActionAndScan('return')">
+      <button class="action-btn return" onclick="memsSelectAction('return')">
         <svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13m-5-5 5 5 5-5M4 14v7h16v-7"/></svg> <span class="ab-label">คืน</span>
       </button>
     </div>
@@ -1044,6 +1044,7 @@ function setShift(s) {
 window.addEventListener('DOMContentLoaded', async () => {
   const profile = await memsGuard('borrow');
   if (!profile) return;
+  if (typeof memsLoadQrScannerSetting === 'function') await memsLoadQrScannerSetting();
   if (memsIsAdmin()) document.getElementById('backdateCard').style.display = '';
   setShift(detectShift());
   const mode = new URLSearchParams(location.search).get('mode');
