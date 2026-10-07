@@ -126,6 +126,8 @@
     .qr-return-kicker { display:block;font-size:10px;font-weight:700;letter-spacing:.06em;opacity:.7;margin-bottom:1px; }
     .qr-return-type { display:block;font-size:18px;font-weight:900;line-height:1.15; }
     .qr-return-no { flex-shrink:0;font-family:var(--mems-font-family);font-size:19px;font-weight:900;background:var(--a);color:#fff;border-radius:9px;padding:7px 11px; }
+    .qr-return-device.batch { align-items:flex-start;flex-direction:column; }
+    .qr-return-device.batch .qr-return-no { width:100%;font-size:12px;line-height:1.6;white-space:normal;overflow-wrap:anywhere; }
     .qr-return-message { font-size:12px;font-weight:700; }
     .qr-scan-prompt { display:none;position:fixed;inset:0;z-index:10020;align-items:center;justify-content:center;padding:20px;background:rgba(12,31,38,.62);backdrop-filter:blur(5px); }
     .qr-scan-prompt.show { display:flex; }
@@ -984,7 +986,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 <script src="vendor/supabase.js"></script>
 <script src="supabase-client.js?v=20261006-qr-return-ward-1"></script>
 <script src="auth.js"></script>
-<script src="borrow-qr.js?v=20261007-qr-batch-5"></script>
+<script src="borrow-qr.js?v=20261007-qr-mixed-return-6"></script>
 <script src="mems-clock.js?v=20260924-clock-status-1"></script>
 <script>
 /* ====== STATE ====== */
@@ -1751,7 +1753,13 @@ async function submitTransfer() {
 }
 
 async function handleSubmit() {
-  const nums   = getEquipNumbers();
+  const returnScanItems = S.action === 'return' && typeof memsQrBatchItems !== 'undefined'
+    ? memsQrBatchItems.slice()
+    : [];
+  const hasReturnScanBatch = returnScanItems.length > 0;
+  const nums   = hasReturnScanBatch
+    ? returnScanItems.map(item => String(item.number))
+    : getEquipNumbers();
   const ward   = document.getElementById('wardSel').value;
   const other  = document.getElementById('otherWard').value.trim();
   const name   = document.getElementById('staffName').value.trim();
@@ -1773,9 +1781,17 @@ async function handleSubmit() {
     } catch (e) { /* โหลดไม่ได้ -> ไม่บล็อค กันระบบล่ม */ }
   }
 
-  if (!S.action || !S.shift || !S.equip || nums.length === 0 || !ward || !name || (ward === 'อื่นๆ โปรดระบุชื่อตึก' && !other) || (S.equip === 'เครื่องมืออื่นๆ' && !otherEquipName)) {
+  if (!S.action || !S.shift || (!hasReturnScanBatch && !S.equip) || nums.length === 0 || !ward || !name || (ward === 'อื่นๆ โปรดระบุชื่อตึก' && !other) || (!hasReturnScanBatch && S.equip === 'เครื่องมืออื่นๆ' && !otherEquipName)) {
     alert('⚠️  กรุณากรอกข้อมูลให้ครบทุกช่อง');
     return;
+  }
+
+  if (hasReturnScanBatch) {
+    const borrowedWards = [...new Set(returnScanItems.map(item => item.borrowedStatus && item.borrowedStatus.ward).filter(Boolean))];
+    if (borrowedWards.length !== 1 || borrowedWards[0] !== finalWard) {
+      alert('⚠️ หน่วยงานในรายการสแกนไม่ตรงกับหน่วยงานที่เลือก กรุณากดคืนและสแกนรายการใหม่');
+      return;
+    }
   }
 
   // ยืมได้เฉพาะเครื่องที่อยู่ในทะเบียนครุภัณฑ์และสถานะ "ใช้งานได้"
@@ -1819,20 +1835,25 @@ async function handleSubmit() {
   btn.disabled = true;
   btn.textContent = `กำลังบันทึก… (0/${nums.length})`;
 
+  const returnRecords = hasReturnScanBatch
+    ? returnScanItems.map(item => ({ equipment: item.equipment, equipmentNumber: String(item.number) }))
+    : nums.map(number => ({ equipment: finalEquip, equipmentNumber: number }));
+  const returnTypes = [...new Set(returnRecords.map(item => item.equipment))];
+
   const basePayload = {
     action   : S.action === 'borrow' ? '🟩 ยืม' : '🟥 คืน',
     shift    : shiftTH[S.shift],
-    equipment: finalEquip,
+    equipment: returnTypes.length === 1 ? returnTypes[0] : 'หลายประเภท',
     ward     : finalWard,
     name     : name,
     timestamp: (actualTime || new Date()).toISOString()
   };
 
-  // submit one record per equipment number
+  // submit one record per equipment number (QR return may contain mixed equipment types)
   let savedCount = 0;
-  for (let i = 0; i < nums.length; i++) {
-    btn.textContent = `กำลังบันทึก… (${i + 1}/${nums.length})`;
-    const payload = { ...basePayload, equipmentNumber: nums[i] };
+  for (let i = 0; i < returnRecords.length; i++) {
+    btn.textContent = `กำลังบันทึก… (${i + 1}/${returnRecords.length})`;
+    const payload = { ...basePayload, ...returnRecords[i] };
     try {
       await saveBorrowRecord(payload);
       savedCount++;
@@ -1841,7 +1862,12 @@ async function handleSubmit() {
     }
   }
 
-  showSuccess({ ...basePayload, equipmentNumbers: nums, savedCount });
+  showSuccess({
+    ...basePayload,
+    equipmentNumbers: nums,
+    equipmentItems: hasReturnScanBatch ? returnRecords : null,
+    savedCount
+  });
 }
 
 function showSuccess(d) {
@@ -1868,8 +1894,13 @@ function showSuccess(d) {
     row.append(key, val);
     detail.append(row);
   };
-  addRow('เครื่องมือ', d.equipment);
-  nums.forEach((n, i) => addRow(`เครื่องที่ ${i + 1}`, `#${n}`));
+  if (d.equipmentItems && d.equipmentItems.length) {
+    addRow('รายการเครื่องมือ', d.equipmentItems.length + ' เครื่อง');
+    d.equipmentItems.forEach((item, i) => addRow(`เครื่องที่ ${i + 1}`, `${item.equipment} · No.${item.equipmentNumber}`));
+  } else {
+    addRow('เครื่องมือ', d.equipment);
+    nums.forEach((n, i) => addRow(`เครื่องที่ ${i + 1}`, `#${n}`));
+  }
   addRow('ตึก', d.ward);
   addRow('ผู้ทำรายการ', d.name);
   if (partial) {
