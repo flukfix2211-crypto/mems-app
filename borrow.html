@@ -718,7 +718,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   <div class="card" id="qrScanCard" style="display:none">
     <div class="sec-label"><span class="req-dot"></span>สแกน QR ที่ตัวเครื่อง</div>
     <div class="qr-scan-row">
-      <input class="field" id="qrScanInput" type="text" inputmode="url" autocomplete="off"
+      <input class="field" id="qrScanInput" type="text" inputmode="url" enterkeyhint="go" lang="en" dir="ltr" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
         placeholder="คลิกช่องนี้แล้วสแกน QR"
         onkeydown="if(event.key==='Enter'){event.preventDefault();memsProcessQrScan()}">
       <button class="qr-scan-btn" type="button" onclick="memsProcessQrScan()">ตรวจสอบ</button>
@@ -744,7 +744,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       </div>
       <div id="qrScanPromptAction" class="qr-scan-prompt-action"></div>
       <h2 id="qrScanPromptTitle" class="qr-scan-prompt-title">กรุณาสแกน QR ที่ตัวเครื่อง</h2>
-      <input id="qrScanPromptInput" class="qr-scan-prompt-input" type="text" inputmode="none" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="รอรับข้อมูลจากเครื่องสแกน…" aria-label="ข้อมูลจากเครื่องสแกน QR" oninput="memsHandlePromptScannerInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();memsProcessPromptScan()}">
+      <input id="qrScanPromptInput" class="qr-scan-prompt-input" type="text" inputmode="none" lang="en" dir="ltr" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="รอรับข้อมูลจากเครื่องสแกน…" aria-label="ข้อมูลจากเครื่องสแกน QR" oninput="memsHandlePromptScannerInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();memsProcessPromptScan()}">
       <div class="qr-scan-scene" aria-hidden="true">
         <svg viewBox="0 0 252 112" fill="none" xmlns="http://www.w3.org/2000/svg">
           <defs>
@@ -920,7 +920,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   <!-- ผู้ยืม/ผู้คืน -->
   <div class="card">
     <div class="sec-label"><span class="req-dot"></span>ผู้ยืม / ผู้คืน</div>
-    <input type="text" class="field" id="staffName" placeholder="กรุณาใส่ชื่อจริง">
+    <input type="text" class="field" id="staffName" lang="th" inputmode="text" enterkeyhint="done" autocomplete="name" autocapitalize="none" autocorrect="on" spellcheck="false" placeholder="กรุณาใส่ชื่อจริง">
   </div>
 
   <!-- บันทึกย้อนหลัง: ระบุวัน-เวลาที่ยืม/คืนจริง เพื่อให้นับวันยืมและวันครบเปลี่ยน Circuit ถูกต้อง (เฉพาะแอดมิน — แสดงหลังตรวจสิทธิ์) -->
@@ -964,7 +964,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 <script src="vendor/supabase.js"></script>
 <script src="supabase-client.js?v=20261006-qr-return-ward-1"></script>
 <script src="auth.js"></script>
-<script src="borrow-qr.js?v=20261006-qr-processing-3"></script>
+<script src="borrow-qr.js?v=20261007-android-keyboard-4"></script>
 <script src="mems-clock.js?v=20260924-clock-status-1"></script>
 <script>
 /* ====== STATE ====== */

@@ -252,7 +252,7 @@ function memsResetScannerBuffer() {
 }
 
 function memsFinishGlobalScan() {
-  const payload = memsScannerState.buffer.trim();
+  const payload = memsNormalizeScannerText(memsScannerState.buffer.trim());
   if (!memsLooksLikeQrPayload(payload)) return false;
   const assetId = memsAssetIdFromScan(payload);
   if (!assetId) return false;
