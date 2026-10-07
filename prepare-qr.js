@@ -2,6 +2,10 @@
 let memsPrepareQrScanner = null;
 let memsPrepareQrHandling = false;
 let memsPrepareQrEnabled = false;
+let memsPrepareQrDraftItems = [];
+let memsPrepareQrBatchItems = [];
+let memsPrepareQrLastValue = '';
+let memsPrepareQrLastReadAt = 0;
 
 function memsPrepareAssetIdFromScan(raw) {
   const value = String(raw || '').trim();
@@ -21,6 +25,53 @@ function memsSetPrepareQrStatus(message, isError) {
   if (!status) return;
   status.textContent = message;
   status.classList.toggle('error', !!isError);
+}
+
+function memsRenderPrepareQrDraft() {
+  const wrap = document.getElementById('prepareQrCameraBatch');
+  const list = document.getElementById('prepareQrCameraList');
+  const count = document.getElementById('prepareQrCameraCount');
+  const confirm = document.getElementById('prepareQrConfirm');
+  if (wrap) wrap.classList.toggle('show', memsPrepareQrDraftItems.length > 0);
+  if (count) count.textContent = memsPrepareQrDraftItems.length + ' เครื่อง';
+  if (confirm) confirm.disabled = memsPrepareQrDraftItems.length === 0 || memsPrepareQrHandling;
+  if (!list) return;
+  list.replaceChildren();
+  memsPrepareQrDraftItems.forEach((item, index) => {
+    const chip = document.createElement('div');
+    chip.className = 'prepare-qr-chip';
+    const label = document.createElement('span');
+    label.textContent = item.equipment + ' · No. ' + item.number;
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.textContent = '×';
+    remove.setAttribute('aria-label', 'นำ ' + item.equipment + ' No. ' + item.number + ' ออกจากรายการ');
+    remove.onclick = () => {
+      memsPrepareQrDraftItems.splice(index, 1);
+      memsRenderPrepareQrDraft();
+    };
+    chip.append(label, remove);
+    list.appendChild(chip);
+  });
+}
+
+function memsRenderPrepareQrSelection() {
+  const summary = document.getElementById('prepareQrSelection');
+  if (!summary) return;
+  summary.classList.toggle('show', memsPrepareQrBatchItems.length > 0);
+  summary.textContent = memsPrepareQrBatchItems.length
+    ? '✓ เลือกแล้ว ' + memsPrepareQrBatchItems.length + ' เครื่อง: ' +
+      memsPrepareQrBatchItems.map(item => item.equipment + ' No.' + item.number).join(', ')
+    : '';
+}
+
+function memsResetPrepareQrBatch() {
+  memsPrepareQrDraftItems = [];
+  memsPrepareQrBatchItems = [];
+  memsPrepareQrLastValue = '';
+  memsPrepareQrLastReadAt = 0;
+  memsRenderPrepareQrDraft();
+  memsRenderPrepareQrSelection();
 }
 
 async function memsInitPrepareQrCamera() {
@@ -43,6 +94,10 @@ async function openPrepareQrCamera() {
   }
   const modal = document.getElementById('prepareQrCameraModal');
   const video = document.getElementById('prepareQrVideo');
+  memsPrepareQrDraftItems = memsPrepareQrBatchItems.slice();
+  memsPrepareQrLastValue = '';
+  memsPrepareQrLastReadAt = 0;
+  memsRenderPrepareQrDraft();
   modal.classList.add('show');
   memsSetPrepareQrStatus('กำลังเปิดกล้อง…', false);
 
@@ -76,7 +131,7 @@ async function openPrepareQrCamera() {
   }
 }
 
-function closePrepareQrCamera() {
+function closePrepareQrCamera(clearDraft = true) {
   if (memsPrepareQrScanner) {
     memsPrepareQrScanner.destroy();
     memsPrepareQrScanner = null;
@@ -86,10 +141,26 @@ function closePrepareQrCamera() {
   if (modal) modal.classList.remove('show');
   const video = document.getElementById('prepareQrVideo');
   if (video) video.srcObject = null;
+  if (clearDraft) {
+    memsPrepareQrDraftItems = [];
+    memsRenderPrepareQrDraft();
+  }
+}
+
+function memsConfirmPrepareQrBatch() {
+  if (memsPrepareQrHandling || !memsPrepareQrDraftItems.length) return;
+  memsPrepareQrBatchItems = memsPrepareQrDraftItems.slice();
+  memsRenderPrepareQrSelection();
+  closePrepareQrCamera(false);
+  toast('✅ เลือกจากกล้องแล้ว ' + memsPrepareQrBatchItems.length + ' เครื่อง');
 }
 
 async function memsHandlePrepareQrResult(raw) {
   if (memsPrepareQrHandling) return;
+  const now = Date.now();
+  if (raw === memsPrepareQrLastValue && now - memsPrepareQrLastReadAt < 1500) return;
+  memsPrepareQrLastValue = raw;
+  memsPrepareQrLastReadAt = now;
   const assetId = memsPrepareAssetIdFromScan(raw);
   if (!assetId) {
     memsSetPrepareQrStatus('QR นี้ไม่ใช่ป้ายเครื่องจากระบบ MEMs กรุณาลองใหม่', true);
@@ -113,21 +184,19 @@ async function memsHandlePrepareQrResult(raw) {
       .find(button => button.textContent.trim().toLowerCase() === requestedEquip.toLowerCase());
     if (!equipButton) throw new Error('ไม่พบประเภทเครื่อง “' + requestedEquip + '” ในหน้าเตรียมเครื่อง');
 
-    equipButton.click();
     const no = normalizeMachineNo(asset.no) || String(asset.no);
-    const existing = getNumberValues().map(value => normalizeMachineNo(value) || value);
-    if (!existing.includes(no)) {
-      const emptyInput = Array.from(document.querySelectorAll('.number-input')).find(input => !input.value.trim());
-      if (emptyInput) {
-        emptyInput.value = no;
-        emptyInput.dispatchEvent(new Event('input', { bubbles: true }));
-      } else {
-        addNumberField(no, false);
-      }
+    const duplicate = memsPrepareQrDraftItems.some(item => item.equipment === requestedEquip && item.number === no);
+    if (!duplicate) {
+      memsPrepareQrDraftItems.push({ asset, equipment: requestedEquip, number: no });
+      memsRenderPrepareQrDraft();
     }
-
-    closePrepareQrCamera();
-    toast((existing.includes(no) ? 'ℹ️ มีเครื่องนี้ในรายการแล้ว: ' : '✅ สแกนแล้ว: ') + equipButton.textContent.trim() + ' No.' + no);
+    memsSetPrepareQrStatus(
+      (duplicate ? 'มีเครื่องนี้ในรายการแล้ว: ' : 'รับแล้ว: ') + requestedEquip + ' No.' + no +
+      ' — สแกนเครื่องถัดไป หรือกดยืนยันเมื่อครบ',
+      false
+    );
+    memsPrepareQrHandling = false;
+    memsRenderPrepareQrDraft();
   } catch (err) {
     console.error(err);
     memsSetPrepareQrStatus('สแกนไม่สำเร็จ: ' + (err.message || err), true);
