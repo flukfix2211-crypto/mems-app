@@ -126,10 +126,12 @@
     .qr-return-kicker { display:block;font-size:10px;font-weight:700;letter-spacing:.06em;opacity:.7;margin-bottom:1px; }
     .qr-return-type { display:block;font-size:18px;font-weight:900;line-height:1.15; }
     .qr-return-no { flex-shrink:0;font-family:var(--mems-font-family);font-size:19px;font-weight:900;background:var(--a);color:#fff;border-radius:9px;padding:7px 11px; }
+    .qr-return-device.batch { align-items:flex-start;flex-direction:column; }
+    .qr-return-device.batch .qr-return-no { width:100%;font-size:12px;line-height:1.6;white-space:normal;overflow-wrap:anywhere; }
     .qr-return-message { font-size:12px;font-weight:700; }
     .qr-scan-prompt { display:none;position:fixed;inset:0;z-index:10020;align-items:center;justify-content:center;padding:20px;background:rgba(12,31,38,.62);backdrop-filter:blur(5px); }
     .qr-scan-prompt.show { display:flex; }
-    .qr-scan-prompt-box { width:min(100%,390px);padding:26px 22px 20px;text-align:center;background:#fff;border-radius:22px;box-shadow:0 24px 70px rgba(0,0,0,.28); }
+    .qr-scan-prompt-box { width:min(100%,390px);max-height:calc(100vh - 40px);overflow-y:auto;padding:26px 22px 20px;text-align:center;background:#fff;border-radius:22px;box-shadow:0 24px 70px rgba(0,0,0,.28); }
     .qr-scan-prompt-icon { width:72px;height:72px;margin:0 auto 14px;display:grid;place-items:center;border-radius:22px;background:#EAF6F8;color:var(--a);animation:qrScanPulse 1.6s ease-in-out infinite; }
     .qr-scan-prompt-icon svg { width:42px;height:42px; }
     .qr-scan-prompt-action { display:inline-flex;margin-bottom:9px;padding:5px 11px;border-radius:999px;background:#EAF6F8;color:var(--a);font-size:12px;font-weight:800; }
@@ -147,6 +149,16 @@
     .qr-scan-prompt.processing .qr-scan-scene { display:none; }
     .qr-scan-prompt.processing .qr-scan-processing { display:flex; }
     .qr-scan-prompt.processing .qr-scan-prompt-cancel { opacity:.55;cursor:wait; }
+    .qr-scan-batch { display:none;margin:10px 0 12px;padding:11px;border:1px solid #CFE5E9;border-radius:13px;background:#F7FBFC;text-align:left; }
+    .qr-scan-prompt.has-scans .qr-scan-batch { display:block; }
+    .qr-scan-batch-head { display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;color:var(--txt);font-size:12px;font-weight:800; }
+    .qr-scan-batch-count { color:var(--a); }
+    .qr-scan-batch-list { display:flex;flex-wrap:wrap;gap:7px; }
+    .qr-scan-chip { display:inline-flex;align-items:center;gap:6px;padding:6px 8px 6px 10px;border:1px solid #B8DCE2;border-radius:999px;background:#fff;color:var(--a);font-family:inherit;font-size:13px;font-weight:900; }
+    .qr-scan-chip-remove { width:20px;height:20px;padding:0;border:0;border-radius:50%;background:#EAF4F6;color:var(--muted);font-family:inherit;font-size:14px;font-weight:900;line-height:20px;cursor:pointer; }
+    .qr-scan-prompt-actions { display:grid;grid-template-columns:1fr 1fr;gap:8px; }
+    .qr-scan-confirm { padding:11px 14px;border:0;border-radius:11px;background:var(--a);color:#fff;font-family:inherit;font-size:14px;font-weight:900;cursor:pointer; }
+    .qr-scan-confirm:disabled { opacity:.4;cursor:not-allowed; }
     .qr-scan-prompt-hint { margin:0 0 18px;color:var(--muted);font-size:13px;font-weight:600;line-height:1.55; }
     .qr-scan-prompt-hint.error { color:#B82E2E; }
     .qr-scan-prompt-cancel { width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:11px;background:#fff;color:var(--muted);font-family:inherit;font-size:14px;font-weight:800;cursor:pointer; }
@@ -792,8 +804,18 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       <div class="qr-scan-processing" aria-hidden="true">
         <div class="qr-processing-spinner"></div>
       </div>
+      <div id="qrScanBatch" class="qr-scan-batch" aria-live="polite">
+        <div class="qr-scan-batch-head">
+          <span>รายการที่สแกนแล้ว</span>
+          <span id="qrScanBatchCount" class="qr-scan-batch-count">0 เครื่อง</span>
+        </div>
+        <div id="qrScanBatchList" class="qr-scan-batch-list"></div>
+      </div>
       <p id="qrScanPromptHint" class="qr-scan-prompt-hint">ยิงเครื่องสแกนได้ทันที ไม่ต้องคลิกช่องกรอกข้อมูล</p>
-      <button id="qrScanPromptCancel" type="button" class="qr-scan-prompt-cancel" onclick="memsHideQrScanPrompt(true)">ปิดและกรอกแบบปกติ</button>
+      <div class="qr-scan-prompt-actions">
+        <button id="qrScanPromptConfirm" type="button" class="qr-scan-confirm" onclick="memsConfirmPromptScans()" disabled>ยืนยันรายการ</button>
+        <button id="qrScanPromptCancel" type="button" class="qr-scan-prompt-cancel" onclick="memsHideQrScanPrompt(true)">ปิดและกรอกปกติ</button>
+      </div>
     </div>
   </div>
 
@@ -964,7 +986,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 <script src="vendor/supabase.js"></script>
 <script src="supabase-client.js?v=20261006-qr-return-ward-1"></script>
 <script src="auth.js"></script>
-<script src="borrow-qr.js?v=20261007-android-keyboard-4"></script>
+<script src="borrow-qr.js?v=20261007-qr-mixed-return-6"></script>
 <script src="mems-clock.js?v=20260924-clock-status-1"></script>
 <script>
 /* ====== STATE ====== */
@@ -1731,7 +1753,13 @@ async function submitTransfer() {
 }
 
 async function handleSubmit() {
-  const nums   = getEquipNumbers();
+  const qrScanItems = typeof memsQrBatchItems !== 'undefined'
+    ? memsQrBatchItems.slice()
+    : [];
+  const hasQrScanBatch = qrScanItems.length > 0;
+  const nums   = hasQrScanBatch
+    ? qrScanItems.map(item => String(item.number))
+    : getEquipNumbers();
   const ward   = document.getElementById('wardSel').value;
   const other  = document.getElementById('otherWard').value.trim();
   const name   = document.getElementById('staffName').value.trim();
@@ -1745,27 +1773,54 @@ async function handleSubmit() {
     try {
       preparedList = await fetchPreparedList();
       renderPreparedBanner();
-      if (preparedList.filter(p => p.ward === ward).length === 0) {
+      const missingPrepared = hasQrScanBatch
+        ? qrScanItems.filter(item => !preparedList.some(prepared =>
+            prepared.ward === ward &&
+            String(prepared.equipment || '').toLowerCase() === item.equipment.toLowerCase() &&
+            (normalizeMachineNo(prepared.number) || String(prepared.number)) === String(item.number)
+          ))
+        : [];
+      if (preparedList.filter(p => p.ward === ward).length === 0 || missingPrepared.length) {
+        const detail = missingPrepared.length
+          ? '\nรายการที่ยังไม่ได้เตรียม: ' + missingPrepared.map(item => item.equipment + ' No.' + item.number).join(', ')
+          : '';
         alert('⚠️ หน่วยงาน "' + ward + '" ยังไม่มีการเตรียมเครื่อง\n' +
-              'ต้องให้เจ้าหน้าที่ศูนย์เครื่องมือแพทย์เตรียมก่อน จึงจะยืมได้');
+              'ต้องให้เจ้าหน้าที่ศูนย์เครื่องมือแพทย์เตรียมก่อน จึงจะยืมได้' + detail);
         return;
       }
     } catch (e) { /* โหลดไม่ได้ -> ไม่บล็อค กันระบบล่ม */ }
   }
 
-  if (!S.action || !S.shift || !S.equip || nums.length === 0 || !ward || !name || (ward === 'อื่นๆ โปรดระบุชื่อตึก' && !other) || (S.equip === 'เครื่องมืออื่นๆ' && !otherEquipName)) {
+  if (!S.action || !S.shift || (!hasQrScanBatch && !S.equip) || nums.length === 0 || !ward || !name || (ward === 'อื่นๆ โปรดระบุชื่อตึก' && !other) || (!hasQrScanBatch && S.equip === 'เครื่องมืออื่นๆ' && !otherEquipName)) {
     alert('⚠️  กรุณากรอกข้อมูลให้ครบทุกช่อง');
     return;
+  }
+
+  if (hasQrScanBatch && S.action === 'return') {
+    const borrowedWards = [...new Set(qrScanItems.map(item => item.borrowedStatus && item.borrowedStatus.ward).filter(Boolean))];
+    if (borrowedWards.length !== 1 || borrowedWards[0] !== finalWard) {
+      alert('⚠️ หน่วยงานในรายการสแกนไม่ตรงกับหน่วยงานที่เลือก กรุณากดคืนและสแกนรายการใหม่');
+      return;
+    }
   }
 
   // ยืมได้เฉพาะเครื่องที่อยู่ในทะเบียนครุภัณฑ์และสถานะ "ใช้งานได้"
   // (ประเภทที่ยังไม่มีในทะเบียน หรือโหลดทะเบียนไม่ได้ -> ไม่บล็อค)
   if (S.action === 'borrow') {
-    const reg = await checkNumbersAgainstRegistry(finalEquip, nums);
-    if (reg && (reg.missing.length || reg.unusable.length)) {
-      const lines = [];
-      if (reg.missing.length) lines.push('• No. ' + reg.missing.join(', ') + ' ไม่มีในทะเบียนครุภัณฑ์ ' + finalEquip);
-      reg.unusable.forEach(u => lines.push('• No. ' + u.no + ' สถานะในทะเบียนคือ "' + u.status + '"'));
+    const groups = hasQrScanBatch
+      ? Object.entries(qrScanItems.reduce((result, item) => {
+          (result[item.equipment] ||= []).push(item.number);
+          return result;
+        }, {}))
+      : [[finalEquip, nums]];
+    const lines = [];
+    for (const [equipmentName, equipmentNumbers] of groups) {
+      const reg = await checkNumbersAgainstRegistry(equipmentName, equipmentNumbers);
+      if (!reg) continue;
+      if (reg.missing.length) lines.push('• ' + equipmentName + ' No. ' + reg.missing.join(', ') + ' ไม่มีในทะเบียนครุภัณฑ์');
+      reg.unusable.forEach(u => lines.push('• ' + equipmentName + ' No. ' + u.no + ' สถานะในทะเบียนคือ "' + u.status + '"'));
+    }
+    if (lines.length) {
       alert('⚠️ ยืมไม่ได้\n' + lines.join('\n') +
             '\n\nตรวจเลขเครื่องอีกครั้ง หรือให้แอดมินเพิ่ม/แก้สถานะในทะเบียนครุภัณฑ์ก่อน');
       return;
@@ -1780,9 +1835,14 @@ async function handleSubmit() {
       equipment.forEach(e => {
         statusMap[String(e.equipment) + '__' + String(e.number)] = e.isBorrowed;
       });
-      const dup = nums.filter(n => statusMap[finalEquip + '__' + (normalizeMachineNo(n) || String(n))] === true);
+      const requestedRecords = hasQrScanBatch
+        ? qrScanItems.map(item => ({ equipment: item.equipment, number: item.number }))
+        : nums.map(number => ({ equipment: finalEquip, number }));
+      const dup = requestedRecords.filter(item =>
+        statusMap[item.equipment + '__' + (normalizeMachineNo(item.number) || String(item.number))] === true
+      );
       if (dup.length) {
-        alert('⚠️ เครื่อง ' + finalEquip + ' No. ' + dup.join(', ') +
+        alert('⚠️ เครื่อง ' + dup.map(item => item.equipment + ' No.' + item.number).join(', ') +
               ' ถูกยืมอยู่แล้ว\nต้องคืนเครื่องนั้นก่อน จึงจะยืมซ้ำได้');
         return;
       }
@@ -1799,20 +1859,25 @@ async function handleSubmit() {
   btn.disabled = true;
   btn.textContent = `กำลังบันทึก… (0/${nums.length})`;
 
+  const transactionRecords = hasQrScanBatch
+    ? qrScanItems.map(item => ({ equipment: item.equipment, equipmentNumber: String(item.number) }))
+    : nums.map(number => ({ equipment: finalEquip, equipmentNumber: number }));
+  const transactionTypes = [...new Set(transactionRecords.map(item => item.equipment))];
+
   const basePayload = {
     action   : S.action === 'borrow' ? '🟩 ยืม' : '🟥 คืน',
     shift    : shiftTH[S.shift],
-    equipment: finalEquip,
+    equipment: transactionTypes.length === 1 ? transactionTypes[0] : 'หลายประเภท',
     ward     : finalWard,
     name     : name,
     timestamp: (actualTime || new Date()).toISOString()
   };
 
-  // submit one record per equipment number
+  // submit one record per equipment number (QR borrow/return may contain mixed equipment types)
   let savedCount = 0;
-  for (let i = 0; i < nums.length; i++) {
-    btn.textContent = `กำลังบันทึก… (${i + 1}/${nums.length})`;
-    const payload = { ...basePayload, equipmentNumber: nums[i] };
+  for (let i = 0; i < transactionRecords.length; i++) {
+    btn.textContent = `กำลังบันทึก… (${i + 1}/${transactionRecords.length})`;
+    const payload = { ...basePayload, ...transactionRecords[i] };
     try {
       await saveBorrowRecord(payload);
       savedCount++;
@@ -1821,7 +1886,12 @@ async function handleSubmit() {
     }
   }
 
-  showSuccess({ ...basePayload, equipmentNumbers: nums, savedCount });
+  showSuccess({
+    ...basePayload,
+    equipmentNumbers: nums,
+    equipmentItems: hasQrScanBatch ? transactionRecords : null,
+    savedCount
+  });
 }
 
 function showSuccess(d) {
@@ -1848,8 +1918,13 @@ function showSuccess(d) {
     row.append(key, val);
     detail.append(row);
   };
-  addRow('เครื่องมือ', d.equipment);
-  nums.forEach((n, i) => addRow(`เครื่องที่ ${i + 1}`, `#${n}`));
+  if (d.equipmentItems && d.equipmentItems.length) {
+    addRow('รายการเครื่องมือ', d.equipmentItems.length + ' เครื่อง');
+    d.equipmentItems.forEach((item, i) => addRow(`เครื่องที่ ${i + 1}`, `${item.equipment} · No.${item.equipmentNumber}`));
+  } else {
+    addRow('เครื่องมือ', d.equipment);
+    nums.forEach((n, i) => addRow(`เครื่องที่ ${i + 1}`, `#${n}`));
+  }
   addRow('ตึก', d.ward);
   addRow('ผู้ทำรายการ', d.name);
   if (partial) {
