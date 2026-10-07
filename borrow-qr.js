@@ -173,8 +173,7 @@ function memsSetQrScanPromptError(message) {
 }
 
 function memsPromptScanLimit(equipment, action) {
-  if (action === 'return') return Infinity;
-  return equipment === 'Infusion Pump' ? 10 : 5;
+  return Infinity;
 }
 
 function memsRenderPromptScans() {
@@ -191,8 +190,7 @@ function memsRenderPromptScans() {
     const chip = document.createElement('div');
     chip.className = 'qr-scan-chip';
     const label = document.createElement('span');
-    const showEquipment = (memsScanIntendedAction || S.action) === 'return';
-    label.textContent = (showEquipment ? item.equipment + ' · ' : '') + 'No. ' + item.number;
+    label.textContent = item.equipment + ' · No. ' + item.number;
     const remove = document.createElement('button');
     remove.type = 'button';
     remove.className = 'qr-scan-chip-remove';
@@ -273,9 +271,6 @@ async function memsAddPromptScan(assetId) {
 
     const number = normalizeMachineNo(asset.no) || String(asset.no);
     const first = memsPromptScannedItems[0];
-    if (targetAction !== 'return' && first && first.equipment !== equipment) {
-      throw new Error('สแกนรวมกันได้เฉพาะเครื่องชนิดเดียวกัน กรุณายืนยันรายการเดิมก่อน');
-    }
     if (memsPromptScannedItems.some(item => item.equipment === equipment && item.number === number)) {
       const hint = document.getElementById('qrScanPromptHint');
       if (hint) {
@@ -582,14 +577,14 @@ async function memsApplyQrBorrowBatchItems(items) {
 
   const missing = items.filter(item => !preparedList.some(prepared =>
     prepared.ward === ward &&
-    String(prepared.equipment || '').toLowerCase() === equipment.toLowerCase() &&
+    String(prepared.equipment || '').toLowerCase() === item.equipment.toLowerCase() &&
     (normalizeMachineNo(prepared.number) || String(prepared.number)) === item.number
   ));
   if (missing.length) {
     clearPreparedSelection();
     memsSetQrBanner(
       '⚠️ เครื่องที่ยังไม่ได้เตรียมไว้สำหรับหน่วยงานนี้: ' +
-      missing.map(item => 'No.' + item.number).join(', '),
+      missing.map(item => item.equipment + ' No.' + item.number).join(', '),
       'error'
     );
     return false;
@@ -598,8 +593,8 @@ async function memsApplyQrBorrowBatchItems(items) {
   selectedPrepared.clear();
   items.forEach(item => {
     selectedPrepared.set(
-      preparedSelectionKey(equipment, item.number),
-      { equipment, number: item.number }
+      preparedSelectionKey(item.equipment, item.number),
+      { equipment: item.equipment, number: item.number }
     );
   });
   document.querySelectorAll('.equip-btn').forEach(button => button.classList.remove('active'));
@@ -607,15 +602,17 @@ async function memsApplyQrBorrowBatchItems(items) {
     .find(button => String(button.dataset.e).toLowerCase() === equipment.toLowerCase());
   if (equipmentButton) equipmentButton.classList.add('active');
   S.equip = equipment;
-  syncPreparedNumbersToForm();
+  const equipmentTypes = [...new Set(items.map(item => item.equipment))];
+  if (equipmentTypes.length === 1) syncPreparedNumbersToForm();
   updatePreparedSelectionUI();
   renderPreparedBanner();
+  if (equipmentTypes.length > 1) memsSetQrBatchDevice(items);
   memsSetQrBanner(
-    '✓ เลือกแล้ว ' + items.length + ' เครื่อง: ' + equipment + ' ' +
-    items.map(item => 'No.' + item.number).join(', ') + ' — กรอกชื่อผู้ยืมแล้วกดบันทึก',
+    '✓ เลือกยืมแล้ว ' + items.length + ' เครื่อง: ' +
+    items.map(item => item.equipment + ' No.' + item.number).join(', ') +
+    ' — กรอกชื่อผู้ยืมแล้วกดบันทึกครั้งเดียว',
     'success'
   );
-  memsQrBatchItems = [];
   document.getElementById('staffName')?.focus({ preventScroll: true });
   return true;
 }
