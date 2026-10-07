@@ -85,6 +85,69 @@ function memsSetQrBatchDevice(items) {
   device.style.display = 'flex';
 }
 
+function memsRenderConfirmedQrItems() {
+  const card = document.getElementById('qrConfirmedCard');
+  const list = document.getElementById('qrConfirmedList');
+  const hasItems = memsQrBatchItems.length > 0;
+  if (card) card.classList.toggle('show', hasItems);
+  if (!hasItems) {
+    if (list) list.replaceChildren();
+    return;
+  }
+
+  ['normalNumCard', 'c2BorrowCard', 'c2GridCard', 'otherEquipNameCard'].forEach(id => {
+    const element = document.getElementById(id);
+    if (element) element.style.display = 'none';
+  });
+  const preparedBanner = document.getElementById('preparedBanner');
+  if (preparedBanner) preparedBanner.style.display = 'none';
+
+  if (!list) return;
+  list.replaceChildren();
+  memsQrBatchItems.forEach((item, index) => {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'qr-confirmed-chip';
+    chip.textContent = item.equipment + ' · No.' + item.number;
+    chip.setAttribute('aria-label', 'ยกเลิก ' + item.equipment + ' No.' + item.number);
+    chip.onclick = () => memsRemoveConfirmedQrItem(index);
+    list.appendChild(chip);
+  });
+}
+
+function memsRemoveConfirmedQrItem(index) {
+  const removed = memsQrBatchItems[index];
+  if (!removed) return;
+  memsQrBatchItems.splice(index, 1);
+  if (typeof selectedPrepared !== 'undefined') {
+    selectedPrepared.delete(preparedSelectionKey(removed.equipment, removed.number));
+    updatePreparedSelectionUI();
+  }
+  if (typeof c2SelectedNums !== 'undefined') c2SelectedNums.clear();
+  resetEquipFields();
+
+  if (memsQrBatchItems.length) {
+    const first = memsQrBatchItems[0];
+    S.equip = first.equipment;
+    memsQrReturnAsset = first.asset;
+    memsSetQrBatchDevice(memsQrBatchItems);
+    const person = S.action === 'borrow' ? 'ผู้ยืม' : 'ผู้คืน';
+    memsSetQrBanner(
+      '✓ เหลือ ' + memsQrBatchItems.length + ' เครื่อง: ' +
+      memsQrBatchItems.map(item => item.equipment + ' No.' + item.number).join(', ') +
+      ' — กรอกชื่อ' + person + 'แล้วกดบันทึก',
+      'success'
+    );
+  } else {
+    if (typeof selectedPrepared !== 'undefined') selectedPrepared.clear();
+    S.equip = null;
+    memsQrReturnAsset = null;
+    memsSetQrDevice(null);
+    memsSetQrBanner('ยกเลิกรายการที่สแกนทั้งหมดแล้ว — กดปุ่มยืมหรือคืนเพื่อสแกนใหม่', 'ready');
+  }
+  memsRenderConfirmedQrItems();
+}
+
 function memsSyncQrScanCard(action) {
   const card = document.getElementById('qrScanCard');
   if (!card) return;
@@ -344,6 +407,7 @@ function memsClearQrReturnContext() {
   memsScannerState.lastPayload = '';
   memsScannerState.lastProcessedAt = 0;
   memsSetQrDevice(null);
+  memsRenderConfirmedQrItems();
   const input = document.getElementById('qrScanInput');
   if (input) input.value = '';
   const banner = document.getElementById('qrReturnBanner');
@@ -543,12 +607,8 @@ async function memsApplyQrBatchItems(items, targetAction) {
     return memsApplyQrBorrowBatchItems(items);
   }
 
-  const returnTypes = [...new Set(items.map(item => item.equipment))];
-  if (returnTypes.length === 1) {
-    memsPrimeQrNumbers(equipment, items.map(item => item.number));
-  } else {
-    memsSetQrBatchDevice(items);
-  }
+  memsSetQrBatchDevice(items);
+  memsRenderConfirmedQrItems();
   memsSetQrBanner(
     '✓ เลือกคืนแล้ว ' + items.length + ' เครื่อง: ' +
     items.map(item => item.equipment + ' No.' + item.number).join(', ') +
@@ -602,11 +662,10 @@ async function memsApplyQrBorrowBatchItems(items) {
     .find(button => String(button.dataset.e).toLowerCase() === equipment.toLowerCase());
   if (equipmentButton) equipmentButton.classList.add('active');
   S.equip = equipment;
-  const equipmentTypes = [...new Set(items.map(item => item.equipment))];
-  if (equipmentTypes.length === 1) syncPreparedNumbersToForm();
   updatePreparedSelectionUI();
   renderPreparedBanner();
-  if (equipmentTypes.length > 1) memsSetQrBatchDevice(items);
+  memsSetQrBatchDevice(items);
+  memsRenderConfirmedQrItems();
   memsSetQrBanner(
     '✓ เลือกยืมแล้ว ' + items.length + ' เครื่อง: ' +
     items.map(item => item.equipment + ' No.' + item.number).join(', ') +
