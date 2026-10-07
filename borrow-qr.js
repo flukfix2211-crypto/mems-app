@@ -71,6 +71,12 @@ function memsSetQrDevice(asset, equipmentName) {
   device.style.display = 'flex';
 }
 
+function memsQrScannedItemLabel(item, spacedNumber) {
+  const ward = item && item.borrowedStatus && item.borrowedStatus.ward;
+  return item.equipment + ' · No.' + (spacedNumber ? ' ' : '') + item.number +
+    (ward ? ' · ยืมจาก ' + ward : '');
+}
+
 function memsSetQrBatchDevice(items) {
   const device = document.getElementById('qrReturnDevice');
   const typeEl = document.getElementById('qrReturnType');
@@ -80,7 +86,7 @@ function memsSetQrBatchDevice(items) {
   typeEl.textContent = equipmentTypes.length === 1
     ? equipmentTypes[0]
     : equipmentTypes.length + ' ประเภท';
-  noEl.textContent = items.map(item => item.equipment + ' No.' + item.number).join(' · ');
+  noEl.textContent = items.map(item => memsQrScannedItemLabel(item, false)).join(' | ');
   device.classList.toggle('batch', items.length > 1 || equipmentTypes.length > 1);
   device.style.display = 'flex';
 }
@@ -108,8 +114,8 @@ function memsRenderConfirmedQrItems() {
     const chip = document.createElement('button');
     chip.type = 'button';
     chip.className = 'qr-confirmed-chip';
-    chip.textContent = item.equipment + ' · No.' + item.number;
-    chip.setAttribute('aria-label', 'ยกเลิก ' + item.equipment + ' No.' + item.number);
+    chip.textContent = memsQrScannedItemLabel(item, false);
+    chip.setAttribute('aria-label', 'ยกเลิก ' + memsQrScannedItemLabel(item, false));
     chip.onclick = () => memsRemoveConfirmedQrItem(index);
     list.appendChild(chip);
   });
@@ -134,7 +140,7 @@ function memsRemoveConfirmedQrItem(index) {
     const person = S.action === 'borrow' ? 'ผู้ยืม' : 'ผู้คืน';
     memsSetQrBanner(
       '✓ เหลือ ' + memsQrBatchItems.length + ' เครื่อง: ' +
-      memsQrBatchItems.map(item => item.equipment + ' No.' + item.number).join(', ') +
+      memsQrBatchItems.map(item => memsQrScannedItemLabel(item, false)).join(', ') +
       ' — กรอกชื่อ' + person + 'แล้วกดบันทึก',
       'success'
     );
@@ -253,11 +259,11 @@ function memsRenderPromptScans() {
     const chip = document.createElement('div');
     chip.className = 'qr-scan-chip';
     const label = document.createElement('span');
-    label.textContent = item.equipment + ' · No. ' + item.number;
+    label.textContent = memsQrScannedItemLabel(item, true);
     const remove = document.createElement('button');
     remove.type = 'button';
     remove.className = 'qr-scan-chip-remove';
-    remove.setAttribute('aria-label', 'นำ ' + item.equipment + ' No. ' + item.number + ' ออกจากรายการ');
+    remove.setAttribute('aria-label', 'นำ ' + memsQrScannedItemLabel(item, true) + ' ออกจากรายการ');
     remove.textContent = '×';
     remove.onclick = () => memsRemovePromptScan(index);
     chip.append(label, remove);
@@ -360,7 +366,9 @@ async function memsAddPromptScan(assetId) {
     memsRenderPromptScans();
     const hint = document.getElementById('qrScanPromptHint');
     if (hint) {
-      hint.textContent = 'รับ ' + equipment + ' No. ' + number + ' แล้ว — ยิงเครื่องถัดไป หรือกดยืนยันเมื่อครบ';
+      hint.textContent = 'รับ ' + equipment + ' No. ' + number +
+        (borrowedStatus ? ' · ยืมจาก ' + borrowedStatus.ward : '') +
+        ' แล้ว — ยิงเครื่องถัดไป หรือกดยืนยันเมื่อครบ';
       hint.classList.remove('error');
     }
     return true;
@@ -611,7 +619,7 @@ async function memsApplyQrBatchItems(items, targetAction) {
   memsRenderConfirmedQrItems();
   memsSetQrBanner(
     '✓ เลือกคืนแล้ว ' + items.length + ' เครื่อง: ' +
-    items.map(item => item.equipment + ' No.' + item.number).join(', ') +
+    items.map(item => memsQrScannedItemLabel(item, false)).join(', ') +
     ' — กรอกชื่อผู้คืนแล้วกดบันทึกครั้งเดียว',
     'success'
   );
