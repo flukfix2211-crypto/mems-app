@@ -1753,12 +1753,12 @@ async function submitTransfer() {
 }
 
 async function handleSubmit() {
-  const returnScanItems = S.action === 'return' && typeof memsQrBatchItems !== 'undefined'
+  const qrScanItems = typeof memsQrBatchItems !== 'undefined'
     ? memsQrBatchItems.slice()
     : [];
-  const hasReturnScanBatch = returnScanItems.length > 0;
-  const nums   = hasReturnScanBatch
-    ? returnScanItems.map(item => String(item.number))
+  const hasQrScanBatch = qrScanItems.length > 0;
+  const nums   = hasQrScanBatch
+    ? qrScanItems.map(item => String(item.number))
     : getEquipNumbers();
   const ward   = document.getElementById('wardSel').value;
   const other  = document.getElementById('otherWard').value.trim();
@@ -1773,21 +1773,31 @@ async function handleSubmit() {
     try {
       preparedList = await fetchPreparedList();
       renderPreparedBanner();
-      if (preparedList.filter(p => p.ward === ward).length === 0) {
+      const missingPrepared = hasQrScanBatch
+        ? qrScanItems.filter(item => !preparedList.some(prepared =>
+            prepared.ward === ward &&
+            String(prepared.equipment || '').toLowerCase() === item.equipment.toLowerCase() &&
+            (normalizeMachineNo(prepared.number) || String(prepared.number)) === String(item.number)
+          ))
+        : [];
+      if (preparedList.filter(p => p.ward === ward).length === 0 || missingPrepared.length) {
+        const detail = missingPrepared.length
+          ? '\nรายการที่ยังไม่ได้เตรียม: ' + missingPrepared.map(item => item.equipment + ' No.' + item.number).join(', ')
+          : '';
         alert('⚠️ หน่วยงาน "' + ward + '" ยังไม่มีการเตรียมเครื่อง\n' +
-              'ต้องให้เจ้าหน้าที่ศูนย์เครื่องมือแพทย์เตรียมก่อน จึงจะยืมได้');
+              'ต้องให้เจ้าหน้าที่ศูนย์เครื่องมือแพทย์เตรียมก่อน จึงจะยืมได้' + detail);
         return;
       }
     } catch (e) { /* โหลดไม่ได้ -> ไม่บล็อค กันระบบล่ม */ }
   }
 
-  if (!S.action || !S.shift || (!hasReturnScanBatch && !S.equip) || nums.length === 0 || !ward || !name || (ward === 'อื่นๆ โปรดระบุชื่อตึก' && !other) || (!hasReturnScanBatch && S.equip === 'เครื่องมืออื่นๆ' && !otherEquipName)) {
+  if (!S.action || !S.shift || (!hasQrScanBatch && !S.equip) || nums.length === 0 || !ward || !name || (ward === 'อื่นๆ โปรดระบุชื่อตึก' && !other) || (!hasQrScanBatch && S.equip === 'เครื่องมืออื่นๆ' && !otherEquipName)) {
     alert('⚠️  กรุณากรอกข้อมูลให้ครบทุกช่อง');
     return;
   }
 
-  if (hasReturnScanBatch) {
-    const borrowedWards = [...new Set(returnScanItems.map(item => item.borrowedStatus && item.borrowedStatus.ward).filter(Boolean))];
+  if (hasQrScanBatch && S.action === 'return') {
+    const borrowedWards = [...new Set(qrScanItems.map(item => item.borrowedStatus && item.borrowedStatus.ward).filter(Boolean))];
     if (borrowedWards.length !== 1 || borrowedWards[0] !== finalWard) {
       alert('⚠️ หน่วยงานในรายการสแกนไม่ตรงกับหน่วยงานที่เลือก กรุณากดคืนและสแกนรายการใหม่');
       return;
@@ -1797,11 +1807,20 @@ async function handleSubmit() {
   // ยืมได้เฉพาะเครื่องที่อยู่ในทะเบียนครุภัณฑ์และสถานะ "ใช้งานได้"
   // (ประเภทที่ยังไม่มีในทะเบียน หรือโหลดทะเบียนไม่ได้ -> ไม่บล็อค)
   if (S.action === 'borrow') {
-    const reg = await checkNumbersAgainstRegistry(finalEquip, nums);
-    if (reg && (reg.missing.length || reg.unusable.length)) {
-      const lines = [];
-      if (reg.missing.length) lines.push('• No. ' + reg.missing.join(', ') + ' ไม่มีในทะเบียนครุภัณฑ์ ' + finalEquip);
-      reg.unusable.forEach(u => lines.push('• No. ' + u.no + ' สถานะในทะเบียนคือ "' + u.status + '"'));
+    const groups = hasQrScanBatch
+      ? Object.entries(qrScanItems.reduce((result, item) => {
+          (result[item.equipment] ||= []).push(item.number);
+          return result;
+        }, {}))
+      : [[finalEquip, nums]];
+    const lines = [];
+    for (const [equipmentName, equipmentNumbers] of groups) {
+      const reg = await checkNumbersAgainstRegistry(equipmentName, equipmentNumbers);
+      if (!reg) continue;
+      if (reg.missing.length) lines.push('• ' + equipmentName + ' No. ' + reg.missing.join(', ') + ' ไม่มีในทะเบียนครุภัณฑ์');
+      reg.unusable.forEach(u => lines.push('• ' + equipmentName + ' No. ' + u.no + ' สถานะในทะเบียนคือ "' + u.status + '"'));
+    }
+    if (lines.length) {
       alert('⚠️ ยืมไม่ได้\n' + lines.join('\n') +
             '\n\nตรวจเลขเครื่องอีกครั้ง หรือให้แอดมินเพิ่ม/แก้สถานะในทะเบียนครุภัณฑ์ก่อน');
       return;
@@ -1816,9 +1835,14 @@ async function handleSubmit() {
       equipment.forEach(e => {
         statusMap[String(e.equipment) + '__' + String(e.number)] = e.isBorrowed;
       });
-      const dup = nums.filter(n => statusMap[finalEquip + '__' + (normalizeMachineNo(n) || String(n))] === true);
+      const requestedRecords = hasQrScanBatch
+        ? qrScanItems.map(item => ({ equipment: item.equipment, number: item.number }))
+        : nums.map(number => ({ equipment: finalEquip, number }));
+      const dup = requestedRecords.filter(item =>
+        statusMap[item.equipment + '__' + (normalizeMachineNo(item.number) || String(item.number))] === true
+      );
       if (dup.length) {
-        alert('⚠️ เครื่อง ' + finalEquip + ' No. ' + dup.join(', ') +
+        alert('⚠️ เครื่อง ' + dup.map(item => item.equipment + ' No.' + item.number).join(', ') +
               ' ถูกยืมอยู่แล้ว\nต้องคืนเครื่องนั้นก่อน จึงจะยืมซ้ำได้');
         return;
       }
@@ -1835,25 +1859,25 @@ async function handleSubmit() {
   btn.disabled = true;
   btn.textContent = `กำลังบันทึก… (0/${nums.length})`;
 
-  const returnRecords = hasReturnScanBatch
-    ? returnScanItems.map(item => ({ equipment: item.equipment, equipmentNumber: String(item.number) }))
+  const transactionRecords = hasQrScanBatch
+    ? qrScanItems.map(item => ({ equipment: item.equipment, equipmentNumber: String(item.number) }))
     : nums.map(number => ({ equipment: finalEquip, equipmentNumber: number }));
-  const returnTypes = [...new Set(returnRecords.map(item => item.equipment))];
+  const transactionTypes = [...new Set(transactionRecords.map(item => item.equipment))];
 
   const basePayload = {
     action   : S.action === 'borrow' ? '🟩 ยืม' : '🟥 คืน',
     shift    : shiftTH[S.shift],
-    equipment: returnTypes.length === 1 ? returnTypes[0] : 'หลายประเภท',
+    equipment: transactionTypes.length === 1 ? transactionTypes[0] : 'หลายประเภท',
     ward     : finalWard,
     name     : name,
     timestamp: (actualTime || new Date()).toISOString()
   };
 
-  // submit one record per equipment number (QR return may contain mixed equipment types)
+  // submit one record per equipment number (QR borrow/return may contain mixed equipment types)
   let savedCount = 0;
-  for (let i = 0; i < returnRecords.length; i++) {
-    btn.textContent = `กำลังบันทึก… (${i + 1}/${returnRecords.length})`;
-    const payload = { ...basePayload, ...returnRecords[i] };
+  for (let i = 0; i < transactionRecords.length; i++) {
+    btn.textContent = `กำลังบันทึก… (${i + 1}/${transactionRecords.length})`;
+    const payload = { ...basePayload, ...transactionRecords[i] };
     try {
       await saveBorrowRecord(payload);
       savedCount++;
@@ -1865,7 +1889,7 @@ async function handleSubmit() {
   showSuccess({
     ...basePayload,
     equipmentNumbers: nums,
-    equipmentItems: hasReturnScanBatch ? returnRecords : null,
+    equipmentItems: hasQrScanBatch ? transactionRecords : null,
     savedCount
   });
 }
