@@ -58,15 +58,28 @@
     .camera-open-btn { flex:0 0 auto;padding:12px 16px;border:0;border-radius:12px;background:var(--a);color:#fff;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 3px 12px rgba(10,100,120,.22); }
     .qr-camera-modal { display:none;position:fixed;inset:0;z-index:10020;align-items:center;justify-content:center;padding:18px;background:rgba(9,28,35,.72);backdrop-filter:blur(5px); }
     .qr-camera-modal.show { display:flex; }
-    .qr-camera-box { width:min(100%,460px);overflow:hidden;border-radius:22px;background:#fff;box-shadow:0 24px 70px rgba(0,0,0,.32); }
+    .qr-camera-box { width:min(100%,460px);max-height:calc(100vh - 36px);overflow-y:auto;border-radius:22px;background:#fff;box-shadow:0 24px 70px rgba(0,0,0,.32); }
     .qr-camera-head { display:flex;align-items:center;justify-content:space-between;padding:15px 17px;background:var(--a);color:#fff; }
     .qr-camera-head strong { font-size:16px; }
     .qr-camera-close { width:34px;height:34px;border:1px solid rgba(255,255,255,.35);border-radius:50%;background:rgba(255,255,255,.15);color:#fff;font-size:21px;cursor:pointer; }
-    .qr-camera-stage { position:relative;aspect-ratio:1/1;background:#081B21;overflow:hidden; }
+    .qr-camera-stage { position:relative;height:min(46vh,360px);background:#081B21;overflow:hidden; }
     .qr-camera-stage video { width:100%;height:100%;object-fit:cover;display:block; }
     .qr-camera-guide { position:absolute;inset:15%;border:3px solid rgba(255,255,255,.92);border-radius:22px;box-shadow:0 0 0 999px rgba(0,0,0,.24);pointer-events:none; }
     .qr-camera-status { min-height:52px;padding:13px 17px;color:var(--muted);font-size:13px;font-weight:700;line-height:1.5;text-align:center; }
     .qr-camera-status.error { color:#B82E2E;background:#FFF4F4; }
+    .prepare-qr-batch { display:none;padding:0 16px 14px; }
+    .prepare-qr-batch.show { display:block; }
+    .prepare-qr-batch-head { display:flex;justify-content:space-between;gap:10px;margin-bottom:8px;font-size:12px;font-weight:800;color:var(--txt); }
+    .prepare-qr-batch-list { display:flex;flex-wrap:wrap;gap:7px;max-height:118px;overflow-y:auto; }
+    .prepare-qr-chip { display:inline-flex;align-items:center;gap:6px;padding:6px 8px 6px 10px;border:1px solid #B8DCE2;border-radius:999px;background:#F7FBFC;color:var(--a);font-size:12px;font-weight:900; }
+    .prepare-qr-chip button { width:20px;height:20px;padding:0;border:0;border-radius:50%;background:#E4F1F3;color:var(--muted);font-family:inherit;font-size:14px;font-weight:900;line-height:20px;cursor:pointer; }
+    .prepare-qr-actions { display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 16px 16px; }
+    .prepare-qr-actions button { padding:11px 12px;border-radius:11px;font-family:inherit;font-size:13px;font-weight:900;cursor:pointer; }
+    .prepare-qr-confirm { border:0;background:var(--a);color:#fff; }
+    .prepare-qr-confirm:disabled { opacity:.4;cursor:not-allowed; }
+    .prepare-qr-cancel { border:1.5px solid var(--border);background:#fff;color:var(--muted); }
+    .prepare-qr-selection { display:none;margin-top:12px;padding:10px 12px;border:1px solid #B8DDE4;border-radius:11px;background:#fff;color:var(--a);font-size:12px;font-weight:800;line-height:1.65; }
+    .prepare-qr-selection.show { display:block; }
 
     .equip-grid { display: flex; flex-wrap: wrap; gap: 8px; }
     .equip-chip { padding: 11px 16px; border: 2px solid var(--border); border-radius: 14px; font-family: 'Sarabun', sans-serif; font-size: 15px; font-weight: 700; background: var(--card); color: var(--muted); cursor: pointer; transition: all .18s; -webkit-tap-highlight-color: transparent; }
@@ -202,6 +215,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       </div>
       <button type="button" class="camera-open-btn" onclick="openPrepareQrCamera()">📷 เปิดกล้อง</button>
     </div>
+    <div id="prepareQrSelection" class="prepare-qr-selection" aria-live="polite"></div>
   </div>
 
   <!-- ประเภทเครื่อง -->
@@ -286,6 +300,14 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       <div class="qr-camera-guide" aria-hidden="true"></div>
     </div>
     <div id="prepareQrCameraStatus" class="qr-camera-status" role="status" aria-live="polite">กำลังเปิดกล้อง…</div>
+    <div id="prepareQrCameraBatch" class="prepare-qr-batch">
+      <div class="prepare-qr-batch-head"><span>รายการที่สแกนแล้ว</span><span id="prepareQrCameraCount">0 เครื่อง</span></div>
+      <div id="prepareQrCameraList" class="prepare-qr-batch-list"></div>
+    </div>
+    <div class="prepare-qr-actions">
+      <button type="button" class="prepare-qr-confirm" id="prepareQrConfirm" onclick="memsConfirmPrepareQrBatch()" disabled>ยืนยันรายการ</button>
+      <button type="button" class="prepare-qr-cancel" onclick="closePrepareQrCamera()">ปิดกล้อง</button>
+    </div>
   </div>
 </div>
 
@@ -315,6 +337,22 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       record_time: bkkTimeStr(now),
       equipment_type: equipment,
       equipment_number: normalizeMachineNo(num) || String(num).trim(),   // "054" → "54" ให้ตรงกับตอนบันทึกยืม
+      ward,
+      prepared_by: preparedBy,
+      recorded_at: now.toISOString(),
+      status: 'เตรียม'
+    }));
+    const { error } = await supabase.from('prepare_records').insert(rows);
+    if (error) throw error;
+  }
+
+  async function saveMixedPrepareRecords(items, ward, preparedBy) {
+    const now = new Date();
+    const rows = items.map(item => ({
+      record_date: bkkDateStr(now),
+      record_time: bkkTimeStr(now),
+      equipment_type: item.equipment,
+      equipment_number: normalizeMachineNo(item.number) || String(item.number).trim(),
       ward,
       prepared_by: preparedBy,
       recorded_at: now.toISOString(),
@@ -484,18 +522,24 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   }
 
   async function savePrepare() {
+    const scannedItems = typeof memsPrepareQrBatchItems !== 'undefined'
+      ? memsPrepareQrBatchItems.slice()
+      : [];
+    const hasScannedBatch = scannedItems.length > 0;
     const ward0 = wardSel.value;
     const other = document.getElementById('otherWard').value.trim();
     const ward = ward0 === 'อื่นๆ โปรดระบุชื่อตึก' ? (other || 'อื่นๆ') : ward0;
     const bySel   = document.getElementById('preparedBySel').value;
     const byOther = document.getElementById('preparedByOther').value.trim();
     const byName  = bySel === 'อื่นๆ' ? byOther : bySel;
-    const numbers = getNumberValues();
+    const numbers = hasScannedBatch ? scannedItems.map(item => item.number) : getNumberValues();
     const otherEquipName = document.getElementById('otherEquipName').value.trim();
-    const equipName = selectedEquip === 'เครื่องมืออื่นๆ' ? otherEquipName : selectedEquip;
+    const equipName = hasScannedBatch
+      ? ([...new Set(scannedItems.map(item => item.equipment))].length === 1 ? scannedItems[0].equipment : 'หลายประเภท')
+      : (selectedEquip === 'เครื่องมืออื่นๆ' ? otherEquipName : selectedEquip);
 
-    if (!selectedEquip || numbers.length === 0 || !ward0 || !byName || (ward0 === 'อื่นๆ โปรดระบุชื่อตึก' && !other)
-        || (selectedEquip === 'เครื่องมืออื่นๆ' && !otherEquipName)) {
+    if ((!hasScannedBatch && !selectedEquip) || numbers.length === 0 || !ward0 || !byName || (ward0 === 'อื่นๆ โปรดระบุชื่อตึก' && !other)
+        || (!hasScannedBatch && selectedEquip === 'เครื่องมืออื่นๆ' && !otherEquipName)) {
       alert('⚠️ กรุณากรอกข้อมูลให้ครบ (ประเภท, หมายเลข, ตึก, ผู้เตรียม)');
       return;
     }
@@ -507,11 +551,20 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 
     // เตรียม/ส่งได้เฉพาะเครื่องที่อยู่ในทะเบียนครุภัณฑ์และสถานะ "ใช้งานได้" (เหมือนหน้ายืม-คืน)
     // ประเภทที่ยังไม่มีในทะเบียน หรือโหลดทะเบียนไม่ได้ -> ไม่บล็อค
-    const reg = await checkNumbersAgainstRegistry(equipName, numbers);
-    if (reg && (reg.missing.length || reg.unusable.length)) {
-      const lines = [];
-      if (reg.missing.length) lines.push('• No. ' + reg.missing.join(', ') + ' ไม่มีในทะเบียนครุภัณฑ์ ' + equipName);
-      reg.unusable.forEach(u => lines.push('• No. ' + u.no + ' สถานะในทะเบียนคือ "' + u.status + '"'));
+    const registryGroups = hasScannedBatch
+      ? Object.entries(scannedItems.reduce((result, item) => {
+          (result[item.equipment] ||= []).push(item.number);
+          return result;
+        }, {}))
+      : [[equipName, numbers]];
+    const lines = [];
+    for (const [equipmentName, equipmentNumbers] of registryGroups) {
+      const reg = await checkNumbersAgainstRegistry(equipmentName, equipmentNumbers);
+      if (!reg) continue;
+      if (reg.missing.length) lines.push('• ' + equipmentName + ' No. ' + reg.missing.join(', ') + ' ไม่มีในทะเบียนครุภัณฑ์');
+      reg.unusable.forEach(u => lines.push('• ' + equipmentName + ' No. ' + u.no + ' สถานะในทะเบียนคือ "' + u.status + '"'));
+    }
+    if (lines.length) {
       alert('⚠️ ' + (prepareMode === 'deliver' ? 'ส่ง' : 'เตรียม') + 'ไม่ได้\n' + lines.join('\n') +
             '\n\nตรวจเลขเครื่องอีกครั้ง หรือเพิ่ม/แก้สถานะในทะเบียนครุภัณฑ์ก่อน');
       btn.disabled = false; btn.textContent = origText;
@@ -527,13 +580,16 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       const activePrep = new Set(prepared.map(p => p.equipment + '__' + normalizeMachineNo(p.number)));
       const borrowed = new Set(equipment.filter(e => e.isBorrowed).map(e => e.equipment + '__' + normalizeMachineNo(e.number)));
       const dups = [];
-      numbers.forEach(num => {
-        const key = equipName + '__' + (normalizeMachineNo(num) || num);
-        if (borrowed.has(key)) dups.push(num + ' (ถูกยืมอยู่)');
-        else if (prepareMode === 'prepare' && activePrep.has(key)) dups.push(num + ' (เตรียมไว้แล้ว)');
+      const requestedItems = hasScannedBatch
+        ? scannedItems
+        : numbers.map(number => ({ equipment: equipName, number }));
+      requestedItems.forEach(item => {
+        const key = item.equipment + '__' + (normalizeMachineNo(item.number) || item.number);
+        if (borrowed.has(key)) dups.push(item.equipment + ' No.' + item.number + ' (ถูกยืมอยู่)');
+        else if (prepareMode === 'prepare' && activePrep.has(key)) dups.push(item.equipment + ' No.' + item.number + ' (เตรียมไว้แล้ว)');
       });
       if (dups.length) {
-        alert('⚠️ เครื่อง ' + equipName + ' No. ' + dups.join(', ') + '\nไม่สามารถทำซ้ำได้');
+        alert('⚠️ เครื่อง ' + dups.join(', ') + '\nไม่สามารถทำซ้ำได้');
         btn.disabled = false; btn.textContent = origText;
         return;
       }
@@ -545,17 +601,24 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
         // โหมดพร้อมส่ง = ยืมแทนหน่วยงานทันที (1 record ต่อ 1 หมายเลข)
         const shift = detectShiftTH();
         const ts = new Date().toISOString();
-        for (const num of numbers) {
+        const deliverItems = hasScannedBatch
+          ? scannedItems
+          : numbers.map(number => ({ equipment: equipName, number }));
+        for (const item of deliverItems) {
           await saveBorrowRecord({
-            shift, action: '🟩 ยืม', equipment: equipName, equipmentNumber: num,
+            shift, action: '🟩 ยืม', equipment: item.equipment, equipmentNumber: item.number,
             ward, name: by, timestamp: ts, note: 'เตรียมพร้อมส่ง (แอดมินนำส่ง)'
           });
         }
-        toast('🚚 ส่ง ' + equipName + ' No.' + numbers.join(', ') + ' ให้ ' + ward + ' (ยืมแล้ว)');
+        toast('🚚 ส่ง ' + deliverItems.map(item => item.equipment + ' No.' + item.number).join(', ') + ' ให้ ' + ward + ' (ยืมแล้ว)');
       } else {
         // โหมดเตรียม = บันทึกเป็นรายการเตรียม
-        await saveMultiplePrepareRecords(equipName, numbers, ward, by);
-        toast('✅ เตรียม ' + equipName + ' No.' + numbers.join(', ') + ' ให้ ' + ward + ' แล้ว');
+        if (hasScannedBatch) await saveMixedPrepareRecords(scannedItems, ward, by);
+        else await saveMultiplePrepareRecords(equipName, numbers, ward, by);
+        const preparedLabel = hasScannedBatch
+          ? scannedItems.map(item => item.equipment + ' No.' + item.number).join(', ')
+          : equipName + ' No.' + numbers.join(', ');
+        toast('✅ เตรียม ' + preparedLabel + ' ให้ ' + ward + ' แล้ว');
       }
       // รีเซ็ตฟอร์มพร้อมกรอกรายการใหม่ (เก็บผู้เตรียม + โหมดไว้)
       resetPrepareForm();
@@ -568,6 +631,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   }
 
   function resetPrepareForm() {
+    if (typeof memsResetPrepareQrBatch === 'function') memsResetPrepareQrBatch();
     selectedEquip = null;
     document.querySelectorAll('.equip-chip').forEach(x => x.classList.remove('active'));
     resetNumberFields();
@@ -639,7 +703,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   });
 </script>
 <script src="https://cdn.jsdelivr.net/npm/qr-scanner@1.4.2/qr-scanner.umd.min.js"></script>
-<script src="prepare-qr.js"></script>
+<script src="prepare-qr.js?v=20261007-mixed-batch-1"></script>
 <script src="mascot.js?v=20260923-mascot-2"></script>
 </body>
 </html>
