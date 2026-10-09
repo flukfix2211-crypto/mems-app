@@ -1204,6 +1204,28 @@ async function exportWorkloadPDF() {
   }
 }
 
+// พร้อมส่งถูกเก็บเป็นรายการยืม แต่เป็นงานเตรียมเครื่องด้วย (ไม่สร้างข้อมูลซ้ำ)
+function mergePrepareHistory(preparedItems, records) {
+  const deliveredItems = records
+    .filter(record => String(record['ประเภท (ยืม/คืน)'] || '').includes('ยืม') &&
+      String(record['หมายเหตุ'] || '').startsWith('เตรียมพร้อมส่ง'))
+    .map(record => ({
+      _rowIndex: 'delivery-' + record._rowIndex,
+      recordDate: slashDateToISO(record['วันที่']),
+      date: record['วันที่'],
+      time: record['เวลา'],
+      equipment: record['ชื่อเครื่อง'],
+      number: record['หมายเลขเครื่อง'],
+      ward: record['ตึก/Ward'],
+      preparedBy: record['ชื่อผู้ยืม'],
+      timestamp: record['Timestamp (ISO)'],
+      status: 'ยืมแล้ว',
+      isDelivery: true
+    }));
+  return preparedItems.concat(deliveredItems)
+    .sort((a, b) => (Date.parse(b.timestamp) || 0) - (Date.parse(a.timestamp) || 0));
+}
+
 async function renderPrepareHistory() {
   const body = document.getElementById('prepHistBody');
   const cnt  = document.getElementById('prepHistCount');
@@ -1211,7 +1233,7 @@ async function renderPrepareHistory() {
   body.innerHTML = '<div class="state-loading"><div class="spinner"></div>กำลังโหลด…</div>';
   if (todayBody) todayBody.innerHTML = '<div class="state-loading"><div class="spinner"></div>กำลังสรุปรายการเตรียมวันนี้…</div>';
   try {
-    const items = await fetchPrepareHistory();
+    const items = mergePrepareHistory(await fetchPrepareHistory(), allRecords);
     renderPrepareTodaySummary(items);
     if (cnt) cnt.textContent = 'ทั้งหมด ' + items.length + ' รายการ';
     if (!items.length) { body.innerHTML = '<div style="text-align:center;color:var(--muted);padding:30px">ยังไม่มีประวัติการเตรียม</div>'; return; }
@@ -1219,7 +1241,7 @@ async function renderPrepareHistory() {
       const st = String(it.status || '');
       let badge;
       if (st === 'ยืมแล้ว') {
-        badge = '<span style="background:#DCF2E5;color:#14612D;font-size:11px;font-weight:700;border-radius:20px;padding:2px 9px">ยืมแล้ว</span>';
+        badge = '<span style="background:#DCF2E5;color:#14612D;font-size:11px;font-weight:700;border-radius:20px;padding:2px 9px">' + (it.isDelivery ? 'เตรียมพร้อมส่ง · ยืมแล้ว' : 'ยืมแล้ว') + '</span>';
       } else if (st.indexOf('ยกเลิก') === 0) {
         badge = '<span style="background:#FDEAEA;color:#B82E2E;font-size:11px;font-weight:700;border-radius:20px;padding:2px 9px">' + st + '</span>';
       } else {
@@ -1227,10 +1249,10 @@ async function renderPrepareHistory() {
       }
       const when = (it.date || '') + (it.time ? ' ' + it.time : '');
       return `<tr>
-        <td style="font-weight:800;color:var(--a)">${it.equipment} No.${it.number}</td>
-        <td>${it.ward}</td>
-        <td style="font-size:12px">${it.preparedBy}</td>
-        <td style="white-space:nowrap;font-size:12px">${when}</td>
+        <td style="font-weight:800;color:var(--a)">${escHtml(it.equipment)} No.${escHtml(it.number)}</td>
+        <td>${escHtml(it.ward)}</td>
+        <td style="font-size:12px">${escHtml(it.preparedBy)}</td>
+        <td style="white-space:nowrap;font-size:12px">${escHtml(when)}</td>
         <td>${badge}</td>
       </tr>`;
     }).join('');
@@ -1482,7 +1504,10 @@ async function loadAll() {
     renderHomeAvailability();
     renderHomeTrend();
     renderDashboardSummary();
-    if (currentView === 'prepare') renderBorrowMonthlySummary();
+    if (currentView === 'prepare') {
+      renderBorrowMonthlySummary();
+      renderPrepareHistory();
+    }
     note.textContent = '';
     document.getElementById('lastUpdated').textContent =
       'อัพเดต ' + new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
@@ -1512,7 +1537,7 @@ function initDashboardRealtime() {
     } else if (currentView === 'records') {
       renderTable();
     } else if (currentView === 'prepare') {
-      initPrepareHistoryView();
+      // loadAll() รีเฟรชทั้งยอดบริการและประวัติเตรียมแล้ว
     } else if (currentView === 'search') {
       renderSearchToolResults();
     } else {
