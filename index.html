@@ -325,6 +325,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   <a href="round.html" data-perm="round"><span class="nm-icon"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V5h14v16M3 21h18M9 9h6m-3-3v6M9 21v-5h6v5"/></svg></span> บันทึกการ Round ward</a>
   <a href="fixjob.html" data-perm="fixjob"><span class="nm-icon"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5a5 5 0 0 0-6 6l-5 5 4 4 5-5a5 5 0 0 0 6-6l-3 3-3-3z"/></svg></span> แก้ไขหน้างาน</a>
   <a href="settings.html" data-perm="admin"><span class="nm-icon"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg></span> การตั้งค่า</a>
+  <a href="memstag.html" data-perm="super_admin"><span class="nm-icon">📡</span> MEMSTAG ตามหาเครื่องมือ</a>
 </nav>
 <div class="content">
   <h1 class="home-page-title">หน้าหลัก</h1>
@@ -386,6 +387,14 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     </div>
     <span class="menu-arrow">›</span>
   </a>
+  <a class="menu-card" href="memstag.html" data-perm="super_admin">
+    <div class="menu-icon teal">📡</div>
+    <div class="menu-text">
+      <div class="menu-title">MEMSTAG ตามหาเครื่องมือ</div>
+      <div class="menu-desc">ดูว่า memstag test01 อยู่ที่ศูนย์หรือหายไป (เฉพาะแอดมินหลัก)</div>
+    </div>
+    <span class="menu-arrow">›</span>
+  </a>
   </div>
 
   <div style="text-align:center;padding:20px 0 8px;font-size:11px;color:#6A8A96;line-height:1.7">
@@ -404,7 +413,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     document.getElementById('homeAccountName').textContent = profile.display_name || profile.username;
     document.querySelectorAll('[data-perm]').forEach(el => {
       const key = el.dataset.perm;
-      const allowed = key === 'admin' ? memsIsSuperAdmin(profile) : memsHasPermission(profile, key);
+      const allowed = (key === 'admin' || key === 'super_admin') ? memsIsSuperAdmin(profile) : memsHasPermission(profile, key);
       el.style.display = allowed ? '' : 'none';
     });
   });

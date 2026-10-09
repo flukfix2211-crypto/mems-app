@@ -1,0 +1,7 @@
+project_id = "pxmhmgdbuhmubviuxcxp"
+
+[functions.environment-ingest]
+verify_jwt = false
+
+[functions.memstag-ingest]
+verify_jwt = false
