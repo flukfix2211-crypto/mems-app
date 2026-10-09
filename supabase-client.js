@@ -11,6 +11,42 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 var supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const MEMS_QR_SCANNER_SETTING_ID = 'qr_scanner_enabled';
+const MEMS_READY_EQUIPMENT_MASTER_SETTING_ID = 'ready_equipment_recommendations_enabled';
+const MEMS_READY_EQUIPMENT_SETTING_PREFIX = 'ready_equipment_type_';
+const MEMS_READY_EQUIPMENT_TYPES = [
+  { name: 'C2', key: 'c2', registryType: 'C2' },
+  { name: 'Infusion Pump', key: 'infusion_pump', registryType: 'Infusion Pump' },
+  { name: 'Syringe pump', key: 'syringe_pump', registryType: 'Syringe Pump' },
+  { name: 'High Flow', key: 'high_flow', registryType: 'High Flow' },
+  { name: 'Brid เขียว', key: 'brid_green', registryType: 'Brid เขียว' },
+  { name: 'T1', key: 't1', registryType: 'T1' },
+  { name: 'Monnal t60', key: 'monnal_t60', registryType: 'Monnal t60' },
+  { name: 'Patient Monitor', key: 'patient_monitor', registryType: 'Patient Monitor' },
+  { name: 'NIBP', key: 'nibp', registryType: 'NIBP' },
+  { name: 'Defibrillator', key: 'defibrillator', registryType: 'Defibrillator', defaultEnabled: false },
+  { name: 'เครื่องมืออื่นๆ', key: 'other_equipment', registryType: 'เครื่องมืออื่นๆ', defaultEnabled: false }
+];
+
+function memsReadyEquipmentSettingId(type) {
+  const def = typeof type === 'string'
+    ? MEMS_READY_EQUIPMENT_TYPES.find(item => item.name === type || item.key === type)
+    : type;
+  return MEMS_READY_EQUIPMENT_SETTING_PREFIX + (def ? def.key : String(type || ''));
+}
+
+function memsReadyEquipmentDefinition(type) {
+  const value = String(type || '').trim().toLocaleLowerCase('en');
+  return MEMS_READY_EQUIPMENT_TYPES.find(item =>
+    item.name.toLocaleLowerCase('en') === value ||
+    item.registryType.toLocaleLowerCase('en') === value ||
+    item.key === value
+  ) || null;
+}
+
+function memsReadyEquipmentTypeKey(type) {
+  const def = memsReadyEquipmentDefinition(type);
+  return def ? def.key : String(type || '').trim().toLocaleLowerCase('en');
+}
 
 /** อ่านสวิตช์ QR ส่วนกลาง — ถ้ายังไม่มีแถวให้เปิดไว้เพื่อคงพฤติกรรมเดิม */
 async function fetchQrScannerEnabled() {
@@ -39,6 +75,122 @@ async function saveQrScannerEnabled(enabled) {
     .single();
   if (error) throw error;
   return data.bool_value !== false;
+}
+
+/** อ่านการตั้งค่าคิวแนะนำเครื่อง พร้อมค่าเริ่มต้นที่ใช้งานได้แม้ migration ยังไม่ถูก deploy */
+async function fetchReadyEquipmentSettings() {
+  const settingIds = [
+    MEMS_READY_EQUIPMENT_MASTER_SETTING_ID,
+    ...MEMS_READY_EQUIPMENT_TYPES.map(memsReadyEquipmentSettingId)
+  ];
+  const { data, error } = await supabase
+    .from('app_settings')
+    .select('id, bool_value')
+    .in('id', settingIds);
+  if (error) throw error;
+
+  const values = Object.fromEntries((data || []).map(row => [row.id, row.bool_value !== false]));
+  const equipment = {};
+  MEMS_READY_EQUIPMENT_TYPES.forEach(type => {
+    const id = memsReadyEquipmentSettingId(type);
+    equipment[type.key] = id in values ? values[id] : type.defaultEnabled !== false;
+  });
+  return {
+    enabled: MEMS_READY_EQUIPMENT_MASTER_SETTING_ID in values
+      ? values[MEMS_READY_EQUIPMENT_MASTER_SETTING_ID]
+      : true,
+    equipment
+  };
+}
+
+/** บันทึกสวิตช์คิวแนะนำเครื่อง — RLS อนุญาตเฉพาะแอดมินหลัก */
+async function saveReadyEquipmentSetting(id, enabled) {
+  const allowedIds = new Set([
+    MEMS_READY_EQUIPMENT_MASTER_SETTING_ID,
+    ...MEMS_READY_EQUIPMENT_TYPES.map(memsReadyEquipmentSettingId)
+  ]);
+  if (!allowedIds.has(id)) throw new Error('ไม่พบการตั้งค่าที่ต้องการบันทึก');
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error('กรุณาเข้าสู่ระบบใหม่');
+  const { data, error } = await supabase
+    .from('app_settings')
+    .upsert({
+      id,
+      bool_value: !!enabled,
+      updated_at: new Date().toISOString(),
+      updated_by: session.user.id
+    }, { onConflict: 'id' })
+    .select('bool_value')
+    .single();
+  if (error) throw error;
+  return data.bool_value !== false;
+}
+
+/**
+ * เครื่องพร้อมใช้ 5 ลำดับแรกของประเภทที่เลือก
+ * - อยู่ในทะเบียนและสถานะ "ใช้งานได้"
+ * - ไม่ได้ถูกยืม และยังไม่ถูกเตรียมไว้
+ * - เรียงเครื่องที่มีประวัติคืนเก่าสุดก่อน; เครื่องที่ยังไม่มีประวัติเติมท้ายรายการ
+ */
+async function fetchReadyEquipmentRecommendations(type, limit = 5) {
+  const def = memsReadyEquipmentDefinition(type);
+  if (!def) return { enabled: false, items: [] };
+
+  const settings = await fetchReadyEquipmentSettings();
+  if (!settings.enabled || settings.equipment[def.key] === false) {
+    return { enabled: false, items: [] };
+  }
+
+  const [assetResult, statuses, prepared] = await Promise.all([
+    supabase.from('assets')
+      .select('no, status, updated_at')
+      .eq('type', def.registryType)
+      .eq('status', 'ใช้งานได้'),
+    fetchEquipmentStatus(),
+    fetchPreparedList()
+  ]);
+  if (assetResult.error) throw assetResult.error;
+
+  const statusByNo = new Map();
+  statuses.forEach(status => {
+    if (memsReadyEquipmentTypeKey(status.equipment) !== def.key) return;
+    const no = normalizeMachineNo(status.number);
+    if (no) statusByNo.set(no, status);
+  });
+
+  const preparedNos = new Set(prepared
+    .filter(item => memsReadyEquipmentTypeKey(item.equipment) === def.key)
+    .map(item => normalizeMachineNo(item.number))
+    .filter(Boolean));
+
+  const now = Date.now();
+  const seen = new Set();
+  const items = (assetResult.data || []).flatMap(asset => {
+    const number = normalizeMachineNo(asset.no);
+    if (!number || seen.has(number) || preparedNos.has(number)) return [];
+    seen.add(number);
+    const status = statusByNo.get(number);
+    if (status && status.isBorrowed) return [];
+    const returnedAt = status && status.lastUpdate ? status.lastUpdate : null;
+    const returnedMs = returnedAt ? Date.parse(returnedAt) : NaN;
+    return [{
+      number,
+      returnedAt,
+      daysAtCenter: Number.isFinite(returnedMs) ? Math.max(0, Math.floor((now - returnedMs) / 86400000)) : null
+    }];
+  });
+
+  items.sort((a, b) => {
+    const aTime = a.returnedAt ? Date.parse(a.returnedAt) : Number.POSITIVE_INFINITY;
+    const bTime = b.returnedAt ? Date.parse(b.returnedAt) : Number.POSITIVE_INFINITY;
+    if (aTime !== bTime) return aTime - bTime;
+    const an = Number(a.number), bn = Number(b.number);
+    if (Number.isFinite(an) && Number.isFinite(bn)) return an - bn;
+    return a.number.localeCompare(b.number, 'th', { numeric: true });
+  });
+
+  return { enabled: true, items: items.slice(0, Math.max(1, Math.min(Number(limit) || 5, 5))) };
 }
 
 /** วันที่/เวลาปัจจุบันตามเขตเวลาไทย (Asia/Bangkok) โดยไม่ขึ้นกับ timezone ของอุปกรณ์ผู้ใช้ */

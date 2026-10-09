@@ -85,6 +85,28 @@
     .equip-chip { padding: 11px 16px; border: 2px solid var(--border); border-radius: 14px; font-family: 'Sarabun', sans-serif; font-size: 15px; font-weight: 700; background: var(--card); color: var(--muted); cursor: pointer; transition: all .18s; -webkit-tap-highlight-color: transparent; }
     .equip-chip.active { background: var(--a); border-color: var(--a); color: #fff; box-shadow: 0 3px 10px rgba(10,100,120,.3); }
 
+    .ready-card { display: none; padding: 0; overflow: hidden; border: 1px solid #B8DDE4; }
+    .ready-card.show { display: block; }
+    .ready-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 17px 18px 14px; border-bottom: 1px solid #DCEEF2; background: linear-gradient(135deg,#F7FCFD,#EAF7F9); }
+    .ready-title { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .ready-icon { display: grid; flex: 0 0 38px; width: 38px; height: 38px; place-items: center; border-radius: 11px; color: #fff; background: var(--a); font-size: 19px; box-shadow: 0 4px 11px rgba(10,100,120,.2); }
+    .ready-title h2 { margin: 0; font-size: 17px; line-height: 1.25; }
+    .ready-title p { margin: 4px 0 0; color: var(--muted); font-size: 11px; line-height: 1.45; }
+    .ready-count { flex: 0 0 auto; padding: 5px 9px; border: 1px solid #B8DCE2; border-radius: 999px; color: var(--a); background: #fff; font-size: 11px; font-weight: 900; }
+    .ready-list { padding: 4px 12px 12px; }
+    .ready-item { display: grid; grid-template-columns: 32px minmax(0,1fr) auto; align-items: center; gap: 11px; width: 100%; padding: 11px 7px; border: 0; border-bottom: 1px solid #E9F3F5; color: var(--txt); background: transparent; text-align: left; cursor: pointer; }
+    .ready-item:last-child { border-bottom: 0; }
+    .ready-item:hover, .ready-item:focus-visible { outline: none; border-radius: 10px; background: #F3FAFB; }
+    .ready-item.selected { border-radius: 10px; background: #E8F6F9; box-shadow: inset 0 0 0 2px var(--a); }
+    .ready-rank { display: grid; width: 30px; height: 30px; place-items: center; border: 1px solid var(--border); border-radius: 9px; color: var(--muted); background: #F8FBFC; font-size: 12px; font-weight: 900; }
+    .ready-item:first-child .ready-rank { border-color: var(--a); color: #fff; background: var(--a); }
+    .ready-no { display: block; font-size: 18px; font-weight: 900; }
+    .ready-meta { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; font-weight: 600; line-height: 1.4; }
+    .ready-duration { color: #167443; font-size: 12px; font-weight: 900; white-space: nowrap; text-align: right; }
+    .ready-pick { display: block; margin-top: 2px; color: var(--a); font-size: 10px; font-weight: 800; }
+    .ready-note { display: flex; gap: 8px; padding: 11px 16px; border-top: 1px solid #DCEEF2; color: var(--muted); background: #FBFDFD; font-size: 11px; line-height: 1.45; }
+    .ready-message { padding: 22px 12px; color: var(--muted); font-size: 13px; text-align: center; }
+
     .number-list { display: flex; flex-direction: column; gap: 10px; }
     .number-row { display: flex; align-items: center; gap: 8px; }
     .number-row .field { flex: 1; min-width: 0; }
@@ -222,6 +244,22 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   <div class="card">
     <div class="sec-label"><span class="req-dot"></span>ประเภทเครื่อง</div>
     <div class="equip-grid" id="equipGrid"></div>
+  </div>
+
+  <!-- เครื่องพร้อมใช้ เรียงตามเวลาที่อยู่ศูนย์นานที่สุด -->
+  <div class="card ready-card" id="readyEquipmentCard" aria-hidden="true" aria-live="polite">
+    <div class="ready-head">
+      <div class="ready-title">
+        <span class="ready-icon" aria-hidden="true">↗</span>
+        <div>
+          <h2>เครื่องต่อไปที่พร้อมใช้</h2>
+          <p id="readyEquipmentContext">เรียงจากเครื่องที่อยู่ศูนย์นานที่สุด</p>
+        </div>
+      </div>
+      <span class="ready-count" id="readyEquipmentCount">0 ลำดับ</span>
+    </div>
+    <div class="ready-list" id="readyEquipmentList"></div>
+    <div class="ready-note"><span aria-hidden="true">ⓘ</span><span>แสดงเฉพาะเครื่องสถานะ “ใช้งานได้” ที่อยู่ศูนย์และยังไม่ถูกเตรียมไว้ แตะรายการเพื่อเพิ่มหมายเลขเครื่อง</span></div>
   </div>
 
   <!-- ชื่อเครื่องมือ (เฉพาะ เครื่องมืออื่นๆ) -->
@@ -372,6 +410,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 
   let selectedEquip = null;
   let prepareMode = 'prepare';
+  let readyEquipmentRequest = 0;
 
   function getBangkokCalendarDate(baseDate = new Date()) {
     const parts = new Intl.DateTimeFormat('en-CA', {
@@ -415,6 +454,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 
   function sanitizeNumberInput(input) {
     input.value = input.value.replace(/[^0-9]/g, '');
+    markReadyEquipmentSelections();
   }
 
   function refreshNumberFieldUI() {
@@ -469,6 +509,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     const nextFocus = row.nextElementSibling?.querySelector('.number-input') || row.previousElementSibling?.querySelector('.number-input');
     row.remove();
     refreshNumberFieldUI();
+    markReadyEquipmentSelections();
     if (nextFocus) nextFocus.focus();
   }
 
@@ -487,6 +528,91 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   function resetNumberFields() {
     document.getElementById('numberInputs').innerHTML = '';
     addNumberField('', false);
+    markReadyEquipmentSelections();
+  }
+
+  function formatReadyEquipmentDate(iso) {
+    if (!iso) return 'ยังไม่มีประวัติคืน';
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return 'ยังไม่มีประวัติคืน';
+    return 'คืนเข้าศูนย์ ' + new Intl.DateTimeFormat('th-TH', {
+      timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', year: 'numeric'
+    }).format(date);
+  }
+
+  function markReadyEquipmentSelections() {
+    const list = document.getElementById('readyEquipmentList');
+    if (!list) return;
+    const selected = new Set(getNumberValues().map(normalizeMachineNo));
+    list.querySelectorAll('.ready-item').forEach(item => {
+      const isSelected = selected.has(normalizeMachineNo(item.dataset.number));
+      item.classList.toggle('selected', isSelected);
+      item.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+      const pick = item.querySelector('.ready-pick');
+      if (pick) pick.textContent = isSelected ? 'เลือกแล้ว' : 'แตะเพื่อเลือก';
+    });
+  }
+
+  function selectReadyEquipment(number) {
+    const normalized = normalizeMachineNo(number);
+    if (!normalized) return;
+    if (getNumberValues().map(normalizeMachineNo).includes(normalized)) {
+      toast('✓ เลือก No.' + normalized + ' ไว้แล้ว');
+      return;
+    }
+    const inputs = [...document.querySelectorAll('.number-input')];
+    const target = inputs.find(input => !input.value.trim());
+    if (target) target.value = normalized;
+    else addNumberField(normalized, false);
+    refreshNumberFieldUI();
+    markReadyEquipmentSelections();
+    toast('✓ เพิ่ม No.' + normalized + ' แล้ว');
+  }
+
+  async function loadReadyEquipmentRecommendations(equipment) {
+    const requestId = ++readyEquipmentRequest;
+    const card = document.getElementById('readyEquipmentCard');
+    const list = document.getElementById('readyEquipmentList');
+    const context = document.getElementById('readyEquipmentContext');
+    const count = document.getElementById('readyEquipmentCount');
+    card.classList.add('show');
+    card.setAttribute('aria-hidden', 'false');
+    context.textContent = equipment + ' · เรียงจากเครื่องที่อยู่ศูนย์นานที่สุด';
+    count.textContent = 'กำลังโหลด';
+    list.innerHTML = '<div class="ready-message">กำลังค้นหาเครื่องพร้อมใช้…</div>';
+    try {
+      const result = await fetchReadyEquipmentRecommendations(equipment, 5);
+      if (requestId !== readyEquipmentRequest || selectedEquip !== equipment) return;
+      if (!result.enabled) {
+        card.classList.remove('show');
+        card.setAttribute('aria-hidden', 'true');
+        return;
+      }
+      count.textContent = result.items.length + ' ลำดับ';
+      if (!result.items.length) {
+        list.innerHTML = '<div class="ready-message">ยังไม่มีเครื่องพร้อมใช้สำหรับประเภทนี้</div>';
+        return;
+      }
+      list.innerHTML = result.items.map((item, index) => `
+        <button type="button" class="ready-item" data-number="${memsEsc(item.number)}" aria-pressed="false" onclick="selectReadyEquipment('${memsEsc(item.number)}')">
+          <span class="ready-rank">${index + 1}</span>
+          <span><span class="ready-no">No. ${memsEsc(item.number)}</span><span class="ready-meta">${memsEsc(formatReadyEquipmentDate(item.returnedAt))}</span></span>
+          <span class="ready-duration">${item.daysAtCenter == null ? '—' : item.daysAtCenter + ' วัน'}<span class="ready-pick">แตะเพื่อเลือก</span></span>
+        </button>`).join('');
+      markReadyEquipmentSelections();
+    } catch (error) {
+      console.error(error);
+      if (requestId !== readyEquipmentRequest) return;
+      count.textContent = 'โหลดไม่ได้';
+      list.innerHTML = '<div class="ready-message">โหลดรายการแนะนำไม่สำเร็จ กรุณากรอกหมายเลขเครื่องตามปกติ</div>';
+    }
+  }
+
+  function hideReadyEquipmentRecommendations() {
+    readyEquipmentRequest += 1;
+    const card = document.getElementById('readyEquipmentCard');
+    card.classList.remove('show');
+    card.setAttribute('aria-hidden', 'true');
   }
 
   // build equip chips
@@ -501,6 +627,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       b.classList.add('active');
       document.getElementById('otherEquipNameCard').style.display = e === 'เครื่องมืออื่นๆ' ? '' : 'none';
       refreshNumberFieldUI();
+      loadReadyEquipmentRecommendations(e);
     };
     grid.appendChild(b);
   });
@@ -633,6 +760,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   function resetPrepareForm() {
     if (typeof memsResetPrepareQrBatch === 'function') memsResetPrepareQrBatch();
     selectedEquip = null;
+    hideReadyEquipmentRecommendations();
     document.querySelectorAll('.equip-chip').forEach(x => x.classList.remove('active'));
     resetNumberFields();
     document.getElementById('otherEquipName').value = '';
@@ -690,6 +818,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       if (error) throw error;
       toast('🗑️ ยกเลิกแล้ว (' + reason + ')');
       setTimeout(loadList, 800);
+      if (selectedEquip) loadReadyEquipmentRecommendations(selectedEquip);
     } catch (e) { toast('❌ ยกเลิกไม่สำเร็จ'); }
   }
 

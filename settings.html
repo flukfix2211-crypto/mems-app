@@ -48,6 +48,25 @@
     .feature-switch.on { background:#20A052; }
     .feature-switch.on::after { transform:translateX(26px); }
     .feature-switch:disabled { opacity:.55;cursor:wait; }
+    .feature-eyebrow { display:flex;align-items:center;gap:7px;margin-bottom:8px;color:var(--a);font-size:11px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;flex-wrap:wrap; }
+    .super-admin-chip { padding:3px 8px;border-radius:999px;background:var(--yellow-bg);color:var(--yellow);font-size:10px;font-weight:900;letter-spacing:0;text-transform:none; }
+    .feature-switch.small { width:50px;height:30px; }
+    .feature-switch.small::after { width:22px;height:22px; }
+    .feature-switch.small.on::after { transform:translateX(20px); }
+    .ready-settings-card { padding:0;overflow:hidden; }
+    .ready-settings-head { display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:18px;border-top:1px solid #E2EFF2;border-bottom:1px solid #E2EFF2;background:#F8FCFD; }
+    .ready-settings-head h2 { margin:0;font-size:16px; }
+    .ready-settings-head p { margin:5px 0 0;color:var(--muted);font-size:12px;line-height:1.5; }
+    .ready-settings-count { flex:0 0 auto;padding:5px 9px;border:1px solid #B8DCE2;border-radius:999px;color:var(--a);background:#fff;font-size:11px;font-weight:900; }
+    .ready-settings-list { padding:4px 16px; }
+    .ready-setting-row { display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;padding:13px 2px;border-bottom:1px solid #E9F3F5; }
+    .ready-setting-row:last-child { border-bottom:0; }
+    .ready-setting-name { font-size:14px;font-weight:900; }
+    .ready-setting-state { margin-top:3px;color:var(--green);font-size:11px;font-weight:800; }
+    .ready-setting-row.off .ready-setting-state { color:var(--red); }
+    .ready-setting-row.off .ready-setting-name { color:#63777E; }
+    .ready-settings-list.disabled { opacity:.48;pointer-events:none;filter:grayscale(.25); }
+    .auto-save-note { display:flex;gap:8px;padding:11px 16px;border-top:1px solid #DCEEF2;color:var(--muted);background:#FBFDFD;font-size:11px;line-height:1.45; }
 
     .ctrl-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; justify-content: space-between; }
     .add-btn { padding: 10px 18px; background: linear-gradient(135deg, var(--a), var(--a2)); color: #fff; border: none; border-radius: var(--rs); font-family: 'Sarabun', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap; box-shadow: 0 3px 12px rgba(10,100,120,.25); transition: all .2s; -webkit-tap-highlight-color: transparent; }
@@ -197,6 +216,29 @@ body{background:#0c6173!important;background-image:none!important}
     </div>
   </div>
 
+  <div class="card ready-settings-card">
+    <div style="padding:18px">
+      <div class="feature-row">
+        <div class="feature-copy">
+          <div class="feature-eyebrow">ฟังก์ชันหน้าเตรียมเครื่องมือ <span class="super-admin-chip">เฉพาะแอดมินสูงสุด</span></div>
+          <div class="feature-title">แนะนำเครื่องต่อไปที่พร้อมใช้</div>
+          <div class="feature-desc">แสดงเครื่อง 5 ลำดับที่อยู่ศูนย์นานที่สุด เพื่อช่วยหมุนเวียนการใช้งานเครื่องอย่างเหมาะสม</div>
+          <div id="readyEquipmentFeatureStatus" class="feature-status">กำลังโหลดการตั้งค่า…</div>
+        </div>
+        <button id="readyEquipmentFeatureSwitch" class="feature-switch" type="button" role="switch" aria-checked="false" aria-label="เปิดหรือปิดฟังก์ชันแนะนำเครื่อง" onclick="toggleReadyEquipmentFeature()" disabled></button>
+      </div>
+    </div>
+    <div class="ready-settings-head">
+      <div>
+        <h2>เลือกประเภทเครื่องที่ใช้ฟังก์ชันนี้</h2>
+        <p>ปิดเฉพาะบางประเภทได้ โดยไม่กระทบการเตรียมเครื่องแบบปกติ</p>
+      </div>
+      <span class="ready-settings-count" id="readyEquipmentActiveCount">กำลังโหลด</span>
+    </div>
+    <div class="ready-settings-list disabled" id="readyEquipmentSettingsList"></div>
+    <div class="auto-save-note"><span aria-hidden="true">✓</span><span>บันทึกอัตโนมัติเมื่อกดสวิตช์ และมีผลกับหน้าเตรียมเครื่องมือทันที</span></div>
+  </div>
+
   <div class="card">
     <div class="ctrl-row">
       <div style="font-size:14px;color:var(--muted)">บัญชีทั้งหมดในระบบ — เฉพาะแอดมินเท่านั้นที่เข้าหน้านี้ได้</div>
@@ -344,6 +386,10 @@ let allUsers = [];
 let editingUserId = null; // null = create mode
 let modalRole = 'user';
 let qrFeatureEnabled = true;
+let readyEquipmentSettings = {
+  enabled: true,
+  equipment: Object.fromEntries(MEMS_READY_EQUIPMENT_TYPES.map(type => [type.key, type.defaultEnabled !== false]))
+};
 
 function renderQrFeatureSetting(loading) {
   const button = document.getElementById('qrFeatureSwitch');
@@ -378,6 +424,75 @@ async function toggleQrFeature() {
   } catch (err) {
     console.error(err);
     renderQrFeatureSetting(false);
+    toast('❌ บันทึกการตั้งค่าไม่สำเร็จ');
+  }
+}
+
+function renderReadyEquipmentSettings(loadingId) {
+  const master = document.getElementById('readyEquipmentFeatureSwitch');
+  const status = document.getElementById('readyEquipmentFeatureStatus');
+  const list = document.getElementById('readyEquipmentSettingsList');
+  master.classList.toggle('on', readyEquipmentSettings.enabled);
+  master.setAttribute('aria-checked', readyEquipmentSettings.enabled ? 'true' : 'false');
+  master.disabled = loadingId === MEMS_READY_EQUIPMENT_MASTER_SETTING_ID;
+  status.className = 'feature-status ' + (readyEquipmentSettings.enabled ? 'on' : 'off');
+  status.textContent = loadingId === MEMS_READY_EQUIPMENT_MASTER_SETTING_ID
+    ? 'กำลังบันทึก…'
+    : (readyEquipmentSettings.enabled ? 'เปิดใช้งานอยู่' : 'ปิดใช้งานอยู่');
+
+  const enabledCount = MEMS_READY_EQUIPMENT_TYPES.filter(type => readyEquipmentSettings.equipment[type.key]).length;
+  document.getElementById('readyEquipmentActiveCount').textContent = enabledCount + ' จาก ' + MEMS_READY_EQUIPMENT_TYPES.length + ' เปิดอยู่';
+  const masterLoading = loadingId === MEMS_READY_EQUIPMENT_MASTER_SETTING_ID;
+  list.classList.toggle('disabled', !readyEquipmentSettings.enabled || masterLoading);
+  list.innerHTML = MEMS_READY_EQUIPMENT_TYPES.map(type => {
+    const enabled = readyEquipmentSettings.equipment[type.key] !== false;
+    const id = memsReadyEquipmentSettingId(type);
+    return `<div class="ready-setting-row ${enabled ? '' : 'off'}">
+      <div><div class="ready-setting-name">${memsEsc(type.name)}</div><div class="ready-setting-state">${enabled ? 'เปิดแสดงลำดับ 1–5' : 'ปิด — ไม่แสดงรายการแนะนำ'}</div></div>
+      <button class="feature-switch small ${enabled ? 'on' : ''}" type="button" role="switch" aria-checked="${enabled ? 'true' : 'false'}" aria-label="เปิดหรือปิด ${memsEsc(type.name)}" onclick="toggleReadyEquipmentType('${type.key}')" ${!readyEquipmentSettings.enabled || masterLoading || loadingId === id ? 'disabled' : ''}></button>
+    </div>`;
+  }).join('');
+}
+
+async function loadReadyEquipmentFeatureSettings() {
+  try {
+    readyEquipmentSettings = await fetchReadyEquipmentSettings();
+    renderReadyEquipmentSettings(null);
+  } catch (error) {
+    console.error(error);
+    document.getElementById('readyEquipmentFeatureStatus').textContent = 'โหลดการตั้งค่าไม่สำเร็จ';
+    document.getElementById('readyEquipmentActiveCount').textContent = 'โหลดไม่ได้';
+    toast('❌ โหลดการตั้งค่าเครื่องแนะนำไม่สำเร็จ');
+  }
+}
+
+async function toggleReadyEquipmentFeature() {
+  const next = !readyEquipmentSettings.enabled;
+  renderReadyEquipmentSettings(MEMS_READY_EQUIPMENT_MASTER_SETTING_ID);
+  try {
+    readyEquipmentSettings.enabled = await saveReadyEquipmentSetting(MEMS_READY_EQUIPMENT_MASTER_SETTING_ID, next);
+    renderReadyEquipmentSettings(null);
+    toast(readyEquipmentSettings.enabled ? '✅ เปิดใช้งานเครื่องแนะนำแล้ว' : '⏸️ ปิดใช้งานเครื่องแนะนำแล้ว');
+  } catch (error) {
+    console.error(error);
+    renderReadyEquipmentSettings(null);
+    toast('❌ บันทึกการตั้งค่าไม่สำเร็จ');
+  }
+}
+
+async function toggleReadyEquipmentType(typeKey) {
+  const type = MEMS_READY_EQUIPMENT_TYPES.find(item => item.key === typeKey);
+  if (!type) return;
+  const id = memsReadyEquipmentSettingId(type);
+  const next = readyEquipmentSettings.equipment[type.key] === false;
+  renderReadyEquipmentSettings(id);
+  try {
+    readyEquipmentSettings.equipment[type.key] = await saveReadyEquipmentSetting(id, next);
+    renderReadyEquipmentSettings(null);
+    toast(readyEquipmentSettings.equipment[type.key] ? '✅ เปิด ' + type.name + ' แล้ว' : '⏸️ ปิด ' + type.name + ' แล้ว');
+  } catch (error) {
+    console.error(error);
+    renderReadyEquipmentSettings(null);
     toast('❌ บันทึกการตั้งค่าไม่สำเร็จ');
   }
 }
@@ -780,6 +895,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   const profile = await memsGuard('super_admin'); // เฉพาะแอดมินหลัก (is_super_admin) เท่านั้น — role='admin' ทั่วไปเข้าไม่ได้
   if (profile) {
     loadQrFeatureSetting();
+    loadReadyEquipmentFeatureSettings();
     loadUsers();
   }
 });
