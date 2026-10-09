@@ -16,12 +16,12 @@
   <main class="main">
     <section class="card"><div class="tag-head"><div class="tag-icon">📡</div><div class="tag-title"><h2 id="tagName">memstag test01</h2><p id="bleIdentity">Holy-IOT · CE:76:04:3F:CE:88</p></div><div id="statusBadge" class="status loading">กำลังโหลด…</div></div><div id="statusMessage" class="message">กำลังตรวจสถานะจากศูนย์…</div>
       <div class="grid"><div class="metric"><label>ศูนย์ตรวจจับ</label><strong id="centerName">ศูนย์เครื่องมือแพทย์</strong></div><div class="metric"><label>สัญญาณกรองแล้ว</label><strong id="rssi">—</strong></div><div class="metric"><label>ระยะโดยประมาณ</label><strong id="distance">—</strong></div><div class="metric"><label>พบ tag ล่าสุด</label><strong id="lastSeen">—</strong></div><div class="metric"><label>ESP32 รายงานล่าสุด</label><strong id="lastReport">—</strong></div><div class="metric" style="grid-column:1/-1"><label>Service data ล่าสุด</label><strong id="payload" class="payload">—</strong></div></div>
-      <p class="distance-note">ระยะคำนวณจาก RSSI median 9 ตัวอย่าง, Tx Power −55 dBm และค่าพื้นที่ภายในอาคาร n=2.8 จึงใช้ประมาณโซน ไม่ใช่การวัดระยะแบบ GPS/UWB</p>
+      <p class="distance-note">ระยะคำนวณจาก RSSI median 9 ตัวอย่าง และค่าที่สอบเทียบหน้างานแบบยกอุปกรณ์พ้นพื้น (Tx@1m −58.4 dBm, n=1.76) จึงใช้ประมาณโซน ไม่ใช่การวัดระยะแบบ GPS/UWB</p>
     </section><section class="card foot"><span id="updatedText">อัปเดตอัตโนมัติทุก 5 วินาที</span><button class="refresh" onclick="loadStatus()">รีเฟรช</button></section>
   </main>
   <script src="vendor/supabase.js"></script><script src="supabase-client.js"></script><script src="auth.js"></script>
   <script>
-    const CENTER_OFFLINE_MS=30000,TX_POWER_AT_1M=-55,INDOOR_PATH_LOSS=2.8;let latestRecord=null;
+    const CENTER_OFFLINE_MS=30000,TX_POWER_AT_1M=-58.4,INDOOR_PATH_LOSS=1.76;let latestRecord=null;
     function dateText(value){if(!value)return'ยังไม่เคยพบ';return new Intl.DateTimeFormat('th-TH',{dateStyle:'medium',timeStyle:'medium'}).format(new Date(value))}
     function ageText(value){if(!value)return'—';const seconds=Math.max(0,Math.floor((Date.now()-new Date(value).getTime())/1000));if(seconds<60)return seconds+' วินาทีที่แล้ว';if(seconds<3600)return Math.floor(seconds/60)+' นาทีที่แล้ว';return Math.floor(seconds/3600)+' ชั่วโมงที่แล้ว'}
     function setText(id,value){document.getElementById(id).textContent=value}
