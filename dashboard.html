@@ -1063,8 +1063,7 @@ function renderSearchToolResults() {
     // มีปุ่มจัดการเฉพาะเครื่องที่มีหมายเลขระบุตัวตนชัดเจน (ระบุเครื่องที่จะย้าย/คืน/เปลี่ยน circuit ได้แน่นอน)
     let actions = '';
     if (e.number) {
-      const dt = parseThaiTimestampStr(e.lastUpdate);
-      const days = dt ? Math.floor((new Date() - dt) / 86400000) : 0;
+      const days = getBorrowedDays(e.equipment, e.number, e.lastUpdate);
       actions = `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px">
           <button onclick="openToolTransferModal('${jsStr(e.equipment)}','${jsStr(e.number)}','${jsStr(e.ward)}')" style="flex:1;min-width:80px;font-size:11px;padding:5px 6px;border-radius:8px;border:1.5px solid #C5E3ED;background:#fff;color:#0A6478;cursor:pointer;font-weight:700">🔁 ย้ายวอร์ด</button>
           <button onclick="openToolReturnModal('${jsStr(e.equipment)}','${jsStr(e.number)}','${jsStr(e.ward)}')" style="flex:1;min-width:80px;font-size:11px;padding:5px 6px;border-radius:8px;border:1.5px solid #FCA5A5;background:#fff;color:#B82E2E;cursor:pointer;font-weight:700">🟥 คืนเครื่อง</button>
@@ -1561,6 +1560,70 @@ const REPAIR_STATUSES = ['ชำรุด', 'ส่งซ่อม'];
 
 const escHtml = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
+// แยก "อายุการยืม" ออกจาก "รอบเปลี่ยน Circuit": equipment_status.lastUpdate คือ
+// เหตุการณ์ล่าสุดของเครื่อง จึงเปลี่ยนเป็นวันเปลี่ยน Circuit/วันย้ายวอร์ดได้และห้ามใช้เป็นวันเริ่มยืม
+function getCurrentLoanTimeline(equipment, number, fallbackLastUpdate = '') {
+  const equipmentKey = String(equipment || '').trim().toLowerCase();
+  const numberKey = normalizeMachineNo(number);
+  const fallbackAt = parseThaiTimestampStr(fallbackLastUpdate);
+  let borrowAt = null;
+  let circuitAt = null;
+  let latestEventAt = fallbackAt;
+
+  for (const record of allRecords) {
+    if (String(record['ชื่อเครื่อง'] || '').trim().toLowerCase() !== equipmentKey) continue;
+    if (normalizeMachineNo(record['หมายเลขเครื่อง']) !== numberKey) continue;
+    const eventAt = parseThaiDT(record);
+    if (!eventAt) continue;
+    if (!latestEventAt || eventAt > latestEventAt) latestEventAt = eventAt;
+
+    const action = String(record['ประเภท (ยืม/คืน)'] || '');
+    // allRecords เรียงใหม่ไปเก่า: เจอคืนก่อนยืมหมายถึงพ้นรอบการยืมปัจจุบันแล้ว
+    if (action.includes('คืน')) break;
+    if (!circuitAt && action.includes('Circuit')) circuitAt = eventAt;
+    if (action.includes('ยืม')) {
+      borrowAt = eventAt;
+      break;
+    }
+  }
+
+  return { borrowAt: borrowAt || fallbackAt, circuitAt, latestEventAt };
+}
+
+function fullDaysSince(date, now = new Date()) {
+  return date ? Math.max(0, Math.floor((now - date) / 86400000)) : 0;
+}
+
+function getBorrowedDays(equipment, number, fallbackLastUpdate = '', now = new Date()) {
+  return fullDaysSince(getCurrentLoanTimeline(equipment, number, fallbackLastUpdate).borrowAt, now);
+}
+
+// ใช้วันที่ Round เมื่อเป็นกำหนดรอบใหม่กว่า แต่ถ้า Round ยังส่งกำหนดเดิมที่ถึงแล้ว
+// ให้รายการเปลี่ยน Circuit ใน MEMs เป็นแหล่งจริง เพื่อไม่ให้แจ้งเตือนเดิมกลับมาทันที
+function getCircuitTiming(equipment, number, fallbackLastUpdate, roundRecord, now = new Date()) {
+  const timeline = getCurrentLoanTimeline(equipment, number, fallbackLastUpdate);
+  const todayISO = bkkDateStr(now);
+  const circuitISO = timeline.circuitAt ? bkkDateStr(timeline.circuitAt) : null;
+  const roundIsCurrent = roundRecord && roundRecord.active && roundRecord.dueISO
+    && (!circuitISO || roundRecord.dueISO > circuitISO);
+
+  let dueISO = null;
+  if (roundIsCurrent) {
+    dueISO = circuitChangeDay(roundRecord.dueISO, todayISO);
+  } else {
+    const anchorAt = timeline.circuitAt || timeline.borrowAt;
+    if (anchorAt) dueISO = isoAddDays(bkkDateStr(anchorAt), OVERDUE_C2_DAYS);
+  }
+
+  return {
+    ...timeline,
+    daysBorrowed: fullDaysSince(timeline.borrowAt, now),
+    dueISO,
+    daysLeft: dueISO ? isoDaysBetween(todayISO, dueISO) : null,
+    source: roundIsCurrent ? 'round' : 'mems'
+  };
+}
+
 // ความพร้อมใช้ต่อประเภท: นับเครื่องจริงจากทะเบียนครุภัณฑ์ (assets) — ไม่ใช่แค่เครื่องที่เคยมีประวัติยืม-คืนใน equipment_status
 // total ไม่นับเครื่องที่จำหน่ายแล้ว, เครื่องที่ยืมอยู่นับเป็น "ยืมอยู่" แม้ในทะเบียนจะเป็นชำรุด/ส่งซ่อม (จะได้ไม่นับซ้ำ)
 // ใช้ทั้งการ์ด "ความพร้อมใช้แยกประเภท" ในหน้าแรก และแจ้งเตือน "ใกล้หมด"
@@ -1735,22 +1798,24 @@ async function fetchRoundC2() {
 }
 
 // รวมโค้ดคำนวณ alert ไว้จุดเดียว ใช้ทั้ง Home banner และ KPI Display slide
-//   circuit    : C2 ที่ยืมอยู่และพบในราวด์ — ครบเปลี่ยน Circuit ตามวันที่ในราวด์ (เลยกำหนด / ใกล้ถึง)
+//   circuit    : C2 ที่ยืมอยู่และพบในราวด์ — ใช้กำหนด Round ล่าสุด หรือ 14 วันจากการเปลี่ยนใน MEMs เมื่อ Round ยังเป็นรอบเดิม
 //   notInRound : MEMs ว่ายืมอยู่ แต่ไม่พบในราวด์ล่าสุด → น่าจะกลับศูนย์แล้ว ให้ตรวจสอบและบันทึกคืน
 //   notBorrowed: พบในราวด์ (อยู่ที่ตึกจริง) แต่ MEMs ไม่มีรายการยืมค้าง → ควรบันทึกยืม
-//   overdue    : ใช้เฉพาะเมื่อโหลดข้อมูลราวด์ไม่ได้ (เกณฑ์เดิม: ยืมเกิน 14 วัน)
+//   overdue    : ใช้เฉพาะเมื่อโหลดข้อมูลราวด์ไม่ได้ (14 วันจากวันยืมหรือเปลี่ยน Circuit ล่าสุด)
 function computeAlerts() {
   const now = new Date();
-  const todayISO = bkkDateStr(now);
   const borrowedC2 = equipStatus.filter(e => e.isBorrowed && String(e.equipment).includes('C2'));
-  const daysSince = e => { const dt = parseThaiTimestampStr(e.lastUpdate); return dt ? Math.floor((now - dt) / 86400000) : null; };
+  const timingFor = (e, roundRecord = null) => getCircuitTiming(e.equipment, e.number, e.lastUpdate, roundRecord, now);
 
   let overdue = [], circuit = [], notInRound = [], notBorrowed = [];
   const round = roundC2 && roundC2.latestRoundDate ? roundC2 : null;
   if (!round) {
     overdue = borrowedC2
-      .map(e => ({ number: e.number, ward: e.ward, days: daysSince(e) }))
-      .filter(e => e.days !== null && e.days >= OVERDUE_C2_DAYS)
+      .map(e => {
+        const timing = timingFor(e);
+        return { number: e.number, ward: e.ward, days: timing.daysBorrowed, changeISO: timing.dueISO, diff: timing.daysLeft };
+      })
+      .filter(e => e.diff !== null && e.diff <= 0)
       .sort((a, b) => b.days - a.days);
   } else {
     const active = no => { const r = round.byNumber[no]; return r && r.active ? r : null; };
@@ -1760,16 +1825,18 @@ function computeAlerts() {
       if (!no) return;
       borrowedNos.add(no);
       const r = active(no);
-      const base = { equipment: e.equipment, number: e.number, ward: e.ward, days: daysSince(e) ?? 0 };
+      const timing = timingFor(e, r);
+      const base = { equipment: e.equipment, number: e.number, ward: e.ward, days: timing.daysBorrowed };
       if (!r) {
         const last = round.byNumber[no];
         notInRound.push({ ...base, lastRound: last ? last.roundDate : null, lastRoundWard: last ? last.ward : '' });
         return;
       }
-      if (!r.dueISO) return;
-      const changeISO = circuitChangeDay(r.dueISO, todayISO);
-      const diff = isoDaysBetween(todayISO, changeISO);
-      if (diff <= CIRCUIT_SOON_DAYS) circuit.push({ ...base, roundWard: r.ward, bed: r.bed, dueISO: r.dueISO, changeISO, diff });
+      if (!timing.dueISO) return;
+      if (timing.daysLeft <= CIRCUIT_SOON_DAYS) circuit.push({
+        ...base, roundWard: r.ward, bed: r.bed, dueISO: r.dueISO,
+        changeISO: timing.dueISO, diff: timing.daysLeft
+      });
     });
     // เวลาบันทึกล่าสุดใน MEMs ของ C2 แต่ละเครื่อง — ถ้าบันทึกคืนหลังเวลาราวด์ แปลว่าเครื่องกลับศูนย์แล้ว ไม่ต้องเตือนให้บันทึกยืม
     const lastMemsAt = {};
@@ -1926,15 +1993,19 @@ function detectShiftTH() {
 }
 
 function openCircuitModal(number, ward, days, equip = 'C2') {
-  _circuitCtx = { number, ward, days, equip };
+  const timeline = getCurrentLoanTimeline(equip, number);
+  const borrowedDays = timeline.borrowAt ? fullDaysSince(timeline.borrowAt) : Math.max(0, Number(days) || 0);
+  _circuitCtx = { number, ward, days: borrowedDays, equip };
   document.getElementById('circuitInfo').innerHTML =
-    `<strong>${equip} No.${number}</strong><br><span style="font-weight:500;color:var(--muted);font-size:12px">📍 ${ward || '—'} · ยืมมาแล้ว ${days} วัน</span>`;
+    `<strong>${equip} No.${number}</strong><br><span style="font-weight:500;color:var(--muted);font-size:12px">📍 ${ward || '—'} · ยืมมาแล้ว ${borrowedDays} วัน</span>`;
   document.getElementById('circuitStaffName').value = '';
   const dateInput = document.getElementById('circuitDate');
   dateInput.max = bkkDateStr(new Date()); // เลือกวันที่ในอนาคตไม่ได้
   // ห้ามเลือกวันที่ก่อนวันยืม/เปลี่ยน Circuit ครั้งล่าสุด — ระบบถือรายการที่มีเวลาล่าสุดเป็นสถานะปัจจุบันเสมอ
   // ถ้าเลือกวันที่เก่ากว่านั้น รายการที่บันทึกใหม่จะถูกรายการเดิม (ที่ใหม่กว่า) บังไว้ ทำให้ดูเหมือนกดยืนยันแล้วไม่มีอะไรเกิดขึ้น
-  dateInput.min = bkkDateStr(new Date(Date.now() - Math.max(0, days) * 86400000));
+  dateInput.min = timeline.latestEventAt
+    ? bkkDateStr(timeline.latestEventAt)
+    : bkkDateStr(new Date(Date.now() - borrowedDays * 86400000));
   setCircuitDateToday();
   document.getElementById('circuitModal').style.display = 'flex';
 }
@@ -2680,8 +2751,7 @@ async function renderC2Dashboard() {
 
     const { items, counts } = computeC2Summary(units, assetMap);
     renderEquipmentStatusGrid(grid, items, 'C2', u => {
-      const dt = parseThaiTimestampStr(u.lastUpdate);
-      const days = dt ? Math.floor((new Date() - dt) / 86400000) : 0;
+      const days = getBorrowedDays('C2', u.number, u.lastUpdate);
       openCircuitModal(String(u.number), u.ward || '', days);
     });
     document.getElementById('c2DashSummary').innerHTML = equipmentStatusSummary(counts);
@@ -2704,19 +2774,13 @@ function renderC2CircuitDue(items) {
   const due = items
     .filter(u => u.status === 'borrowed')
     .map(u => {
-      const dt = parseThaiTimestampStr(u.lastUpdate);
-      if (!dt) return null;
-      const daysBorrowed = Math.floor((now - dt) / 86400000);
-      // ถ้ามีวันครบเปลี่ยนจากราวด์หน้างาน (Round Ventilator) ให้ใช้วันนั้น (ปัดเป็นวันอังคาร/พฤหัส) — ไม่งั้นนับ 14 วันจากวันยืมเหมือนเดิม
       const r = roundC2 && roundC2.activeSince && roundC2.byNumber[roundMachineNo(u.number)];
-      if (r && r.dueISO && r.active) {
-        const todayISO = bkkDateStr(now);
-        const changeISO = circuitChangeDay(r.dueISO, todayISO);
-        return { number: u.number, ward: u.ward, daysBorrowed, dueDate: new Date(changeISO + 'T00:00:00+07:00'), daysLeft: isoDaysBetween(todayISO, changeISO) };
-      }
-      const dueDate = new Date(dt.getTime() + OVERDUE_C2_DAYS * 86400000);
-      const daysLeft = Math.ceil((dueDate - now) / 86400000);
-      return { number: u.number, ward: u.ward, daysBorrowed, dueDate, daysLeft };
+      const timing = getCircuitTiming('C2', u.number, u.lastUpdate, r, now);
+      if (!timing.dueISO) return null;
+      return {
+        number: u.number, ward: u.ward, daysBorrowed: timing.daysBorrowed,
+        dueDate: new Date(timing.dueISO + 'T00:00:00+07:00'), daysLeft: timing.daysLeft
+      };
     })
     .filter(Boolean)
     .sort((a, b) => a.dueDate - b.dueDate);
