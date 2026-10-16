@@ -74,6 +74,7 @@ test('changing a circuit keeps the original borrow age and schedules another 14 
   assert.equal(timing.dueISO, '2026-10-29');
   assert.equal(timing.daysLeft, 13);
   assert.equal(timing.source, 'mems');
+  assert.equal(context.formatCircuitDate(timing.circuitAt), '15/10/2026');
 });
 
 test('a newer Round due date can replace a completed local circuit round', () => {
