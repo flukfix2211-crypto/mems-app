@@ -1,0 +1,203 @@
+/* Shared institutional footer for every MEMs page. */
+@media screen {
+  body.mems-has-site-footer {
+    display: flex;
+    min-height: 100vh;
+    flex-direction: column;
+  }
+
+  .site-footer {
+    position: relative;
+    z-index: 2;
+    box-sizing: border-box;
+    width: 100%;
+    margin-top: auto;
+    border-top: 3px solid #216579;
+    background: #142b40;
+    color: #cfdfeb;
+    font-family: 'Sarabun', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  .site-footer,
+  .site-footer * {
+    box-sizing: border-box;
+  }
+
+  .site-footer__inner {
+    width: calc(100% - 48px);
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 30px 0 22px;
+  }
+
+  .site-footer__primary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 40px;
+    padding-bottom: 24px;
+  }
+
+  .site-footer__brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+  }
+
+  .site-footer__brand img {
+    width: 48px;
+    height: 48px;
+    padding: 3px;
+    border-radius: 10px;
+    background: #fff;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+
+  .site-footer__brand-copy,
+  .site-footer__organization {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .site-footer__brand strong {
+    color: #fff;
+    font-size: 1.125rem;
+    line-height: 1.35;
+    letter-spacing: .02em;
+  }
+
+  .site-footer__brand span {
+    color: #9fb7c8;
+    font-size: .75rem;
+    line-height: 1.5;
+  }
+
+  .site-footer__organization {
+    align-items: flex-end;
+    text-align: right;
+    line-height: 1.55;
+  }
+
+  .site-footer__label {
+    margin-bottom: 3px;
+    color: #72d7d2;
+    font-size: .6875rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+  }
+
+  .site-footer__organization strong {
+    color: #fff;
+    font-size: .9375rem;
+    font-weight: 600;
+  }
+
+  .site-footer__organization > span:last-child {
+    color: #b6c9d8;
+    font-size: .8125rem;
+  }
+
+  .site-footer__meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding-top: 18px;
+    border-top: 1px solid rgba(255, 255, 255, .12);
+    color: #9fb7c8;
+    font-size: .75rem;
+    line-height: 1.6;
+  }
+
+  .site-footer__credits {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    text-align: right;
+  }
+
+  .site-footer__credits strong {
+    color: #cfdfeb;
+    font-weight: 600;
+  }
+
+  .site-footer__version {
+    display: inline-flex;
+    align-items: center;
+    min-height: 26px;
+    padding: 3px 9px;
+    border: 1px solid #527082;
+    border-radius: 999px;
+    color: #dceaf3;
+    font-size: .6875rem;
+    font-weight: 600;
+    letter-spacing: .03em;
+    white-space: nowrap;
+  }
+
+  .site-footer--with-sticky-action {
+    margin-bottom: calc(84px + env(safe-area-inset-bottom));
+  }
+
+  body.mems-dashboard > .site-footer {
+    width: calc(100% - 244px);
+    margin-left: 244px;
+  }
+
+  body.mems-dashboard:has(#viewKpi.active) > .site-footer {
+    display: none;
+  }
+
+  @media (max-width: 1100px) {
+    body.mems-dashboard > .site-footer {
+      width: calc(100% - 210px);
+      margin-left: 210px;
+    }
+  }
+
+  @media (max-width: 760px) {
+    .site-footer__inner {
+      width: calc(100% - 40px);
+      padding: 26px 0 20px;
+    }
+
+    .site-footer__primary {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: 22px;
+      padding-bottom: 22px;
+    }
+
+    .site-footer__organization {
+      align-items: flex-start;
+      text-align: left;
+    }
+
+    .site-footer__meta {
+      align-items: flex-start;
+      flex-direction: column-reverse;
+      gap: 14px;
+    }
+
+    .site-footer__credits {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: 8px;
+      text-align: left;
+    }
+
+    body.mems-dashboard > .site-footer {
+      width: 100%;
+      margin-left: 0;
+    }
+  }
+}
+
+@media print {
+  .site-footer {
+    display: none !important;
+  }
+}
