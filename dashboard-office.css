@@ -213,7 +213,7 @@
 
 /* Home: ความพร้อมใช้แยกประเภท + สรุปสถานะครุภัณฑ์ */
 @media screen {
- .dash-asset-summary { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:10px; margin-bottom:20px; }
+ .dash-asset-summary { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:10px; margin-bottom:20px; }
  .dash-asset-chip { border:1px solid #dce4eb; border-radius:10px; padding:10px 14px; background:#f8fafc; display:flex; flex-direction:column; gap:2px; border-left:4px solid #8aa1b1; }
  .dash-asset-chip span { font-size:.8125rem; color:#5a7080; }
  .dash-asset-chip strong { font:600 1.5rem 'Sarabun',sans-serif; color:#142b40; font-variant-numeric:tabular-nums; line-height:1.3; }
@@ -221,12 +221,13 @@
  .dash-asset-chip.is-borrowed { border-left-color:#216579; }
  .dash-asset-chip.is-broken { border-left-color:#c2410c; }
  .dash-asset-chip.is-repair { border-left-color:#b7791f; }
+ .dash-asset-chip.is-pending { border-left-color:#996000; }
  .dash-avail-list { display:flex; flex-direction:column; gap:12px; }
  .dash-avail-row { display:grid; grid-template-columns:150px minmax(0,1fr) 120px 110px; align-items:center; gap:14px; font-size:.875rem; }
  .dash-avail-name { font-weight:600; color:#203d53; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
  .dash-avail-bar { display:flex; gap:2px; height:14px; border-radius:7px; overflow:hidden; background:#e9eef3; }
  .dash-avail-bar span { display:block; height:100%; }
- .seg-avail { background:#2f8f6b; } .seg-borrowed { background:#216579; } .seg-repair { background:#d08a2e; }
+ .seg-avail { background:#2f8f6b; } .seg-borrowed { background:#216579; } .seg-repair { background:#d08a2e; } .seg-pending { background:#9b7a30; }
  .dash-avail-count { color:#526875; text-align:right; font-variant-numeric:tabular-nums; }
  .dash-avail-count strong { color:#142b40; font-size:1rem; }
  .dash-avail-row.is-low .dash-avail-count strong { color:#b42318; }

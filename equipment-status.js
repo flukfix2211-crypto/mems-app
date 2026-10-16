@@ -4,7 +4,7 @@ const EQUIPMENT_STATUS_IMAGES = {
   'High Flow': 'img/equipment/high-flow.jpg',
   'Brid เขียว': 'img/equipment/brid-green.jpg'
 };
-const EQUIPMENT_STATUS_LABELS = { avail: 'พร้อมใช้', borrowed: 'ยืมอยู่', repair: 'ซ่อม', sold: 'จำหน่าย' };
+const EQUIPMENT_STATUS_LABELS = { avail: 'พร้อมใช้', borrowed: 'ยืมอยู่', repair: 'ซ่อม', pending: 'รอเลขครุภัณฑ์', sold: 'จำหน่าย' };
 function equipmentStatusEscape(value) {
   return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
@@ -20,7 +20,9 @@ function renderEquipmentStatusGrid(grid, items, type, onBorrowedClick) {
     const interactive = u.status === 'borrowed' && !!onBorrowedClick;
     const tag = interactive ? 'button' : 'article';
     const location = u.status === 'borrowed' ? u.ward || 'ไม่ระบุหน่วยงาน'
-      : u.status === 'repair' ? u.assetStatus : u.status === 'sold' ? 'จำหน่ายออกจากระบบ' : 'พร้อมสำหรับยืม';
+      : u.status === 'repair' ? u.assetStatus
+      : u.status === 'pending' ? ASSET_STATUS_WAITING_FOR_NUMBER
+      : u.status === 'sold' ? 'จำหน่ายออกจากระบบ' : 'พร้อมสำหรับยืม';
     const image = EQUIPMENT_STATUS_IMAGES[type];
     return `<${tag} class="eq-machine eq-${u.status}" ${interactive ? `type="button" data-index="${index}" title="บันทึกการเปลี่ยน Circuit"` : ''}>
       <div class="eq-machine-heading"><strong>No.${esc(u.number)}</strong><span class="eq-status-badge"><i class="eq-dot" aria-hidden="true"></i>${EQUIPMENT_STATUS_LABELS[u.status]}</span></div>

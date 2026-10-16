@@ -231,7 +231,9 @@ async function loadStatistics() {
       ward: row.ward || 'ไม่ระบุหน่วยงาน', ts: new Date(row.recorded_at),
       isBorrow: isBorrowAction(row.action), isReturn: isReturnAction(row.action)
     })).filter(row => EQUIPMENT_TYPES.includes(row.type) && row.no && !Number.isNaN(row.ts.getTime()) && (row.isBorrow || row.isReturn));
-    statsState.assets = assets.map(row => ({ type: normalizeEquipmentType(row.type), no: normalizeMachineNo(row.no), status: row.status || 'ใช้งานได้' }))
+    statsState.assets = assets
+      .filter(row => !isAssetHiddenFromDashboard(row.status))
+      .map(row => ({ type: normalizeEquipmentType(row.type), no: normalizeMachineNo(row.no), status: row.status || 'ใช้งานได้' }))
       .filter(row => EQUIPMENT_TYPES.includes(row.type) && row.no);
     statsState.current = current.map(row => ({
       type: normalizeEquipmentType(row.equipment_name), no: normalizeMachineNo(row.equipment_number),

@@ -261,11 +261,21 @@ async function fetchEquipmentStatusForMachine(equipment, number) {
  * ใช้กำหนดว่าหน้าสถานะมีเครื่อง No. อะไรบ้าง/กี่เครื่อง — ถ้าโหลดไม่ได้หรือทะเบียนยังว่าง คืน [] (ผู้เรียกใช้ค่าเดิม 1-58 แทน)
  */
 const C2_FALLBACK_COUNT = 58;
+const ASSET_STATUS_WAITING_FOR_NUMBER = 'รอเลขครุภัณฑ์';
+const ASSET_STATUS_NOT_READY = 'เครื่องยังไม่พร้อมใช้งาน';
+
+// รายการสถานะนี้ใช้จอง/รัน No. ไว้ในทะเบียนเท่านั้น จึงต้องไม่ปรากฏหรือนับรวมบน Dashboard
+function isAssetHiddenFromDashboard(status) {
+  return String(status || '').trim() === ASSET_STATUS_NOT_READY;
+}
+
 async function fetchC2AssetNumbers() {
   try {
-    const { data, error } = await supabase.from('assets').select('no').eq('type', 'C2');
+    const { data, error } = await supabase.from('assets').select('no, status').eq('type', 'C2');
     if (error) throw error;
-    return sortMachineNumbers((data || []).map(a => a.no));
+    return sortMachineNumbers((data || [])
+      .filter(a => !isAssetHiddenFromDashboard(a.status))
+      .map(a => a.no));
   } catch (e) {
     return [];
   }

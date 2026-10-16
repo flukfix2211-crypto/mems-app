@@ -1,5 +1,5 @@
 /* Executive equipment overview in MEMs teal; scoped to the equipment view. */
-#viewEquipStatus .eq-status-summary { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-bottom:20px; }
+#viewEquipStatus .eq-status-summary { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:12px; margin-bottom:20px; }
 #viewEquipStatus .eq-stat { background:#fff; border:1px solid #dce7eb; border-radius:14px; padding:18px; box-shadow:0 3px 12px #173d4805; }
 #viewEquipStatus .eq-stat-label { display:flex; align-items:center; gap:8px; font-size:13px; color:#526875; }
 #viewEquipStatus .eq-stat strong { display:block; margin:8px 0 4px; font-size:30px; line-height:1.2; color:#173d48; font-variant-numeric:tabular-nums; }
@@ -8,6 +8,7 @@
 #viewEquipStatus .eq-avail { --eq-color:#1a7b4a; --eq-tint:#eaf6ef; }
 #viewEquipStatus .eq-borrowed { --eq-color:#b54b35; --eq-tint:#fff1eb; }
 #viewEquipStatus .eq-repair { --eq-color:#626c85; --eq-tint:#eff1f6; }
+#viewEquipStatus .eq-pending { --eq-color:#996000; --eq-tint:#fff4dd; }
 #viewEquipStatus .eq-sold { --eq-color:#737d85; --eq-tint:#f1f3f4; }
 #viewEquipStatus .eq-status-layout { display:grid; grid-template-columns:minmax(0,1fr); gap:20px; align-items:start; }
 #viewEquipStatus .eq-status-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px; margin-top:8px; }

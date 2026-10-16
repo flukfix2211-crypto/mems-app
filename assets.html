@@ -35,12 +35,14 @@
     .card { background: var(--card); border-radius: var(--r); box-shadow: var(--sh); padding: 18px; margin-bottom: 12px; }
 
     /* STATS */
-    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px; }
+    .stats-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-bottom: 12px; }
     .stat-chip { background: var(--card); border-radius: var(--rs); box-shadow: var(--sh); padding: 14px 10px; text-align: center; }
     .stat-num { font-size: 26px; font-weight: 900; color: var(--a); line-height: 1; }
     .stat-num.green { color: var(--green); }
     .stat-num.red { color: var(--red); }
     .stat-num.yellow { color: var(--yellow); }
+    .stat-num.orange { color: #A45A00; }
+    .stat-num.purple { color: #6D4AA2; }
     .stat-lbl { font-size: 11px; font-weight: 700; color: var(--muted); margin-top: 4px; }
 
     /* CONTROLS */
@@ -80,6 +82,8 @@
     .badge.sold   { background: var(--red-bg);   color: var(--red); }
     .badge.broken { background: var(--yellow-bg); color: var(--yellow); }
     .badge.repair { background: #E8F0FE; color: #1A56C4; }
+    .badge.waiting { background: #FFF0D9; color: #935300; }
+    .badge.not-ready { background: #F1EAFB; color: #69449A; }
 
     /* ACTION BTNS */
     .act-wrap { display: flex; gap: 6px; flex-wrap: nowrap; }
@@ -232,6 +236,14 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       <div class="stat-num red" id="statSold">—</div>
       <div class="stat-lbl">จำหน่าย</div>
     </div>
+    <div class="stat-chip">
+      <div class="stat-num orange" id="statWaiting">—</div>
+      <div class="stat-lbl">รอเลขครุภัณฑ์</div>
+    </div>
+    <div class="stat-chip">
+      <div class="stat-num purple" id="statNotReady">—</div>
+      <div class="stat-lbl">เครื่องยังไม่พร้อมใช้งาน</div>
+    </div>
   </div>
 
   <!-- CONTROLS -->
@@ -246,6 +258,8 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       <option value="ชำรุด">ชำรุด</option>
       <option value="ส่งซ่อม">ส่งซ่อม</option>
       <option value="จำหน่าย">จำหน่าย</option>
+      <option value="รอเลขครุภัณฑ์">รอเลขครุภัณฑ์</option>
+      <option value="เครื่องยังไม่พร้อมใช้งาน">เครื่องยังไม่พร้อมใช้งาน</option>
     </select>
     <button class="add-btn" onclick="openModal()">＋ เพิ่มเครื่องใหม่</button>
   </div>
@@ -338,6 +352,8 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
           <option value="ชำรุด">⚠️ ชำรุด</option>
           <option value="ส่งซ่อม">🔧 ส่งซ่อม</option>
           <option value="จำหน่าย">❌ จำหน่าย</option>
+          <option value="รอเลขครุภัณฑ์">🕓 รอเลขครุภัณฑ์</option>
+          <option value="เครื่องยังไม่พร้อมใช้งาน">📋 เครื่องยังไม่พร้อมใช้งาน</option>
         </select>
       </div>
       <div class="form-group">
@@ -352,7 +368,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 <div id="toast"></div>
 
 <script src="vendor/supabase.js"></script>
-<script src="supabase-client.js"></script>
+<script src="supabase-client.js?v=20261016-asset-status-1"></script>
 <script src="auth.js"></script>
 <script src="vendor/qrcode.js"></script>
 <script src="vendor/jspdf.umd.min.js"></script>
@@ -394,13 +410,17 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     'ใช้งานได้': 'ok',
     'ชำรุด':    'broken',
     'ส่งซ่อม':  'repair',
-    'จำหน่าย':  'sold'
+    'จำหน่าย':  'sold',
+    'รอเลขครุภัณฑ์': 'waiting',
+    'เครื่องยังไม่พร้อมใช้งาน': 'not-ready'
   };
   const STATUS_ICON = {
     'ใช้งานได้': '✅',
     'ชำรุด':    '⚠️',
     'ส่งซ่อม':  '🔧',
-    'จำหน่าย':  '❌'
+    'จำหน่าย':  '❌',
+    'รอเลขครุภัณฑ์': '🕓',
+    'เครื่องยังไม่พร้อมใช้งาน': '📋'
   };
 
   async function loadAssets() {
@@ -423,6 +443,8 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     document.getElementById('statOk').textContent     = src.filter(a => a.สถานะ === 'ใช้งานได้').length;
     document.getElementById('statBroken').textContent = src.filter(a => a.สถานะ === 'ชำรุด' || a.สถานะ === 'ส่งซ่อม').length;
     document.getElementById('statSold').textContent   = src.filter(a => a.สถานะ === 'จำหน่าย').length;
+    document.getElementById('statWaiting').textContent = src.filter(a => a.สถานะ === ASSET_STATUS_WAITING_FOR_NUMBER).length;
+    document.getElementById('statNotReady').textContent = src.filter(a => a.สถานะ === ASSET_STATUS_NOT_READY).length;
   }
 
   let currentTypeFilter = '';
