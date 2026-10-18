@@ -96,6 +96,8 @@
     .equip-card.borrowed { background: #FFF5F5; border-color: #FCA5A5; }
     .equip-card.returned { background: #F0FFF4; border-color: #86EFAC; }
     .equip-card.warn { background: #FFFBEB; border-color: #FCD34D; }
+    .equip-card.empty { background: #FEF2F2; border-color: #DC2626; }
+    .equip-card.empty .equip-name, .equip-card.empty .equip-num, .equip-card.empty .equip-who { color: #B91C1C; }
     .equip-card.clickable { cursor: pointer; transition: transform .15s ease, box-shadow .15s ease; }
     .equip-card.clickable:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.10); }
     .equip-name { font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
@@ -1909,7 +1911,7 @@ const ALERT_TOPICS = [
   { key: 'overdue',     label: '⏰ C2 ยืมเกินกำหนด' },
   { key: 'notInRound',  label: '🔎 ไม่พบในราวด์ (ยังยืมอยู่)' },
   { key: 'notBorrowed', label: '📋 พบในราวด์ แต่ไม่มีรายการยืม' },
-  { key: 'shortage',    label: '⚠️ ใกล้หมด' }
+  { key: 'shortage',    label: '⚠️ ใกล้หมด / เครื่องหมด' }
 ];
 let alertTopic = (() => { try { return localStorage.getItem('memsAlertTopic') || 'all'; } catch (_) { return 'all'; } })();
 
@@ -1957,8 +1959,8 @@ function alertCardsHTML(a) {
         <div class="equip-who">พบในราวด์ ${thaiDateShort(n.roundDate)} แต่ MEMs ไม่มีรายการยืมค้าง — ควรบันทึกยืม</div>
       </div>`).join(''),
     shortage: a.shortage.map(s => `
-      <div class="equip-card warn">
-        <div class="equip-name">⚠️ ใกล้หมด</div>
+      <div class="equip-card ${s.available <= 0 ? 'empty' : 'warn'}">
+        <div class="equip-name">${s.available <= 0 ? '🔴 เครื่องหมด' : '⚠️ ใกล้หมด'}</div>
         <div class="equip-num" style="font-size:16px">${s.equipment}</div>
         <div class="equip-who">เหลือว่าง ${s.available} · ยืมอยู่ ${s.borrowed}${s.repair ? ' · ซ่อม ' + s.repair : ''} · ทั้งหมด ${s.total} เครื่อง</div>
       </div>`).join('')
