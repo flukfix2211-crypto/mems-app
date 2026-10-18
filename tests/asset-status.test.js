@@ -86,3 +86,35 @@ test('C2 dashboard omits not-ready units and separates waiting-for-number units'
   assert.equal(result.counts.avail, 1);
   assert.equal(Object.values(result.counts).reduce((sum, value) => sum + value, 0), 2);
 });
+
+const shortageStart = dashboard.indexOf('const SHORTAGE_MAX =');
+const shortageEnd = dashboard.indexOf('\n}', shortageStart) + 2;
+vm.runInContext(dashboard.slice(shortageStart, shortageEnd), context);
+
+test('C2 low-stock threshold is below five; other types keep their existing threshold', () => {
+  for (const available of [0, 1, 2, 3, 4]) {
+    assert.equal(context.isEquipmentLowStock({ equipment: 'C2', total: 10, available }), true);
+  }
+  assert.equal(context.isEquipmentLowStock({ equipment: 'C2', total: 10, available: 5 }), false);
+  assert.equal(context.isEquipmentLowStock({ equipment: 'High Flow', total: 10, available: 3 }), false);
+  assert.equal(context.isEquipmentLowStock({ equipment: 'High Flow', total: 10, available: 2 }), true);
+});
+
+test('missing round entries cannot free borrowed C2 units; a recorded return can', () => {
+  context.assetRows = Array.from({ length: 10 }, (_, i) => ({ type: 'C2', no: i + 1, status: 'ใช้งานได้' }));
+  context.equipStatus = Array.from({ length: 6 }, (_, i) => ({ equipment: 'C2', number: String(i + 1), isBorrowed: true }));
+  context.roundC2 = { latestRoundDate: '2026-10-18', byNumber: {} };
+  const start = dashboard.indexOf('function computeAlerts()');
+  const end = dashboard.indexOf('// นับจำนวนยืม/คืนรายวัน', start);
+  context.getCircuitTiming = () => ({ daysBorrowed: 1, dueISO: null, daysLeft: null });
+  context.roundMachineNo = context.normalizeMachineNo;
+  context.parseThaiTimestampStr = () => null;
+  vm.runInContext(dashboard.slice(start, end), context);
+  const alerts = context.computeAlerts();
+  assert.equal(alerts.notInRound.length, 6);
+  assert.equal(alerts.shortage[0].available, 4);
+  assert.equal(alerts.shortage[0].borrowed, 6);
+  context.equipStatus[0].isBorrowed = false;
+  assert.equal(context.computeTypeAvailability()[0].available, 5);
+  assert.equal(context.computeAlerts().shortage.length, 0);
+});
