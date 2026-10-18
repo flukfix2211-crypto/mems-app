@@ -1558,6 +1558,10 @@ function filterDashboardEquipmentStatus(equipment, assets) {
 /* ============================================================ HOME: แจ้งเตือน & แนวโน้ม ============================================================ */
 const OVERDUE_C2_DAYS = 14;
 const SHORTAGE_MAX = 2;
+function isEquipmentLowStock(summary) {
+  const threshold = String(summary.equipment || '').trim().toUpperCase() === 'C2' ? 5 : SHORTAGE_MAX + 1;
+  return summary.total > 0 && summary.available < threshold;
+}
 const TREND_DAYS = 30;
 const REPAIR_STATUSES = ['ชำรุด', 'ส่งซ่อม'];
 
@@ -1695,7 +1699,7 @@ function renderHomeAvailability() {
 
   const pct = (n, t) => t ? (n / t * 100).toFixed(2) + '%' : '0%';
   list.innerHTML = types.map(t => {
-    const low = t.available <= SHORTAGE_MAX;
+    const low = isEquipmentLowStock(t);
     return `
     <div class="dash-avail-row${low ? ' is-low' : ''}">
       <div class="dash-avail-name">${escHtml(t.equipment)}</div>
@@ -1811,7 +1815,7 @@ async function fetchRoundC2() {
 
 // รวมโค้ดคำนวณ alert ไว้จุดเดียว ใช้ทั้ง Home banner และ KPI Display slide
 //   circuit    : C2 ที่ยืมอยู่และพบในราวด์ — ใช้กำหนด Round ล่าสุด หรือ 14 วันจากการเปลี่ยนใน MEMs เมื่อ Round ยังเป็นรอบเดิม
-//   notInRound : MEMs ว่ายืมอยู่ แต่ไม่พบในราวด์ล่าสุด → น่าจะกลับศูนย์แล้ว ให้ตรวจสอบและบันทึกคืน
+//   notInRound : MEMs ว่ายืมอยู่ แต่ไม่พบในราวด์ล่าสุด → ยังนับว่ายืมอยู่จนกว่าจะบันทึกคืน
 //   notBorrowed: พบในราวด์ (อยู่ที่ตึกจริง) แต่ MEMs ไม่มีรายการยืมค้าง → ควรบันทึกยืม
 //   overdue    : ใช้เฉพาะเมื่อโหลดข้อมูลราวด์ไม่ได้ (14 วันจากวันยืมหรือเปลี่ยน Circuit ล่าสุด)
 function computeAlerts() {
@@ -1871,7 +1875,7 @@ function computeAlerts() {
   }
 
   const shortage = computeTypeAvailability()
-    .filter(s => s.total > 0 && s.available <= SHORTAGE_MAX)
+    .filter(isEquipmentLowStock)
     .sort((a, b) => a.available - b.available);
 
   return { overdue, circuit, notInRound, notBorrowed, shortage, round };
@@ -1903,7 +1907,7 @@ const ALERT_TOPICS = [
   { key: 'all',         label: 'ทั้งหมด' },
   { key: 'circuit',     label: '🔁 ครบเปลี่ยน Circuit' },
   { key: 'overdue',     label: '⏰ C2 ยืมเกินกำหนด' },
-  { key: 'notInRound',  label: '🏠 ไม่พบในราวด์ (อาจคืนศูนย์แล้ว)' },
+  { key: 'notInRound',  label: '🔎 ไม่พบในราวด์ (ยังยืมอยู่)' },
   { key: 'notBorrowed', label: '📋 พบในราวด์ แต่ไม่มีรายการยืม' },
   { key: 'shortage',    label: '⚠️ ใกล้หมด' }
 ];
@@ -1939,11 +1943,11 @@ function alertCardsHTML(a) {
         <div class="equip-who">ยืมมาแล้ว ${o.days} วัน</div>
       </div>`).join(''),
     notInRound: a.notInRound.map(n => `
-      <div class="equip-card returned clickable" onclick="openToolReturnModal('${jsq(n.equipment)}','${jsq(n.number)}','${jsq(n.ward)}')" title="ตรวจสอบแล้วเครื่องอยู่ที่ศูนย์ → กดเพื่อบันทึกคืน">
-        <div class="equip-name">🏠 ไม่พบในราวด์</div>
+      <div class="equip-card warn clickable" onclick="openToolReturnModal('${jsq(n.equipment)}','${jsq(n.number)}','${jsq(n.ward)}')" title="ตรวจสอบแล้วเครื่องอยู่ที่ศูนย์ → กดเพื่อบันทึกคืน">
+        <div class="equip-name">🔎 ไม่พบในราวด์</div>
         <div class="equip-num" style="font-size:16px">No.${n.number}</div>
         <div class="equip-ward">📍 MEMs: ${n.ward || '—'}</div>
-        <div class="equip-who">${n.lastRound ? `พบล่าสุด ${thaiDateShort(n.lastRound)}${n.lastRoundWard ? ' · ' + n.lastRoundWard : ''}` : 'ไม่พบในราวด์ 60 วันล่าสุด'} — ถ้าอยู่ที่ศูนย์แล้ว กดบันทึกคืน</div>
+        <div class="equip-who">${n.lastRound ? `พบล่าสุด ${thaiDateShort(n.lastRound)}${n.lastRoundWard ? ' · ' + n.lastRoundWard : ''}` : 'ไม่พบในราวด์ 60 วันล่าสุด'} — ยังนับว่ายืมอยู่ หากตรวจพบที่ศูนย์แล้วจึงบันทึกคืน</div>
       </div>`).join(''),
     notBorrowed: a.notBorrowed.map(n => `
       <div class="equip-card warn">
@@ -3318,7 +3322,7 @@ function renderKpiAlerts() {
       `openCircuitModal('${jsq(c.number)}','${jsq(c.ward)}',${c.days})`)),
     ...a.overdue.map(o => row('#ef4444', '⏰', `C2 No.${o.number} · ${o.ward || '—'}`, `ยืมมาแล้ว ${o.days} วัน (เกิน ${OVERDUE_C2_DAYS} วัน)`,
       `openCircuitModal('${jsq(o.number)}','${jsq(o.ward)}',${o.days})`)),
-    ...a.notInRound.map(n => row('#10b981', '🏠', `C2 No.${n.number} · ไม่พบในราวด์`, `MEMs: ${n.ward || '—'} — อาจคืนศูนย์แล้ว`)),
+    ...a.notInRound.map(n => row('#f59e0b', '🔎', `C2 No.${n.number} · ไม่พบในราวด์`, `MEMs: ${n.ward || '—'} — ยังนับว่ายืมอยู่จนกว่าจะบันทึกคืน`)),
     ...a.notBorrowed.map(n => row('#f59e0b', '📋', `C2 No.${n.number} · ${n.roundWard || '—'}`, 'พบในราวด์ แต่ไม่มีรายการยืม')),
     ...a.shortage.map(s => row('#f59e0b', '⚠️', s.equipment, `เหลือว่าง ${s.available} · ยืมอยู่ ${s.borrowed}${s.repair ? ' · ซ่อม ' + s.repair : ''} · ทั้งหมด ${s.total} เครื่อง`))
   ];
