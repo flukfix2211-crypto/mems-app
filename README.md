@@ -37,3 +37,10 @@ supabase secrets set TELEGRAM_TOKEN=xxxx TELEGRAM_CHAT_ID=xxxx
 
 ## Developed by
 Pavarit Somchipeng
+
+### แจ้งเตือนเครื่องใกล้หมดรายชั่วโมง
+- งาน `mems-hourly-shortage` ตรวจทุกต้นชั่วโมงตลอด 24 ชั่วโมง และส่ง Telegram เฉพาะเมื่อ C2 พร้อมใช้ ≤4, High Flow ≤2 หรือ Brid เขียว (Bird) ≤2
+- เตือนซ้ำทุกชั่วโมงขณะที่ยังใกล้หมด และหยุดเมื่อพ้นเกณฑ์
+- ใช้ทะเบียน `assets` หักรายการยืมค้างจาก `equipment_status` และเครื่องซ่อม/รอเลข ไม่ใช้การไม่พบในราวด์เป็นหลักฐานว่าคืนแล้ว
+- ส่ง `POST {"type":"hourly_shortage","dryRun":true}` ไปยัง `telegram-notify` เพื่อดูผลโดยไม่ส่งข้อความ
+- Deploy Edge Function ก่อน แล้วใช้ `supabase/jobs/hourly-shortage.sql` ติดตั้ง/อัปเดตงาน Cron โดยใช้การยืนยันตัวตนจากงานสรุปเวรเดิม
