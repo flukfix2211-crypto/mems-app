@@ -1954,7 +1954,11 @@ function showSuccess(d) {
     detail.append(note);
   }
   document.getElementById('sTag').textContent = d.shift + '  ·  ' + new Date().toLocaleDateString('th-TH', { day:'numeric', month:'short', year:'numeric' });
+  // Keep the receipt outside .content's stacking context so the site footer
+  // cannot paint over it, even when the underlying form is scrolled.
+  document.body.appendChild(screen);
   screen.classList.add('show');
+  screen.scrollTop = 0;
 }
 
 // เวลาที่ยืม/คืนจริง (บันทึกย้อนหลัง) — คืน null = ใช้เวลาปัจจุบัน, false = ค่าไม่ถูกต้อง (แจ้งเตือนแล้ว)
