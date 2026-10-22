@@ -271,6 +271,7 @@ const fakeClient = `window.supabase={createClient(){return {auth:{getSession:asy
     await open("prepare.html");
     await page.getByRole("button", { name: "Priority test", exact: true }).click();
     assert.equal(await page.locator("#readyEquipmentList button").count(), 15);
+    assert.equal(await page.locator("#numberInputs button").count(), 0);
     assert.match(await page.locator("#readyEquipmentList button").first().innerText(), /No. 18/);
     assert.match(await page.locator("#readyEquipmentList button").last().innerText(), /No. 4/);
     assert.match(await page.locator("#readyEquipmentList button").first().innerText(), /18 วัน/);
@@ -286,13 +287,11 @@ const fakeClient = `window.supabase={createClient(){return {auth:{getSession:asy
     await open("prepare.html");
     await page.getByRole("button", { name: "C2", exact: true }).click();
     await page
-      .locator("#numberInputs")
-      .getByRole("button", { name: "No. 1", exact: true })
+      .locator("#readyEquipmentList button").filter({ hasText: "No. 1" })
       .click();
     assert.equal(
       await page
-        .locator("#numberInputs")
-        .getByRole("button", { name: "No. 2", exact: true })
+        .locator("#readyEquipmentList button").filter({ hasText: "No. 2" })
         .count(),
       0,
     );
@@ -300,16 +299,14 @@ const fakeClient = `window.supabase={createClient(){return {auth:{getSession:asy
       .getByRole("button", { name: "Syringe Pump", exact: true })
       .click();
     await page
-      .locator("#numberInputs")
-      .getByRole("button", { name: "No. 1", exact: true })
+      .locator("#readyEquipmentList button").filter({ hasText: "No. 1" })
       .click();
     await page.selectOption("#wardSel", "ER");
     await page.selectOption("#preparedBySel", "ปวริศ");
     assert.match(await save("#saveBtn"), /2 เครื่อง/);
     await page.getByRole("button", { name: "High Flow", exact: true }).click();
     await page
-      .locator("#numberInputs")
-      .getByRole("button", { name: "No. 1", exact: true })
+      .locator("#readyEquipmentList button").filter({ hasText: "No. 1" })
       .click();
     await page.selectOption("#wardSel", "ER");
     await page.evaluate(() =>
@@ -325,11 +322,10 @@ const fakeClient = `window.supabase={createClient(){return {auth:{getSession:asy
     ).rows[0].id;
     await page.evaluate((id) => openCancelModal(id), cancelId);
     await page.locator("#cancelModal .reason-btn").first().click();
-    await page.waitForSelector("#numberInputs button");
+    await page.waitForSelector("#readyEquipmentList button");
     assert.equal(
       await page
-        .locator("#numberInputs")
-        .getByRole("button", { name: "No. 1", exact: true })
+        .locator("#readyEquipmentList button").filter({ hasText: "No. 1" })
         .count(),
       1,
     );

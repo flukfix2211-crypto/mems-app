@@ -61,28 +61,7 @@
   function renderNumbers() {
     const wrap = $("numberInputs");
     wrap.replaceChildren();
-    registry
-      .filter(
-        (a) => memsTypeKey(a.type) === memsTypeKey(selectedEquip) && usable(a),
-      )
-      .forEach((a) => {
-        const item = { equipment: a.type, number: normalizeMachineNo(a.no) };
-        wrap.append(
-          button(
-            "No. " + item.number,
-            () => toggle(item, renderNumbers),
-            selected.has(key(item)),
-          ),
-        );
-      });
-    if (!wrap.childElementCount) {
-      const message = document.createElement("p");
-      message.className = "lifecycle-empty";
-      message.textContent = selectedEquip
-        ? "ไม่มีเครื่องพร้อมใช้ที่ศูนย์ กรุณาตรวจสอบหรือเพิ่มทะเบียนพร้อมหมายเลขก่อน"
-        : "เลือกประเภทเครื่องเพื่อแสดงหมายเลขที่พร้อมใช้";
-      wrap.append(message);
-    }
+    wrap.hidden = true;
     let manual = $("lifecycleManualNumber");
     if (!manual) {
       manual = document.createElement("form");
@@ -197,7 +176,7 @@
       );
 
       document.querySelector(".number-help").textContent =
-        "กรอกหมายเลขแล้วกดเพิ่ม หรือแตะรายการแนะนำ/หมายเลขด้านล่าง รวมหลายประเภทได้";
+        "กรอกหมายเลขแล้วกดเพิ่ม หรือแตะรายการแนะนำเครื่องที่ควรใช้ก่อน รวมหลายประเภทได้";
     } else {
       const grid = document.querySelector(".equip-grid");
       // Keep image buttons for QR compatibility; extend from the registry.
@@ -365,6 +344,8 @@
     }
   }
   if (isPrepare) {
+    // Keep legacy cancellation callbacks on the same registry-backed list.
+    loadReadyEquipmentRecommendations = async () => renderRecommendations();
     const cancelPreparation = doCancel;
     doCancel = async function (reason) {
       await cancelPreparation(reason);
