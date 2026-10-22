@@ -486,7 +486,7 @@ const fakeClient = `window.supabase={createClient(){return {auth:{getSession:asy
     await open("prepare.html");
     await page.getByRole("button", { name: "High Flow", exact: true }).click();
     await page.locator("#lifecycleManualNumber input").fill("1");
-    await page.locator("#lifecycleManualNumber input").press("Enter");
+    // Direct Save must consume the typed number without requiring Add/Enter.
     await page.selectOption("#wardSel", "อื่นๆ โปรดระบุชื่อตึก");
     await page.fill("#otherWard", "  " + newWard + "  ");
     await page.selectOption("#preparedBySel", "ปวริศ");
