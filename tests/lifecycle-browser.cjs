@@ -277,6 +277,14 @@ const fakeClient = `window.supabase={createClient(){return {auth:{getSession:asy
     assert.match(await page.locator("#readyEquipmentList button").first().innerText(), /18 วัน/);
     await page.locator("#readyEquipmentList button").first().click();
     assert.match(await page.locator("#lifecycleSelection").innerText(), /Priority test No.18/);
+    assert.equal(await page.inputValue("#lifecycleManualNumber input"), "18");
+    await page.locator("#readyEquipmentList button").first().click();
+    assert.equal(await page.inputValue("#lifecycleManualNumber input"), "");
+    await page.locator("#readyEquipmentList button").first().click();
+    await page.locator("#readyEquipmentList button").nth(1).click();
+    assert.equal(await page.inputValue("#lifecycleManualNumber input"), "17");
+    assert.match(await page.locator("#lifecycleSelection").innerText(), /Priority test No.18/);
+    assert.match(await page.locator("#lifecycleSelection").innerText(), /Priority test No.17/);
     await page.locator("#lifecycleManualNumber input").fill("20");
     await page.locator("#lifecycleManualNumber input").press("Enter");
     assert.match(await page.locator("#lifecycleSelection").innerText(), /Priority test No.20/);
