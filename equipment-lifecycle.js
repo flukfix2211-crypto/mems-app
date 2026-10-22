@@ -271,13 +271,16 @@
           () => toggle(item, renderWard),
           selected.has(key(item)),
         );
+        const container = document.createElement("div");
+        container.className = "lifecycle-return-machine";
         if (S.action === "return") {
           const start = item.borrowStartedAt;
           const small = document.createElement("small");
           small.textContent = start
             ? "ยืม " +
               new Date(start).toLocaleString("th-TH", {
-                timeZone: "Asia/Bangkok",
+                timeZone: "Asia/Bangkok", day: "numeric", month: "numeric",
+                year: "2-digit", hour: "2-digit", minute: "2-digit",
               }) +
               " · " +
               Math.max(0, (Date.now() - Date.parse(start)) / 3600000).toFixed(
@@ -285,15 +288,16 @@
               ) +
               " ชม."
             : "ข้อมูลวันเริ่มยืมไม่ครบ";
-          b.append(small);
-        }
-        group.append(b);
-        if (S.action === "return")
-          group.append(
-            button("ย้าย No. " + item.number, () =>
-              openTransferModal(item.equipment, item.number, item.ward),
-            ),
-          );
+          small.className = "lifecycle-return-time";
+          container.append(b, small);
+          const transfer = button("ย้าย", () =>
+            openTransferModal(item.equipment, item.number, item.ward));
+          transfer.classList.add("lifecycle-transfer");
+          transfer.setAttribute("aria-label", "ย้าย " + item.equipment + " No. " + item.number);
+          container.append(transfer);
+          group.classList.add("lifecycle-return-grid");
+          group.append(container);
+        } else group.append(b);
       });
     });
     const info = document.createElement("p");
