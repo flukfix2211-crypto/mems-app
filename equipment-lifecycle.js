@@ -340,22 +340,7 @@
         const container = document.createElement("div");
         container.className = "lifecycle-return-machine";
         if (S.action === "return") {
-          const start = item.borrowStartedAt;
-          const small = document.createElement("small");
-          small.textContent = start
-            ? "ยืม " +
-              new Date(start).toLocaleString("th-TH", {
-                timeZone: "Asia/Bangkok", day: "numeric", month: "numeric",
-                year: "2-digit", hour: "2-digit", minute: "2-digit",
-              }) +
-              " · " +
-              Math.max(0, (Date.now() - Date.parse(start)) / 3600000).toFixed(
-                1,
-              ) +
-              " ชม."
-            : "ข้อมูลวันเริ่มยืมไม่ครบ";
-          small.className = "lifecycle-return-time";
-          container.append(b, small);
+          container.append(b);
           const transfer = button("ย้าย", () =>
             openTransferModal(item.equipment, item.number, item.ward));
           transfer.classList.add("lifecycle-transfer");
