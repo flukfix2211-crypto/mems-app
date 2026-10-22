@@ -348,6 +348,13 @@ const fakeClient = `window.supabase={createClient(){return {auth:{getSession:asy
     await action("return");
     await ward("ER");
     assert.equal(await page.locator("#preparedBanner small").count(), 2);
+    const compactReturn = await page.waitForFunction(() => {
+      const button = document.querySelector(".lifecycle-return-machine > button");
+      const height = button?.getBoundingClientRect().height;
+      return height > 0 && height <= 48;
+    });
+    assert.equal(await compactReturn.jsonValue(), true, "return number stays compact on mobile");
+    assert.equal(await page.locator(".lifecycle-return-machine .lifecycle-transfer").count(), 2);
     await page
       .locator("#preparedBanner .lifecycle-number")
       .filter({ hasText: "No. 1" })
