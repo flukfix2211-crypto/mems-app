@@ -262,7 +262,7 @@
       prompt.textContent = "เลือกประเภทเครื่องที่จะคืน";
       el.append(prompt);
       const choices = document.createElement("div");
-      choices.className = "lifecycle-grid";
+      choices.className = "lifecycle-grid lifecycle-return-types";
       el.append(choices);
       for (const type of types) {
         const choice = button(type, () => {
@@ -270,9 +270,26 @@
           returnType = type;
           renderWard();
         }, type === returnType);
+        const original = [...document.querySelectorAll(".equip-grid .equip-btn")]
+          .find(item => memsTypeKey(item.dataset.e) === memsTypeKey(type));
+        const sample = original?.querySelector(".ei, .ei-fb");
+        const picture = sample ? sample.cloneNode(true) : document.createElement("span");
+        if (!sample) {
+          picture.className = "ei-fb";
+          picture.textContent = "🏥";
+        }
+        picture.setAttribute("aria-hidden", "true");
+        const label = document.createElement("span");
+        label.className = "ei-label";
+        label.textContent = type;
+        const check = document.createElement("span");
+        check.className = "ei-check";
+        check.setAttribute("aria-hidden", "true");
+        choice.replaceChildren(picture, label, check);
         choice.dataset.returnType = type;
         choice.classList.remove("lifecycle-number");
-        choice.classList.add("lifecycle-return-type");
+        choice.classList.add("equip-btn", "lifecycle-return-type");
+        choice.setAttribute("aria-current", String(type === returnType));
         choice.removeAttribute("aria-pressed");
         choice.setAttribute("aria-label", "เลือกประเภทคืน " + type);
         choices.append(choice);
