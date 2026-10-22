@@ -103,3 +103,30 @@
   min-height: 32px; padding: 5px 3px; font-size: 11px; font-weight: 500;
   border-width: 1px; background: transparent;
 }
+
+/* Each number has an action-colored outline and a solid selected state. */
+#preparedBanner[data-action="borrow"] { --machine-color: #15803d; --machine-tint: #f0fdf4; }
+#preparedBanner[data-action="return"] { --machine-color: #b91c1c; --machine-tint: #fef2f2; }
+#preparedBanner .lifecycle-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 8px;
+}
+#preparedBanner .lifecycle-number:not(.lifecycle-transfer) {
+  min-width: 0; min-height: 44px; padding: 8px 3px; font-size: 12px;
+  border: 2px solid var(--machine-color); border-radius: 8px;
+  background: var(--machine-tint); color: var(--machine-color); box-shadow: none;
+}
+#preparedBanner .lifecycle-number:not(.lifecycle-transfer)[aria-pressed="true"] {
+  background: var(--machine-color); color: #fff; border-color: var(--machine-color);
+}
+#preparedBanner .lifecycle-return-machine {
+  padding: 5px; border: 1px solid var(--machine-color); border-radius: 8px;
+  background: var(--machine-tint);
+}
+#preparedBanner .lifecycle-transfer { color: var(--txt, #334155); border-color: var(--border, #cbd5e1); }
+
+.lifecycle-return-type {
+  min-height: 44px; padding: 8px; border: 1px solid var(--machine-color, #b91c1c);
+  border-radius: 8px; background: var(--card, #fff); color: var(--machine-color, #b91c1c);
+  font: inherit; font-size: 12px; cursor: pointer; overflow-wrap: anywhere;
+}
+.lifecycle-return-type.active { background: var(--machine-color, #b91c1c); color: #fff; }
