@@ -75,6 +75,13 @@ const fakeClient = `window.supabase={createClient(){return {auth:{getSession:asy
     await db.query(
       "insert into assets(type,no,status)values('C2',2,'ส่งซ่อม')",
     );
+    // Dedicated recommendation fixtures: enough machines to verify the 15-item cap.
+    await db.query("insert into assets(type,no) select 'Priority test',generate_series(1,20)");
+    await db.query("set session_replication_role=replica");
+    await db.query(`insert into borrow_records(record_date,record_time,equipment_name,equipment_number,ward,staff_name,action,recorded_at)
+      select current_date,localtime, 'Priority test',n::text,'ER','test','คืน',now()-n*interval '1 day'
+      from generate_series(1,18) n`);
+    await db.query("set session_replication_role=origin");
     await db.query(
       `set role authenticated;select set_config('request.jwt.claim.sub','${uuid}',false)`,
     );
@@ -262,6 +269,21 @@ const fakeClient = `window.supabase={createClient(){return {auth:{getSession:asy
       await page.waitForLoadState("networkidle");
     };
     await open("prepare.html");
+    await page.getByRole("button", { name: "Priority test", exact: true }).click();
+    assert.equal(await page.locator("#readyEquipmentList button").count(), 15);
+    assert.match(await page.locator("#readyEquipmentList button").first().innerText(), /No. 18/);
+    assert.match(await page.locator("#readyEquipmentList button").last().innerText(), /No. 4/);
+    assert.match(await page.locator("#readyEquipmentList button").first().innerText(), /18 วัน/);
+    await page.locator("#readyEquipmentList button").first().click();
+    assert.match(await page.locator("#lifecycleSelection").innerText(), /Priority test No.18/);
+    await page.locator("#lifecycleManualNumber input").fill("20");
+    await page.locator("#lifecycleManualNumber input").press("Enter");
+    assert.match(await page.locator("#lifecycleSelection").innerText(), /Priority test No.20/);
+    await page.locator("#lifecycleManualNumber input").fill("9999");
+    await page.locator("#lifecycleManualNumber input").press("Enter");
+    assert.match(alerts.pop(), /ไม่พบเครื่องพร้อมใช้/);
+    assert.doesNotMatch(await page.locator("#lifecycleSelection").innerText(), /9999/);
+    await open("prepare.html");
     await page.getByRole("button", { name: "C2", exact: true }).click();
     await page
       .locator("#numberInputs")
@@ -423,7 +445,7 @@ const fakeClient = `window.supabase={createClient(){return {auth:{getSession:asy
     await open("c2-statistics.html");
     assert.equal(
       await page.locator("#typeSelect option").count(),
-      types.length + 1,
+      types.length + 2,
     );
     assert.match(await page.locator("#summaryGrid").innerText(), /ครั้งยืม/);
     assert.doesNotMatch(await page.locator("body").innerText(), /ผู้ป่วย/);
@@ -434,7 +456,7 @@ const fakeClient = `window.supabase={createClient(){return {auth:{getSession:asy
     await page.click("[data-view=machine]");
     assert.equal(
       await page.locator("#viewOutput .detail-btn").count(),
-      types.length + 1,
+      types.length + 21,
     );
     await page.locator("#viewOutput .detail-btn").first().click();
     assert.match(await page.locator("#machineDetail").innerText(), /รอบใช้งาน/);
@@ -458,6 +480,10 @@ const fakeClient = `window.supabase={createClient(){return {auth:{getSession:asy
       await page.setViewportSize({ width, height: 1024 });
       for (const f of ["prepare.html", "borrow.html", "c2-statistics.html"]) {
         await open(f);
+        if (f === "prepare.html") {
+          await page.getByRole("button", { name: "Priority test", exact: true }).click();
+          assert.equal(await page.locator("#readyEquipmentList button").count(), 15);
+        }
         assert.ok(
           await page.evaluate(
             () => document.documentElement.scrollWidth <= innerWidth + 1,
