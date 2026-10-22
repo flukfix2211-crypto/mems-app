@@ -306,8 +306,9 @@
       throw new Error(
         "เลือกได้สูงสุด 5 เครื่อง หรือ Infusion Pump อย่างเดียว 10 เครื่อง",
       );
-    if (!items.length || !ward || !name)
-      throw new Error("กรุณาเลือกเครื่อง ตึก และระบุชื่อให้ครบ");
+    if (!items.length) throw new Error("กรุณาเลือกเครื่องจากรายการแนะนำ หรือกรอกหมายเลขเครื่องก่อนบันทึก");
+    if (!ward) throw new Error("กรุณาเลือกหรือระบุชื่อตึก/หน่วยงาน");
+    if (!name) throw new Error("กรุณาระบุชื่อผู้ทำรายการ");
     saving = true;
     const b = $(isPrepare ? "saveBtn" : "submitBtn");
     b.disabled = true;
@@ -398,6 +399,17 @@
           ? $("preparedByOther").value.trim()
           : $("preparedBySel").value;
       try {
+        // Saving also accepts a valid number still typed in the entry field.
+        const input = $("lifecycleManualNumber")?.querySelector("input");
+        const number = normalizeMachineNo((input?.value || "").trim());
+        if (number) {
+          const asset = registry.find((a) =>
+            memsTypeKey(a.type) === memsTypeKey(selectedEquip) &&
+            normalizeMachineNo(a.no) === number && usable(a));
+          if (!asset) throw new Error("ไม่พบเครื่องพร้อมใช้หมายเลขนี้ในประเภทที่เลือก กรุณาตรวจสอบทะเบียนหรือสถานะเครื่อง");
+          const item = { equipment: asset.type, number };
+          if (!items.some((existing) => key(existing) === key(item))) items.push(item);
+        }
         await submit(
           prepareMode === "deliver" ? "deliver" : "prepare",
           items,
