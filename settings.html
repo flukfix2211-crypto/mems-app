@@ -300,7 +300,7 @@ body{background:#0c6173!important;background-image:none!important}
           <button type="button" class="role-btn active" id="roleUserBtn" onclick="setRole('user')">ผู้ใช้ทั่วไป</button>
           <button type="button" class="role-btn" id="roleAdminBtn" onclick="setRole('admin')">แอดมิน</button>
         </div>
-        <div class="hint">แอดมินได้สิทธิ์เข้าทุกหน้าอัตโนมัติ (รวมหน้านี้)</div>
+        <div class="hint">แอดมินเข้าหน้าปฏิบัติงานได้ทุกหน้า ส่วนการจัดการบัญชีสงวนให้แอดมินหลัก</div>
       </div>
 
       <div class="form-group" id="permGroup">
@@ -314,6 +314,7 @@ body{background:#0c6173!important;background-image:none!important}
         <div class="perm-grid" id="permCheckboxes"></div>
       </div>
 
+      <div class="form-group"><label class="perm-check"><input type="checkbox" id="fCanTransferWard"> อนุญาตให้ย้ายวอร์ดเครื่องมือ</label><div class="hint">กำหนดแยกรายบัญชี รวมถึงแอดมิน และต้องมีสิทธิ์เข้าหน้ายืม–คืนหรือแดชบอร์ดด้วย</div></div>
       <button class="save-btn" id="userModalSaveBtn" onclick="submitUserModal()">บันทึก</button>
     </div>
   </div>
@@ -575,6 +576,7 @@ function openCreateModal() {
   document.getElementById('fPassword').value = '';
   setRole('user');
   setCheckedPerms(['borrow']);
+  document.getElementById('fCanTransferWard').checked = false;
   document.getElementById('userModalErr').style.display = 'none';
   document.getElementById('userModal').classList.add('show');
 }
@@ -589,6 +591,7 @@ function openEditModal(id) {
   document.getElementById('fDisplayName').value = u.display_name || '';
   setRole(u.role);
   setCheckedPerms(u.permissions || []);
+  document.getElementById('fCanTransferWard').checked = u.can_transfer_ward === true;
   document.getElementById('userModalErr').style.display = 'none';
   document.getElementById('userModal').classList.add('show');
 }
@@ -617,6 +620,7 @@ async function submitUserModal() {
         action: 'create',
         username, password, display_name: displayName,
         role: modalRole,
+        can_transfer_ward: document.getElementById('fCanTransferWard').checked,
         permissions: modalRole === 'admin' ? [] : getCheckedPerms()
       });
       toast('✅ เพิ่มบัญชี ' + username + ' แล้ว');
@@ -631,6 +635,7 @@ async function submitUserModal() {
         user_id: editingUserId,
         display_name: displayName,
         role: modalRole,
+        can_transfer_ward: document.getElementById('fCanTransferWard').checked,
         permissions: modalRole === 'admin' ? MEMS_PAGE_KEYS : getCheckedPerms()
       });
       toast('✅ แก้ไขบัญชีแล้ว');
@@ -717,6 +722,7 @@ function auditValue(key, v) {
   if (key === 'permissions' && Array.isArray(v)) {
     return v.length ? v.map(p => (typeof MEMS_PAGE_LABELS !== 'undefined' && MEMS_PAGE_LABELS[p]) || p).join(', ') : '—';
   }
+  if (key === 'can_transfer_ward') return v ? 'เปิด' : 'ปิด';
   if (key === 'role') return v === 'admin' ? 'แอดมิน' : 'ผู้ใช้';
   if (Array.isArray(v)) return v.length ? (key === 'photo_urls' ? v.length + ' รูป' : v.join(', ')) : '—';
   if (key === 'recorded_at') return memsFmtDateTime(v);
@@ -740,7 +746,7 @@ function auditActivityItem(a) {
     const who = d.username ? d.username + (d.display_name ? ' (' + d.display_name + ')' : '') : '';
     let sub = '';
     if (d.op === 'update' && d.before && d.after) {
-      const label = { role: 'สิทธิ์', display_name: 'ชื่อที่แสดง', permissions: 'หน้าที่เข้าได้' };
+      const label = { role: 'สิทธิ์', display_name: 'ชื่อที่แสดง', permissions: 'หน้าที่เข้าได้', can_transfer_ward: 'สิทธิ์ย้ายวอร์ด' };
       sub = Object.keys(d.after).map(k =>
         (label[k] || k) + ': ' + auditValue(k, d.before[k]) + ' → ' + auditValue(k, d.after[k])).join(' · ');
     } else if (d.op === 'create') {
@@ -863,7 +869,7 @@ function renderUsers() {
       <td>${memsEsc(u.display_name || '—')}</td>
       <td>
         <span class="badge ${u.role === 'admin' ? 'admin' : 'user'}">${u.role === 'admin' ? 'แอดมิน' : 'ผู้ใช้ทั่วไป'}</span>
-        <div style="margin-top:4px">${permsHtml}</div>
+        <div style="margin-top:4px">${permsHtml}<span class="perm-chip">ย้ายวอร์ด: ${u.can_transfer_ward ? 'เปิด' : 'ปิด'}</span></div>
       </td>
       <td><span class="badge ${u.active ? 'on' : 'off'}">${u.active ? 'ใช้งานอยู่' : 'ปิดใช้งาน'}</span></td>
       <td>

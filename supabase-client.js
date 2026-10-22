@@ -372,6 +372,12 @@ async function fetchPreparedList() {
 
 /** บันทึกรายการยืม/คืน/Round/ย้ายวอร์ด ลง borrow_records — เทียบเท่า saveRecord() เดิม */
 async function saveBorrowRecord(payload) {
+  if (String(payload.action || '').includes('ย้าย')) {
+    const profile = typeof memsLoadProfile === 'function' ? await memsLoadProfile() : null;
+    if (typeof memsCanTransferWard !== 'function' || !memsCanTransferWard(profile)) {
+      throw new Error('บัญชีนี้ไม่มีสิทธิ์ย้ายวอร์ดเครื่องมือ');
+    }
+  }
   const now = payload.timestamp ? new Date(payload.timestamp) : new Date();
   const row = {
     record_date: bkkDateStr(now),

@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
       if(!usernameOk(body.username)||String(body.password||"").length<10||!String(body.display_name||"").trim()) return reply({ok:false,error:"ข้อมูลไม่ครบหรือรูปแบบไม่ถูกต้อง"},400);
       const {data,error}=await admin.auth.admin.createUser({email:emailFor(body.username),password:body.password,email_confirm:true,user_metadata:{display_name:String(body.display_name).trim(),username:body.username},app_metadata:{role:"admin"}});
       if(error) throw error;
-      const {error:profileError}=await admin.from("user_profiles").insert({id:data.user.id,username:body.username,display_name:String(body.display_name).trim(),role:"admin",active:true,permissions:PAGE_KEYS,is_super_admin:true});
+      const {error:profileError}=await admin.from("user_profiles").insert({id:data.user.id,username:body.username,display_name:String(body.display_name).trim(),role:"admin",active:true,permissions:PAGE_KEYS,is_super_admin:true,can_transfer_ward:true});
       if(profileError){await admin.auth.admin.deleteUser(data.user.id);throw profileError;}
       return reply({ok:true});
     }
@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
     };
 
     if(body.action==="list"){
-      const {data,error}=await admin.from("user_profiles").select("id,username,display_name,role,active,permissions,is_super_admin,created_at").order("created_at");
+      const {data,error}=await admin.from("user_profiles").select("id,username,display_name,role,active,permissions,is_super_admin,can_transfer_ward,created_at").order("created_at");
       if(error) throw error; return reply({ok:true,users:data||[]});
     }
     if(body.action==="activity"){
@@ -83,21 +83,26 @@ Deno.serve(async (req) => {
       });
     }
     if(body.action==="create"){
+      if(body.can_transfer_ward!==undefined && typeof body.can_transfer_ward!=="boolean") return reply({ok:false,error:"รูปแบบสิทธิ์ย้ายวอร์ดไม่ถูกต้อง"},400);
       const role=body.role==="admin"?"admin":"user";
       const permissions=role==="admin"?PAGE_KEYS:(permsOk(body.permissions)?body.permissions:[]);
       if(!usernameOk(body.username)||String(body.password||"").length<10||!String(body.display_name||"").trim()) return reply({ok:false,error:"ข้อมูลไม่ครบหรือรูปแบบไม่ถูกต้อง"},400);
       const {data,error}=await admin.auth.admin.createUser({email:emailFor(body.username),password:body.password,email_confirm:true,user_metadata:{display_name:String(body.display_name).trim(),username:body.username},app_metadata:{role}});
       if(error) throw error;
       // is_super_admin ตั้งได้เฉพาะตอน bootstrap เท่านั้น — บัญชีที่สร้างทีหลังทั้งหมด (แม้ role=admin) ไม่ได้สิทธิ์จัดการบัญชี
-      const {error:profileError}=await admin.from("user_profiles").insert({id:data.user.id,username:body.username,display_name:String(body.display_name).trim(),role,active:true,permissions,is_super_admin:false});
+      const {error:profileError}=await admin.from("user_profiles").insert({id:data.user.id,username:body.username,display_name:String(body.display_name).trim(),role,active:true,permissions,is_super_admin:false,can_transfer_ward:body.can_transfer_ward===true});
       if(profileError){await admin.auth.admin.deleteUser(data.user.id);throw profileError;}
-      await logAccount(data.user.id,"create",{role,permissions});
+      await logAccount(data.user.id,"create",{role,permissions,can_transfer_ward:body.can_transfer_ward===true});
       return reply({ok:true});
     }
     if(body.action==="update"){
-      const {data:target,error:targetError}=await admin.from("user_profiles").select("role,display_name,permissions").eq("id",body.user_id).single();
+      const {data:target,error:targetError}=await admin.from("user_profiles").select("role,display_name,permissions,can_transfer_ward").eq("id",body.user_id).single();
       if(targetError) throw targetError;
       const patch: Record<string, unknown> = {};
+      if(body.can_transfer_ward!==undefined){
+        if(typeof body.can_transfer_ward!=="boolean") return reply({ok:false,error:"รูปแบบสิทธิ์ย้ายวอร์ดไม่ถูกต้อง"},400);
+        patch.can_transfer_ward=body.can_transfer_ward;
+      }
       if(body.display_name!==undefined){
         if(!String(body.display_name).trim()) return reply({ok:false,error:"ชื่อที่แสดงห้ามว่าง"},400);
         patch.display_name=String(body.display_name).trim();
@@ -125,7 +130,7 @@ Deno.serve(async (req) => {
         const {error:authError}=await admin.auth.admin.updateUserById(body.user_id,{app_metadata:{role:patch.role}});
         if(authError) throw authError;
       }
-      await logAccount(body.user_id,"update",{before:{role:target.role,display_name:target.display_name,permissions:target.permissions},after:patch});
+      await logAccount(body.user_id,"update",{before:{role:target.role,display_name:target.display_name,permissions:target.permissions,can_transfer_ward:target.can_transfer_ward},after:patch});
       return reply({ok:true});
     }
     if(body.action==="reset_password"){
