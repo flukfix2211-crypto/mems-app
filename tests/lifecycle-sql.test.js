@@ -44,17 +44,26 @@ async function setup() {
   for (const f of catalog.functions) await db.exec(f);
   for (const t of catalog.triggers) await db.exec(t);
   await db.exec(
-    `insert into auth.users values('${user}');insert into public.user_profiles values('${user}',true,'admin');`,
+    `insert into auth.users values('${user}');insert into public.user_profiles(id,active,role) values('${user}',true,'admin');`,
   );
   for (const table of ["assets", "borrow_records", "prepare_records"])
     await db.exec(
-      `alter table public.${table} enable row level security;create policy read on public.${table} for select using(true);create policy write on public.${table} for all to authenticated using(private.is_active_user()) with check(private.is_active_user());`,
+      `alter table public.${table} enable row level security;create policy read on public.${table} for select using(true);create policy write on public.${table} for all to authenticated using(${table === "assets" ? "private.has_permission('assets')" : "private.is_active_user()"}) with check(${table === "assets" ? "private.has_permission('assets')" : "private.is_active_user()"});`,
     );
   await db.exec(
     fs.readFileSync(
       path.join(
         root,
         "supabase/migrations/20261022031655_registry_equipment_lifecycle.sql",
+      ),
+      "utf8",
+    ),
+  );
+  await db.exec(
+    fs.readFileSync(
+      path.join(
+        root,
+        "supabase/migrations/20261022042356_registry_lock_rls.sql",
       ),
       "utf8",
     ),
@@ -238,7 +247,7 @@ test(
     try {
       const second = "10000000-0000-4000-8000-000000000002";
       await db.exec(
-        `reset role;insert into auth.users values('${second}');insert into user_profiles values('${second}',true,'admin');set role authenticated;`,
+        `reset role;insert into auth.users values('${second}');insert into user_profiles(id,active,role) values('${second}',true,'admin');set role authenticated;`,
       );
       await other.exec(
         `set role authenticated;select set_config('request.jwt.claim.sub','${second}',false)`,
@@ -354,3 +363,67 @@ test("cancellation reasons, blank numbers, alias collisions, limits and forged a
     await db.close();
   }
 });
+
+test("borrow-only accounts complete the flow without registry edit permission", async () => {
+  const db = await setup();
+  try {
+    const borrower = "10000000-0000-4000-8000-000000000003";
+    await db.exec(
+      `insert into assets(type,no) values('C2',1);reset role;insert into auth.users values('${borrower}');insert into user_profiles(id,active,role,permissions)values('${borrower}',true,'user',array['borrow','prepare']);set role authenticated;select set_config('request.jwt.claim.sub','${borrower}',false)`,
+    );
+    assert.equal(
+      (await db.query("select private.has_permission('assets') allowed"))
+        .rows[0].allowed,
+      false,
+    );
+    await batch(db, "prepare", [item("C2")]);
+    await batch(db, "borrow", [item("C2")]);
+    await batch(db, "return", [item("C2")]);
+    const update = await db.query(
+      "update assets set status='ชำรุด' where type='C2' returning id",
+    );
+    assert.equal(update.rows.length, 0);
+    assert.equal(
+      (await db.query("select status from assets where type='C2'")).rows[0]
+        .status,
+      "ใช้งานได้",
+    );
+  } finally {
+    await db.close();
+  }
+});
+
+test(
+  "registry repair update serializes with a concurrent borrowing request",
+  { skip: !process.env.MEMS_TEST_PG },
+  async () => {
+    const db = await setup();
+    const { Client } = require("pg");
+    const c = new Client({ connectionString: db.connectionString });
+    await c.connect();
+    const other = { query: (s, p) => c.query(s, p) };
+    try {
+      await c.query(
+        `set role authenticated;select set_config('request.jwt.claim.sub','${user}',false)`,
+      );
+      await db.exec("insert into assets(type,no)values('C2',1)");
+      await batch(db, "prepare", [item("C2")]);
+      await db.exec("begin;update assets set status='ส่งซ่อม' where type='C2'");
+      const pending = batch(other, "borrow", [item("C2")]).then(
+        (value) => ({ value }),
+        (error) => ({ error }),
+      );
+      await db.exec("select pg_sleep(0.05);commit");
+      const result = await pending;
+      assert.match(result.error?.message || "", /ไม่พร้อมใช้|สถานะในทะเบียน/);
+      assert.equal(
+        (await db.query("select count(*)::int n from borrow_records")).rows[0]
+          .n,
+        0,
+      );
+    } finally {
+      await c.end();
+      await db.close();
+    }
+  },
+);

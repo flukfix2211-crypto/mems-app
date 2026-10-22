@@ -46,17 +46,26 @@ const fakeClient = `window.supabase={createClient(){return {auth:{getSession:asy
     for (const f of catalog.functions) await db.query(f);
     for (const t of catalog.triggers) await db.query(t);
     await db.query(
-      `insert into auth.users values('${uuid}');insert into user_profiles values('${uuid}',true,'admin');`,
+      `insert into auth.users values('${uuid}');insert into user_profiles(id,active,role) values('${uuid}',true,'admin');`,
     );
     for (const table of ["assets", "borrow_records", "prepare_records"])
       await db.query(
-        `alter table ${table} enable row level security;create policy read on ${table} for select using(true);create policy write on ${table} for all to authenticated using(private.is_active_user()) with check(private.is_active_user());`,
+        `alter table ${table} enable row level security;create policy read on ${table} for select using(true);create policy write on ${table} for all to authenticated using(${table === "assets" ? "private.has_permission('assets')" : "private.is_active_user()"}) with check(${table === "assets" ? "private.has_permission('assets')" : "private.is_active_user()"});`,
       );
     await db.query(
       fs.readFileSync(
         path.join(
           root,
           "supabase/migrations/20261022031655_registry_equipment_lifecycle.sql",
+        ),
+        "utf8",
+      ),
+    );
+    await db.query(
+      fs.readFileSync(
+        path.join(
+          root,
+          "supabase/migrations/20261022042356_registry_lock_rls.sql",
         ),
         "utf8",
       ),
