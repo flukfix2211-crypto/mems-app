@@ -347,6 +347,13 @@ async function fetchC2Status() {
   return numbers.map(k => map[k] || { number: k, isBorrowed: false, ward: '', borrowedBy: '', lastUpdate: '' });
 }
 
+/** Reuse saved preparation wards across pages, including completed preparations. */
+async function fetchPreparationWards() {
+  const rows = await fetchAllPages(() => supabase.from('prepare_records')
+    .select('ward').order('id'));
+  return [...new Set(rows.map(row => (row.ward || '').trim()).filter(Boolean))];
+}
+
 /** รายการเครื่องที่เตรียมไว้และยังไม่ถูกยืม — เทียบเท่า getPrepareList() เดิม */
 async function fetchPreparedList() {
   const data = await fetchAllPages(() => supabase.from('prepare_records')

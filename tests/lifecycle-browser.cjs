@@ -472,6 +472,35 @@ const fakeClient = `window.supabase={createClient(){return {auth:{getSession:asy
     );
     await page.click("[data-close-pdf]");
 
+    // A typed preparation ward must be selectable on another page after reload,
+    // and remain available once its preparation has been consumed.
+    const newWard = "ICU หน่วยงานใหม่ <ทดสอบ>";
+    await open("prepare.html");
+    await page.getByRole("button", { name: "High Flow", exact: true }).click();
+    await page.locator("#lifecycleManualNumber input").fill("1");
+    await page.locator("#lifecycleManualNumber input").press("Enter");
+    await page.selectOption("#wardSel", "อื่นๆ โปรดระบุชื่อตึก");
+    await page.fill("#otherWard", "  " + newWard + "  ");
+    await page.selectOption("#preparedBySel", "ปวริศ");
+    assert.match(await save("#saveBtn"), /1 เครื่อง/);
+    await open("borrow.html");
+    assert.equal(await page.locator("#wardSel option").filter({ hasText: newWard }).count(), 1);
+    await action("borrow");
+    await ward(newWard);
+    assert.equal(await page.inputValue("#wardSel"), newWard);
+    assert.match(await page.locator("#preparedBanner").innerText(), /High Flow/);
+    await page.locator("#preparedBanner .lifecycle-number").first().click();
+    await page.fill("#staffName", "Test");
+    assert.match(await save("#submitBtn"), /1 เครื่อง/);
+    await open("borrow.html");
+    await action("return");
+    await ward(newWard);
+    await page.locator("#preparedBanner .lifecycle-number").first().click();
+    await page.fill("#staffName", "Test");
+    assert.match(await save("#submitBtn"), /1 เครื่อง/);
+    await open("borrow.html");
+    assert.equal(await page.locator("#wardSel option").filter({ hasText: newWard }).count(), 1);
+
     for (const width of [390, 768]) {
       await page.setViewportSize({ width, height: 1024 });
       for (const f of ["prepare.html", "borrow.html", "c2-statistics.html"]) {

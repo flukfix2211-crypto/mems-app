@@ -24,11 +24,26 @@
     return b;
   };
   async function refresh() {
-    [registry, status, prepared] = await Promise.all([
+    const results = await Promise.all([
       fetchRegistryEquipment(),
       fetchEquipmentStatus(),
       fetchPreparedList(),
+      fetchPreparationWards(),
     ]);
+    [registry, status, prepared] = results;
+    const select = $("wardSel");
+    const existing = new Set([...select.options].map(option => option.value));
+    const other = [...select.options].find(option => option.value === "อื่นๆ โปรดระบุชื่อตึก");
+    const names = [...new Set([...results[3], ...prepared.map(item => item.ward),
+      ...status.map(item => item.ward)].filter(Boolean))].sort((a, b) => a.localeCompare(b, "th"));
+    for (const name of names) {
+      if (existing.has(name)) continue;
+      const option = document.createElement("option");
+      option.value = name;
+      option.textContent = name;
+      select.insertBefore(option, other || null);
+      existing.add(name);
+    }
   }
   function usable(a) {
     const k = memsMachineKey(a.type, a.no);
