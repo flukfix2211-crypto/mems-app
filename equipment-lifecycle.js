@@ -83,7 +83,39 @@
         : "เลือกประเภทเครื่องเพื่อแสดงหมายเลขที่พร้อมใช้";
       wrap.append(message);
     }
+    let manual = $("lifecycleManualNumber");
+    if (!manual) {
+      manual = document.createElement("form");
+      manual.id = "lifecycleManualNumber";
+      const input = document.createElement("input");
+      input.className = "field";
+      input.type = "text";
+      input.inputMode = "numeric";
+      input.placeholder = "กรอกหมายเลขเครื่อง เช่น 5";
+      input.setAttribute("aria-label", "กรอกหมายเลขเครื่อง");
+      const add = button("＋ เพิ่มเครื่อง", () => {});
+      add.type = "submit";
+      manual.append(input, add);
+      manual.onsubmit = (event) => {
+        event.preventDefault();
+        if (saving) return;
+        const number = normalizeMachineNo(input.value.trim());
+        const asset = registry.find((a) =>
+          memsTypeKey(a.type) === memsTypeKey(selectedEquip) &&
+          normalizeMachineNo(a.no) === number && usable(a));
+        if (!asset) return alert("ไม่พบเครื่องพร้อมใช้หมายเลขนี้ในประเภทที่เลือก กรุณาตรวจสอบทะเบียนหรือสถานะเครื่อง");
+        const item = { equipment: asset.type, number };
+        selected.set(key(item), item);
+        retry = null;
+        input.value = "";
+        renderNumbers();
+        input.focus();
+      };
+      wrap.before(manual);
+    }
+    manual.querySelector("input").disabled = !selectedEquip || saving;
     $("addNumberBtn").hidden = true;
+    renderRecommendations();
     let summary = $("lifecycleSelection");
     if (!summary) {
       summary = document.createElement("p");
@@ -97,6 +129,52 @@
       [...selected.values()]
         .map((i) => i.equipment + " No." + i.number)
         .join(", ");
+  }
+  function renderRecommendations() {
+    const card = $("readyEquipmentCard");
+    card.style.display = selectedEquip ? "block" : "none";
+    card.classList.toggle("show", !!selectedEquip);
+    card.setAttribute("aria-hidden", String(!selectedEquip));
+    $("readyEquipmentContext").textContent =
+      (selectedEquip || "") + " · 15 อันดับแรก เรียงจากวันคืนเก่าสุดก่อน";
+    const items = registry.filter((a) =>
+      memsTypeKey(a.type) === memsTypeKey(selectedEquip) && usable(a)
+    ).map((a) => {
+      const item = { equipment: a.type, number: normalizeMachineNo(a.no) };
+      const record = status.find((s) => key(s) === key(item));
+      const time = record && !record.isBorrowed ? Date.parse(record.lastUpdate) : NaN;
+      return { ...item, time: Number.isFinite(time) ? time : Infinity };
+    }).sort((a, b) => {
+      if (a.time !== b.time) return a.time < b.time ? -1 : 1;
+      return a.number.localeCompare(b.number, "th", { numeric: true });
+    }).slice(0, 15);
+    $("readyEquipmentCount").textContent = items.length + " ลำดับ";
+    const list = $("readyEquipmentList");
+    list.replaceChildren();
+    const bangkokDay = (date) => Date.parse(bkkDateStr(date) + "T00:00:00+07:00");
+    items.forEach((item, index) => {
+      const row = button("", () => toggle(item, renderNumbers), selected.has(key(item)));
+      row.classList.add("ready-item");
+      const rank = document.createElement("span");
+      rank.className = "ready-rank";
+      rank.textContent = index + 1;
+      const description = document.createElement("span");
+      description.textContent = "No. " + item.number;
+      const meta = document.createElement("small");
+      meta.className = "ready-meta";
+      meta.textContent = Number.isFinite(item.time)
+        ? formatReadyEquipmentDate(new Date(item.time).toISOString())
+        : "ยังไม่มีประวัติคืน";
+      description.append(meta);
+      const duration = document.createElement("span");
+      duration.className = "ready-duration";
+      duration.textContent = Number.isFinite(item.time)
+        ? Math.max(0, Math.round((bangkokDay(new Date()) - bangkokDay(new Date(item.time))) / 86400000)) + " วัน"
+        : "—";
+      row.append(rank, description, duration);
+      list.append(row);
+    });
+    if (!items.length) list.textContent = "ยังไม่มีเครื่องพร้อมใช้สำหรับประเภทนี้";
   }
   function renderTypes() {
     const types = [
@@ -117,9 +195,9 @@
           ),
         ),
       );
-      $("readyEquipmentCard").style.display = "none";
+
       document.querySelector(".number-help").textContent =
-        "แตะหมายเลขเพื่อเลือกหลายเครื่อง รวมหลายประเภทได้";
+        "กรอกหมายเลขแล้วกดเพิ่ม หรือแตะรายการแนะนำ/หมายเลขด้านล่าง รวมหลายประเภทได้";
     } else {
       const grid = document.querySelector(".equip-grid");
       // Keep image buttons for QR compatibility; extend from the registry.

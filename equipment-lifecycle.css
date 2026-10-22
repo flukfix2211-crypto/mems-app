@@ -76,3 +76,12 @@
   color: var(--muted);
   line-height: 1.6;
 }
+
+#lifecycleManualNumber { display: flex; gap: 8px; margin-bottom: 12px; }
+#lifecycleManualNumber .field { flex: 1; min-width: 0; }
+#readyEquipmentList .ready-item { width: 100%; text-align: left; }
+#readyEquipmentList .ready-meta { max-width: none; }
+@media (max-width: 600px) {
+  #lifecycleManualNumber { flex-wrap: wrap; }
+  #lifecycleManualNumber .field { flex-basis: 100%; }
+}
