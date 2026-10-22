@@ -107,7 +107,8 @@
       };
       wrap.before(manual);
     }
-    manual.querySelector("input").disabled = !selectedEquip || saving;
+    manual.querySelector("input").disabled = !selectedEquip;
+    if (!selectedEquip) manual.querySelector("input").value = "";
     $("addNumberBtn").hidden = true;
     renderRecommendations();
     let summary = $("lifecycleSelection");
@@ -147,7 +148,12 @@
     list.replaceChildren();
     const bangkokDay = (date) => Date.parse(bkkDateStr(date) + "T00:00:00+07:00");
     items.forEach((item, index) => {
-      const row = button("", () => toggle(item, renderNumbers), selected.has(key(item)));
+      const row = button("", () => {
+        if (saving) return;
+        toggle(item, renderNumbers);
+        const input = $("lifecycleManualNumber").querySelector("input");
+        input.value = selected.has(key(item)) ? item.number : "";
+      }, selected.has(key(item)));
       row.classList.add("ready-item");
       const rank = document.createElement("span");
       rank.className = "ready-rank";
@@ -180,6 +186,8 @@
           button(
             type,
             () => {
+              const input = $("lifecycleManualNumber")?.querySelector("input");
+              if (input && selectedEquip !== type) input.value = "";
               selectedEquip = type;
               $("otherEquipNameCard").style.display = "none";
               renderTypes();
