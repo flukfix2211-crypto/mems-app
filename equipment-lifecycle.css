@@ -1,0 +1,78 @@
+.lifecycle-grid,
+#numberInputs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.lifecycle-number {
+  min-width: 64px;
+  min-height: 48px;
+  touch-action: manipulation;
+  white-space: normal;
+}
+.lifecycle-number small {
+  display: block;
+  font-size: 11px;
+  font-weight: 400;
+  max-width: 180px;
+}
+.lifecycle-number[aria-pressed="true"] {
+  background: var(--a, #147d70);
+  color: #fff;
+  border: 2px solid currentColor;
+}
+#preparedBanner {
+  padding: 16px;
+  border-radius: 16px;
+  background: var(--card, #fff);
+  overflow-wrap: anywhere;
+}
+#preparedBanner h4 {
+  margin: 14px 0 8px;
+}
+@media (max-width: 600px) {
+  .lifecycle-grid {
+    gap: 8px;
+  }
+  .lifecycle-number {
+    flex: 1 0 70px;
+  }
+  #preparedBanner {
+    padding: 12px;
+  }
+}
+
+.lifecycle-number {
+  padding: 12px 14px;
+  border: 2px solid var(--border, #c5e3ed);
+  border-radius: 12px;
+  background: var(--card, #fff);
+  color: var(--a, #0a6478);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.4;
+  cursor: pointer;
+  box-shadow: var(--sh);
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+.lifecycle-number:focus-visible {
+  outline: 3px solid var(--a, #0a6478);
+  outline-offset: 3px;
+}
+#numberInputs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(62px, 1fr));
+  gap: 8px;
+}
+#numberInputs .lifecycle-number {
+  padding: 12px 4px;
+}
+
+#numberInputs .lifecycle-empty {
+  grid-column: 1/-1;
+  color: var(--muted);
+  line-height: 1.6;
+}

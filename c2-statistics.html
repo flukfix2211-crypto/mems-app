@@ -7,20 +7,20 @@
   <meta name="apple-mobile-web-app-title" content="MEMs Equipment Statistics">
   <link rel="apple-touch-icon" href="icon.png">
   <link rel="icon" type="image/png" href="icon.png">
-  <title>MEMs — สถิติการใช้เครื่องช่วยหายใจ</title>
+  <title>MEMs — สถิติยืม–คืนเครื่องมือแพทย์</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="mems-ui.css?v=20261005-font-1">
   <link rel="stylesheet" href="site-footer.css?v=20261016-footer-1">
   <link rel="stylesheet" href="mems-auth-theme.css?v=20260923-app-2">
   <link rel="stylesheet" href="report-office.css?v=20260923-report-3">
-  <link rel="stylesheet" href="c2-statistics.css?v=20261005-usage-stats-1">
+  <link rel="stylesheet" href="c2-statistics.css?v=20261022-lifecycle-1">
 </head>
 <body class="mems-report mems-c2-stats">
 
 <div id="loginOverlay" class="auth-overlay" style="display:none">
   <div class="auth-dialog">
     <div class="auth-symbol">🔒</div>
-    <h2>สถิติการใช้เครื่องช่วยหายใจ</h2>
+    <h2>สถิติยืม–คืนเครื่องมือแพทย์</h2>
     <p>เข้าสู่ระบบเพื่อใช้งาน</p>
     <input id="authUser" type="text" placeholder="ชื่อผู้ใช้" autocomplete="username" autofocus onkeydown="if(event.key==='Enter'){document.getElementById('authPass').focus()}">
     <input id="authPass" type="password" placeholder="รหัสผ่าน" autocomplete="current-password" onkeydown="if(event.key==='Enter')memsHandleLogin()">
@@ -41,8 +41,8 @@
 <header class="header">
   <div class="header-inner">
     <div>
-      <h1>สถิติการใช้เครื่องช่วยหายใจ</h1>
-      <div class="sub">C2 · High Flow · Bird — รายวัน รายเดือน และปีงบประมาณ</div>
+      <h1>สถิติยืม–คืนเครื่องมือแพทย์</h1>
+      <div class="sub">ทุกประเภทจากทะเบียน — รายวัน รายเดือน และปีงบประมาณ</div>
       <div class="hosp-sub">โรงพยาบาลพหลพลพยุหเสนา จ.กาญจนบุรี</div>
     </div>
     <div class="header-right">
@@ -56,9 +56,9 @@
 <main class="stats-main">
   <section class="stats-intro" aria-labelledby="statsTitle">
     <div>
-      <div class="stats-eyebrow">RESPIRATORY EQUIPMENT LEDGER</div>
-      <h2 id="statsTitle">การใช้งานเครื่องและผู้ป่วยจากรอบยืม–คืน</h2>
-      <p>หนึ่งรอบยืมและคืนที่สมบูรณ์นับเป็นผู้ป่วย 1 ราย ส่วนเครื่องที่ยังไม่คืนจะแสดงเป็นกำลังใช้งานและนับเวลาแบบสด</p>
+      <div class="stats-eyebrow">MEDICAL EQUIPMENT LEDGER</div>
+      <h2 id="statsTitle">การใช้งานเครื่องจากรอบยืม–คืน</h2>
+      <p>แยกจำนวนเตรียม ครั้งยืม ครั้งคืน และรอบปิดสมบูรณ์ ชั่วโมงตัดตามช่วงรายงานและตึกที่ถือเครื่อง</p>
     </div>
     <button id="refreshBtn" class="btn-secondary" type="button">อัปเดตข้อมูล</button>
   </section>
@@ -88,12 +88,14 @@
     </nav>
 
     <div class="filter-panel">
+      <label class="filter-field"><span>ตั้งแต่วันที่ (ไม่บังคับ)</span><input type="date" id="rangeStart"></label>
+      <label class="filter-field"><span>ถึงวันที่ (ไม่บังคับ)</span><input type="date" id="rangeEnd"></label>
       <label class="filter-field"><span>ปีงบประมาณ</span><select id="fiscalSelect"></select></label>
       <label class="filter-field view-filter" data-views="daily"><span>วันที่</span><input id="dayInput" type="date"></label>
       <label class="filter-field view-filter" data-views="monthly machine"><span>เดือน</span><select id="monthSelect"></select></label>
-      <label class="filter-field"><span>ประเภทเครื่อง</span><select id="typeSelect"><option value="">ทุกประเภท</option><option value="C2">C2</option><option value="High Flow">High Flow</option><option value="Bird">Bird</option></select></label>
+      <label class="filter-field"><span>ประเภทเครื่อง</span><select id="typeSelect"><option value="">ทุกประเภท</option></select></label>
       <label class="filter-field"><span>หน่วยงาน</span><select id="wardSelect"><option value="">ทุกหน่วยงาน</option></select></label>
-      <label class="filter-field view-filter" data-views="machine"><span>หมายเลขเครื่อง</span><input id="machineInput" type="search" inputmode="numeric" placeholder="เช่น 27"></label>
+      <label class="filter-field view-filter" data-views="daily monthly fiscal machine"><span>หมายเลขเครื่อง</span><input id="machineInput" type="search" inputmode="numeric" placeholder="เช่น 27"></label>
       <div class="filter-actions">
         <button id="pdfBtn" type="button" class="btn-primary" disabled>พรีวิว PDF</button>
         <button id="csvBtn" type="button" class="btn-secondary" disabled>ส่งออก Excel (CSV)</button>
@@ -105,7 +107,7 @@
     <div class="table-panel">
       <div class="table-panel-head">
         <div><h3 id="viewTitle">สถิติรายวัน</h3><p id="viewCaption">—</p></div>
-        <div class="legend" aria-label="คำอธิบาย"><span><i class="legend-machine"></i> เครื่อง</span><span><i class="legend-patient"></i> ผู้ป่วย</span><span><i class="legend-hours"></i> ชั่วโมง</span></div>
+        <div class="legend" aria-label="คำอธิบาย"><span><i class="legend-machine"></i> เครื่อง</span><span><i class="legend-patient"></i> รอบปิดสมบูรณ์</span><span><i class="legend-hours"></i> ชั่วโมง</span></div>
       </div>
       <div id="viewOutput" class="table-scroll"><div class="state-panel">กำลังโหลดข้อมูล…</div></div>
     </div>
@@ -126,10 +128,11 @@
 <script src="vendor/supabase.js"></script>
 <script src="vendor/jspdf.umd.min.js"></script>
 <script src="vendor/jspdf.plugin.autotable.min.js"></script>
-<script src="supabase-client.js?v=20261016-asset-status-1"></script>
+<script src="supabase-client.js?v=20261022-lifecycle-1"></script>
 <script src="auth.js"></script>
 <script src="reports.js?v=20260923-pdf-c2-1"></script>
-<script src="equipment-statistics.js?v=20261016-asset-status-1"></script>
+<script src="equipment-ledger.js?v=20261022"></script>
+<script src="equipment-statistics.js?v=20261022-lifecycle-1"></script>
 <script src="site-footer.js?v=20261016-footer-1"></script>
 <script src="mascot.js?v=20260923-mascot-2"></script>
 </body>

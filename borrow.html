@@ -650,6 +650,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 <link rel="stylesheet" href="mems-auth-theme.css?v=20260923-app-2">
 <link rel="stylesheet" href="operations-office.css?v=20260923-ops-2">
 <link rel="stylesheet" href="borrow-success.css?v=20260925-1">
+<link rel="stylesheet" href="equipment-lifecycle.css?v=20261022">
 </head>
 <body class="mems-operation mems-borrow">
 
@@ -996,9 +997,9 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 </div>
 
 <script src="vendor/supabase.js"></script>
-<script src="supabase-client.js?v=20261016-asset-status-1"></script>
+<script src="supabase-client.js?v=20261022-lifecycle-1"></script>
 <script src="auth.js"></script>
-<script src="borrow-qr.js?v=20261007-scanned-ward-8"></script>
+<script src="borrow-qr.js?v=20261022-lifecycle-1"></script>
 <script src="mems-clock.js?v=20260924-clock-status-1"></script>
 <script>
 /* ====== STATE ====== */
@@ -1215,8 +1216,8 @@ async function computeWardReturnTypes(ward) {
   try {
     const equipment = await fetchEquipmentStatus();
     equipment.forEach(e => {
-      // วอร์ดไหนยืม วอร์ดนั้นคืน — ยกเว้น ER (หรือ ICU) ยืม วอร์ดอื่นคืนได้ด้วย
-      if (e.isBorrowed && (String(e.ward) === ward || isErIcu(e.ward))) wardReturnTypes.add(String(e.equipment));
+      // แสดงเครื่องเฉพาะตึกที่ถืออยู่ล่าสุด รวม ER และ ICU
+      if (e.isBorrowed && String(e.ward) === ward) wardReturnTypes.add(String(e.equipment));
     });
   } catch (e) { /* โหลดไม่ได้ -> ไม่กรอง */ }
 }
@@ -1667,10 +1668,10 @@ function renderEquipReturnGrid() {
   }
   if (!allEquipStatus) { loadEquipStatus(); return; }
 
-  // กติกา: วอร์ดไหนยืม วอร์ดนั้นคืน — ยกเว้นถ้า ER (หรือ ICU) เป็นผู้ยืม วอร์ดอื่นคืนได้ด้วย
+  // กติกา: คืนได้เฉพาะตึกที่ถือเครื่องล่าสุด หากเปลี่ยนตึกให้บันทึกย้ายก่อน
   const borrowed = allEquipStatus.filter(e =>
     e.isBorrowed && e.equipment === S.equip &&
-    (e.ward === ward || isErIcu(e.ward))
+    e.ward === ward
   );
 
   if (!borrowed.length) {
@@ -1770,148 +1771,6 @@ async function submitTransfer() {
   } finally {
     btn.disabled = false; btn.textContent = 'ยืนยันย้ายวอร์ด';
   }
-}
-
-async function handleSubmit() {
-  const qrScanItems = typeof memsQrBatchItems !== 'undefined'
-    ? memsQrBatchItems.slice()
-    : [];
-  const hasQrScanBatch = qrScanItems.length > 0;
-  const nums   = hasQrScanBatch
-    ? qrScanItems.map(item => String(item.number))
-    : getEquipNumbers();
-  const ward   = document.getElementById('wardSel').value;
-  const other  = document.getElementById('otherWard').value.trim();
-  const name   = document.getElementById('staffName').value.trim();
-  const otherEquipName = document.getElementById('otherEquipName').value.trim();
-  const finalWard = (ward === 'อื่นๆ โปรดระบุชื่อตึก') ? (other || 'อื่นๆ') : ward;
-  const finalEquip = (S.equip === 'เครื่องมืออื่นๆ' && otherEquipName) ? otherEquipName : S.equip;
-  const shiftTH = { morning: 'เวรเช้า', afternoon: 'เวรบ่าย', night: 'เวรดึก' };
-
-  // โหมดยืม: ต้องมีการเตรียมเครื่องสำหรับหน่วยงานนี้ก่อนจึงจะยืมได้
-  if (S.action === 'borrow' && ward) {
-    try {
-      preparedList = await fetchPreparedList();
-      renderPreparedBanner();
-      const missingPrepared = hasQrScanBatch
-        ? qrScanItems.filter(item => !preparedList.some(prepared =>
-            prepared.ward === ward &&
-            String(prepared.equipment || '').toLowerCase() === item.equipment.toLowerCase() &&
-            (normalizeMachineNo(prepared.number) || String(prepared.number)) === String(item.number)
-          ))
-        : [];
-      if (preparedList.filter(p => p.ward === ward).length === 0 || missingPrepared.length) {
-        const detail = missingPrepared.length
-          ? '\nรายการที่ยังไม่ได้เตรียม: ' + missingPrepared.map(item => item.equipment + ' No.' + item.number).join(', ')
-          : '';
-        alert('⚠️ หน่วยงาน "' + ward + '" ยังไม่มีการเตรียมเครื่อง\n' +
-              'ต้องให้เจ้าหน้าที่ศูนย์เครื่องมือแพทย์เตรียมก่อน จึงจะยืมได้' + detail);
-        return;
-      }
-    } catch (e) { /* โหลดไม่ได้ -> ไม่บล็อค กันระบบล่ม */ }
-  }
-
-  if (!S.action || !S.shift || (!hasQrScanBatch && !S.equip) || nums.length === 0 || !ward || !name || (ward === 'อื่นๆ โปรดระบุชื่อตึก' && !other) || (!hasQrScanBatch && S.equip === 'เครื่องมืออื่นๆ' && !otherEquipName)) {
-    alert('⚠️  กรุณากรอกข้อมูลให้ครบทุกช่อง');
-    return;
-  }
-
-  if (hasQrScanBatch && S.action === 'return') {
-    const borrowedWards = [...new Set(qrScanItems.map(item => item.borrowedStatus && item.borrowedStatus.ward).filter(Boolean))];
-    if (borrowedWards.length !== 1 || borrowedWards[0] !== finalWard) {
-      alert('⚠️ หน่วยงานในรายการสแกนไม่ตรงกับหน่วยงานที่เลือก กรุณากดคืนและสแกนรายการใหม่');
-      return;
-    }
-  }
-
-  // ยืมได้เฉพาะเครื่องที่อยู่ในทะเบียนครุภัณฑ์และสถานะ "ใช้งานได้"
-  // (ประเภทที่ยังไม่มีในทะเบียน หรือโหลดทะเบียนไม่ได้ -> ไม่บล็อค)
-  if (S.action === 'borrow') {
-    const groups = hasQrScanBatch
-      ? Object.entries(qrScanItems.reduce((result, item) => {
-          (result[item.equipment] ||= []).push(item.number);
-          return result;
-        }, {}))
-      : [[finalEquip, nums]];
-    const lines = [];
-    for (const [equipmentName, equipmentNumbers] of groups) {
-      const reg = await checkNumbersAgainstRegistry(equipmentName, equipmentNumbers);
-      if (!reg) continue;
-      if (reg.missing.length) lines.push('• ' + equipmentName + ' No. ' + reg.missing.join(', ') + ' ไม่มีในทะเบียนครุภัณฑ์');
-      reg.unusable.forEach(u => lines.push('• ' + equipmentName + ' No. ' + u.no + ' สถานะในทะเบียนคือ "' + u.status + '"'));
-    }
-    if (lines.length) {
-      alert('⚠️ ยืมไม่ได้\n' + lines.join('\n') +
-            '\n\nตรวจเลขเครื่องอีกครั้ง หรือให้แอดมินเพิ่ม/แก้สถานะในทะเบียนครุภัณฑ์ก่อน');
-      return;
-    }
-  }
-
-  // กันยืมซ้ำ: ถ้าเครื่อง No. นั้นถูกยืมอยู่และยังไม่คืน ห้ามยืมซ้ำ
-  if (S.action === 'borrow') {
-    try {
-      const equipment = await fetchEquipmentStatus();
-      const statusMap = {};
-      equipment.forEach(e => {
-        statusMap[String(e.equipment) + '__' + String(e.number)] = e.isBorrowed;
-      });
-      const requestedRecords = hasQrScanBatch
-        ? qrScanItems.map(item => ({ equipment: item.equipment, number: item.number }))
-        : nums.map(number => ({ equipment: finalEquip, number }));
-      const dup = requestedRecords.filter(item =>
-        statusMap[item.equipment + '__' + (normalizeMachineNo(item.number) || String(item.number))] === true
-      );
-      if (dup.length) {
-        alert('⚠️ เครื่อง ' + dup.map(item => item.equipment + ' No.' + item.number).join(', ') +
-              ' ถูกยืมอยู่แล้ว\nต้องคืนเครื่องนั้นก่อน จึงจะยืมซ้ำได้');
-        return;
-      }
-    } catch (e) {
-      // โหลดสถานะไม่ได้ -> ปล่อยผ่าน ไม่บล็อคการบันทึก
-      console.warn('ตรวจสอบสถานะยืมซ้ำไม่ได้:', e);
-    }
-  }
-
-  const actualTime = readActualTime();
-  if (actualTime === false) return;
-
-  const btn = document.getElementById('submitBtn');
-  btn.disabled = true;
-  btn.textContent = `กำลังบันทึก… (0/${nums.length})`;
-
-  const transactionRecords = hasQrScanBatch
-    ? qrScanItems.map(item => ({ equipment: item.equipment, equipmentNumber: String(item.number) }))
-    : nums.map(number => ({ equipment: finalEquip, equipmentNumber: number }));
-  const transactionTypes = [...new Set(transactionRecords.map(item => item.equipment))];
-
-  const basePayload = {
-    action   : S.action === 'borrow' ? '🟩 ยืม' : '🟥 คืน',
-    shift    : shiftTH[S.shift],
-    equipment: transactionTypes.length === 1 ? transactionTypes[0] : 'หลายประเภท',
-    ward     : finalWard,
-    name     : name,
-    timestamp: (actualTime || new Date()).toISOString()
-  };
-
-  // submit one record per equipment number (QR borrow/return may contain mixed equipment types)
-  let savedCount = 0;
-  for (let i = 0; i < transactionRecords.length; i++) {
-    btn.textContent = `กำลังบันทึก… (${i + 1}/${transactionRecords.length})`;
-    const payload = { ...basePayload, ...transactionRecords[i] };
-    try {
-      await saveBorrowRecord(payload);
-      savedCount++;
-    } catch (e2) {
-      console.error('บันทึกล้มเหลว:', e2);
-    }
-  }
-
-  showSuccess({
-    ...basePayload,
-    equipmentNumbers: nums,
-    equipmentItems: hasQrScanBatch ? transactionRecords : null,
-    savedCount
-  });
 }
 
 function showSuccess(d) {
@@ -2083,7 +1942,7 @@ function resetForm() {
       <div style="background:#EBF5F8;border-radius:14px;padding:16px">
         <div style="font-size:15px;font-weight:800;color:#0A6478;margin-bottom:10px"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 10v7m0-10v.1M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0"/></svg> เคล็ดลับ</div>
         <div style="font-size:13px;color:#192D35;line-height:1.8">
-          • กติกาคืนเครื่อง: <b>วอร์ดไหนยืม วอร์ดนั้นคืน</b> ยกเว้นถ้า <b>ER หรือ ICU</b> เป็นผู้ยืม วอร์ดใดก็คืนได้ (ทุกประเภทเครื่อง)<br>
+          • กติกาคืนเครื่อง: <b>วอร์ดไหนยืม วอร์ดนั้นคืน</b> ทุกประเภทเครื่อง รวม ER และ ICU ต้องย้ายตึกก่อนคืนจากตึกอื่น<br>
           • ในโหมด <b>คืน</b> ที่มีปุ่มเลือกหมายเลข จะมีปุ่ม <b><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18l-4-4M21 17H3l4 4"/></svg> ย้ายวอร์ด</b> ให้ย้ายเครื่องที่ยืมอยู่ไปวอร์ดอื่นได้โดยไม่ต้องคืน<br>
           • <b>เครื่องมืออื่นๆ</b>: ใช้สำหรับเครื่องที่ไม่มีในรายการ กรอกชื่อเครื่องและเลขครุภัณฑ์เอง<br>
           • บันทึกหน้าเว็บเป็น Shortcut บน iPhone หรือ Desktop เพื่อใช้งานเหมือนแอป<br>
@@ -2096,5 +1955,6 @@ function resetForm() {
 </div>
 <script src="site-footer.js?v=20261016-footer-1"></script>
 <script src="mascot.js?v=20260923-mascot-2"></script>
+<script src="equipment-lifecycle.js?v=20261022"></script>
 </body>
 </html>

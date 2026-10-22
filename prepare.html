@@ -158,6 +158,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   <link rel="stylesheet" href="site-footer.css?v=20261016-footer-1">
   <link rel="stylesheet" href="mems-auth-theme.css?v=20260923-app-2">
   <link rel="stylesheet" href="operations-office.css?v=20260923-ops-2">
+<link rel="stylesheet" href="equipment-lifecycle.css?v=20261022">
 </head>
 <body class="mems-operation mems-prepare">
 
@@ -366,44 +367,9 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 <div id="toast"></div>
 
 <script src="vendor/supabase.js"></script>
-<script src="supabase-client.js?v=20261009-ready-equipment-1"></script>
+<script src="supabase-client.js?v=20261022-lifecycle-1"></script>
 <script src="auth.js"></script>
 <script>
-  /** บันทึกรายการเตรียมหลายหมายเลข — เทียบเท่า savePrepare() ใน gas/Code.gs เดิม */
-  async function saveMultiplePrepareRecords(equipment, numbers, ward, preparedBy) {
-    const now = new Date();
-    const rows = numbers.filter(n => String(n).trim() !== '').map(num => ({
-      record_date: bkkDateStr(now),
-      record_time: bkkTimeStr(now),
-      equipment_type: equipment,
-      equipment_number: normalizeMachineNo(num) || String(num).trim(),   // "054" → "54" ให้ตรงกับตอนบันทึกยืม
-      ward,
-      prepared_by: preparedBy,
-      recorded_at: now.toISOString(),
-      status: 'เตรียม'
-    }));
-    const { error } = await supabase.from('prepare_records').insert(rows);
-    if (error) throw error;
-  }
-
-  async function saveMixedPrepareRecords(items, ward, preparedBy) {
-    const now = new Date();
-    const rows = items.map(item => ({
-      record_date: bkkDateStr(now),
-      record_time: bkkTimeStr(now),
-      equipment_type: item.equipment,
-      equipment_number: normalizeMachineNo(item.number) || String(item.number).trim(),
-      ward,
-      prepared_by: preparedBy,
-      recorded_at: now.toISOString(),
-      status: 'เตรียม'
-    }));
-    const { error } = await supabase.from('prepare_records').insert(rows);
-    if (error) throw error;
-  }
-
-  const EQUIPS = ['C2', 'Infusion Pump', 'Syringe pump', 'High Flow', 'Brid เขียว', 'T1', 'Monnal t60',
-    'Patient Monitor', 'NIBP', 'Defibrillator', 'เครื่องมืออื่นๆ'];
   const ASSET_LABEL_EQUIPS = new Set(['Defibrillator', 'เครื่องมืออื่นๆ']);
   const WARDS = ['ER','อายุรกรรมหญิง (M.ญ)','EENT','ศัลยกรรมหญิง','ศัลยกรรมกระดูก','ศัลยกรรมชาย',
     'อายุรกรรมชาย (M.ช)','Semi ICU','ICU 100 ปี','กจ.3','กจ.2','TM','เด็กล่าง','PICU','เด็กบน',
@@ -617,23 +583,6 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     card.setAttribute('aria-hidden', 'true');
   }
 
-  // build equip chips
-  const grid = document.getElementById('equipGrid');
-  EQUIPS.forEach(e => {
-    const b = document.createElement('button');
-    b.className = 'equip-chip';
-    b.textContent = e;
-    b.onclick = () => {
-      selectedEquip = e;
-      document.querySelectorAll('.equip-chip').forEach(x => x.classList.remove('active'));
-      b.classList.add('active');
-      document.getElementById('otherEquipNameCard').style.display = e === 'เครื่องมืออื่นๆ' ? '' : 'none';
-      refreshNumberFieldUI();
-      loadReadyEquipmentRecommendations(e);
-    };
-    grid.appendChild(b);
-  });
-
   // build ward options
   const wardSel = document.getElementById('wardSel');
   WARDS.forEach(w => { const o = document.createElement('option'); o.value = w; o.textContent = w; wardSel.appendChild(o); });
@@ -648,115 +597,6 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     const el = document.getElementById('toast');
     el.textContent = msg; el.classList.add('show');
     setTimeout(() => el.classList.remove('show'), 3000);
-  }
-
-  async function savePrepare() {
-    const scannedItems = typeof memsPrepareQrBatchItems !== 'undefined'
-      ? memsPrepareQrBatchItems.slice()
-      : [];
-    const hasScannedBatch = scannedItems.length > 0;
-    const ward0 = wardSel.value;
-    const other = document.getElementById('otherWard').value.trim();
-    const ward = ward0 === 'อื่นๆ โปรดระบุชื่อตึก' ? (other || 'อื่นๆ') : ward0;
-    const bySel   = document.getElementById('preparedBySel').value;
-    const byOther = document.getElementById('preparedByOther').value.trim();
-    const byName  = bySel === 'อื่นๆ' ? byOther : bySel;
-    const numbers = hasScannedBatch ? scannedItems.map(item => item.number) : getNumberValues();
-    const otherEquipName = document.getElementById('otherEquipName').value.trim();
-    const equipName = hasScannedBatch
-      ? ([...new Set(scannedItems.map(item => item.equipment))].length === 1 ? scannedItems[0].equipment : 'หลายประเภท')
-      : (selectedEquip === 'เครื่องมืออื่นๆ' ? otherEquipName : selectedEquip);
-
-    if ((!hasScannedBatch && !selectedEquip) || numbers.length === 0 || !ward0 || !byName || (ward0 === 'อื่นๆ โปรดระบุชื่อตึก' && !other)
-        || (!hasScannedBatch && selectedEquip === 'เครื่องมืออื่นๆ' && !otherEquipName)) {
-      alert('⚠️ กรุณากรอกข้อมูลให้ครบ (ประเภท, หมายเลข, ตึก, ผู้เตรียม)');
-      return;
-    }
-    const by = byName + ' เจ้าหน้าที่ศูนย์เครื่องมือแพทย์';
-
-    const btn = document.getElementById('saveBtn');
-    const origText = btn.textContent;
-    btn.disabled = true; btn.textContent = 'กำลังตรวจสอบ…';
-
-    // เตรียม/ส่งได้เฉพาะเครื่องที่อยู่ในทะเบียนครุภัณฑ์และสถานะ "ใช้งานได้" (เหมือนหน้ายืม-คืน)
-    // ประเภทที่ยังไม่มีในทะเบียน หรือโหลดทะเบียนไม่ได้ -> ไม่บล็อค
-    const registryGroups = hasScannedBatch
-      ? Object.entries(scannedItems.reduce((result, item) => {
-          (result[item.equipment] ||= []).push(item.number);
-          return result;
-        }, {}))
-      : [[equipName, numbers]];
-    const lines = [];
-    for (const [equipmentName, equipmentNumbers] of registryGroups) {
-      const reg = await checkNumbersAgainstRegistry(equipmentName, equipmentNumbers);
-      if (!reg) continue;
-      if (reg.missing.length) lines.push('• ' + equipmentName + ' No. ' + reg.missing.join(', ') + ' ไม่มีในทะเบียนครุภัณฑ์');
-      reg.unusable.forEach(u => lines.push('• ' + equipmentName + ' No. ' + u.no + ' สถานะในทะเบียนคือ "' + u.status + '"'));
-    }
-    if (lines.length) {
-      alert('⚠️ ' + (prepareMode === 'deliver' ? 'ส่ง' : 'เตรียม') + 'ไม่ได้\n' + lines.join('\n') +
-            '\n\nตรวจเลขเครื่องอีกครั้ง หรือเพิ่ม/แก้สถานะในทะเบียนครุภัณฑ์ก่อน');
-      btn.disabled = false; btn.textContent = origText;
-      return;
-    }
-
-    // กันทำซ้ำ: เครื่องที่ถูกเตรียมไว้แล้ว หรือถูกยืมอยู่ ทำซ้ำไม่ได้
-    try {
-      const [prepared, equipment] = await Promise.all([
-        fetchPreparedList().catch(() => []),
-        fetchEquipmentStatus().catch(() => [])
-      ]);
-      const activePrep = new Set(prepared.map(p => p.equipment + '__' + normalizeMachineNo(p.number)));
-      const borrowed = new Set(equipment.filter(e => e.isBorrowed).map(e => e.equipment + '__' + normalizeMachineNo(e.number)));
-      const dups = [];
-      const requestedItems = hasScannedBatch
-        ? scannedItems
-        : numbers.map(number => ({ equipment: equipName, number }));
-      requestedItems.forEach(item => {
-        const key = item.equipment + '__' + (normalizeMachineNo(item.number) || item.number);
-        if (borrowed.has(key)) dups.push(item.equipment + ' No.' + item.number + ' (ถูกยืมอยู่)');
-        else if (prepareMode === 'prepare' && activePrep.has(key)) dups.push(item.equipment + ' No.' + item.number + ' (เตรียมไว้แล้ว)');
-      });
-      if (dups.length) {
-        alert('⚠️ เครื่อง ' + dups.join(', ') + '\nไม่สามารถทำซ้ำได้');
-        btn.disabled = false; btn.textContent = origText;
-        return;
-      }
-    } catch (e) { /* เช็คไม่ได้ -> ปล่อยผ่าน ไม่บล็อค */ }
-
-    btn.textContent = 'กำลังบันทึก…';
-    try {
-      if (prepareMode === 'deliver') {
-        // โหมดพร้อมส่ง = ยืมแทนหน่วยงานทันที (1 record ต่อ 1 หมายเลข)
-        const shift = detectShiftTH();
-        const ts = new Date().toISOString();
-        const deliverItems = hasScannedBatch
-          ? scannedItems
-          : numbers.map(number => ({ equipment: equipName, number }));
-        for (const item of deliverItems) {
-          await saveBorrowRecord({
-            shift, action: '🟩 ยืม', equipment: item.equipment, equipmentNumber: item.number,
-            ward, name: by, timestamp: ts, note: 'เตรียมพร้อมส่ง (แอดมินนำส่ง)'
-          });
-        }
-        toast('🚚 ส่ง ' + deliverItems.map(item => item.equipment + ' No.' + item.number).join(', ') + ' ให้ ' + ward + ' (ยืมแล้ว)');
-      } else {
-        // โหมดเตรียม = บันทึกเป็นรายการเตรียม
-        if (hasScannedBatch) await saveMixedPrepareRecords(scannedItems, ward, by);
-        else await saveMultiplePrepareRecords(equipName, numbers, ward, by);
-        const preparedLabel = hasScannedBatch
-          ? scannedItems.map(item => item.equipment + ' No.' + item.number).join(', ')
-          : equipName + ' No.' + numbers.join(', ');
-        toast('✅ เตรียม ' + preparedLabel + ' ให้ ' + ward + ' แล้ว');
-      }
-      // รีเซ็ตฟอร์มพร้อมกรอกรายการใหม่ (เก็บผู้เตรียม + โหมดไว้)
-      resetPrepareForm();
-      setTimeout(loadList, 800);
-    } catch (e) {
-      // ฐานข้อมูลปฏิเสธ (เช่น เลขไม่มีในทะเบียน) -> แสดงเหตุผลจากฐานข้อมูล
-      toast('❌ บันทึกไม่สำเร็จ' + (e && e.message && e.code === 'P0001' ? ': ' + e.message : ''));
-    }
-    btn.disabled = false; btn.textContent = origText;
   }
 
   function resetPrepareForm() {
@@ -781,15 +621,15 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       const items = await fetchPreparedList();
       if (!items.length) { body.innerHTML = '<div class="empty">ยังไม่มีรายการที่เตรียมไว้</div>'; return; }
       // group by ward
-      const byWard = {};
+      const byWard = Object.create(null);
       items.forEach(it => { (byWard[it.ward] = byWard[it.ward] || []).push(it); });
       let html = '';
       Object.keys(byWard).sort().forEach(w => {
-        html += `<div class="group-ward">📍 ${w}</div>`;
+        html += `<div class="group-ward">📍 ${memsEscapeHtml(w)}</div>`;
         byWard[w].forEach(it => {
           const when = (it.date || '') + (it.time ? ' ' + it.time : '');
           html += `<div class="prep-item">
-            <div class="prep-info"><span class="prep-eq">${it.equipment} No.${it.number}</span><div class="prep-sub">โดย ${it.preparedBy}${when ? ' · 🕒 ' + when : ''}</div></div>
+            <div class="prep-info"><span class="prep-eq">${memsEscapeHtml(it.equipment)} No.${memsEscapeHtml(it.number)}</span><div class="prep-sub">โดย ${memsEscapeHtml(it.preparedBy)}${when ? ' · 🕒 ' + memsEscapeHtml(when) : ''}</div></div>
             <button class="del-btn" onclick="openCancelModal(${it._rowIndex})">ลบ</button>
           </div>`;
         });
@@ -816,7 +656,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     try {
       const { error } = await supabase.from('prepare_records')
         .update({ status: 'ยกเลิก: ' + reason })
-        .eq('id', rowIndex);
+        .eq('id', rowIndex).eq('status', 'เตรียม').select('id').single();
       if (error) throw error;
       toast('🗑️ ยกเลิกแล้ว (' + reason + ')');
       setTimeout(loadList, 800);
@@ -834,8 +674,9 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   });
 </script>
 <script src="https://cdn.jsdelivr.net/npm/qr-scanner@1.4.2/qr-scanner.umd.min.js"></script>
-<script src="prepare-qr.js?v=20261007-mixed-batch-1"></script>
+<script src="prepare-qr.js?v=20261022-lifecycle-1"></script>
 <script src="site-footer.js?v=20261016-footer-1"></script>
 <script src="mascot.js?v=20260923-mascot-2"></script>
+<script src="equipment-lifecycle.js?v=20261022"></script>
 </body>
 </html>
