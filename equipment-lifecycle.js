@@ -6,6 +6,7 @@
     prepared = [],
     selected = new Map(),
     version = 0;
+  let returnType = null;
   let saving = false,
     retry = null;
   const isPrepare = !!$("equipGrid");
@@ -233,6 +234,7 @@
     const el = $("preparedBanner"),
       ward = $("wardSel").value;
     el.replaceChildren();
+    el.dataset.action = S.action || "";
     el.style.display = ward && S.action ? "" : "none";
     if (!ward || !S.action) return;
     const source =
@@ -253,8 +255,31 @@
           : "หน่วยงานนี้ไม่มีเครื่องที่กำลังยืม";
       el.append(p);
     }
+    if (S.action === "return" && source.length) {
+      const types = [...new Set(source.map(item => item.equipment))].sort((a, b) => a.localeCompare(b, "th"));
+      if (!types.includes(returnType)) returnType = null;
+      const prompt = document.createElement("p");
+      prompt.textContent = "เลือกประเภทเครื่องที่จะคืน";
+      el.append(prompt);
+      const choices = document.createElement("div");
+      choices.className = "lifecycle-grid";
+      el.append(choices);
+      for (const type of types) {
+        const choice = button(type, () => {
+          if (saving) return;
+          returnType = type;
+          renderWard();
+        }, type === returnType);
+        choice.dataset.returnType = type;
+        choice.classList.remove("lifecycle-number");
+        choice.classList.add("lifecycle-return-type");
+        choice.removeAttribute("aria-pressed");
+        choice.setAttribute("aria-label", "เลือกประเภทคืน " + type);
+        choices.append(choice);
+      }
+    }
     const groups = new Map();
-    source.forEach((i) => {
+    source.filter(item => S.action !== "return" || item.equipment === returnType).forEach((i) => {
       if (!groups.has(i.equipment)) groups.set(i.equipment, []);
       groups.get(i.equipment).push(i);
     });
@@ -455,6 +480,7 @@
       if (items.length > limit(items))
         throw new Error("เกินจำนวนเครื่องสูงสุดต่อครั้ง");
       selected = new Map(items.map((i) => [key(i), i]));
+      if (S.action === "return") returnType = items[0]?.equipment || null;
       renderWard();
     };
     memsApplyQrReturnSelection = async function () {
@@ -491,6 +517,7 @@
       return result;
     };
     setAction = function (a) {
+      returnType = null;
       selected.clear();
       selectedPrepared.clear();
       retry = null;
@@ -498,6 +525,7 @@
       renderWard();
     };
     onWardChange = async function (sel) {
+      returnType = null;
       selected.clear();
       selectedPrepared.clear();
       c2SelectedNums.clear();

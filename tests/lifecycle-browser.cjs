@@ -267,6 +267,12 @@ const fakeClient = `window.supabase={createClient(){return {auth:{getSession:asy
     const ward = async (w) => {
       await page.selectOption("#wardSel", w);
       await page.waitForLoadState("networkidle");
+      if (await page.evaluate(() => S.action === "return")) {
+        assert.equal(await page.locator(".lifecycle-return-machine").count(), 0,
+          "return numbers stay hidden until a type is chosen");
+        const choices = page.locator("[data-return-type]");
+        if (await choices.count()) await choices.first().click();
+      }
     };
     await open("prepare.html");
     await page.getByRole("button", { name: "Priority test", exact: true }).click();
@@ -347,14 +353,14 @@ const fakeClient = `window.supabase={createClient(){return {auth:{getSession:asy
     assert.match(await save("#submitBtn"), /2 เครื่อง/);
     await action("return");
     await ward("ER");
-    assert.equal(await page.locator("#preparedBanner small").count(), 2);
+    assert.equal(await page.locator("#preparedBanner small").count(), 1);
     const compactReturn = await page.waitForFunction(() => {
       const button = document.querySelector(".lifecycle-return-machine > button");
       const height = button?.getBoundingClientRect().height;
       return height > 0 && height <= 48;
     });
     assert.equal(await compactReturn.jsonValue(), true, "return number stays compact on mobile");
-    assert.equal(await page.locator(".lifecycle-return-machine .lifecycle-transfer").count(), 2);
+    assert.equal(await page.locator(".lifecycle-return-machine .lifecycle-transfer").count(), 1);
     await page
       .locator("#preparedBanner .lifecycle-number")
       .filter({ hasText: "No. 1" })
@@ -434,10 +440,7 @@ const fakeClient = `window.supabase={createClient(){return {auth:{getSession:asy
       }
       await memsConfirmPromptScans();
     }, scanned);
-    assert.equal(
-      await page.locator("#preparedBanner [aria-pressed=true]").count(),
-      2,
-    );
+    assert.match(await page.locator("#preparedBanner").innerText(), /เลือกแล้ว 2 เครื่อง/);
     await page.fill("#staffName", "Test");
     assert.match(await save("#submitBtn"), /2 เครื่อง/);
     await action("return");
@@ -447,10 +450,7 @@ const fakeClient = `window.supabase={createClient(){return {auth:{getSession:asy
       }
       await memsConfirmPromptScans();
     }, scanned);
-    assert.equal(
-      await page.locator("#preparedBanner [aria-pressed=true]").count(),
-      2,
-    );
+    assert.match(await page.locator("#preparedBanner").innerText(), /เลือกแล้ว 2 เครื่อง/);
     await page.fill("#staffName", "Test");
     assert.match(await save("#submitBtn"), /2 เครื่อง/);
     await open("c2-statistics.html");
