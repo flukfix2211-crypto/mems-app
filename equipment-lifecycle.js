@@ -24,6 +24,29 @@
     b.onclick = click;
     return b;
   };
+  function addMachineThumbnail(target, type, number) {
+    const original = [...document.querySelectorAll(".equip-grid .equip-btn")]
+      .find(item => memsTypeKey(item.dataset.e) === memsTypeKey(type));
+    const sample = original?.querySelector("img.ei");
+    const thumbnail = document.createElement("span");
+    thumbnail.className = "lifecycle-machine-thumbnail";
+    thumbnail.setAttribute("aria-hidden", "true");
+    // Show the equipment name if no photo exists, never another device's photo.
+    const fallback = () => { thumbnail.textContent = type; };
+    if (sample) {
+      const picture = document.createElement("img");
+      picture.src = sample.getAttribute("src");
+      picture.alt = "";
+      picture.addEventListener("error", fallback, { once: true });
+      thumbnail.append(picture);
+    } else fallback();
+    const label = document.createElement("span");
+    label.className = "lifecycle-machine-label";
+    label.textContent = "No. " + number;
+    target.replaceChildren(thumbnail, label);
+    target.classList.add("lifecycle-machine-choice");
+    target.setAttribute("aria-label", type + " No. " + number);
+  }
   async function refresh() {
     const results = await Promise.all([
       fetchRegistryEquipment(),
@@ -313,6 +336,7 @@
           () => toggle(item, renderWard),
           selected.has(key(item)),
         );
+        addMachineThumbnail(b, item.equipment, item.number);
         const container = document.createElement("div");
         container.className = "lifecycle-return-machine";
         if (S.action === "return") {
@@ -336,7 +360,7 @@
             openTransferModal(item.equipment, item.number, item.ward));
           transfer.classList.add("lifecycle-transfer");
           transfer.setAttribute("aria-label", "ย้าย " + item.equipment + " No. " + item.number);
-          container.append(transfer);
+          if (typeof memsCanTransferWard === "function" && memsCanTransferWard()) container.append(transfer);
           group.classList.add("lifecycle-return-grid");
           group.append(container);
         } else group.append(b);

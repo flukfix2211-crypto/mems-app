@@ -1698,7 +1698,7 @@ function renderEquipReturnGrid() {
     tfBtn.textContent = '🔁 ย้ายวอร์ด';
     tfBtn.style.cssText = 'font-size:9px;padding:3px 2px;border-radius:6px;border:1px solid #C5E3ED;background:#fff;color:#0A6478;cursor:pointer;font-weight:700;line-height:1.3';
     tfBtn.onclick = (ev) => { ev.stopPropagation(); openTransferModal(S.equip, num, e.ward); };
-    wrap.appendChild(tfBtn);
+    if (memsCanTransferWard()) wrap.appendChild(tfBtn);
     grid.appendChild(wrap);
   });
   updateC2SelInfo();
@@ -1721,6 +1721,7 @@ function getWardList() {
 }
 
 function openTransferModal(equip, num, fromWard) {
+  if (!memsCanTransferWard()) { alert('บัญชีนี้ไม่มีสิทธิ์ย้ายวอร์ดเครื่องมือ'); return; }
   tfCtx = { equip, num, fromWard };
   document.getElementById('tfInfo').innerHTML =
     `<strong>${equip}</strong> No.${num}<br><span style="font-weight:500;color:var(--muted);font-size:12px">ปัจจุบันอยู่ที่วอร์ด ${fromWard}</span>`;
@@ -1738,6 +1739,7 @@ function closeTransferModal() {
 }
 
 async function submitTransfer() {
+  if (!memsCanTransferWard()) { alert('บัญชีนี้ไม่มีสิทธิ์ย้ายวอร์ดเครื่องมือ'); return; }
   if (!tfCtx) return;
   const toWard = document.getElementById('tfWardSel').value;
   const name   = document.getElementById('tfStaffName').value.trim();
@@ -1767,7 +1769,7 @@ async function submitTransfer() {
     await loadEquipStatus();
     alert('✅ ย้าย ' + movedEquip + ' No.' + movedNum + ' ไปวอร์ด ' + toWard + ' สำเร็จ');
   } catch (e2) {
-    alert('⚠️ ย้ายวอร์ดไม่สำเร็จ กรุณาลองใหม่');
+    alert('⚠️ ย้ายวอร์ดไม่สำเร็จ: ' + e2.message);
   } finally {
     btn.disabled = false; btn.textContent = 'ยืนยันย้ายวอร์ด';
   }

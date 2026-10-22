@@ -1061,7 +1061,7 @@ function renderSearchToolResults() {
     if (e.number) {
       const days = getBorrowedDays(e.equipment, e.number, e.lastUpdate);
       actions = `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px">
-          <button onclick="openToolTransferModal('${jsStr(e.equipment)}','${jsStr(e.number)}','${jsStr(e.ward)}')" style="flex:1;min-width:80px;font-size:11px;padding:5px 6px;border-radius:8px;border:1.5px solid #C5E3ED;background:#fff;color:#0A6478;cursor:pointer;font-weight:700">🔁 ย้ายวอร์ด</button>
+          ${memsCanTransferWard() ? `<button onclick="openToolTransferModal('${jsStr(e.equipment)}','${jsStr(e.number)}','${jsStr(e.ward)}')" style="flex:1;min-width:80px;font-size:11px;padding:5px 6px;border-radius:8px;border:1.5px solid #C5E3ED;background:#fff;color:#0A6478;cursor:pointer;font-weight:700">🔁 ย้ายวอร์ด</button>` : ''}
           <button onclick="openToolReturnModal('${jsStr(e.equipment)}','${jsStr(e.number)}','${jsStr(e.ward)}')" style="flex:1;min-width:80px;font-size:11px;padding:5px 6px;border-radius:8px;border:1.5px solid #FCA5A5;background:#fff;color:#B82E2E;cursor:pointer;font-weight:700">🟥 คืนเครื่อง</button>
           ${VENTILATOR_EQUIPS.includes(e.equipment) ? `<button onclick="openCircuitModal('${jsStr(e.number)}','${jsStr(e.ward)}',${days},'${jsStr(e.equipment)}')" style="flex:1;min-width:110px;font-size:11px;padding:5px 6px;border-radius:8px;border:1.5px solid #C5E3ED;background:#fff;color:#0A6478;cursor:pointer;font-weight:700">🔧 เปลี่ยน Circuit</button>` : ''}
         </div>`;
@@ -2108,6 +2108,7 @@ const WARDS_ALL = ['ER','อายุรกรรมหญิง (M.ญ)','EENT'
 let _toolTransferCtx = null; // { equip, number, fromWard }
 
 function openToolTransferModal(equip, number, fromWard) {
+  if (!memsCanTransferWard()) { alert('บัญชีนี้ไม่มีสิทธิ์ย้ายวอร์ดเครื่องมือ'); return; }
   _toolTransferCtx = { equip, number, fromWard };
   document.getElementById('toolTransferInfo').innerHTML =
     `<strong>${equip} No.${number}</strong><br><span style="font-weight:500;color:var(--muted);font-size:12px">ปัจจุบันอยู่ที่วอร์ด ${fromWard || '—'}</span>`;
@@ -2124,6 +2125,7 @@ function closeToolTransferModal() {
 }
 
 async function submitToolTransfer() {
+  if (!memsCanTransferWard()) { alert('บัญชีนี้ไม่มีสิทธิ์ย้ายวอร์ดเครื่องมือ'); return; }
   if (!_toolTransferCtx) return;
   const toWard = document.getElementById('toolTransferWardSel').value;
   const name = document.getElementById('toolTransferStaffName').value.trim();

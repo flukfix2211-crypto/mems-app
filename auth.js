@@ -43,7 +43,7 @@ async function memsLoadProfile() {
   if (!session) return null;
   const { data, error } = await supabase
     .from('user_profiles')
-    .select('id, username, display_name, role, active, permissions, is_super_admin')
+    .select('id, username, display_name, role, active, permissions, is_super_admin, can_transfer_ward')
     .eq('id', session.user.id)
     .single();
   if (error || !data) return null;
@@ -182,4 +182,9 @@ async function memsUserAdminCall(payload) {
   const json = await res.json();
   if (!json.ok) throw new Error(json.error || 'เกิดข้อผิดพลาด');
   return json;
+}
+
+/** Action permission is explicit, including for administrators. */
+function memsCanTransferWard(profile = MEMS_USER) {
+  return !!(profile && profile.active && profile.can_transfer_ward === true);
 }
