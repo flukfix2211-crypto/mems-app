@@ -41,7 +41,7 @@ function memsNormalizeScannerText(raw) {
 }
 
 function memsQrEquipmentName(type) {
-  return type === 'อื่นๆ' ? 'เครื่องมืออื่นๆ' : String(type || '');
+  return String(type || '').trim();
 }
 
 function memsSetQrBanner(message, state) {
@@ -242,7 +242,8 @@ function memsSetQrScanPromptError(message) {
 }
 
 function memsPromptScanLimit(equipment, action) {
-  return Infinity;
+  const types = [...memsPromptScannedItems.map(item => item.equipment), equipment];
+  return types.every(type => memsTypeKey(type) === 'infusion pump') ? 10 : 5;
 }
 
 function memsRenderPromptScans() {
@@ -335,7 +336,7 @@ async function memsAddPromptScan(assetId) {
     const asset = await memsLoadQrAsset(assetId);
     const equipment = memsQrEquipmentName(asset.type);
     const equipmentButton = Array.from(document.querySelectorAll('.equip-btn'))
-      .find(button => String(button.dataset.e).toLowerCase() === equipment.toLowerCase());
+      .find(button => memsTypeKey(button.dataset.e) === memsTypeKey(equipment));
     if (!equipmentButton) throw new Error('ไม่พบประเภทเครื่อง “' + equipment + '” ในหน้าทำรายการ');
 
     const number = normalizeMachineNo(asset.no) || String(asset.no);
@@ -553,6 +554,7 @@ async function memsLoadQrAsset(assetId) {
     .limit(1);
   if (error) throw error;
   if (!data || !data.length) throw new Error('ไม่พบเครื่องนี้ในทะเบียนครุภัณฑ์');
+  if (!normalizeMachineNo(data[0].no)) throw new Error('กรุณาเพิ่มหมายเลขในทะเบียนก่อน');
   return data[0];
 }
 
@@ -589,7 +591,7 @@ async function memsApplyQrBatchItems(items, targetAction) {
   const first = items[0];
   const equipment = first.equipment;
   const equipmentButton = Array.from(document.querySelectorAll('.equip-btn'))
-    .find(button => String(button.dataset.e).toLowerCase() === equipment.toLowerCase());
+    .find(button => memsTypeKey(button.dataset.e) === memsTypeKey(equipment));
   if (!equipmentButton) throw new Error('ไม่พบประเภทเครื่อง “' + equipment + '” ในหน้าทำรายการ');
 
   memsQrBatchItems = items.slice();
@@ -645,7 +647,7 @@ async function memsApplyQrBorrowBatchItems(items) {
 
   const missing = items.filter(item => !preparedList.some(prepared =>
     prepared.ward === ward &&
-    String(prepared.equipment || '').toLowerCase() === item.equipment.toLowerCase() &&
+    memsTypeKey(prepared.equipment) === memsTypeKey(item.equipment) &&
     (normalizeMachineNo(prepared.number) || String(prepared.number)) === item.number
   ));
   if (missing.length) {
@@ -667,7 +669,7 @@ async function memsApplyQrBorrowBatchItems(items) {
   });
   document.querySelectorAll('.equip-btn').forEach(button => button.classList.remove('active'));
   const equipmentButton = Array.from(document.querySelectorAll('.equip-btn'))
-    .find(button => String(button.dataset.e).toLowerCase() === equipment.toLowerCase());
+    .find(button => memsTypeKey(button.dataset.e) === memsTypeKey(equipment));
   if (equipmentButton) equipmentButton.classList.add('active');
   S.equip = equipment;
   updatePreparedSelectionUI();
@@ -695,7 +697,7 @@ async function memsUseQrAssetId(assetId, options) {
     memsQrReturnAsset = asset;
     const requestedEquip = memsQrEquipmentName(asset.type);
     const equipButton = Array.from(document.querySelectorAll('.equip-btn'))
-      .find(button => String(button.dataset.e).toLowerCase() === requestedEquip.toLowerCase());
+      .find(button => memsTypeKey(button.dataset.e) === memsTypeKey(requestedEquip));
 
     memsSyncQrScanCard(targetAction);
     if (!equipButton) throw new Error('ไม่พบประเภทเครื่อง “' + requestedEquip + '” ในหน้าทำรายการ');
@@ -796,7 +798,7 @@ async function memsApplyQrBorrowSelection() {
 
   const prepared = preparedList.find(item =>
     item.ward === ward &&
-    String(item.equipment || '').toLowerCase() === requestedEquip.toLowerCase() &&
+    memsTypeKey(item.equipment) === memsTypeKey(requestedEquip) &&
     (normalizeMachineNo(item.number) || String(item.number)) === no
   );
   if (!prepared) {
@@ -806,7 +808,7 @@ async function memsApplyQrBorrowSelection() {
   }
 
   const equipButton = Array.from(document.querySelectorAll('.equip-btn'))
-    .find(button => String(button.dataset.e).toLowerCase() === requestedEquip.toLowerCase());
+    .find(button => memsTypeKey(button.dataset.e) === memsTypeKey(requestedEquip));
   if (!equipButton) {
     memsSetQrBanner('⚠️ ไม่พบประเภทเครื่อง “' + requestedEquip + '” ในหน้าทำรายการ', 'error');
     return;
@@ -853,7 +855,7 @@ async function memsApplyQrReturnSelection() {
   }
 
   const equipButton = Array.from(document.querySelectorAll('.equip-btn'))
-    .find(button => String(button.dataset.e).toLowerCase() === requestedEquip.toLowerCase());
+    .find(button => memsTypeKey(button.dataset.e) === memsTypeKey(requestedEquip));
   if (!equipButton) {
     memsSetQrBanner('⚠️ ไม่พบประเภทเครื่อง “' + requestedEquip + '” ในหน้าคืนเครื่อง', 'error');
     return;

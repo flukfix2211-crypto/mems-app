@@ -226,7 +226,7 @@ async function fetchAllPages(buildQuery, pageSize = 1000) {
 async function fetchEquipmentStatus() {
   const rows = await fetchAllPages(() =>
     supabase.from('equipment_status')
-      .select('equipment_name, equipment_number, ward, staff_name, action, recorded_at, is_borrowed')
+      .select('equipment_name, equipment_number, ward, staff_name, action, recorded_at, is_borrowed, borrow_started_at')
       .order('equipment_name').order('equipment_number'));
   return rows.map(mapEquipmentStatusRow);
 }
@@ -239,6 +239,7 @@ function mapEquipmentStatusRow(r) {
     ward: r.ward,
     borrowedBy: r.staff_name,
     lastUpdate: r.recorded_at,
+    borrowStartedAt: r.borrow_started_at,
     isBorrowed: !!r.is_borrowed
   };
 }
@@ -247,13 +248,8 @@ function mapEquipmentStatusRow(r) {
 async function fetchEquipmentStatusForMachine(equipment, number) {
   const machineNo = normalizeMachineNo(number);
   if (!equipment || !machineNo) return null;
-  const { data, error } = await supabase.from('equipment_status')
-    .select('equipment_name, equipment_number, ward, staff_name, action, recorded_at, is_borrowed')
-    .eq('equipment_name', equipment)
-    .eq('equipment_number', machineNo)
-    .limit(1);
-  if (error) throw error;
-  return data && data.length ? mapEquipmentStatusRow(data[0]) : null;
+  const all = await fetchEquipmentStatus();
+  return all.find(s => memsMachineKey(s.equipment,s.number) === memsMachineKey(equipment,machineNo)) || null;
 }
 
 /**
@@ -309,30 +305,19 @@ function sortMachineNumbers(list) {
 /**
  * ตรวจเลขเครื่องกับทะเบียนครุภัณฑ์ก่อนบันทึกยืม
  * คืน { missing: [...เลขที่ไม่มีในทะเบียน], unusable: [{ no, status }...เครื่องที่สถานะไม่ใช่ "ใช้งานได้"] }
- * คืน null ถ้าประเภทนี้ยังไม่มีในทะเบียน หรือโหลดทะเบียนไม่ได้ (ไม่บล็อคการบันทึก)
+ * ประเภทที่ไม่มีทะเบียนถือว่าไม่พบทุกหมายเลข; หากอ่านทะเบียนไม่ได้ให้ throw เพื่อหยุดบันทึก
  */
 async function checkNumbersAgainstRegistry(type, nums) {
-  try {
-    const { data, error } = await supabase.from('assets').select('no, status').eq('type', type);
-    if (error) throw error;
-    if (!data || !data.length) return null;
-    const statusByNo = {};
-    data.forEach(a => {
-      const k = normalizeMachineNo(a.no);
-      if (!k) return;
-      // เลขซ้ำในทะเบียน: ถ้ามีแถวไหน "ใช้งานได้" ถือว่าใช้ได้
-      if (statusByNo[k] !== 'ใช้งานได้') statusByNo[k] = a.status || 'ใช้งานได้';
-    });
-    const missing = [], unusable = [];
-    nums.forEach(n => {
-      const k = normalizeMachineNo(n);
-      if (!(k in statusByNo)) missing.push(k || String(n));
-      else if (statusByNo[k] !== 'ใช้งานได้') unusable.push({ no: k, status: statusByNo[k] });
-    });
-    return { missing, unusable };
-  } catch (e) {
-    return null;
-  }
+  const assets = await fetchRegistryEquipment();
+  const matching = assets.filter(a => memsTypeKey(a.type) === memsTypeKey(type));
+  const missing = [], unusable = [];
+  nums.forEach(n => {
+    const no = normalizeMachineNo(n);
+    const rows = matching.filter(a => normalizeMachineNo(a.no) === no);
+    if (!no || !rows.length) missing.push(no || '(ไม่มีหมายเลข)');
+    else if (rows.length !== 1 || rows[0].status !== 'ใช้งานได้') unusable.push({ no, status: rows.length !== 1 ? 'ทะเบียนซ้ำ กรุณาตรวจสอบ' : rows[0].status });
+  });
+  return { missing, unusable };
 }
 
 /** สถานะเครื่อง C2 ทุกเครื่องตาม No. ในทะเบียนครุภัณฑ์ — เทียบเท่า getC2Status()/buildC2Units() เดิม */
@@ -364,12 +349,9 @@ async function fetchC2Status() {
 
 /** รายการเครื่องที่เตรียมไว้และยังไม่ถูกยืม — เทียบเท่า getPrepareList() เดิม */
 async function fetchPreparedList() {
-  const { data, error } = await supabase
-    .from('prepare_records')
+  const data = await fetchAllPages(() => supabase.from('prepare_records')
     .select('id, record_date, record_time, equipment_type, equipment_number, ward, prepared_by, recorded_at')
-    .eq('status', 'เตรียม')
-    .order('recorded_at', { ascending: true });
-  if (error) throw error;
+    .eq('status', 'เตรียม').order('recorded_at', { ascending: true }).order('id'));
   return (data || []).map(r => ({
     _rowIndex: r.id,
     date: r.record_date,
@@ -400,17 +382,6 @@ async function saveBorrowRecord(payload) {
   };
   const { data, error } = await supabase.from('borrow_records').insert(row).select().single();
   if (error) throw error;
-
-  // เครื่องที่ถูกยืม -> หายจากรายการเตรียม (เทียบเท่า markPreparedUsed() เดิม)
-  if ((payload.action || '').includes('ยืม') && payload.equipment && payload.equipmentNumber != null) {
-    try {
-      await supabase.from('prepare_records')
-        .update({ status: 'ยืมแล้ว' })
-        .eq('status', 'เตรียม')
-        .eq('equipment_type', payload.equipment)
-        .eq('equipment_number', String(payload.equipmentNumber));
-    } catch (e) { /* ไม่ให้กระทบการบันทึกหลัก */ }
-  }
 
   notifyTelegram({ type: 'borrow_return', record: row }); // ไม่ await — ไม่บล็อคการบันทึกหลัก
   return { row: data.id, timestamp: row.recorded_at };
@@ -502,4 +473,27 @@ async function notifyTelegram(payload) {
   } catch (e) {
     return { ok: false, error: String(e) };
   }
+}
+
+// Exact aliases only: never collapse arbitrary punctuation or use substring matching.
+function memsTypeKey(type) {
+  const key = String(type || '').trim().replace(/\s+/g, ' ').toLowerCase();
+  return ({ 'bird': 'brid เขียว', 'bird เขียว': 'brid เขียว', 'brid': 'brid เขียว', 'highflow': 'high flow', 'monnal t60': 'monnal t60' })[key] || key;
+}
+function memsMachineKey(type, number) { return JSON.stringify([memsTypeKey(type), normalizeMachineNo(number)]); }
+async function fetchRegistryEquipment() {
+  return fetchAllPages(() => supabase.from('assets').select('id,type,no,status,updated_at').order('id'));
+}
+async function saveEquipmentBatch(mode, items, ward, name, options = {}) {
+  const payload = { mode, items: items.map(i => ({ equipment: i.equipment, number: normalizeMachineNo(i.number ?? i.equipmentNumber) })),
+    ward, name, shift: options.shift || null, timestamp: options.timestamp || null };
+  const { data, error } = await supabase.rpc('mems_equipment_batch', { request_id: options.requestId, payload });
+  if (error) throw error;
+  if (!Array.isArray(data) || data.length !== items.length || data.some(r => !r.id)) throw new Error('ยังยืนยันการบันทึกไม่ได้ กรุณาลองซ้ำ');
+  if(mode!=='prepare') items.forEach((item,index)=>{const now=new Date(options.timestamp||Date.now());notifyTelegram({type:'borrow_return',record:{id:data[index].id,action:mode==='return'?'🟥 คืน':'🟩 ยืม',equipment_name:item.equipment,equipment_number:normalizeMachineNo(item.number??item.equipmentNumber),ward,staff_name:name,shift:options.shift,recorded_at:now.toISOString(),record_date:bkkDateStr(now),record_time:bkkTimeStr(now)}});});
+  return data;
+}
+
+function memsEscapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }

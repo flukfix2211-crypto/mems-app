@@ -179,12 +179,17 @@ async function memsHandlePrepareQrResult(raw) {
     if (!data || !data.length) throw new Error('ไม่พบเครื่องนี้ในทะเบียนครุภัณฑ์');
 
     const asset = data[0];
-    const requestedEquip = asset.type === 'อื่นๆ' ? 'เครื่องมืออื่นๆ' : String(asset.type || '');
+    const requestedEquip = String(asset.type || '').trim();
     const equipButton = Array.from(document.querySelectorAll('.equip-chip'))
-      .find(button => button.textContent.trim().toLowerCase() === requestedEquip.toLowerCase());
+      .find(button => memsTypeKey(button.textContent) === memsTypeKey(requestedEquip));
     if (!equipButton) throw new Error('ไม่พบประเภทเครื่อง “' + requestedEquip + '” ในหน้าเตรียมเครื่อง');
 
-    const no = normalizeMachineNo(asset.no) || String(asset.no);
+    const no = normalizeMachineNo(asset.no);
+    if (!no) throw new Error('กรุณาเพิ่มหมายเลขในทะเบียนก่อน');
+    if (asset.status !== 'ใช้งานได้') throw new Error('เครื่องไม่พร้อมใช้');
+    const [prepared,statuses] = await Promise.all([fetchPreparedList(),fetchEquipmentStatus()]);
+    const machineKey = memsMachineKey(requestedEquip,no);
+    if(prepared.some(p=>memsMachineKey(p.equipment,p.number)===machineKey)||statuses.some(s=>s.isBorrowed&&memsMachineKey(s.equipment,s.number)===machineKey)) throw new Error('เครื่องถูกเตรียมหรือถูกยืมอยู่');
     const duplicate = memsPrepareQrDraftItems.some(item => item.equipment === requestedEquip && item.number === no);
     if (!duplicate) {
       memsPrepareQrDraftItems.push({ asset, equipment: requestedEquip, number: no });

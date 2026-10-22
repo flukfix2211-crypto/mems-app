@@ -150,3 +150,5 @@
     *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
   }
 }
+
+.equipment-card-grid{grid-template-columns:repeat(2,minmax(0,1fr));}

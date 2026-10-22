@@ -1,0 +1,13 @@
+{
+  "name": "mems-app",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "test:browser": "node tests/lifecycle-browser.cjs"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.11",
+    "pg": "8.16.3",
+    "playwright": "1.62.1"
+  }
+}
