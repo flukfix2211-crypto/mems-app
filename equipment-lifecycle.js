@@ -24,6 +24,23 @@
     b.onclick = click;
     return b;
   };
+  function preparationTypeButton(type, click, active) {
+    const target = button(type, click, active);
+    target.classList.add("lifecycle-type-choice");
+    const src = window.memsEquipmentPhotos?.[memsTypeKey(type)];
+    if (src) {
+      const picture = document.createElement("img");
+      picture.src = src;
+      picture.alt = "";
+      picture.width = 56;
+      picture.height = 56;
+      picture.addEventListener("error", () => picture.remove(), { once: true });
+      const label = document.createElement("span");
+      label.textContent = type;
+      target.replaceChildren(picture, label);
+    }
+    return target;
+  }
   function addMachineThumbnail(target, type, number) {
     const original = [...document.querySelectorAll(".equip-grid .equip-btn")]
       .find(item => memsTypeKey(item.dataset.e) === memsTypeKey(type));
@@ -207,7 +224,7 @@
     if (isPrepare) {
       $("equipGrid").replaceChildren(
         ...types.map((type) =>
-          button(
+          preparationTypeButton(
             type,
             () => {
               const input = $("lifecycleManualNumber")?.querySelector("input");
