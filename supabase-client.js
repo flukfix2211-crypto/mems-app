@@ -493,6 +493,11 @@ function memsTypeKey(type) {
   const key = String(type || '').trim().replace(/\s+/g, ' ').toLowerCase();
   return ({ 'bird': 'brid เขียว', 'bird เขียว': 'brid เขียว', 'brid': 'brid เขียว', 'highflow': 'high flow', 'monnal t60': 'monnal t60' })[key] || key;
 }
+// ER High Flow can be returned by any ward while ER is the current holder.
+function memsCanReturnEquipment(item, ward) {
+  return !!(ward && item && item.isBorrowed &&
+    (item.ward === ward || (item.ward === 'ER' && memsTypeKey(item.equipment) === 'high flow')));
+}
 function memsMachineKey(type, number) { return JSON.stringify([memsTypeKey(type), normalizeMachineNo(number)]); }
 async function fetchRegistryEquipment() {
   return fetchAllPages(() => supabase.from('assets').select('id,type,no,status,updated_at').order('id'));

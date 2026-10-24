@@ -997,9 +997,9 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 </div>
 
 <script src="vendor/supabase.js"></script>
-<script src="supabase-client.js?v=20261022-shared-wards-1"></script>
+<script src="supabase-client.js?v=20261024-er-high-flow"></script>
 <script src="auth.js"></script>
-<script src="borrow-qr.js?v=20261022-lifecycle-1"></script>
+<script src="borrow-qr.js?v=20261024-er-high-flow"></script>
 <script src="mems-clock.js?v=20260924-clock-status-1"></script>
 <script>
 /* ====== STATE ====== */
@@ -1216,8 +1216,8 @@ async function computeWardReturnTypes(ward) {
   try {
     const equipment = await fetchEquipmentStatus();
     equipment.forEach(e => {
-      // แสดงเครื่องเฉพาะตึกที่ถืออยู่ล่าสุด รวม ER และ ICU
-      if (e.isBorrowed && String(e.ward) === ward) wardReturnTypes.add(String(e.equipment));
+      // แสดงเครื่องที่ตึกนี้คืนได้ รวมข้อยกเว้น High Flow ของ ER
+      if (memsCanReturnEquipment(e, ward)) wardReturnTypes.add(String(e.equipment));
     });
   } catch (e) { /* โหลดไม่ได้ -> ไม่กรอง */ }
 }
@@ -1668,10 +1668,9 @@ function renderEquipReturnGrid() {
   }
   if (!allEquipStatus) { loadEquipStatus(); return; }
 
-  // กติกา: คืนได้เฉพาะตึกที่ถือเครื่องล่าสุด หากเปลี่ยนตึกให้บันทึกย้ายก่อน
+  // กติกา: คืนตามตึกผู้ถือเครื่องล่าสุด ยกเว้น High Flow ของ ER
   const borrowed = allEquipStatus.filter(e =>
-    e.isBorrowed && e.equipment === S.equip &&
-    e.ward === ward
+    e.equipment === S.equip && memsCanReturnEquipment(e, ward)
   );
 
   if (!borrowed.length) {
@@ -1944,7 +1943,7 @@ function resetForm() {
       <div style="background:#EBF5F8;border-radius:14px;padding:16px">
         <div style="font-size:15px;font-weight:800;color:#0A6478;margin-bottom:10px"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 10v7m0-10v.1M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0"/></svg> เคล็ดลับ</div>
         <div style="font-size:13px;color:#192D35;line-height:1.8">
-          • กติกาคืนเครื่อง: <b>วอร์ดไหนยืม วอร์ดนั้นคืน</b> ทุกประเภทเครื่อง รวม ER และ ICU ต้องย้ายตึกก่อนคืนจากตึกอื่น<br>
+          • กติกาคืนเครื่อง: <b>วอร์ดไหนยืม วอร์ดนั้นคืน</b> ยกเว้น High Flow ที่ ER ถืออยู่ ตึกไหนก็คืนได้ ส่วนกรณีอื่นต้องย้ายตึกก่อนคืนจากตึกอื่น<br>
           • ในโหมด <b>คืน</b> ที่มีปุ่มเลือกหมายเลข จะมีปุ่ม <b><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18l-4-4M21 17H3l4 4"/></svg> ย้ายวอร์ด</b> ให้ย้ายเครื่องที่ยืมอยู่ไปวอร์ดอื่นได้โดยไม่ต้องคืน<br>
           • <b>เครื่องมืออื่นๆ</b>: ใช้สำหรับเครื่องที่ไม่มีในรายการ กรอกชื่อเครื่องและเลขครุภัณฑ์เอง<br>
           • บันทึกหน้าเว็บเป็น Shortcut บน iPhone หรือ Desktop เพื่อใช้งานเหมือนแอป<br>
@@ -1957,6 +1956,6 @@ function resetForm() {
 </div>
 <script src="site-footer.js?v=20261016-footer-1"></script>
 <script src="mascot.js?v=20261023-header-1"></script>
-<script src="equipment-lifecycle.js?v=20261022-return-type-original-rows-2"></script>
+<script src="equipment-lifecycle.js?v=20261024-er-high-flow"></script>
 </body>
 </html>
