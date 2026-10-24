@@ -358,7 +358,9 @@ async function memsAddPromptScan(assetId) {
     if (targetAction === 'return') {
       borrowedStatus = await memsLoadBorrowedStatus(equipment, number);
       const firstWard = first && first.borrowedStatus && first.borrowedStatus.ward;
-      if (firstWard && borrowedStatus.ward !== firstWard) {
+      if (firstWard && borrowedStatus.ward !== firstWard &&
+          ![first, { borrowedStatus, equipment }].every(item =>
+            memsCanReturnEquipment({ ...item.borrowedStatus, equipment: item.equipment }, document.getElementById('wardSel').value))) {
         throw new Error('เครื่องนี้ยืมจากคนละหน่วยงานกับรายการที่สแกนไว้ กรุณายืนยันแยกรายการ');
       }
     }
@@ -599,7 +601,8 @@ async function memsApplyQrBatchItems(items, targetAction) {
   memsSyncQrScanCard(targetAction);
   if (targetAction === 'return') {
     const ward = first.borrowedStatus && first.borrowedStatus.ward;
-    memsSelectBorrowedWard(ward);
+    const selectedWard = document.getElementById('wardSel').value;
+    if (!items.every(item => memsCanReturnEquipment({ ...item.borrowedStatus, equipment: item.equipment }, selectedWard))) memsSelectBorrowedWard(ward);
   }
   memsSetQrDevice(first.asset, equipment);
   pickEquip(equipmentButton, equipment);
@@ -705,7 +708,8 @@ async function memsUseQrAssetId(assetId, options) {
     if (targetAction === 'return') {
       memsSetQrBanner('กำลังค้นหาหน่วยงานที่ยืมเครื่องนี้…', 'loading');
       const borrowedStatus = await memsLoadBorrowedStatus(equip, asset.no);
-      memsSelectBorrowedWard(borrowedStatus.ward);
+      const selectedWard = document.getElementById('wardSel').value;
+      if (!memsCanReturnEquipment({ ...borrowedStatus, equipment: equip }, selectedWard)) memsSelectBorrowedWard(borrowedStatus.ward);
     }
     memsHideQrScanPrompt(true);
     memsSetQrDevice(asset, equip);

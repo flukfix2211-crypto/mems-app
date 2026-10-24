@@ -68,6 +68,7 @@ async function setup() {
       "utf8",
     ),
   );
+  await db.exec(fs.readFileSync(path.join(root, 'supabase/migrations/20261024050733_er_high_flow_cross_ward_return.sql'), 'utf8'));
   await db.exec(
     `set role authenticated;select set_config('request.jwt.claim.sub','${user}',false);`,
   );
@@ -108,7 +109,7 @@ test("production trigger fixture + migration: all types prepare → borrow → r
       await assert.rejects(batch(db, "borrow", [i], "ICU"), /ไม่ได้เตรียม/);
       await batch(db, "borrow", [i]);
       await assert.rejects(batch(db, "borrow", [i]), /ถูกยืม/);
-      await assert.rejects(batch(db, "return", [i], "ICU"), /ตึกอื่น/);
+      if (type !== "High Flow") await assert.rejects(batch(db, "return", [i], "ICU"), /ตึกอื่น/);
       await batch(db, "return", [i]);
       await assert.rejects(batch(db, "return", [i]), /คืนแล้ว/);
     }
@@ -427,3 +428,25 @@ test(
     }
   },
 );
+
+test("ER High Flow cross-ward return, direct inserts, ICU restrictions and transfer remain consistent", async () => {
+  const db = await setup();
+  try {
+    await db.exec("insert into assets(type,no)values('High Flow',1),('C2',1)");
+    await batch(db, 'deliver', [item('HighFlow')]);
+    await batch(db, 'return', [item('High Flow')], 'ศัลยกรรมชาย');
+    await assert.rejects(batch(db, 'return', [item('High Flow')], 'ICU'), /คืนแล้ว/);
+    assert.equal((await db.query("select count(distinct loan_id)::int n from borrow_records where equipment_name='High Flow'")).rows[0].n, 1);
+    await batch(db, 'deliver', [item('High Flow')]);
+    await db.exec("insert into borrow_records(record_date,record_time,action,equipment_name,equipment_number,ward,staff_name)values(current_date,current_time,'คืน','High Flow','1','ICU','Test')");
+    await batch(db, 'deliver', [item('High Flow')], 'ICU');
+    await assert.rejects(batch(db, 'return', [item('High Flow')], 'ER'), /ตึกอื่น/);
+    await batch(db, 'return', [item('High Flow')], 'ICU');
+    await batch(db, 'deliver', [item('High Flow')]);
+    await db.exec("insert into borrow_records(record_date,record_time,action,equipment_name,equipment_number,ward,staff_name,note)values(current_date,current_time,'ย้ายวอร์ด','High Flow','1','ICU','Test','ย้ายจาก ER')");
+    await assert.rejects(batch(db, 'return', [item('High Flow')], 'ER'), /ตึกอื่น/);
+    await batch(db, 'return', [item('High Flow')], 'ICU');
+    await batch(db, 'deliver', [item('C2')]);
+    await assert.rejects(batch(db, 'return', [item('C2')], 'ICU'), /ตึกอื่น/);
+  } finally { await db.close(); }
+});

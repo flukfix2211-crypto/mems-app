@@ -105,3 +105,16 @@ test("same number across equipment types remains independent; preparation and ze
   assert.equal(m.usageMs, 0);
   assert.equal(m.outstanding, 0);
 });
+
+test("ER High Flow returned by another ward closes a complete session", () => {
+  const events = [event(1, '2026-10-24T01:00Z', 'b', 'ER', 'High Flow'),
+    event(2, '2026-10-24T03:00Z', 'r', 'ICU', 'High Flow')];
+  const result = ledger.build(events);
+  assert.equal(result.anomalies.length, 0);
+  assert.equal(result.sessions[0].completed, true);
+  assert.equal(result.sessions[0].incomplete, false);
+  assert.equal(result.sessions[0].returnWard, 'ICU');
+  assert.equal(result.sessions[0].segments[0].ward, 'ER');
+  events[0].ward = 'ICU 100 ปี';
+  assert.equal(ledger.build(events).anomalies.length, 1);
+});

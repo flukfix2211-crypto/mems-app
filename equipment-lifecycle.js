@@ -280,12 +280,12 @@
     const source =
       S.action === "borrow"
         ? prepared.filter((p) => p.ward === ward)
-        : status.filter((s) => s.isBorrowed && s.ward === ward);
+        : status.filter((s) => memsCanReturnEquipment(s, ward));
     const title = document.createElement("h3");
     title.textContent =
       S.action === "borrow"
         ? "เครื่องที่เตรียมไว้สำหรับ " + ward
-        : "เครื่องที่กำลังยืมโดย " + ward;
+        : "เครื่องที่ " + ward + " สามารถคืนได้";
     el.append(title);
     if (!source.length) {
       const p = document.createElement("p");
@@ -358,6 +358,11 @@
         container.className = "lifecycle-return-machine";
         if (S.action === "return") {
           container.append(b);
+          if (item.ward !== ward) {
+            const holder = document.createElement("small");
+            holder.textContent = "ยืมโดย " + item.ward;
+            container.append(holder);
+          }
           const transfer = button("ย้าย", () =>
             openTransferModal(item.equipment, item.number, item.ward));
           transfer.classList.add("lifecycle-transfer");
@@ -517,7 +522,7 @@
       const source =
         S.action === "borrow"
           ? prepared.filter((p) => p.ward === ward)
-          : status.filter((p) => p.isBorrowed && p.ward === ward);
+          : status.filter((p) => memsCanReturnEquipment(p, ward));
       if (items.some((i) => !source.some((p) => key(p) === key(i))))
         throw new Error("เครื่องไม่ได้อยู่ในรายการของหน่วยงานนี้");
       if (items.length > limit(items))
@@ -534,9 +539,7 @@
         asset.no,
       );
       if (
-        !current ||
-        !current.isBorrowed ||
-        current.ward !== $("wardSel").value
+        !memsCanReturnEquipment(current, $("wardSel").value)
       )
         throw new Error("เครื่องไม่ได้อยู่ในรายการของหน่วยงานนี้");
       await selectQr([

@@ -54,7 +54,9 @@
             anomalies.push({ kind: "return-without-borrow", event: e });
             return;
           }
-          if (open.segments.at(-1).ward !== e.ward) {
+          if (open.segments.at(-1).ward !== e.ward &&
+              !(open.segments.at(-1).ward === 'ER' &&
+                ['high flow', 'highflow'].includes(String(e.type).trim().replace(/\s+/g, ' ').toLowerCase()))) {
             open.incomplete = true;
             anomalies.push({ kind: "legacy-cross-ward-return", event: e });
           }
