@@ -43,21 +43,26 @@ async function harness({ reduced = false, paused = false } = {}) {
   const click = s => dock.querySelector(s).listeners.click();
   return { dock, doc, modal, mutation: () => mutation(), advance, click, frames, sessionStorage, localStorage };
 }
-test('welcome runs once per session, retreats, and has no idle animation loop', async () => {
-  const h = await harness(); h.advance(8000);
+test('walk loops continuously while advice runs once per session', async () => {
+  const h = await harness(); h.advance(4200);
   assert.match(h.dock.querySelector('p').textContent, /เลือกประเภทเครื่อง/);
   assert.equal(h.sessionStorage.getItem('mems-guide-welcomed'), '1');
-  h.advance(10000); assert.equal(h.dock.dataset.state, 'rest'); assert.equal(h.frames.size, 0);
-  h.advance(120000); assert.equal(h.dock.dataset.state, 'rest');
+  h.advance(10000); assert.notEqual(h.dock.dataset.state, 'rest'); assert.equal(h.frames.size, 1);
+  assert.equal(h.dock.querySelector('p').textContent, '');
+  h.advance(120000); assert.notEqual(h.dock.dataset.state, 'rest'); assert.equal(h.frames.size, 1);
 });
 test('input focus and programmatic dialogs hide guidance immediately', async () => {
   const h = await harness(); h.advance(8000);
   h.modal.style.display = 'flex'; h.mutation();
   assert.equal(h.dock.querySelector('p').textContent, '');
   h.advance(500); assert.equal(h.dock.dataset.state, 'rest');
-  h.modal.style.display = 'none'; h.click('.mems-guide-call'); h.advance(4000);
+  h.modal.style.display = 'none'; h.mutation(); h.advance(4000);
+  assert.notEqual(h.dock.dataset.state, 'rest');
   h.doc.activeElement = { tagName: 'INPUT' }; h.doc.listeners.focusin({target:h.doc.activeElement});
   assert.equal(h.dock.querySelector('p').textContent, '');
+  h.advance(500); assert.equal(h.frames.size, 0);
+  h.doc.activeElement = { tagName: 'BODY' }; h.doc.listeners.focusout(); h.advance(4000);
+  assert.equal(h.frames.size, 1);
 });
 test('pause persists and reduced motion keeps manual advice without animation', async () => {
   const h = await harness({reduced:true}); h.advance(8000);

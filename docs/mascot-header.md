@@ -1,8 +1,10 @@
 # Header companion
 
-The mascot emerges from behind a small MEMs logo dock on a reserved rail at the bottom of the header. It peeks, walks, briefly greets and retreats. It no longer crosses the form or renders a fixed speech overlay. Advice occupies a fixed-height slot so its appearance does not move form controls.
+The mascot emerges from behind a small MEMs logo dock on a reserved rail at the bottom of the header, then walks back and forth continuously on every page. It never crosses the form. Advice occupies a fixed-height slot so its appearance does not move form controls.
 
-Automatic welcome runs once per browser-tab session. Manual advice and a persistent pause toggle are available. Input focus, scrolling, visible dialogs and page visibility changes suppress speech. Reduced motion offers manual text without animation; idle state has no requestAnimationFrame loop.
+Automatic advice runs once per browser-tab session; walking continues afterward. Manual advice and a persistent pause toggle are available. Input focus, scrolling, visible dialogs and page visibility changes suppress speech and temporarily retreat the header companion. Walking resumes after interaction. Reduced motion offers manual text without animation. Hidden pages and paused companions have no animation loop.
+
+The borrow/return receipt has its own reserved 72px canvas above the new-transaction button, using the existing walking sprite continuously. The underlying header companion yields while this receipt is open. Both components request Screen Wake Lock where available and release their own locks on exit/backgrounding. The header also releases on pause. Browser/device policy can deny a wake lock; animation alone cannot guarantee preventing display sleep. Reduced motion stops animation while retaining screen wake protection.
 
 The preparation advice now matches the current add-number workflow.
 
@@ -17,7 +19,7 @@ Final editing prompt:
 ## Validation
 
 - `node --check mascot.js`
-- `node --test tests/mascot.test.js`: welcome frequency, idle animation shutdown, modal/input suppression, pause persistence and reduced-motion behavior.
+- `node --test tests/mascot.test.js tests/receipt-mascot.test.js`: continuous walking over multiple cycles, welcome frequency, modal/input suppression and automatic restart, pause persistence, reduced motion, receipt wake-lock lifecycle and pending-request cleanup.
 - `node --test tests/mascot-browser.cjs`: browser layout and integration test, requires Playwright Chromium. Not run successfully in the authoring environment: Chromium download returned an invalid ZIP. Visual review on an actual mobile browser remains necessary before merge.
 
 The generated frame sequence is a first animation pass. Its perceived smoothness and transition to the existing wave pose still require visual review.

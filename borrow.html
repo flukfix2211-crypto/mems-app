@@ -649,7 +649,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 <link rel="stylesheet" href="site-footer.css?v=20261016-footer-1">
 <link rel="stylesheet" href="mems-auth-theme.css?v=20260923-app-2">
 <link rel="stylesheet" href="operations-office.css?v=20260923-ops-2">
-<link rel="stylesheet" href="borrow-success.css?v=20260925-1">
+<link rel="stylesheet" href="borrow-success.css?v=20261027-mascot-1">
 <link rel="stylesheet" href="equipment-lifecycle.css?v=20261022-return-type-original-rows-2">
 </head>
 <body class="mems-operation mems-borrow">
@@ -991,6 +991,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       <p class="suc-intro">ตรวจสอบข้อมูลรายการด้านล่าง</p>
       <div class="suc-detail" id="sDetail"></div>
       <div class="suc-tag" id="sTag"></div>
+      <canvas id="receiptMascot" width="840" height="144" aria-hidden="true"></canvas>
       <button type="button" class="reset-btn" onclick="resetForm()">ทำรายการใหม่ <span aria-hidden="true">→</span></button>
     </div>
   </div>
@@ -1955,7 +1956,8 @@ function resetForm() {
   </div>
 </div>
 <script src="site-footer.js?v=20261016-footer-1"></script>
-<script src="mascot.js?v=20261023-header-1"></script>
+<script src="receipt-mascot.js?v=20261027-1"></script>
+<script src="mascot.js?v=20261027-loop-1"></script>
 <script src="equipment-lifecycle.js?v=20261024-er-high-flow"></script>
 </body>
 </html>

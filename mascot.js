@@ -10,7 +10,7 @@
   const read = (key, storage) => { try { return storage.getItem(key); } catch { return null; } };
   const write = (key, value, storage) => { try { storage.setItem(key, value); } catch {} };
   const sheet = document.createElement('link');
-  sheet.rel = 'stylesheet'; sheet.href = asset('mascot.css?v=20261023-header-1');
+  sheet.rel = 'stylesheet'; sheet.href = asset('mascot.css?v=20261027-loop-1');
   document.head.append(sheet);
   const page = (location.pathname.split('/').pop() || 'index.html').replace('.html', '');
   const tips = {
@@ -47,9 +47,26 @@
   let inView = true, state = 'rest', started = 0, raf = 0, timer = 0, speechTimer = 0;
   let x = -30, retreatFrom = 0, lastFrame = 0, distance = 0;
   let ready = false, destroyed = false;
+  let screenLock = null, lockPending = false;
+  async function keepScreenAwake() {
+    if (destroyed || paused || document.hidden || screenLock || lockPending || !globalThis.navigator?.wakeLock) return;
+    lockPending = true;
+    try {
+      const acquired = await navigator.wakeLock.request('screen');
+      if (destroyed || paused || document.hidden) { await acquired.release(); return; }
+      screenLock = acquired;
+      acquired.addEventListener('release', () => { if (screenLock === acquired) screenLock = null; });
+    } catch { /* Browser or device policy may deny screen wake locks. */ }
+    finally { lockPending = false; }
+  }
+  function syncScreenAwake() {
+    if (!destroyed && !paused && !document.hidden) { keepScreenAwake(); return; }
+    const old = screenLock; screenLock = null;
+    if (old) old.release().catch(() => {});
+  }
   const poses = {};
   const home = -30, end = 88;
-  const duration = { peek: 1050, emerge: 800, walk: 1800, greet: 3500, turn: 220, back: 2400, retreat: 420 };
+  const duration = { peek: 1050, emerge: 800, walk: 1800, greet: 3500, turn: 220, turnRight: 220, back: 2400, retreat: 420 };
   const load = (name, path) => new Promise(resolve => {
     const image = new Image();
     image.onload = () => { poses[name] = image; resolve(); };
@@ -62,7 +79,7 @@
   function blocked() {
     return document.hidden || !inView || /^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement?.tagName || '') ||
       document.activeElement?.isContentEditable ||
-      [...document.querySelectorAll('dialog[open], [role="dialog"], [aria-modal="true"], #loginOverlay, #helpModal, #editModal, #cancelModal, .qr-scan-prompt')].some(visible);
+      [...document.querySelectorAll('dialog[open], [role="dialog"], [aria-modal="true"], #loginOverlay, #helpModal, #editModal, #cancelModal, #successScreen, .qr-scan-prompt')].some(visible);
   }
   function silence() {
     clearTimeout(speechTimer); tip.textContent = ''; close.hidden = true;
@@ -78,10 +95,10 @@
     ctx.clearRect(0, 0, 300, 320);
     const image = poses.walk;
     ctx.save();
-    if (state === 'turn') {
+    if (state === 'turn' || state === 'turnRight') {
       const phase = Math.min(1, (now - started) / duration.turn);
       ctx.translate(150, 0); ctx.scale(Math.max(.2, Math.abs(Math.cos(phase * Math.PI))), 1); ctx.translate(-150, 0);
-      facingLeft = phase > .5;
+      facingLeft = state === 'turn' ? phase > .5 : phase < .5;
     }
     if (facingLeft) { ctx.translate(300, 0); ctx.scale(-1, 1); }
     if (walking && image) {
@@ -121,7 +138,7 @@
     if (state === 'peek') x = home + Math.sin(t * Math.PI / 2) * 14;
     else if (state === 'emerge') x = -16 + t * 44;
     else if (state === 'walk') x = 28 + t * (end - 28);
-    else if (state === 'back') x = end - t * (end - home);
+    else if (state === 'back') x = end - t * (end - 28);
     else if (state === 'retreat') x = retreatFrom + (home - retreatFrom) * (t * t * (3 - 2 * t));
     distance += Math.abs(x - before);
     const walking = ['emerge', 'walk', 'back', 'retreat'].includes(state);
@@ -130,9 +147,16 @@
     if (t === 1) {
       if (state === 'peek') change('emerge', now);
       else if (state === 'emerge') change('walk', now);
-      else if (state === 'walk') { change('greet', now); speak(); }
+      else if (state === 'walk') {
+        if (!read('mems-guide-welcomed', sessionStorage)) {
+          speak(); write('mems-guide-welcomed', '1', sessionStorage);
+        }
+        change('turn', now);
+      }
       else if (state === 'greet') { silence(); change('turn', now); }
       else if (state === 'turn') change('back', now);
+      else if (state === 'back') change('turnRight', now);
+      else if (state === 'turnRight') change('walk', now);
       else { rest(); return; }
     }
     raf = requestAnimationFrame(tick);
@@ -148,16 +172,17 @@
   }
   function scheduleWelcome() {
     clearTimeout(timer);
-    if (!ready || paused || reduce.matches || read('mems-guide-welcomed', sessionStorage) || blocked()) return;
+    if (!ready || paused || reduce.matches || blocked()) return;
     timer = setTimeout(() => {
       if (blocked() || paused) return;
-      write('mems-guide-welcomed', '1', sessionStorage); start();
-    }, 3500);
+      start();
+    }, 350);
   }
   function updatePause() {
     pause.textContent = paused ? 'เปิดผู้ช่วย' : 'พักผู้ช่วย';
     pause.setAttribute('aria-pressed', String(paused));
     call.disabled = paused;
+    syncScreenAwake();
   }
   call.addEventListener('click', () => start(true));
   pause.addEventListener('click', () => {
@@ -166,13 +191,15 @@
   });
   close.addEventListener('click', retreat);
   function activity(event) {
+    keepScreenAwake();
     if (dock.contains(event.target)) return;
     retreat(); scheduleWelcome();
   }
   ['pointerdown', 'keydown', 'focusin', 'wheel', 'touchstart'].forEach(name => document.addEventListener(name, activity, { passive: true }));
+  document.addEventListener('focusout', () => { clearTimeout(timer); timer = setTimeout(scheduleWelcome, 0); });
   addEventListener('scroll', activity, { passive: true });
-  addEventListener('resize', retreat);
-  document.addEventListener('visibilitychange', () => { retreat(); if (!document.hidden) scheduleWelcome(); });
+  addEventListener('resize', () => { retreat(); scheduleWelcome(); });
+  document.addEventListener('visibilitychange', () => { syncScreenAwake(); retreat(); if (!document.hidden) scheduleWelcome(); });
   reduce.addEventListener('change', () => { silence(); rest(); scheduleWelcome(); });
   const observer = new IntersectionObserver(entries => {
     inView = entries[0].isIntersecting;
@@ -182,10 +209,10 @@
   // Programmatic dialogs can appear without a click. Observe visibility changes only.
   const modals = new MutationObserver(() => { if (blocked()) retreat(); else scheduleWelcome(); });
   // Observe dialog containers, not the companion's own animation styles.
-  document.querySelectorAll('dialog, [role="dialog"], [aria-modal="true"], #loginOverlay, #helpModal, #editModal, #cancelModal, .qr-scan-prompt').forEach(el =>
+  document.querySelectorAll('dialog, [role="dialog"], [aria-modal="true"], #loginOverlay, #helpModal, #editModal, #cancelModal, #successScreen, .qr-scan-prompt').forEach(el =>
     modals.observe(el, { attributes: true, attributeFilter: ['class', 'style', 'open', 'aria-hidden'] }));
-  addEventListener('pagehide', () => { destroyed = true; clearTimeout(timer); silence(); rest(); });
-  addEventListener('pageshow', event => { if (event.persisted) { destroyed = false; scheduleWelcome(); } });
+  addEventListener('pagehide', () => { destroyed = true; syncScreenAwake(); clearTimeout(timer); silence(); rest(); });
+  addEventListener('pageshow', event => { if (event.persisted) { destroyed = false; syncScreenAwake(); scheduleWelcome(); } });
   updatePause(); rest();
   Promise.all(['idle', 'blink', 'wave'].map(name => load(name, `img/mascot/mascot-${name}.png`)).concat(load('walk', 'img/mascot/mascot-walk-v2.webp'))).then(() => {
     ready = !!poses.idle; if (ready) scheduleWelcome();
