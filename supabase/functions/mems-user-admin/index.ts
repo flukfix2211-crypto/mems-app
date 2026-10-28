@@ -4,14 +4,13 @@
 //
 // ไฟล์นี้คือซอร์สของฟังก์ชันที่ deploy อยู่บน Supabase — แก้แล้วต้อง deploy ใหม่
 
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const cors = {"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Content-Type":"application/json"};
 const reply = (body: unknown, status=200) => new Response(JSON.stringify(body), {status, headers:cors});
 const usernameOk = (v: unknown) => /^[a-z0-9._-]{3,32}$/.test(String(v||""));
 const emailFor = (username: string) => `${username.toLowerCase()}@mems.local`;
-const PAGE_KEYS = ["borrow","prepare","dashboard","assets","round","fixjob"];
+const PAGE_KEYS = ["borrow","prepare","dashboard","assets","round","fixjob","pm_reports"];
 const permsOk = (v: unknown) => Array.isArray(v) && v.every(p => PAGE_KEYS.includes(p));
 
 Deno.serve(async (req) => {
