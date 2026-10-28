@@ -4,7 +4,6 @@
 //
 // ไฟล์นี้คือซอร์สของฟังก์ชันที่ deploy อยู่บน Supabase — แก้แล้วต้อง deploy ใหม่
 
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const cors = {"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Content-Type":"application/json"};

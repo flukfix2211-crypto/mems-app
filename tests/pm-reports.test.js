@@ -22,7 +22,7 @@ test('parses pasted No. values, deduplicates and refuses malformed / missing / d
 test('database enforces feature / role / permission, immutable canonical registry snapshots, full checks, retries and history',async()=>{
  const db=new PGlite();
  try{
- await db.exec(`create schema auth;create schema private;create role authenticated;create role service_role;
+ await db.exec(`create schema auth;create schema private;create role authenticated;create role service_role;create role anon;
  create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
  create table auth.users(id uuid primary key);create table user_profiles(id uuid primary key,active boolean,role text,permissions text[]);
  create table assets(id bigint primary key,no int,type text,asset_code text,asset_id text);
@@ -33,6 +33,10 @@ test('database enforces feature / role / permission, immutable canonical registr
  grant usage on schema public,auth,private to authenticated;grant select on user_profiles,assets to authenticated;
  set request.jwt.claim.sub='${actor}';`);
  await db.exec(fs.readFileSync(path.join(root,'supabase/migrations/20261028081412_pm_acceptance_reports.sql'),'utf8'));
+ await db.exec('grant all on mems_report_settings,mems_reports to anon,authenticated');
+ await db.exec(fs.readFileSync(path.join(root,'supabase/migrations/20261028083412_pm_report_explicit_grants.sql'),'utf8'));
+ assert.equal((await db.query("select has_table_privilege('anon','mems_reports','SELECT') permitted")).rows[0].permitted,false);
+ assert.equal((await db.query("select has_table_privilege('authenticated','mems_reports','TRUNCATE') permitted")).rows[0].permitted,false);
  const save=(id=request,p=payload())=>db.query('select public.save_mems_report($1,$2::jsonb) report',[id,JSON.stringify(p)]);
  await db.exec('set role authenticated');
  await assert.rejects(save(),/ไม่มีสิทธิ์/);
