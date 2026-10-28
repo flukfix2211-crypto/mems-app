@@ -6,7 +6,7 @@
  * อยู่แล้ว จึงล็อกอินค้างไว้ได้จนกว่าจะกด "ออกจากระบบ" (memsLogout) โดยไม่ต้องเขียนเพิ่ม
  */
 
-const MEMS_PAGE_KEYS = ['borrow', 'prepare', 'dashboard', 'assets', 'round', 'fixjob'];
+const MEMS_PAGE_KEYS = ['borrow', 'prepare', 'dashboard', 'assets', 'round', 'fixjob', 'pm_reports'];
 
 const MEMS_PAGE_LABELS = {
   borrow: 'ยืม-คืนเครื่องมือแพทย์',
@@ -14,7 +14,8 @@ const MEMS_PAGE_LABELS = {
   dashboard: 'แดชบอร์ด',
   assets: 'จัดการเครื่องมือในระบบ',
   round: 'บันทึกการ Round ward',
-  fixjob: 'แก้ไขหน้างาน'
+  fixjob: 'แก้ไขหน้างาน',
+  pm_reports: 'แบบฟอร์ม PM และตรวจรับ'
 };
 
 let MEMS_USER = null; // { id, username, display_name, role, active, permissions }

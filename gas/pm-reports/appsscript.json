@@ -1,0 +1,10 @@
+{
+  "timeZone": "Asia/Bangkok",
+  "runtimeVersion": "V8",
+  "exceptionLogging": "NONE",
+  "oauthScopes": [
+    "https://www.googleapis.com/auth/drive",
+    "https://www.googleapis.com/auth/presentations",
+    "https://www.googleapis.com/auth/script.external_request"
+  ]
+}
