@@ -272,6 +272,36 @@ function rptWorkloadRowDefs() {
 }
 
 /** monthLabel: 'YYYY-MM' (ไม่ระบุ = เดือนปัจจุบันตามเวลาไทย) */
+
+// รายชื่อเดียวกับแบบฟอร์มเตรียมเครื่อง
+const WORKLOAD_STAFF_NAMES = ['นัฐวัติ', 'ปวริศ', 'ปนัดดา', 'นวพงษ์', 'เนตรดาว', 'สิริอาภา', 'สุกัญญา', 'วรรณพร'];
+
+async function fetchWorkloadStaffAssignments(month) {
+  const { data, error } = await supabase.from('workload_staff_assignments')
+    .select('work_date, shift, staff_name').gte('work_date', month + '-01')
+    .lt('work_date', rptNextWorkloadMonth(month) + '-01');
+  if (error) throw error;
+  return data || [];
+}
+
+function rptNextWorkloadMonth(month) {
+  const [year, mon] = month.split('-').map(Number);
+  return mon === 12 ? (year + 1) + '-01' : year + '-' + String(mon + 1).padStart(2, '0');
+}
+
+async function saveWorkloadStaffAssignment(month, day, shift, name) {
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month) ||
+      !WORKLOAD_SHIFTS.includes(shift) || !Number.isInteger(day) ||
+      day < 1 || day > new Date(Number(month.slice(0, 4)), Number(month.slice(5)), 0).getDate() ||
+      (name !== null && name !== '' && !WORKLOAD_STAFF_NAMES.includes(name))) {
+    throw new Error('ข้อมูลผู้ปฏิบัติงานไม่ถูกต้อง');
+  }
+  const { error } = await supabase.from('workload_staff_assignments').upsert({
+    work_date: month + '-' + String(day).padStart(2, '0'), shift, staff_name: name
+  }, { onConflict: 'work_date,shift' });
+  if (error) throw error;
+}
+
 async function computeWorkloadCalendar(monthLabel) {
   const now = new Date();
   if (!monthLabel) {
@@ -366,6 +396,17 @@ async function computeWorkloadCalendar(monthLabel) {
     });
   }
 
+  const autoStaffByDay = JSON.parse(JSON.stringify(staffOut));
+  const staffAssignments = await fetchWorkloadStaffAssignments(monthLabel);
+  const staffOverrides = {};
+  staffAssignments.forEach(row => {
+    const day = Number(row.work_date.slice(8, 10));
+    if (!staffOut[day] || !WORKLOAD_SHIFTS.includes(row.shift) || row.staff_name === null) return;
+    if (row.shift === 'เวรเช้า' && !offHoursMorning[day]) return;
+    (staffOverrides[day] = staffOverrides[day] || {})[row.shift] = row.staff_name;
+    staffOut[day][row.shift] = row.staff_name;
+  });
+
   const rowsOut = rowDefs.map(def => rowMap[def.key]);
   const grandByDay = {};
   let grandTotal = 0;
@@ -378,7 +419,7 @@ async function computeWorkloadCalendar(monthLabel) {
   return {
     ok: true, month: monthLabel, monthTH, daysInMonth,
     shifts: WORKLOAD_SHIFTS, rows: rowsOut,
-    staffByDay: staffOut, grandByDay, grandTotal,
+    staffByDay: staffOut, autoStaffByDay, staffOverrides, grandByDay, grandTotal,
     offHoursMorning,
     isCurrentMonth: monthLabel === new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok', year: 'numeric', month: '2-digit' }).format(now).slice(0, 7),
     generatedAt: new Intl.DateTimeFormat('th-TH-u-ca-gregory', { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(now)
