@@ -713,7 +713,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
         <div id="borrowMonthlySummary" class="monthly-service-wrap" role="region" aria-label="ตารางบริการเครื่องมือแพทย์รายเดือน" tabindex="0" aria-live="polite">
           <div class="state-loading"><div class="spinner"></div>กำลังคำนวณสรุปรายเดือน…</div>
         </div>
-        <p class="monthly-service-note">นับเฉพาะรายการเตรียมที่ยืมแล้วและมีรายการยืมจริง · ไม่นับรายการรอรับ ยกเลิก หรือลบการเตรียม<br>ช่องวันที่พื้นเข้ม = วันหยุด · เฉลี่ย/คน และ ลา/ประชุม/ป่วย เว้นว่างไว้ก่อน</p>
+        <p class="monthly-service-note">นับรายการเตรียมที่ยืมแล้ว รวมการเตรียมพร้อมส่งจากระบบเดิม · ไม่นับรายการรอรับ ยกเลิก หรือประวัติเตรียมระบบใหม่ที่ถูกลบ<br>ช่องวันที่พื้นเข้ม = วันหยุด · เฉลี่ย/คน และ ลา/ประชุม/ป่วย เว้นว่างไว้ก่อน</p>
         <div id="borrowMonthlyMeta" class="borrow-monthly-meta"></div>
       </div>
     </section>
@@ -974,6 +974,7 @@ function isoToSlashDate(iso) {
 function toRecordView(row) {
   return {
     _rowIndex: row.id,
+    _requestId: row.request_id || null,
     'ลำดับ': row.id,
     'วันที่': isoToSlashDate(row.record_date),
     'เวลา': row.record_time,
@@ -1473,6 +1474,19 @@ function monthlyConfirmedSendIds(records, preparations) {
       return !used.has(String(r._rowIndex)) && time >= start && time < end && matches(r, p);
     });
     if (record) { const id = String(record._rowIndex); confirmed.add(id); used.add(id); }
+  });
+  // รายการนำส่งเดิมไม่มี prepare_records แยก แต่มีหลักฐานการเตรียมในรายการยืม
+  borrowRows.forEach(record => {
+    const id = String(record._rowIndex);
+    if (confirmed.has(id) || record._requestId ||
+        !String(record['หมายเหตุ'] || '').startsWith('เตรียมพร้อมส่ง')) return;
+    const time = Date.parse(record['Timestamp (ISO)']);
+    if (!Number.isFinite(time)) return;
+    // ถ้ามีประวัติรอรับ/ยกเลิกในรอบเดียวกัน ต้องไม่ใช้ fallback คืนยอด
+    const existing = sortedPreps.some(p => matches(record, p) &&
+      (String(p.borrow_record_id || '') === id ||
+       (time >= Date.parse(p.recorded_at) && time < nextPreparation.get(p))));
+    if (!existing) confirmed.add(id);
   });
   return confirmed;
 }
