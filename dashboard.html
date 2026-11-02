@@ -1123,10 +1123,10 @@ async function changeWorkloadStaff(select, day, shift) {
       (data.staffOverrides[day] = data.staffOverrides[day] || {})[shift] = value;
       data.staffByDay[day][shift] = value;
     }
-    toast('บันทึกชื่อผู้ปฏิบัติงานแล้ว');
+    showToast('บันทึกชื่อผู้ปฏิบัติงานแล้ว');
   } catch (e) {
     select.value = previous;
-    toast('บันทึกชื่อไม่ได้: ' + (e.message || 'กรุณาลองใหม่'));
+    showToast('บันทึกชื่อไม่ได้: ' + (e.message || 'กรุณาลองใหม่'));
   } finally {
     select.disabled = false;
     wklPendingSaves.delete(save);
