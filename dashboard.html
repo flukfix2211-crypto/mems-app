@@ -229,7 +229,25 @@
       #printArea, #printArea * { visibility: visible; }
       #printArea { position: fixed; top: 0; left: 0; width: 100%; background: #fff; padding: 20px; }
     }
-  </style>
+  
+    /* แบบบันทึกการบริการยืม–คืนรายเดือน */
+    .monthly-service-wrap { overflow:auto; margin-top:20px; border:1px solid #7f929b; background:#fff; }
+    .monthly-service-table { width:100%; min-width:1020px; border-collapse:collapse; table-layout:fixed; font-size:13px; color:#203640; }
+    .monthly-service-table caption { padding:18px 8px; font-size:18px; font-weight:700; color:#203640; text-align:center; caption-side:top; }
+    .monthly-service-table caption span { font-size:15px; font-weight:500; }
+    .monthly-service-table th, .monthly-service-table td { border:1px solid #8d9da5; padding:5px 3px; text-align:center; height:31px; box-sizing:border-box; }
+    .monthly-service-table thead th { background:#eef3f4; color:#203640; font-weight:700; white-space:normal; line-height:1.35; }
+    .monthly-service-table thead th:first-child { width:48px; }
+    .monthly-service-table thead tr:nth-child(2) th:last-child { width:112px; }
+    .monthly-service-table tbody th { background:#fafcfc; font-weight:600; }
+    .monthly-service-table tbody th.is-holiday { background:#62747b; color:#fff; }
+    .monthly-service-table tbody td { background:#fff; font-variant-numeric:tabular-nums; }
+    .monthly-service-table tbody tr:hover td { background:#f0f8f8; }
+    .monthly-service-table .monthly-service-row-total { background:#f4f8f9; font-weight:700; }
+    .monthly-service-table tfoot th, .monthly-service-table tfoot td { background:#e6f1f2; color:#14565e; font-weight:800; border-top:2px solid #527c82; }
+    .monthly-service-note { margin:12px 0 0; color:var(--muted); font-size:12px; line-height:1.7; }
+
+</style>
 <style id="mems-approved-theme">
 /* MEMs approved visual theme. Presentation only; existing DOM and scripts are unchanged. */
 @media screen {
@@ -684,27 +702,18 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       <div class="card-body">
         <div class="borrow-monthly-head">
           <div>
-            <div class="borrow-monthly-eyebrow">MONTHLY BORROW SERVICE</div>
-            <h3 id="borrowMonthlyTitle">สรุปการให้บริการเครื่องรายเดือน</h3>
-            <p>นับจากรายการยืม โดย 1 รายการเท่ากับให้บริการเครื่อง 1 เครื่อง</p>
+            <h3 id="borrowMonthlyTitle">ตารางการบริการยืม–คืน เครื่องมือแพทย์</h3>
+            <p>สรุปรายวันตามแบบบันทึกประจำเดือน</p>
           </div>
           <label class="borrow-monthly-filter" for="borrowMonthlyMonth">
             <span>เดือน</span>
             <input type="month" id="borrowMonthlyMonth" onchange="renderBorrowMonthlySummary()">
           </label>
         </div>
-        <div id="borrowMonthlySummary" class="borrow-monthly-summary" aria-live="polite">
+        <div id="borrowMonthlySummary" class="monthly-service-wrap" role="region" aria-label="ตารางบริการเครื่องมือแพทย์รายเดือน" tabindex="0" aria-live="polite">
           <div class="state-loading"><div class="spinner"></div>กำลังคำนวณสรุปรายเดือน…</div>
         </div>
-        <section class="borrow-monthly-equipment" aria-labelledby="borrowMonthlyEquipmentTitle">
-          <div class="borrow-monthly-equipment-head">
-            <h4 id="borrowMonthlyEquipmentTitle">ยอดยืมแยกตามประเภทเครื่อง</h4>
-            <span id="borrowMonthlyEquipmentTotal"></span>
-          </div>
-          <div id="borrowMonthlyEquipment" class="borrow-monthly-equipment-grid" aria-live="polite">
-            <div class="state-loading"><div class="spinner"></div>กำลังนับประเภทเครื่อง…</div>
-          </div>
-        </section>
+        <p class="monthly-service-note">C2, Bird และ High Flow แยกจำนวนส่ง–คืน · เครื่องประเภทอื่นนับจำนวนส่ง · รวม = ผลรวมตัวเลขในแถวนั้น<br>ช่องวันที่พื้นเข้ม = วันหยุด · เฉลี่ย/คน และ ลา/ประชุม/ป่วย เว้นว่างไว้ก่อน</p>
         <div id="borrowMonthlyMeta" class="borrow-monthly-meta"></div>
       </div>
     </section>
@@ -1416,72 +1425,86 @@ function initPrepareHistoryView() {
   renderPrepareHistory();
 }
 
+
+function monthlyServiceEquipmentKey(value) {
+  const name = String(value || '').trim().toLowerCase().replace(/[\s_-]+/g, '');
+  if (name === 'c2') return 'c2';
+  if (['bird', 'brid', 'bridเขียว', 'birdเขียว'].includes(name)) return 'bird';
+  if (name === 'highflow') return 'highflow';
+  if (['t1', 'monnal', 'monnalt60'].includes(name)) return 'monnal';
+  if (name === 'infusionpump' || name === 'infusion') return 'infusion';
+  if (name === 'syringepump' || name === 'syringe' || name === 'syring') return 'syringe';
+  if (name === 'nibp' || name === 'bpติดจอ') return 'bp';
+  if (name === 'patientmonitor' || name === 'monitor') return 'monitor';
+  return 'other';
+}
+
+function buildMonthlyServiceLedger(records, monthLabel, holidays) {
+  const [year, month] = monthLabel.split('-').map(Number);
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(monthLabel)) throw new Error('เดือนไม่ถูกต้อง');
+  const columns = ['c2Send','c2Return','birdSend','birdReturn','highflowSend','highflowReturn','monnal','infusion','syringe','bp','monitor','other'];
+  const days = Array.from({ length: new Date(year, month, 0).getDate() }, (_, i) => {
+    const day = i + 1;
+    const iso = monthLabel + '-' + String(day).padStart(2, '0');
+    const weekday = new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+    return { day, iso, holiday: weekday === 0 || weekday === 6 || holidays.has(iso), values: Object.fromEntries(columns.map(key => [key, 0])), total: 0 };
+  });
+  let sent = 0, returned = 0;
+  records.forEach(record => {
+    const iso = slashDateToISO(record['วันที่']);
+    if (!iso.startsWith(monthLabel + '-')) return;
+    const row = days[Number(iso.slice(8, 10)) - 1];
+    if (!row || row.iso !== iso) return;
+    const action = String(record['ประเภท (ยืม/คืน)'] || '');
+    const isReturn = action.includes('คืน');
+    if (!isReturn && !action.includes('ยืม')) return;
+    const key = monthlyServiceEquipmentKey(record['ชื่อเครื่อง']);
+    if (isReturn) returned++; else sent++;
+    const column = ['c2','bird','highflow'].includes(key) ? key + (isReturn ? 'Return' : 'Send') : (isReturn ? null : key);
+    if (column) { row.values[column]++; row.total++; }
+  });
+  const totals = Object.fromEntries(columns.map(key => [key, days.reduce((sum, row) => sum + row.values[key], 0)]));
+  return { days, totals, total: days.reduce((sum, row) => sum + row.total, 0), sent, returned, hasOther: totals.other > 0 };
+}
+
+let monthlyServiceRenderVersion = 0;
 async function renderBorrowMonthlySummary() {
   const monthInput = document.getElementById('borrowMonthlyMonth');
   const summary = document.getElementById('borrowMonthlySummary');
-  const equipmentBreakdown = document.getElementById('borrowMonthlyEquipment');
-  const equipmentTotal = document.getElementById('borrowMonthlyEquipmentTotal');
   const meta = document.getElementById('borrowMonthlyMeta');
-  if (!monthInput || !summary || !equipmentBreakdown || !equipmentTotal || !meta) return;
-
+  if (!monthInput || !summary || !meta) return;
+  const version = ++monthlyServiceRenderVersion;
   const monthLabel = monthInput.value || currentBkkMonth();
   monthInput.value = monthLabel;
   summary.innerHTML = '<div class="state-loading"><div class="spinner"></div>กำลังคำนวณสรุปรายเดือน…</div>';
-  equipmentBreakdown.innerHTML = '<div class="state-loading"><div class="spinner"></div>กำลังนับประเภทเครื่อง…</div>';
-  equipmentTotal.textContent = '';
   meta.textContent = '';
-
   try {
-    const [year, month] = monthLabel.split('-').map(Number);
-    if (!year || !month) throw new Error('เดือนไม่ถูกต้อง');
     const holidays = await fetchThaiHolidayDates();
-    const daysInMonth = new Date(year, month, 0).getDate();
-    const todayISO = bkkTodayISO();
-    const isCurrentMonth = monthLabel === todayISO.slice(0, 7);
-    const workingDates = [];
-
-    for (let day = 1; day <= daysInMonth; day++) {
-      const iso = `${monthLabel}-${String(day).padStart(2, '0')}`;
-      const weekday = new Date(Date.UTC(year, month - 1, day)).getUTCDay();
-      if (weekday !== 0 && weekday !== 6 && !holidays.has(iso)) workingDates.push(iso);
-    }
-
-    const borrowedRows = allRecords
-      .filter(record => String(record['ประเภท (ยืม/คืน)'] || '').includes('ยืม'))
-      .map(record => ({ record, iso: slashDateToISO(record['วันที่']) }))
-      .filter(item => item.iso.startsWith(monthLabel));
-    const workingSet = new Set(workingDates);
-    const workingRows = borrowedRows.filter(item => workingSet.has(item.iso));
-    const offDayRows = borrowedRows.filter(item => !workingSet.has(item.iso));
-    const elapsedWorkingDays = workingDates.filter(iso => !isCurrentMonth || iso <= todayISO).length;
-    const activeWorkingDays = new Set(workingRows.map(item => item.iso)).size;
-    const average = elapsedWorkingDays ? workingRows.length / elapsedWorkingDays : 0;
-
-    const cards = [
-      { label: 'ให้บริการในวันทำการ', value: workingRows.length.toLocaleString('th-TH'), unit: 'เครื่อง', note: 'จันทร์–ศุกร์ ไม่รวมวันหยุดราชการ', tone: 'primary' },
-      { label: isCurrentMonth ? 'วันทำการที่ผ่านแล้ว' : 'วันทำการของเดือน', value: elapsedWorkingDays.toLocaleString('th-TH'), unit: 'วัน', note: `มีรายการให้บริการ ${activeWorkingDays.toLocaleString('th-TH')} วัน`, tone: 'neutral' },
-      { label: 'เฉลี่ยต่อวันทำการ', value: average.toLocaleString('th-TH', { minimumFractionDigits: 1, maximumFractionDigits: 1 }), unit: 'เครื่อง/วัน', note: 'คำนวณจากวันทำการที่ผ่านแล้ว', tone: 'success' },
-      { label: 'ให้บริการนอกวันทำการ', value: offDayRows.length.toLocaleString('th-TH'), unit: 'เครื่อง', note: 'เสาร์–อาทิตย์ และวันหยุดราชการ', tone: 'warning' }
-    ];
-
-    summary.innerHTML = cards.map(card => `<article class="borrow-monthly-stat is-${card.tone}">
-      <span>${card.label}</span>
-      <div><strong>${card.value}</strong><b>${card.unit}</b></div>
-      <small>${card.note}</small>
-    </article>`).join('');
-    const counts = equipmentCounts(borrowedRows, item => item.record['ชื่อเครื่อง']);
-    equipmentTotal.textContent = counts.length ? `${counts.length.toLocaleString('th-TH')} ประเภท` : '';
-    equipmentBreakdown.innerHTML = counts.length
-      ? counts.map(item => `<article class="borrow-monthly-equipment-item">
-          <span>${escHtml(item.name)}</span>
-          <div><strong>${item.count.toLocaleString('th-TH')}</strong><small>เครื่อง</small></div>
-        </article>`).join('')
-      : '<div class="borrow-monthly-equipment-empty">เดือนนี้ยังไม่มีรายการยืม</div>';
-    meta.textContent = `${thaiMonthLabel(monthLabel)} · รวมรายการยืมทั้งหมด ${borrowedRows.length.toLocaleString('th-TH')} เครื่อง`;
+    if (version !== monthlyServiceRenderVersion) return;
+    const data = buildMonthlyServiceLedger(allRecords, monthLabel, holidays);
+    const paired = ['c2Send','c2Return','birdSend','birdReturn','highflowSend','highflowReturn'];
+    const single = ['monnal','infusion','syringe','bp','monitor'].concat(data.hasOther ? ['other'] : []);
+    const numberCells = values => paired.concat(single).map(key => '<td>' + (values[key] || '') + '</td>').join('');
+    summary.innerHTML = `<table class="monthly-service-table">
+      <caption>การบริการยืม–คืน เครื่องมือแพทย์<br><span>ศูนย์เครื่องมือแพทย์ ประจำเดือน${escHtml(thaiMonthLabel(monthLabel))}</span></caption>
+      <thead><tr>
+        <th rowspan="2" scope="col">วันที่</th>
+        <th colspan="2" scope="colgroup">C2</th><th colspan="2" scope="colgroup">Bird</th><th colspan="2" scope="colgroup">High Flow</th>
+        <th rowspan="2" scope="col">Monnal<br>/ T1</th><th rowspan="2" scope="col">Infusion</th><th rowspan="2" scope="col">Syringe</th>
+        <th rowspan="2" scope="col">BP ติดจอ</th><th rowspan="2" scope="col">Monitor</th>
+        ${data.hasOther ? '<th rowspan="2" scope="col">อื่นๆ</th>' : ''}
+        <th colspan="3" scope="colgroup">รวม</th>
+      </tr><tr><th scope="col">ส่ง</th><th scope="col">คืน</th><th scope="col">ส่ง</th><th scope="col">คืน</th><th scope="col">ส่ง</th><th scope="col">คืน</th>
+        <th scope="col">รวม</th><th scope="col">เฉลี่ย/คน</th><th scope="col">ลา/ประชุม/ป่วย</th>
+      </tr></thead>
+      <tbody>${data.days.map(row => `<tr><th scope="row" class="${row.holiday ? 'is-holiday' : ''}"${row.holiday ? ' title="วันหยุด"' : ''}>${row.day}</th>${numberCells(row.values)}<td class="monthly-service-row-total">${row.total || ''}</td><td></td><td></td></tr>`).join('')}</tbody>
+      <tfoot><tr><th scope="row">รวม</th>${numberCells(data.totals)}<td>${data.total}</td><td></td><td></td></tr></tfoot>
+    </table>`;
+    meta.textContent = `${thaiMonthLabel(monthLabel)} · ส่งทั้งหมด ${data.sent.toLocaleString('th-TH')} เครื่อง · คืนทั้งหมด ${data.returned.toLocaleString('th-TH')} เครื่อง`;
   } catch (error) {
+    if (version !== monthlyServiceRenderVersion) return;
     console.error(error);
-    summary.innerHTML = '<div class="borrow-monthly-error">คำนวณสรุปรายเดือนไม่สำเร็จ กรุณาลองใหม่อีกครั้ง</div>';
-    equipmentBreakdown.innerHTML = '<div class="borrow-monthly-equipment-empty is-error">นับประเภทเครื่องไม่สำเร็จ</div>';
+    summary.innerHTML = '<div class="borrow-monthly-error">คำนวณตารางรายเดือนไม่สำเร็จ กรุณาลองใหม่อีกครั้ง</div>';
   }
 }
 
