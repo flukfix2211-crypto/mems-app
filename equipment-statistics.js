@@ -210,7 +210,7 @@ async function loadStatistics() {
         supabase
           .from("borrow_records")
           .select(
-            "id, action, equipment_name, equipment_number, ward, recorded_at, note",
+            "id, action, equipment_name, equipment_number, ward, recorded_at, note, request_id",
           )
           .order("recorded_at")
           .order("id"),
@@ -251,13 +251,7 @@ async function loadStatistics() {
     byId("typeSelect").value = EQUIPMENT_TYPES.includes(previousType)
       ? previousType
       : "";
-    statsState.prepares = prepares.map((p) => ({
-      type: normalizeEquipmentType(p.equipment_type),
-      no: normalizeMachineNo(p.equipment_number),
-      ward: p.ward,
-      ts: new Date(p.recorded_at),
-      status: p.status,
-    }));
+    statsState.prepares = statsPreparationHistory(records, prepares);
     statsState.raw = records
       .map((row) => ({
         id: Number(row.id),
@@ -300,7 +294,7 @@ async function loadStatistics() {
         (r) =>
           String(r.note || "").includes("เตรียมพร้อมส่ง") &&
           isBorrowAction(r.action) &&
-          !prepares.some((p) => String(p.borrow_record_id) === String(r.id)),
+          !statsState.prepares.some((p) => String(p.borrowId) === String(r.id)),
       )
       .forEach((r) => {
         const event = statsState.raw.find((e) => e.id === Number(r.id));
@@ -324,6 +318,52 @@ async function loadStatistics() {
   } finally {
     setLoading(false);
   }
+}
+
+
+function statsPreparationHistory(records, prepares) {
+  const mapped = prepares.map(p => ({
+    id: p.id,
+    borrowId: p.borrow_record_id,
+    requestId: p.request_id,
+    type: normalizeEquipmentType(p.equipment_type),
+    no: normalizeMachineNo(p.equipment_number),
+    ward: p.ward,
+    ts: new Date(p.recorded_at),
+    status: p.status,
+  }));
+  const ordered = mapped.slice().sort((a, b) => a.ts - b.ts || Number(a.id) - Number(b.id));
+  const nextByMachine = new Map(), nextTime = new Map();
+  for (let i = ordered.length - 1; i >= 0; i--) {
+    const p = ordered[i], key = machineKey(p.type, p.no);
+    nextByMachine.set(p, nextTime.get(key) ?? Infinity);
+    nextTime.set(key, +p.ts);
+  }
+  const represented = new Set(mapped.filter(p => p.borrowId).map(p => String(p.borrowId)));
+  const claimed = new Set();
+  records.slice().sort((a, b) => Date.parse(a.recorded_at) - Date.parse(b.recorded_at) || Number(a.id) - Number(b.id)).forEach(r => {
+    // ประวัติเดิมบันทึกการเตรียมพร้อมส่งไว้ในรายการยืมโดยไม่มี prepare_records
+    // รายการระบบใหม่ที่มี request_id ต้องอาศัยประวัติเตรียมจริง เพื่อไม่คืนยอดที่ถูกลบ
+    if (r.request_id || !isBorrowAction(r.action) || !String(r.note || '').startsWith('เตรียมพร้อมส่ง') ||
+        represented.has(String(r.id))) return;
+    const type = normalizeEquipmentType(r.equipment_name), no = normalizeMachineNo(r.equipment_number);
+    const ts = new Date(r.recorded_at);
+    if (!Number.isFinite(+ts)) return;
+    const existing = ordered.find(p => !claimed.has(p) && !p.borrowId &&
+      p.type === type && p.no === no && p.ward === r.ward &&
+      +p.ts <= +ts && +ts < nextByMachine.get(p));
+    if (existing) {
+      claimed.add(existing);
+      // จับคู่ประวัติเดิมโดยไม่สร้างจำนวนเตรียมซ้ำ
+      existing.borrowId = r.id;
+      represented.add(String(r.id));
+      return;
+    }
+    mapped.push({ id: 'legacy-delivery-' + r.id, borrowId: r.id, requestId: null,
+      type, no, ward: r.ward, ts, status: 'ยืมแล้ว', legacyDelivery: true });
+    represented.add(String(r.id));
+  });
+  return mapped;
 }
 
 function buildFilters() {
