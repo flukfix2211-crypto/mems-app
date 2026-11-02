@@ -185,6 +185,9 @@
     .wkl-table td.wkl-num.wkl-zero { color: var(--border); }
     .wkl-table td.wkl-num.wkl-na { color: transparent; background-image: repeating-linear-gradient(135deg, transparent, transparent 3px, var(--border) 3px, var(--border) 4px); cursor: help; }
     .wkl-table tr.wkl-total td { background: #FFF3CD; font-weight: 800; }
+    .wkl-staff-select { width:100%; min-width:64px; border:1px solid #BCD8DE; border-radius:4px; padding:4px 1px; font:inherit; color:inherit; background:#fff; cursor:pointer; }
+    .wkl-staff-select:focus { outline:2px solid #0D8791; outline-offset:1px; }
+    .wkl-staff-select:disabled { cursor:wait; opacity:.6; }
     .wkl-table tr.wkl-staff td { background: #F7F9FA; font-size: 10px; }
     .wkl-table td.wkl-rowtotal { font-weight: 800; color: var(--a); background: #F8FBFC; }
     .wkl-untracked-tag { font-size: 10px; color: #B87A00; background: #FFF3CD; padding: 1px 6px; border-radius: 8px; }
@@ -951,7 +954,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 <script src="supabase-client.js?v=20261022-lifecycle-1"></script>
 <script src="auth.js"></script>
 <script src="equipment-status.js?v=20261016-asset-status-1"></script>
-<script src="reports.js?v=20260923-pdf-2"></script>
+<script src="reports.js?v=20261102-workload-staff-1"></script>
 <script>
 /* ============================================================ RECORD MAPPING (borrow_records -> shape เดิมจาก GAS getRecords()) ============================================================ */
 function isoToSlashDate(iso) {
@@ -1087,6 +1090,49 @@ function formatThaiDateTime(iso) {
 /* ============================================================ WORKLOAD CALENDAR ============================================================ */
 let wklData = null;
 let wklInited = false;
+let wklLoadVersion = 0;
+const wklPendingSaves = new Set();
+
+function wklStaffOptions(d, day, shift) {
+  const current = (d.staffByDay[day] && d.staffByDay[day][shift]) || '';
+  const automatic = (d.autoStaffByDay[day] && d.autoStaffByDay[day][shift]) || '';
+  const overridden = d.staffOverrides[day] && Object.prototype.hasOwnProperty.call(d.staffOverrides[day], shift);
+  const names = WORKLOAD_STAFF_NAMES.slice();
+  if (current && !names.includes(current)) names.push(current);
+  return '<option value="auto"' + (!overridden ? ' selected' : '') + '>' + (automatic ? escHtml(automatic) : 'ไม่ระบุ') + ' (อัตโนมัติ)' + '</option>' +
+    '<option value=""' + (overridden && !current ? ' selected' : '') + '>ไม่ระบุ</option>' +
+    names.map(name => '<option value="' + escHtml(name) + '"' + (overridden && current === name ? ' selected' : '') + '>' + escHtml(name) + '</option>').join('');
+}
+
+async function changeWorkloadStaff(select, day, shift) {
+  const data = wklData;
+  if (!data) return;
+  const value = select.value;
+  const overridden = data.staffOverrides[day] && Object.prototype.hasOwnProperty.call(data.staffOverrides[day], shift);
+  const previous = overridden ? data.staffOverrides[day][shift] : 'auto';
+  select.disabled = true;
+  const save = saveWorkloadStaffAssignment(data.month, day, shift, value === 'auto' ? null : value);
+  wklPendingSaves.add(save);
+  document.getElementById('wklPdfBtn').disabled = true;
+  try {
+    await save;
+    if (value === 'auto') {
+      if (data.staffOverrides[day]) delete data.staffOverrides[day][shift];
+      data.staffByDay[day][shift] = data.autoStaffByDay[day][shift] || '';
+    } else {
+      (data.staffOverrides[day] = data.staffOverrides[day] || {})[shift] = value;
+      data.staffByDay[day][shift] = value;
+    }
+    toast('บันทึกชื่อผู้ปฏิบัติงานแล้ว');
+  } catch (e) {
+    select.value = previous;
+    toast('บันทึกชื่อไม่ได้: ' + (e.message || 'กรุณาลองใหม่'));
+  } finally {
+    select.disabled = false;
+    wklPendingSaves.delete(save);
+    document.getElementById('wklPdfBtn').disabled = wklPendingSaves.size > 0;
+  }
+}
 
 function initWorkloadView() {
   const sel = document.getElementById('wklMonthSel');
@@ -1102,15 +1148,20 @@ async function loadWorkloadCalendar() {
   const wrap = document.getElementById('wklTableWrap');
   const meta = document.getElementById('wklMeta');
   const month = document.getElementById('wklMonthSel').value;
+  const version = ++wklLoadVersion;
+  wklData = null;
   wrap.innerHTML = '<div class="state-loading"><div class="spinner"></div>กำลังโหลด…</div>';
   try {
+    await Promise.allSettled(Array.from(wklPendingSaves));
     const data = await computeWorkloadCalendar(month || null);
+    if (version !== wklLoadVersion) return;
     wklData = data;
     meta.innerHTML = `ประจำเดือน <b>${data.monthTH}</b> · ยอดรวมทั้งเดือน <b>${data.grandTotal}</b> ครั้ง` +
       (data.isCurrentMonth ? ' · <span style="color:var(--a);font-weight:700">กำลังนับของเดือนนี้แบบสด</span>' : '') +
       ` · คำนวณล่าสุด ${data.generatedAt}`;
     renderWorkloadTable(data);
   } catch (e) {
+    if (version !== wklLoadVersion) return;
     wklData = null;
     meta.textContent = '';
     wrap.innerHTML = '<div class="empty">โหลดข้อมูลภาระงานไม่ได้: ' + (e.message || '') + '</div>';
@@ -1172,7 +1223,7 @@ function renderWorkloadTable(d) {
     for (let day = 1; day <= N; day++) {
       if (shift === 'เวรเช้า' && !offHoursMorning[day]) { body += `<td class="wkl-num wkl-na" title="${NA_TITLE}"></td>`; continue; }
       const name = (d.staffByDay[day] && d.staffByDay[day][shift]) || '';
-      body += `<td class="wkl-num">${name || '·'}</td>`;
+      body += `<td class="wkl-num"><select class="wkl-staff-select" aria-label="ผู้ปฏิบัติงาน วันที่ ${day} ${escHtml(d.monthTH)} ${escHtml(shift)}" title="เลือกผู้ปฏิบัติงาน" onchange="changeWorkloadStaff(this, ${day}, '${shift}')">${wklStaffOptions(d, day, shift)}</select></td>`;
     }
     if (si === 0) body += '<td class="wkl-rowtotal" rowspan="3"></td>';
     body += '</tr>';
@@ -1190,6 +1241,7 @@ async function exportWorkloadPDF() {
   const orig = btn.textContent;
   btn.disabled = true; btn.textContent = '⏳ กำลังสร้าง PDF...';
   try {
+    await Promise.allSettled(Array.from(wklPendingSaves));
     const data = await computeWorkloadCalendar(month || null);
     await exportWorkloadCalendarPDF(data);
   } catch (e) {
