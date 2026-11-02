@@ -431,15 +431,15 @@ async function exportWorkloadCalendarPDF(d) {
   const pageW = doc.internal.pageSize.getWidth();
 
   doc.setFillColor(...PDF_THEME.brand);
-  doc.rect(0, 0, pageW, 62, 'F');
+  doc.rect(0, 0, pageW, 36, 'F');
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(18);
-  doc.text('รายงานภาระงานนอกเวลาราชการ', 36, 27);
+  doc.setFontSize(15);
+  doc.text('รายงานภาระงานนอกเวลาราชการ', 24, 15);
   doc.setFontSize(12);
-  doc.text('ศูนย์เครื่องมือแพทย์ | ' + HOSPITAL_NAME + ' | ' + d.monthTH, 36, 46);
+  doc.text('ศูนย์เครื่องมือแพทย์ | ' + HOSPITAL_NAME + ' | ' + d.monthTH, 24, 29);
   doc.setFontSize(11);
-  doc.text('รวม ' + d.grandTotal + ' ครั้ง', pageW - 36, 27, { align: 'right' });
-  doc.text('จัดทำเมื่อ ' + d.generatedAt, pageW - 36, 46, { align: 'right' });
+  doc.text('รวม ' + d.grandTotal + ' ครั้ง', pageW - 24, 15, { align: 'right' });
+  doc.text('จัดทำเมื่อ ' + d.generatedAt, pageW - 24, 29, { align: 'right' });
 
   const head = [['ภาระงาน', 'เวร', ...Array.from({ length: d.daysInMonth }, (_, i) => String(i + 1)), 'รวม']];
   const body = [];
@@ -477,12 +477,17 @@ async function exportWorkloadCalendarPDF(d) {
 
   const totalStartIdx = body.length - 6;
   thaiTable(doc, {
-    head, body, startY: 74,
-    styles: { fontSize: 7.8, cellPadding: 1.6, halign: 'center' },
-    headStyles: { fontSize: 8.5, cellPadding: 2.2 },
-    columnStyles: { 0: { halign: 'left', cellWidth: 150 } },
+    head, body, startY: 42,
+    margin: { top: 42, left: 24, right: 24, bottom: 45 },
+    rowPageBreak: 'avoid',
+    styles: { fontSize: 8.5, cellPadding: { top: .8, bottom: .8, left: .6, right: .6 }, halign: 'center' },
+    headStyles: { fontSize: 9, cellPadding: 1.2 },
+    columnStyles: { 0: { halign: 'left', cellWidth: 155 }, 1: { cellWidth: 18 }, [d.daysInMonth + 2]: { cellWidth: 26 } },
     didParseCell: (data) => {
       if (data.section !== 'body') return;
+      if (data.row.index >= body.length - 3 && data.column.index >= 2 && data.column.index <= d.daysInMonth + 1) {
+        data.cell.styles.fontSize = 7.2;
+      }
       if (data.row.index >= totalStartIdx) {
         data.cell.styles.fillColor = PDF_THEME.soft;
         data.cell.styles.textColor = PDF_THEME.brand;
