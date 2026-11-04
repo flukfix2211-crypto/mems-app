@@ -130,6 +130,12 @@ const root=path.join(__dirname,'..');
   await page.screenshot({path:'/tmp/mems-native-mobile.png',fullPage:true});
   for(const width of [320,768,1440]){await page.setViewportSize({width,height:900});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,'no horizontal overflow at '+width);}
   await page.setViewportSize({width:390,height:844});
+  await db.exec("reset role;update user_profiles set permissions=array['pm_reports','assets'] where role='user';set role authenticated");
+  await page.locator('#section').selectOption('ศูนย์เครื่องมือแพทย์');await fill(0,'New Center Device','no','77');
+  assert.match(await row(0).locator('.pm-status').textContent(),/เพิ่มเครื่องนี้/);
+  await page.locator('#reviewBtn').click();await page.locator('#reviewPanel').waitFor({state:'visible'});assert.match(await page.locator('#reviewSummary').textContent(),/เพิ่มทะเบียน/);await page.locator('#confirmed').check();await page.locator('#saveReports').click();await page.locator('#savedPanel').waitFor({state:'visible'});
+  assert.match(await page.locator('#savedSummary').textContent(),/เพิ่มทะเบียนใหม่ 1/);assert.equal((await db.query("select count(*)::int n from assets where type='New Center Device' and no=77")).rows[0].n,1);
+  await page.locator('#startNew').click();await row(0).locator('[data-registry]').selectOption('New Center Device');assert.ok((await row(0).locator('[data-key="identifier"] option').allTextContents()).includes('77'));
   // Long notes must flow across pages rather than truncate; use stored snapshot shapes.
   await page.evaluate(async saved=>{saved[0].payload.note=('หมายเหตุทดสอบข้อความยาว '.repeat(80))+' จบหมายเหตุ ENDNOTE';await memsExportInspectionPdf([saved[0]]);},saved);
   const longUrl=await page.locator('#memsPrintablePdf a[download]').getAttribute('href');const long=await page.evaluate(async u=>Array.from(new Uint8Array(await (await fetch(u)).arrayBuffer())),longUrl);fs.writeFileSync('/tmp/mems-native-long.pdf',Buffer.from(long));

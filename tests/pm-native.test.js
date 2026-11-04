@@ -135,3 +135,28 @@ test('copy inspection results supports PM and acceptance, mixed outcomes and ind
   delete source[names[1]];assert.throws(()=>pm.inspectionResults(source,kind),/ครบทุกข้อ/);
  }
 });
+
+test('center acceptance registers new assets atomically, reuses existing machines and preserves original asset permissions',async()=>{
+ const db=await setup();try{
+ const acceptance=(overrides={})=>({kind:'acceptance',section:'ศูนย์เครื่องมือแพทย์',register_asset:true,results:Object.fromEntries(pm.fields('acceptance').map(f=>[f,'ผ่าน'])),...overrides});
+ await db.exec("reset role;update user_profiles set permissions=array['pm_reports','assets'] where role='user';set role authenticated");
+ const fresh=[item(1,acceptance({no:'99'}))];const first=(await save(db,100,fresh)).rows[0].reports[0];assert.equal(first.snapshot.asset_registered,true);assert.ok(first.snapshot.asset_pk);
+ const registered=(await db.query('select * from assets where no=99')).rows[0];assert.equal(registered.status,'ใช้งานได้');assert.match(registered.note,/Hamilton/);assert.match(registered.note,/C2/);
+ await save(db,100,fresh);assert.equal((await db.query('select count(*)::int n from assets where no=99')).rows[0].n,1);
+ const again=(await save(db,101,[item(2,acceptance({no:'99'}))])).rows[0].reports[0];assert.equal(again.snapshot.asset_pk,first.snapshot.asset_pk);assert.equal(again.snapshot.asset_registered,undefined);
+ const serial=(await save(db,102,[item(3,acceptance({equipment_type:'New',identity_mode:'serial',no:null,serial_number:'NEW-ONLY-SN'}))])).rows[0].reports[0];assert.equal(serial.snapshot.no,null);assert.equal(serial.snapshot.asset_status,'รอเลขครุภัณฑ์');
+ const failed=(await save(db,103,[item(4,acceptance({no:'100',note:'Self Test ไม่ผ่าน',results:{...acceptance().results,'Self Test':'ไม่ผ่าน'}}))])).rows[0].reports[0];assert.equal(failed.snapshot.asset_status,'เครื่องยังไม่พร้อมใช้งาน');
+ const before=(await db.query('select count(*)::int n from assets')).rows[0].n;
+ await assert.rejects(save(db,104,[item(5,acceptance({no:'101'})),item(6,acceptance({no:'102',results:{}}))]),/ผลตรวจไม่ครบ/);
+ assert.equal((await db.query('select count(*)::int n from assets')).rows[0].n,before);assert.equal((await db.query('select count(*)::int n from assets where no=101')).rows[0].n,0);
+ await assert.rejects(save(db,105,[item(7,acceptance({no:'103',section:'PICU'}))]),/เฉพาะตรวจรับ/);
+ await assert.rejects(save(db,106,[item(8,{no:'104',section:'ศูนย์เครื่องมือแพทย์',register_asset:true})]),/เฉพาะตรวจรับ/);
+ await assert.rejects(save(db,107,[item(9,acceptance({no:'105',serial_number:'SN41'}))]),/S\/N นี้/);
+ await assert.rejects(save(db,108,[item(10,acceptance({no:'41',serial_number:'other'}))]),/ไม่ตรง/);
+ await assert.rejects(save(db,109,[item(11,acceptance({equipment_type:'Duplicate',identity_mode:'serial',no:null,serial_number:'DUP'})),item(12,acceptance({equipment_type:'Duplicate',identity_mode:'serial',no:null,serial_number:'DUP'}))]),/ซ้ำ/);
+ assert.equal((await db.query("select count(*)::int n from assets where serial_number='DUP'")).rows[0].n,0);
+ await db.exec("reset role;update user_profiles set permissions=array['pm_reports'] where role='user';set role authenticated");
+ await assert.rejects(save(db,110,[item(13,acceptance({no:'106'}))]),/ไม่มีสิทธิ์เพิ่มทะเบียน/);
+ await save(db,111,[item(14,acceptance({no:'106',register_asset:false}))]);assert.equal((await db.query('select count(*)::int n from assets where no=106')).rows[0].n,0);
+ }finally{await db.close();}
+});

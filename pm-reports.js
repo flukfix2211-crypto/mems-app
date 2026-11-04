@@ -94,6 +94,9 @@
       <button type="button" class="pm-remove" data-remove="${i}">ลบเครื่องนี้จากชุดงาน</button></div></details>`).join('');
     rows.forEach((_,i)=>updateMachine(i));summary();
   }
+  const centerSection='ศูนย์เครื่องมือแพทย์';
+  const canRegisterAssets=()=>profile?.role==='admin'||(profile?.permissions||[]).includes('assets');
+  const isCenterAcceptance=row=>$('reportKind').value==='acceptance'&&(row.section.trim()||$('section').value.trim())===centerSection;
   function updateMachine(i){
     const row=rows[i];$('machineTitle'+i).textContent=String(i+1).padStart(2,'0')+' · '+(row.equipment_type||'เลือกประเภทเครื่อง')+' · '+(row.identity_mode==='no'?'No.':'S/N ')+(row.identifier||'ยังไม่ระบุ');
     const status=$('machineStatus'+i);
@@ -102,6 +105,7 @@
       const a=resolveMachine(assets,row);
       status.textContent=a?'เชื่อมทะเบียน: '+a.type+' '+(a.no?'No.'+a.no:'')+' · ID '+(a.asset_id||'—')+' · เลขครุภัณฑ์ '+(a.asset_code||'—')+(a.serial_number?' · S/N '+a.serial_number:''):'ยังไม่พบในทะเบียน · กรอกรายละเอียดเพื่อบันทึกรายงานได้โดยไม่สร้างทะเบียนอัตโนมัติ';
       status.className='pm-status';
+      if(!a&&isCenterAcceptance(row))status.textContent=canRegisterAssets()?'เมื่อบันทึกตรวจรับ จะเพิ่มเครื่องนี้ในจัดการเครื่องมือพร้อมกัน · S/N อย่างเดียวจะรอระบุ No. · ผลไม่ผ่านจะเป็นสถานะยังไม่พร้อมใช้งาน':'ยังไม่พบในทะเบียน · บันทึกรายงานได้ แต่การเพิ่มทะเบียนต้องมีสิทธิ์จัดการเครื่องมือ';
     }catch(error){status.textContent=error.message;status.className='pm-status error-text';}
   }
   function summary(){
@@ -112,7 +116,7 @@
   function lock(locked){$('pmForm').inert=locked;$('confirmed').disabled=locked;$('newTab').disabled=locked;$('historyTab').disabled=locked;}
   function makePayload(row){
     const asset=resolveMachine(assets,row);
-    const payload={form_version:2,kind:$('reportKind').value,date:$('reportDate').value,operator:$('operator').value.trim(),operator_position:$('operatorPosition').value.trim(),section:row.section.trim()||$('section').value.trim(),
+    const payload={form_version:2,register_asset:!asset&&isCenterAcceptance(row)&&canRegisterAssets(),kind:$('reportKind').value,date:$('reportDate').value,operator:$('operator').value.trim(),operator_position:$('operatorPosition').value.trim(),section:row.section.trim()||$('section').value.trim(),
       equipment_type:row.equipment_type.trim(),identity_mode:row.identity_mode,no:row.identity_mode==='no'?String(Number(row.identifier)):null,
       serial_number:row.identity_mode==='serial'?row.identifier.trim():(asset?.serial_number||''),
       tool_type:row.tool_type.trim(),brand:row.brand.trim(),model:row.model.trim(),note:row.note.trim(),replacement:row.replacement.trim(),results:row.results,confirmed:true};
@@ -134,7 +138,7 @@
         catch(error){$('machineList').children[i].open=true;$('machineList').children[i].scrollIntoView({behavior:'smooth',block:'center'});throw new Error('เครื่องที่ '+(i+1)+': '+error.message);}
       }
       reviewed=items;notice('ตรวจข้อมูลครบแล้ว กรุณาตรวจทานและยืนยันผลจริงก่อนบันทึก');
-      $('reviewSummary').innerHTML='<h2>ตรวจทาน '+items.length+' เครื่องก่อนบันทึก</h2>'+items.map(({payload:p},i)=>'<div class="pm-review-row"><strong>'+esc((i+1)+'. '+p.equipment_type+' '+(p.identity_mode==='no'?'No.'+p.no:'S/N '+p.serial_number))+'</strong>'+esc(p.brand+' · '+p.model+' · '+p.section)+'<p>'+esc(fields(p.kind).filter(f=>p.results[f]!=='ผ่าน').map(f=>f+': '+p.results[f]).join('\n')||'ผลตรวจผ่านครบทุกข้อ')+'</p><p>ผู้ตรวจ: '+esc(p.operator+(p.operator_position?' · '+p.operator_position:''))+'</p><p>หมายเหตุ: '+esc(p.note||'—')+'</p></div>').join('');
+      $('reviewSummary').innerHTML='<h2>ตรวจทาน '+items.length+' เครื่องก่อนบันทึก</h2>'+items.map(({payload:p},i)=>'<div class="pm-review-row"><strong>'+esc((i+1)+'. '+p.equipment_type+' '+(p.identity_mode==='no'?'No.'+p.no:'S/N '+p.serial_number))+'</strong>'+esc(p.brand+' · '+p.model+' · '+p.section)+'<p>'+esc(fields(p.kind).filter(f=>p.results[f]!=='ผ่าน').map(f=>f+': '+p.results[f]).join('\n')||'ผลตรวจผ่านครบทุกข้อ')+'</p>'+(p.register_asset?'<p>จะเพิ่มทะเบียนเครื่องมือพร้อมบันทึกตรวจรับ</p>':'')+'<p>ผู้ตรวจ: '+esc(p.operator+(p.operator_position?' · '+p.operator_position:''))+'</p><p>หมายเหตุ: '+esc(p.note||'—')+'</p></div>').join('');
       $('saveReports').textContent='บันทึกทั้งชุด '+items.length+' เครื่อง';$('saveReports').disabled=false;$('reviewPanel').hidden=false;
       $('reviewPanel').scrollIntoView({behavior:'smooth',block:'start'});
     }finally{$('reviewBtn').disabled=false;}
@@ -149,7 +153,8 @@
       if(error)throw error;
       if(!Array.isArray(data)||data.length!==pending.items.length||data.some((r,i)=>r.id!==pending.items[i].id||r.batch_id!==pending.id))throw new Error('ยังยืนยันผลบันทึกไม่ได้');
       savedRows=data;pending=null;reviewed=null;$('reviewPanel').hidden=true;$('savedPanel').hidden=false;
-      $('savedSummary').textContent='บันทึกครบ '+data.length+' เครื่อง · สร้าง PDF หรือพิมพ์ได้ทันที';
+      $('savedSummary').textContent='บันทึกครบ '+data.length+' เครื่อง'+(data.some(r=>r.snapshot.asset_registered)?' · เพิ่มทะเบียนใหม่ '+data.filter(r=>r.snapshot.asset_registered).length+' เครื่อง':'')+' · สร้าง PDF หรือพิมพ์ได้ทันที';
+      await loadAssets().catch(error=>console.warn('บันทึกแล้ว แต่โหลดทะเบียนล่าสุดไม่ได้',error));
       notice('บันทึกชุดงานสำเร็จครบ '+data.length+' เครื่อง');
       $('newTab').disabled=false;$('historyTab').disabled=false;$('savedPanel').scrollIntoView({behavior:'smooth',block:'center'});
     }catch(error){
@@ -189,7 +194,8 @@
     $('operator').addEventListener('input',()=>{$('savedOperator').value='';});
     $('operatorPosition').addEventListener('input',()=>{$('savedOperator').value='';});
     $('pmForm').addEventListener('submit',guard(review));
-    $('pmForm').addEventListener('input',event=>{if(pending)return;invalidate();const target=event.target;if(target.dataset.row!==undefined){const i=Number(target.dataset.row);if(target.dataset.registry){rows[i].registry_manual=target.value==='__manual__';rows[i].equipment_type=rows[i].registry_manual?'':target.value;rows[i].identifier='';rows[i].manual_identifier=false;renderMachines(i);return;}
+    $('pmForm').addEventListener('input',event=>{if(pending)return;invalidate();const target=event.target;if(target.id==='section'){rows.forEach((_,i)=>updateMachine(i));}
+      if(target.dataset.row!==undefined){const i=Number(target.dataset.row);if(target.dataset.registry){rows[i].registry_manual=target.value==='__manual__';rows[i].equipment_type=rows[i].registry_manual?'':target.value;rows[i].identifier='';rows[i].manual_identifier=false;renderMachines(i);return;}
       if(target.dataset.key==='brand'){rows[i].brand=target.value;rows[i].model='';renderMachines(i);return;}
       if(target.dataset.key==='identity_mode'){rows[i].identity_mode=target.value;rows[i].identifier='';rows[i].manual_identifier=false;renderMachines(i);return;}
       if(target.dataset.key==='identifier'&&target.tagName==='SELECT'&&target.value==='__manual__'){rows[i].identifier='';rows[i].manual_identifier=true;renderMachines(i);return;}
