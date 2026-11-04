@@ -87,7 +87,7 @@
       <label>ระบุเครื่องด้วย<select data-row="${i}" data-key="identity_mode"><option value="no" ${row.identity_mode==='no'?'selected':''}>No. เครื่อง</option><option value="serial" ${row.identity_mode==='serial'?'selected':''}>S/N</option></select></label>
       ${identityField(row,i)}${toolTypeField(row,i)}${brandModelFields(row,i)}${wardField(row,i)}
       </div><div class="pm-status" id="machineStatus${i}"></div><div class="result-grid">${fields($('reportKind').value).map((field,j)=>`<label class="result-row"><span>${esc(field)}</span><select data-row="${i}" data-check="${j}" aria-label="เครื่องที่ ${i+1} ${esc(field)}"><option value="">เลือกผล</option>${['ผ่าน','ไม่ผ่าน','N/A'].map(value=>`<option ${row.results[field]===value?'selected':''}>${value}</option>`).join('')}</select></label>`).join('')}</div>
-      <button type="button" class="pm-copy-results" data-copy-results="${i}" ${rows.length<2?'disabled':''}>คัดลอกผลตรวจเครื่องนี้ไปทุกเครื่อง</button>
+      <button type="button" class="pm-copy-results" data-copy-results="${i}" ${rows.length<2?'disabled':''}>คัดลอกผลตรวจ + ประเภท / ยี่ห้อ / รุ่น ไปทุกเครื่อง</button>
       ${$('reportKind').value==='pm'?input(row,i,'replacement','เปลี่ยนวัสดุตามอายุงาน (ถ้ามี)'):''}
       <label>หมายเหตุเฉพาะเครื่องนี้<textarea data-row="${i}" data-key="note" rows="3" maxlength="2000" placeholder="ระบุรายละเอียดกรณีไม่ผ่าน หรือหมายเหตุเพิ่มเติม (N/A ไม่ต้องใส่เหตุผล)">${esc(row.note)}</textarea></label>
       <button type="button" data-copy-details="${i}">ใช้รายละเอียดนี้กับเครื่องประเภทเดียวกัน</button>
@@ -208,20 +208,25 @@
     $('operator').addEventListener('input',()=>{$('savedOperator').value='';});
     $('operatorPosition').addEventListener('input',()=>{$('savedOperator').value='';});
     $('pmForm').addEventListener('submit',guard(review));
-    $('pmForm').addEventListener('input',event=>{if(pending)return;invalidate();const target=event.target;if(target.id==='section'){rows.forEach((_,i)=>updateMachine(i));}
+    const onFormEdit=event=>{if(pending)return;invalidate();const target=event.target;if(target.id==='section'){rows.forEach((_,i)=>updateMachine(i));}
       if(target.dataset.row!==undefined){const i=Number(target.dataset.row);if(target.dataset.registry){rows[i].registry_manual=target.value==='__manual__';rows[i].equipment_type=rows[i].registry_manual?'':target.value;rows[i].identifier='';rows[i].manual_identifier=false;renderMachines(i);return;}
       if(target.dataset.key==='brand'){rows[i].brand=target.value;rows[i].model='';renderMachines(i);return;}
       if(target.dataset.key==='identity_mode'){rows[i].identity_mode=target.value;rows[i].identifier='';rows[i].manual_identifier=false;renderMachines(i);return;}
       if(target.dataset.key==='identifier'&&target.tagName==='SELECT'&&target.value==='__manual__'){rows[i].identifier='';rows[i].manual_identifier=true;renderMachines(i);return;}
-      if(target.dataset.key)rows[i][target.dataset.key]=target.value;else if(target.dataset.check!==undefined)rows[i].results[fields($('reportKind').value)[Number(target.dataset.check)]]=target.value;updateMachine(i);summary();}});
+      if(target.dataset.key)rows[i][target.dataset.key]=target.value;else if(target.dataset.check!==undefined)rows[i].results[fields($('reportKind').value)[Number(target.dataset.check)]]=target.value;updateMachine(i);summary();}};
+    $('pmForm').addEventListener('input',onFormEdit);
+    $('pmForm').addEventListener('change',onFormEdit);
     $('reportKind').addEventListener('change',()=>{rows.forEach(r=>{r.results={};});invalidate();renderMachines();});
     $('machineList').addEventListener('click',event=>{
       const copyResults=event.target.closest('[data-copy-results]');
       if(copyResults&&!pending&&!busy){
         const index=Number(copyResults.dataset.copyResults),source=rows[index];
         if(rows.length<2)return;
+        const sourceCard=$('machineList').children[index];
+        for(const key of ['tool_type','brand','model'])source[key]=sourceCard.querySelector('[data-key="'+key+'"]').value;
+        sourceCard.querySelectorAll('[data-check]').forEach(select=>{source.results[fields($('reportKind').value)[Number(select.dataset.check)]]=select.value;});
         try{if(['tool_type','brand','model'].some(key=>!source[key].trim()))throw new Error('เลือกประเภทเครื่องบนรายงาน ยี่ห้อ และรุ่นของเครื่องต้นทางก่อนคัดลอก');MemsPM.inspectionResults(source.results,$('reportKind').value);}catch(error){notice(error.message,true);return;}
-        copyResultsSource=index;
+        copyResultsSource={index,details:Object.fromEntries(['tool_type','brand','model'].map(key=>[key,source[key]])),results:MemsPM.inspectionResults(source.results,$('reportKind').value)};
         $('copyResultsMessage').textContent='คัดลอกผลตรวจ '+fields($('reportKind').value).length+' ข้อจาก '+source.equipment_type+' '+(source.identity_mode==='no'?'No.':'S/N ')+source.identifier+' พร้อมประเภท '+source.tool_type+' ยี่ห้อ '+source.brand+' รุ่น '+source.model+' ไปยังอีก '+(rows.length-1)+' เครื่องที่เพิ่มไว้ตอนนี้ โดยแทนที่ผลตรวจ ประเภท ยี่ห้อ และรุ่นเดิมของเครื่องเหล่านั้น';
         $('copyResultsModal').showModal();return;
       }
@@ -242,9 +247,8 @@
     $('cancelCopyResults').onclick=()=>$('copyResultsModal').close();
     $('applyCopyResults').onclick=guard(()=>{
       if(pending||busy||copyResultsSource===null)return;
-      const index=copyResultsSource,source=rows[index];
-      const results=MemsPM.inspectionResults(source.results,$('reportKind').value);
-      for(const target of rows)if(target!==source){target.results={...results};for(const key of ['tool_type','brand','model'])target[key]=source[key];}
+      const {index,details,results}=copyResultsSource,source=rows[index];
+      for(const target of rows)if(target!==source){target.results={...results};for(const key of ['tool_type','brand','model'])target[key]=details[key];}
       $('copyResultsModal').close();copyResultsSource=null;invalidate();renderMachines(index);
       $('machineList').querySelector('[data-copy-results="'+index+'"]').focus();
       notice('คัดลอกผลตรวจ ประเภท ยี่ห้อ และรุ่นไปอีก '+(rows.length-1)+' เครื่องแล้ว · ตรวจผลจริงของทุกเครื่องก่อนยืนยันบันทึก · หมายเหตุและวัสดุที่เปลี่ยนยังแยกรายเครื่อง');
