@@ -69,6 +69,7 @@ async function setup() {
     ),
   );
   await db.exec(fs.readFileSync(path.join(root, 'supabase/migrations/20261024050733_er_high_flow_cross_ward_return.sql'), 'utf8'));
+  await db.exec(fs.readFileSync(path.join(root, 'supabase/migrations/20261104000000_prepare_unreturned_equipment.sql'), 'utf8'));
   await db.exec(
     `set role authenticated;select set_config('request.jwt.claim.sub','${user}',false);`,
   );
@@ -448,5 +449,22 @@ test("ER High Flow cross-ward return, direct inserts, ICU restrictions and trans
     await batch(db, 'return', [item('High Flow')], 'ICU');
     await batch(db, 'deliver', [item('C2')]);
     await assert.rejects(batch(db, 'return', [item('C2')], 'ICU'), /ตึกอื่น/);
+  } finally { await db.close(); }
+});
+
+test("prepare confirms missing return, records ward reason and retries without duplicate returns", async () => {
+  const db = await setup();
+  try {
+    await db.exec("insert into public.assets(type,no,status) values('C2',1,'ใช้งานได้')");
+    await batch(db, 'prepare', [item('C2')]);
+    await batch(db, 'borrow', [item('C2')]);
+    await assert.rejects(batch(db, 'prepare', [item('C2')]), /สถานะยืมเปลี่ยน/);
+    const holder = (await db.query("select ward, recorded_at from public.borrow_records where action ~ 'ยืม' order by id desc limit 1")).rows[0];
+    const payload = {mode:'prepare',items:[item('C2')],ward:'ICU',name:'Admin',unreturned:[{...item('C2'),ward:holder.ward,lastUpdate:holder.recorded_at}]};
+    const request = '30000000-0000-4000-8000-000000000001';
+    for (let n=0;n<2;n++) await db.query('select public.mems_equipment_batch($1,$2::jsonb)',[request,JSON.stringify(payload)]);
+    const returns = (await db.query("select ward,note from public.borrow_records where action ~ 'คืน'")).rows;
+    assert.deepEqual(returns,[{ward:'ER',note:'หน่วยงาน ER ไม่คีย์คืนเครื่อง'}]);
+    assert.equal((await db.query("select count(*)::int n from public.prepare_records where status='เตรียม' and ward='ICU'")).rows[0].n,1);
   } finally { await db.close(); }
 });

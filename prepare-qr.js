@@ -189,7 +189,7 @@ async function memsHandlePrepareQrResult(raw) {
     if (asset.status !== 'ใช้งานได้') throw new Error('เครื่องไม่พร้อมใช้');
     const [prepared,statuses] = await Promise.all([fetchPreparedList(),fetchEquipmentStatus()]);
     const machineKey = memsMachineKey(requestedEquip,no);
-    if(prepared.some(p=>memsMachineKey(p.equipment,p.number)===machineKey)||statuses.some(s=>s.isBorrowed&&memsMachineKey(s.equipment,s.number)===machineKey)) throw new Error('เครื่องถูกเตรียมหรือถูกยืมอยู่');
+    if(prepared.some(p=>memsMachineKey(p.equipment,p.number)===machineKey)) throw new Error('เครื่องถูกเตรียมหรือถูกยืมอยู่');
     const duplicate = memsPrepareQrDraftItems.some(item => item.equipment === requestedEquip && item.number === no);
     if (!duplicate) {
       memsPrepareQrDraftItems.push({ asset, equipment: requestedEquip, number: no });

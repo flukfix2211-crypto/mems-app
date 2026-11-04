@@ -504,7 +504,7 @@ async function fetchRegistryEquipment() {
 }
 async function saveEquipmentBatch(mode, items, ward, name, options = {}) {
   const payload = { mode, items: items.map(i => ({ equipment: i.equipment, number: normalizeMachineNo(i.number ?? i.equipmentNumber) })),
-    ward, name, shift: options.shift || null, timestamp: options.timestamp || null };
+    ward, name, shift: options.shift || null, timestamp: options.timestamp || null, unreturned: options.unreturned || [] };
   const { data, error } = await supabase.rpc('mems_equipment_batch', { request_id: options.requestId, payload });
   if (error) throw error;
   if (!Array.isArray(data) || data.length !== items.length || data.some(r => !r.id)) throw new Error('ยังยืนยันการบันทึกไม่ได้ กรุณาลองซ้ำ');

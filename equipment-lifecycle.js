@@ -92,9 +92,9 @@
       a.no != null &&
       a.status === "ใช้งานได้" &&
       registry.filter((b) => memsMachineKey(b.type, b.no) === k).length === 1 &&
-      !status.some(
+      (isPrepare || !status.some(
         (s) => s.isBorrowed && memsMachineKey(s.equipment, s.number) === k,
-      ) &&
+      )) &&
       !prepared.some((p) => key(p) === k)
     );
   }
@@ -203,7 +203,8 @@
       description.textContent = "No. " + item.number;
       const meta = document.createElement("small");
       meta.className = "ready-meta";
-      meta.textContent = Number.isFinite(item.time)
+      const holder = status.find(s => s.isBorrowed && key(s) === key(item));
+      meta.textContent = holder ? "ยังถูกยืมอยู่ที่ " + holder.ward : Number.isFinite(item.time)
         ? formatReadyEquipmentDate(new Date(item.time).toISOString())
         : "ยังไม่มีประวัติคืน";
       description.append(meta);
@@ -487,12 +488,21 @@
           const item = { equipment: asset.type, number };
           if (!items.some((existing) => key(existing) === key(item))) items.push(item);
         }
+        if (!items.length || !ward || !name) throw new Error("กรุณาเลือกเครื่อง หน่วยงาน และผู้เตรียมให้ครบ");
+        const current = await fetchEquipmentStatus();
+        const unreturned = items.flatMap(item => {
+          const holder = current.find(s => s.isBorrowed && key(s) === key(item));
+          return holder ? [{ equipment: item.equipment, number: item.number, ward: holder.ward, lastUpdate: holder.lastUpdate }] : [];
+        });
+        if (unreturned.length && !confirm(unreturned.map(i => i.equipment + " No." + i.number + " ถูกยืมอยู่ที่ " + i.ward).join("\n") +
+          "\nเครื่องกลับมาที่ศูนย์แล้วโดยไม่ได้คีย์คืน ต้องการคืนเครื่องและเตรียมต่อเลยไหม?\nจะบันทึกเหตุผล: " +
+          unreturned.map(i => "หน่วยงาน " + i.ward + " ไม่คีย์คืนเครื่อง").join("\n"))) return;
         await submit(
           prepareMode === "deliver" ? "deliver" : "prepare",
           items,
           ward,
           name ? name + " เจ้าหน้าที่ศูนย์เครื่องมือแพทย์" : "",
-          { shift: detectShiftTH() },
+          { shift: detectShiftTH(), unreturned },
         );
       } catch (e) {
         error(e);

@@ -261,7 +261,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       <span class="ready-count" id="readyEquipmentCount">0 ลำดับ</span>
     </div>
     <div class="ready-list" id="readyEquipmentList"></div>
-    <div class="ready-note"><span aria-hidden="true">ⓘ</span><span>แสดงเฉพาะเครื่องสถานะ “ใช้งานได้” ที่อยู่ศูนย์และยังไม่ถูกเตรียมไว้ แตะรายการเพื่อเพิ่มหมายเลขเครื่อง</span></div>
+    <div class="ready-note"><span aria-hidden="true">ⓘ</span><span>แสดงเครื่องสถานะ “ใช้งานได้” ที่ยังไม่ถูกเตรียมไว้ หากยังมีสถานะยืม ระบบจะให้ยืนยันคืนเครื่องก่อนบันทึกเตรียม</span></div>
   </div>
 
   <!-- ชื่อเครื่องมือ (เฉพาะ เครื่องมืออื่นๆ) -->
@@ -367,7 +367,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 <div id="toast"></div>
 
 <script src="vendor/supabase.js"></script>
-<script src="supabase-client.js?v=20261022-shared-wards-1"></script>
+<script src="supabase-client.js?v=20261104-unreturned-1"></script>
 <script src="auth.js"></script>
 <script>
   const ASSET_LABEL_EQUIPS = new Set(['Defibrillator', 'เครื่องมืออื่นๆ']);
@@ -674,10 +674,10 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   });
 </script>
 <script src="https://cdn.jsdelivr.net/npm/qr-scanner@1.4.2/qr-scanner.umd.min.js"></script>
-<script src="prepare-qr.js?v=20261022-lifecycle-1"></script>
+<script src="prepare-qr.js?v=20261104-unreturned-1"></script>
 <script src="site-footer.js?v=20261016-footer-1"></script>
 <script src="mascot.js?v=20261027-loop-1"></script>
 <script src="equipment-photos.js?v=20261023-1"></script>
-<script src="equipment-lifecycle.js?v=20261023-prepare-photos-1"></script>
+<script src="equipment-lifecycle.js?v=20261104-unreturned-1"></script>
 </body>
 </html>
