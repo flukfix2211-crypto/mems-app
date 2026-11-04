@@ -270,3 +270,51 @@ html, body, button, input, select, textarea, optgroup { font-family: var(--mems-
   }
 }
 
+
+/* Center app popups even when a page resets native dialog margins. */
+@media screen {
+  dialog {
+    position: fixed !important;
+    inset: 0 !important;
+    margin: auto !important;
+    max-width: calc(100vw - 32px) !important;
+    max-height: calc(100vh - 32px) !important;
+    max-height: calc(100dvh - 32px) !important;
+    box-sizing: border-box;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  :is(.modal-overlay, .pdf-preview-modal, .qr-camera-modal, .qr-scan-prompt,
+      #cancelModal, #editModal, #circuitModal, #toolTransferModal,
+      #toolReturnModal, #transferModal, #helpModal) {
+    position: fixed !important;
+    inset: 0 !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+    padding: 16px !important;
+    align-items: center !important;
+    justify-content: center !important;
+    place-items: center !important;
+  }
+  :is(.modal-overlay, .pdf-preview-modal, .qr-camera-modal, .qr-scan-prompt,
+      #cancelModal, #editModal, #circuitModal, #toolTransferModal,
+      #toolReturnModal, #transferModal, #helpModal) > :first-child {
+    min-width: 0;
+    flex-shrink: 1;
+    max-height: calc(100vh - 32px) !important;
+    max-height: calc(100dvh - 32px) !important;
+    box-sizing: border-box !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    margin: 0 !important;
+  }
+  .modal-overlay > .modal-box {
+    border-radius: 18px !important;
+    animation: none !important;
+  }
+  .pdf-preview-modal > .pdf-preview-shell {
+    border-radius: 16px !important;
+    height: min(920px, calc(100vh - 32px)) !important;
+    height: min(920px, calc(100dvh - 32px)) !important;
+  }
+}
