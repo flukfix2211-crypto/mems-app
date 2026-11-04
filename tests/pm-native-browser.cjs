@@ -18,8 +18,11 @@ const root=path.join(__dirname,'..');
     const body=req.postDataJSON();const data=(await db.query('select save_mems_report_operator($1,$2) r',[body.operator_name,body.operator_position])).rows[0].r;
     return route.fulfill({json:data});
    }
+   if(url.pathname.includes('/rest/v1/rpc/save_mems_report_tool_type')){
+    const body=req.postDataJSON();const data=(await db.query('select save_mems_report_tool_type($1) r',[body.type_name])).rows[0].r;return route.fulfill({json:data});
+   }
    if(url.pathname.includes('/rest/v1/')){
-    const table=url.pathname.split('/').at(-1);assert.ok(['assets','mems_reports','mems_report_settings','mems_report_operators'].includes(table));
+    const table=url.pathname.split('/').at(-1);assert.ok(['assets','mems_reports','mems_report_settings','mems_report_operators','mems_report_tool_types'].includes(table));
     const params=[],filters=[];
     for(const [key,val] of url.searchParams){
       if(['select','order','offset','limit'].includes(key))continue;
@@ -54,10 +57,22 @@ const root=path.join(__dirname,'..');
   await page.locator('#savedOperator').selectOption(operatorId);assert.equal(await page.locator('#operator').inputValue(),'ผู้ตรวจทดสอบ');assert.equal(await page.locator('#operatorPosition').inputValue(),'นายช่างเทคนิค');
   const row=n=>page.locator('.pm-machine').nth(n);
   async function fill(n,type,mode,identifier){
-   await row(n).locator('[data-key="equipment_type"]').fill(type);await row(n).locator('[data-key="identity_mode"]').selectOption(mode);await row(n).locator('[data-key="identifier"]').fill(identifier);
-   for(const [key,value] of [['brand','Hamilton'],['model','C2'],['tool_type','Ventilator']])await row(n).locator('[data-key="'+key+'"]').fill(value);
+   const typeSelect=row(n).locator('[data-registry]');
+   if(await typeSelect.locator('option').evaluateAll((els,type)=>els.some(e=>e.value===type),type))await typeSelect.selectOption(type);
+   else {await typeSelect.selectOption('__manual__');await row(n).locator('input[data-key="equipment_type"]').fill(type);}
+   await row(n).locator('[data-key="identity_mode"]').selectOption(mode);
+   const identity=row(n).locator('[data-key="identifier"]');
+   if(await identity.evaluate(el=>el.tagName)==='SELECT')await identity.selectOption(identifier);else await identity.fill(identifier);
+   for(const [key,value] of [['brand','Hamilton'],['model','C2']])await row(n).locator('[data-key="'+key+'"]').fill(value);
+   await row(n).locator('[data-key="tool_type"]').selectOption('Ventilator');
    const choices=row(n).locator('[data-check]');for(let i=0;i<await choices.count();i++)await choices.nth(i).selectOption('ผ่าน');
   }
+  assert.deepEqual(await row(0).locator('[data-registry] option').evaluateAll(els=>els.map(e=>e.value)),['','C2','Pump','__manual__']);
+  await row(0).locator('[data-registry]').selectOption('C2');assert.deepEqual(await row(0).locator('select[data-key="identifier"] option').evaluateAll(els=>els.map(e=>e.value)),['','41','__manual__']);
+  await row(0).locator('[data-add-tool-type]').click();await page.locator('#toolTypeName').fill('เครื่องทดสอบใหม่');await page.locator('#saveToolType').click();await page.locator('#toolTypeModal').waitFor({state:'hidden'});
+  assert.equal(await row(0).locator('[data-key="tool_type"]').inputValue(),'เครื่องทดสอบใหม่');
+  await page.reload();await page.waitForFunction(()=>document.querySelectorAll('.pm-machine').length===1);assert.equal(await row(0).locator('[data-key="tool_type"] option').filter({hasText:'เครื่องทดสอบใหม่'}).count(),1);
+  await page.locator('#savedOperator').selectOption(operatorId);
   await fill(0,'C2','no','41');await row(0).locator('[data-key="note"]').fill('หมายเหตุเครื่องแรก');
   await page.locator('#addMachine').click();await fill(1,'C2','serial','SN41');await row(1).locator('[data-key="note"]').fill('หมายเหตุเครื่องสอง');
   await page.locator('#reviewBtn').click();await page.waitForFunction(()=>document.getElementById('pmNotice').textContent.includes('ซ้ำ'));assert.equal(calls,0);
@@ -88,6 +103,7 @@ const root=path.join(__dirname,'..');
   await page.locator('#savedPdf').click();await page.locator('#memsPrintablePdf').waitFor({state:'visible'});
   const accUrl=await page.locator('#memsPrintablePdf a[download]').getAttribute('href');const acc=await page.evaluate(async u=>Array.from(new Uint8Array(await (await fetch(u)).arrayBuffer())),accUrl);fs.writeFileSync('/tmp/mems-native-acceptance.pdf',Buffer.from(acc));
   await page.getByRole('button',{name:'ปิด',exact:true}).click();await page.locator('#startNew').click();
+  await page.locator('#bulkAdd').click();await page.locator('#bulkType').selectOption('C2');await page.locator('#bulkValues').fill('41');await page.locator('#bulkForm button[type=submit]').click();assert.equal(await page.locator('.pm-machine').count(),1);assert.equal(await row(0).locator('[data-key="identifier"]').inputValue(),'41');
   await page.setViewportSize({width:390,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),true);
   await page.screenshot({path:'/tmp/mems-native-mobile.png',fullPage:true});
   // Long notes must flow across pages rather than truncate; use stored snapshot shapes.

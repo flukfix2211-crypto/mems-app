@@ -81,3 +81,17 @@ test('saved operators persist with titles, deduplicate, enforce permissions and 
  assert.equal((await db.query("select has_table_privilege('anon','mems_report_operators','SELECT') allowed")).rows[0].allowed,false);
  }finally{await db.close();}
 });
+
+test('tool categories seed from observed Form names, persist new names, deduplicate and restrict access',async()=>{
+ const db=await setup();try{
+ assert.equal((await db.query("select count(*)::int n from mems_report_tool_types where name='Ventilator' and source='form_response'")).rows[0].n,1);
+ const add=name=>db.query('select save_mems_report_tool_type($1) item',[name]);
+ const a=(await add(' ชนิดเครื่องใหม่ ')).rows[0].item;assert.equal(a.name,'ชนิดเครื่องใหม่');assert.equal(a.source,'custom');
+ assert.equal((await add('ชนิดเครื่องใหม่')).rows[0].item.id,a.id);
+ assert.equal((await add('ventilator')).rows[0].item.name,'Ventilator');
+ await assert.rejects(add(''),/กรอกชื่อ/);await assert.rejects(add('x'.repeat(201)),/200/);
+ await assert.rejects(db.exec('delete from mems_report_tool_types'),/permission denied/);
+ await db.exec('reset role;update mems_report_settings set enabled=false;set role authenticated');await assert.rejects(add('Other'),/ไม่มีสิทธิ์/);
+ assert.equal((await db.query("select has_table_privilege('anon','mems_report_tool_types','SELECT') allowed")).rows[0].allowed,false);
+ }finally{await db.close();}
+});
