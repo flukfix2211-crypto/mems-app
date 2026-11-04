@@ -118,3 +118,17 @@ test("ER High Flow returned by another ward closes a complete session", () => {
   events[0].ward = 'ICU 100 ปี';
   assert.equal(ledger.build(events).anomalies.length, 1);
 });
+
+test('PICU and lower pediatrics cross-returns close complete sessions without changing borrowing ward', () => {
+  for (const [holder,receiver] of [['PICU','เด็กล่าง'],['เด็กล่าง','PICU']]) {
+    const events = [event(1,'2026-11-04T01:00Z','b',holder,'C2'),event(2,'2026-11-04T03:00Z','r',receiver,'C2')];
+    const result = ledger.build(events);
+    assert.equal(result.anomalies.length,0);
+    assert.equal(result.sessions[0].incomplete,false);
+    assert.equal(result.sessions[0].completed,true);
+    assert.equal(result.sessions[0].returnWard,receiver);
+    assert.equal(result.sessions[0].segments[0].ward,holder);
+    events[1].ward='ICU';
+    assert.equal(ledger.build(events).anomalies.length,1);
+  }
+});

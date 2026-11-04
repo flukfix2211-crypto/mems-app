@@ -55,6 +55,7 @@
             return;
           }
           if (open.segments.at(-1).ward !== e.ward &&
+              !(['PICU', 'เด็กล่าง'].includes(open.segments.at(-1).ward) && ['PICU', 'เด็กล่าง'].includes(e.ward)) &&
               !(open.segments.at(-1).ward === 'ER' &&
                 ['high flow', 'highflow'].includes(String(e.type).trim().replace(/\s+/g, ' ').toLowerCase()))) {
             open.incomplete = true;

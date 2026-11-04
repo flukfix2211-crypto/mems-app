@@ -70,6 +70,7 @@ async function setup() {
   );
   await db.exec(fs.readFileSync(path.join(root, 'supabase/migrations/20261024050733_er_high_flow_cross_ward_return.sql'), 'utf8'));
   await db.exec(fs.readFileSync(path.join(root, 'supabase/migrations/20261104000000_prepare_unreturned_equipment.sql'), 'utf8'));
+  await db.exec(fs.readFileSync(path.join(root, 'supabase/migrations/20261104033354_picu_lower_pediatrics_cross_ward_return.sql'), 'utf8'));
   await db.exec(
     `set role authenticated;select set_config('request.jwt.claim.sub','${user}',false);`,
   );
@@ -466,5 +467,33 @@ test("prepare confirms missing return, records ward reason and retries without d
     const returns = (await db.query("select ward,note from public.borrow_records where action ~ 'คืน'")).rows;
     assert.deepEqual(returns,[{ward:'ER',note:'หน่วยงาน ER ไม่คีย์คืนเครื่อง'}]);
     assert.equal((await db.query("select count(*)::int n from public.prepare_records where status='เตรียม' and ward='ICU'")).rows[0].n,1);
+  } finally { await db.close(); }
+});
+
+test('PICU and lower pediatrics share returns both directions for all types, keeping loan links and blocking outsiders', async () => {
+  const db = await setup();
+  try {
+    for (const type of ['C2','High Flow','Infusion Pump','NIBP']) {
+      await db.query('insert into assets(type,no) values($1,1)',[type]);
+      for (const [holder,receiver] of [['PICU','เด็กล่าง'],['เด็กล่าง','PICU']]) {
+        await batch(db,'deliver',[item(type)],holder);
+        await assert.rejects(batch(db,'return',[item(type)],'ICU'),/ตึกอื่น/);
+        const loan=(await db.query("select id from borrow_records where equipment_name=$1 and action ~ 'ยืม' order by id desc limit 1",[type])).rows[0].id;
+        await batch(db,'return',[item(type)],receiver);
+        const returned=(await db.query("select loan_id,ward from borrow_records where equipment_name=$1 and action ~ 'คืน' order by id desc limit 1",[type])).rows[0];
+        assert.equal(returned.loan_id,loan);
+        assert.equal(returned.ward,receiver);
+        await assert.rejects(batch(db,'return',[item(type)],holder),/คืนแล้ว/);
+      }
+      await batch(db,'deliver',[item(type)],'ICU');
+      await assert.rejects(batch(db,'return',[item(type)],'PICU'),/ตึกอื่น/);
+      await assert.rejects(batch(db,'return',[item(type)],'เด็กล่าง'),/ตึกอื่น/);
+      await batch(db,'return',[item(type)],'ICU');
+    }
+    await batch(db,'deliver',[item('C2')],'PICU');
+    await db.exec("insert into borrow_records(record_date,record_time,action,equipment_name,equipment_number,ward,staff_name) values(current_date,current_time,'คืน','C2','1','เด็กล่าง','Test')");
+    await batch(db,'deliver',[item('C2')],'PICU');
+    await db.exec("insert into borrow_records(record_date,record_time,action,equipment_name,equipment_number,ward,staff_name,note) values(current_date,current_time,'ย้ายวอร์ด','C2','1','ICU','Test','ย้ายจาก PICU')");
+    await assert.rejects(batch(db,'return',[item('C2')],'เด็กล่าง'),/ตึกอื่น/);
   } finally { await db.close(); }
 });

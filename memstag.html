@@ -19,7 +19,7 @@
       <p class="distance-note">ระยะคำนวณจาก RSSI median 9 ตัวอย่าง และค่าที่สอบเทียบหน้างานแบบยกอุปกรณ์พ้นพื้น (Tx@1m −58.4 dBm, n=1.76) จึงใช้ประมาณโซน ไม่ใช่การวัดระยะแบบ GPS/UWB</p>
     </section><section class="card foot"><span id="updatedText">อัปเดตอัตโนมัติทุก 5 วินาที</span><button class="refresh" onclick="loadStatus()">รีเฟรช</button></section>
   </main>
-  <script src="vendor/supabase.js"></script><script src="supabase-client.js"></script><script src="auth.js"></script>
+  <script src="vendor/supabase.js"></script><script src="supabase-client.js?v=20261104-pediatric-returns-1"></script><script src="auth.js"></script>
   <script>
     const CENTER_OFFLINE_MS=30000,TX_POWER_AT_1M=-58.4,INDOOR_PATH_LOSS=1.76;let latestRecord=null;
     function dateText(value){if(!value)return'ยังไม่เคยพบ';return new Intl.DateTimeFormat('th-TH',{dateStyle:'medium',timeStyle:'medium'}).format(new Date(value))}

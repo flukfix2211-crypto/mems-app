@@ -72,14 +72,29 @@ test('QR return keeps selected destination for ER High Flow and selects holder f
   };
   vm.createContext(ctx);
   vm.runInContext(policy + qr.slice(start, end), ctx);
-  for (const [equipment, holder, expected] of [
+  for (const [equipment, holder, expected, selectedWard] of [
     ['High Flow', 'ER', 'ศัลยกรรมชาย'],
     ['High Flow', 'ICU 100 ปี', 'ICU 100 ปี'],
     ['C2', 'ER', 'ER'],
+    ['C2', 'PICU', 'เด็กล่าง', 'เด็กล่าง'],
+    ['C2', 'เด็กล่าง', 'PICU', 'PICU'],
   ]) {
-    ward.value = 'ศัลยกรรมชาย';
+    ward.value = selectedWard || 'ศัลยกรรมชาย';
     await ctx.memsApplyQrBatchItems([{ equipment, number: '1', asset: {},
       borrowedStatus: { ward: holder, isBorrowed: true } }], 'return');
     assert.equal(ward.value, expected);
+  }
+});
+
+test('PICU and lower pediatrics can return all equipment types in both directions only while borrowed', () => {
+  const context = vm.createContext({});
+  vm.runInContext(policy, context);
+  for (const equipment of ['C2','High Flow','Infusion Pump','NIBP']) {
+    for (const [holder,ward] of [['PICU','เด็กล่าง'],['เด็กล่าง','PICU']]) {
+      assert.equal(context.memsCanReturnEquipment({equipment,ward:holder,isBorrowed:true},ward),true);
+      assert.equal(context.memsCanReturnEquipment({equipment,ward:holder,isBorrowed:false},ward),false);
+      assert.equal(context.memsCanReturnEquipment({equipment,ward:holder,isBorrowed:true},'ICU'),false);
+      assert.equal(context.memsCanReturnEquipment({equipment,ward:'ICU',isBorrowed:true},ward),false);
+    }
   }
 });
