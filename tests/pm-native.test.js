@@ -84,7 +84,7 @@ test('saved operators persist with titles, deduplicate, enforce permissions and 
 
 test('tool categories seed from observed Form names, persist new names, deduplicate and restrict access',async()=>{
  const db=await setup();try{
- assert.equal((await db.query("select count(*)::int n from mems_report_tool_types where name='Ventilator' and source='form_response'")).rows[0].n,1);
+ assert.equal((await db.query("select count(*)::int n from mems_report_tool_types where name='Ventilator' and source='form_confirmed'")).rows[0].n,1);
  const add=name=>db.query('select save_mems_report_tool_type($1) item',[name]);
  const a=(await add(' ชนิดเครื่องใหม่ ')).rows[0].item;assert.equal(a.name,'ชนิดเครื่องใหม่');assert.equal(a.source,'custom');
  assert.equal((await add('ชนิดเครื่องใหม่')).rows[0].item.id,a.id);
@@ -93,5 +93,19 @@ test('tool categories seed from observed Form names, persist new names, deduplic
  await assert.rejects(db.exec('delete from mems_report_tool_types'),/permission denied/);
  await db.exec('reset role;update mems_report_settings set enabled=false;set role authenticated');await assert.rejects(add('Other'),/ไม่มีสิทธิ์/);
  assert.equal((await db.query("select has_table_privilege('anon','mems_report_tool_types','SELECT') allowed")).rows[0].allowed,false);
+ }finally{await db.close();}
+});
+
+test('confirmed seven Form types hide historical guesses, preserve custom names and allow explicitly re-adding retired names',async()=>{
+ const db=await setup();try{
+ const expected=['Defibrillator','Infusionpump','Syringpump','Vital sing Monitor','Electrosurgical','Anesthetic Machine','Ventilator'];
+ const names=(await db.query('select name from mems_report_tool_types')).rows.map(r=>r.name);
+ assert.deepEqual(names.sort(),expected.sort());
+ const added=(await db.query("select save_mems_report_tool_type('Monitor') as item")).rows[0].item;
+ assert.equal(added.name,'Monitor');assert.equal(added.active,true);assert.equal(added.source,'custom');
+ await db.exec('reset role');assert.equal((await db.query("select count(*)::int n from mems_report_tool_types where name='Monitor'")).rows[0].n,2);
+ // Reapplying the data migration must keep user additions available.
+ await db.exec(fs.readFileSync(path.join(root,'supabase/migrations/20261104044405_pm_confirmed_form_types.sql'),'utf8').replace('alter table public.mems_report_tool_types add column active boolean not null default true;',''));
+ await db.exec('set role authenticated');assert.equal((await db.query("select count(*)::int n from mems_report_tool_types where name='Monitor'")).rows[0].n,1);
  }finally{await db.close();}
 });
