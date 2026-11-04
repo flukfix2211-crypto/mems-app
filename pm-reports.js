@@ -220,9 +220,9 @@
       if(copyResults&&!pending&&!busy){
         const index=Number(copyResults.dataset.copyResults),source=rows[index];
         if(rows.length<2)return;
-        try{MemsPM.inspectionResults(source.results,$('reportKind').value);}catch(error){notice(error.message,true);return;}
+        try{if(['tool_type','brand','model'].some(key=>!source[key].trim()))throw new Error('เลือกประเภทเครื่องบนรายงาน ยี่ห้อ และรุ่นของเครื่องต้นทางก่อนคัดลอก');MemsPM.inspectionResults(source.results,$('reportKind').value);}catch(error){notice(error.message,true);return;}
         copyResultsSource=index;
-        $('copyResultsMessage').textContent='คัดลอกผลตรวจ '+fields($('reportKind').value).length+' ข้อจาก '+source.equipment_type+' '+(source.identity_mode==='no'?'No.':'S/N ')+source.identifier+' ไปยังอีก '+(rows.length-1)+' เครื่องที่เพิ่มไว้ตอนนี้ โดยแทนที่ผลตรวจเดิมของเครื่องเหล่านั้น';
+        $('copyResultsMessage').textContent='คัดลอกผลตรวจ '+fields($('reportKind').value).length+' ข้อจาก '+source.equipment_type+' '+(source.identity_mode==='no'?'No.':'S/N ')+source.identifier+' พร้อมประเภท '+source.tool_type+' ยี่ห้อ '+source.brand+' รุ่น '+source.model+' ไปยังอีก '+(rows.length-1)+' เครื่องที่เพิ่มไว้ตอนนี้ โดยแทนที่ผลตรวจ ประเภท ยี่ห้อ และรุ่นเดิมของเครื่องเหล่านั้น';
         $('copyResultsModal').showModal();return;
       }
       const addBrand=event.target.closest('[data-add-brand-model]');
@@ -244,10 +244,10 @@
       if(pending||busy||copyResultsSource===null)return;
       const index=copyResultsSource,source=rows[index];
       const results=MemsPM.inspectionResults(source.results,$('reportKind').value);
-      for(const target of rows)if(target!==source)target.results={...results};
+      for(const target of rows)if(target!==source){target.results={...results};for(const key of ['tool_type','brand','model'])target[key]=source[key];}
       $('copyResultsModal').close();copyResultsSource=null;invalidate();renderMachines(index);
       $('machineList').querySelector('[data-copy-results="'+index+'"]').focus();
-      notice('คัดลอกผลตรวจไปอีก '+(rows.length-1)+' เครื่องแล้ว · ตรวจผลจริงของทุกเครื่องก่อนยืนยันบันทึก · หมายเหตุและวัสดุที่เปลี่ยนยังแยกรายเครื่อง');
+      notice('คัดลอกผลตรวจ ประเภท ยี่ห้อ และรุ่นไปอีก '+(rows.length-1)+' เครื่องแล้ว · ตรวจผลจริงของทุกเครื่องก่อนยืนยันบันทึก · หมายเหตุและวัสดุที่เปลี่ยนยังแยกรายเครื่อง');
     });
     $('closeBrandModel').onclick=()=>$('brandModelModal').close();
     $('brandModelForm').onsubmit=guard(async event=>{event.preventDefault();const brand=$('brandModelBrand').value.trim(),model=$('brandModelModel').value.trim();if(!brand)throw new Error('กรอกยี่ห้อก่อนบันทึก');$('saveBrandModel').disabled=true;try{const {data,error}=await supabase.rpc('save_mems_report_brand_model',{brand_name:brand,model_name:model});if(error)throw error;await loadBrandModels();if(rows[brandModelTarget]){const row=rows[brandModelTarget];if(row.brand!==data.brand)row.model='';row.brand=data.brand;if(data.model)row.model=data.model;}invalidate();renderMachines(brandModelTarget);$('brandModelModal').close();notice('บันทึก '+data.brand+(data.model?' · '+data.model:'')+' ไว้เลือกใช้ครั้งต่อไปแล้ว');}finally{$('saveBrandModel').disabled=false;}});
