@@ -13,3 +13,12 @@
 .unkeyed-dashboard th { background: #edf6f7; white-space: nowrap; }
 .unkeyed-dashboard summary { cursor: pointer; font-weight: 700; padding: 12px 0; }
 @media(max-width:600px) { .unkeyed-dashboard { padding: 14px; } .unkeyed-metrics { grid-template-columns: 1fr; gap: 8px; } }
+
+/* Collapsible statistics card in the borrowing/returning list. */
+.unkeyed-dropdown { margin: 0 0 14px; padding: 0; }
+.unkeyed-dropdown > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px; list-style: none; color: #0a6478; font-size: 14px; font-weight: 800; }
+.unkeyed-dropdown > summary::-webkit-details-marker { display: none; }
+.unkeyed-chevron { transition: transform .2s; }
+.unkeyed-dropdown[open] > summary .unkeyed-chevron { transform: rotate(90deg); }
+.unkeyed-dropdown > summary:focus-visible { outline: 2px solid #0a6478; outline-offset: 3px; border-radius: 12px; }
+.unkeyed-dropdown-body { padding: 0 18px 18px; }

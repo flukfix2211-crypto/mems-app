@@ -371,6 +371,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   <link rel="stylesheet" href="dashboard-office.css?v=20261006-prepare-counts-1">
   <link rel="stylesheet" href="equipment-status.css?v=20261016-asset-status-1">
   <link rel="stylesheet" href="mems-auth-theme.css?v=20260923-app-2">
+<link rel="stylesheet" href="unkeyed-statistics.css?v=20261104-dropdown-1">
 </head>
 <body class="mems-dashboard">
 
@@ -639,6 +640,29 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       <button class="btn-view-back" onclick="showView('home')">← กลับ</button>
       <div class="view-title"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14v18H5zM8 7h8M8 11h8M8 15h5"/></svg> รายการทั้งหมด</div>
     </div>
+
+  <details class="unkeyed-dashboard unkeyed-dropdown" id="unkeyedStatisticsCard" ontoggle="if(this.open) memsLoadUnkeyedStatistics()">
+    <summary id="unkeyedTitle">สถิติหน่วยงานไม่คีย์ยืม–คืนเครื่อง <span class="unkeyed-chevron" aria-hidden="true">▸</span></summary>
+    <div class="unkeyed-dropdown-body">
+    <p>ไม่คีย์ยืม: เจ้าหน้าที่ลบรายการเตรียมด้วยเหตุผล “หน่วยงานนำเครื่องไปไม่คีย์ยืมเครื่อง”<br>ไม่คีย์คืน: เจ้าหน้าที่ยืนยันคืนเครื่องที่ยังมีสถานะยืม ก่อนบันทึกเตรียมครั้งใหม่</p>
+    <div class="unkeyed-controls">
+      <label for="unkeyedMonth">เดือน</label><input type="month" id="unkeyedMonth" onchange="memsLoadUnkeyedStatistics()">
+      <button type="button" onclick="document.getElementById('unkeyedMonth').value='';memsLoadUnkeyedStatistics()">ทุกช่วงเวลา</button>
+      <button type="button" onclick="memsLoadUnkeyedStatistics()">รีเฟรช</button>
+    </div>
+    <p id="unkeyedStatus" role="status" aria-live="polite">กำลังโหลดสถิติ…</p>
+    <div id="unkeyedResults" hidden>
+      <div class="unkeyed-metrics">
+        <div><strong id="unkeyedBorrow">0</strong><span>เครื่องที่ไม่คีย์ยืม</span></div>
+        <div><strong id="unkeyedReturn">0</strong><span>เครื่องที่ไม่คีย์คืน</span></div>
+        <div><strong id="unkeyedWards">0</strong><span>หน่วยงานที่พบรายการ</span></div>
+      </div>
+      <div class="unkeyed-scroll"><table><caption>สรุปแยกตามหน่วยงาน</caption><thead><tr><th scope="col">หน่วยงาน</th><th scope="col">ไม่คีย์ยืม</th><th scope="col">ไม่คีย์คืน</th><th scope="col">รวม (เครื่อง)</th></tr></thead><tbody id="unkeyedWardRows"></tbody></table></div>
+      <details><summary>ดูรายละเอียดรายการและเหตุผล</summary><div class="unkeyed-scroll"><table><thead><tr><th scope="col">วันที่</th><th scope="col">ประเภท</th><th scope="col">หน่วยงาน</th><th scope="col">เครื่อง</th><th scope="col">เจ้าหน้าที่</th><th scope="col">เหตุผล</th></tr></thead><tbody id="unkeyedIncidentRows"></tbody></table></div></details>
+    </div>
+    <p>ไม่คีย์ยืมนับตามวันที่เตรียมเครื่อง (รวมเหตุผลเดิม “หน่วยงานไม่คีย์ยืมเครื่องมือ”) ส่วนไม่คีย์คืนนับตามวันที่ยืนยันคืนเครื่อง</p>
+    </div>
+  </details>
 
     <!-- ── ลบแบบกลุ่ม (collapsible) ── -->
     <div class="card" style="margin-bottom:14px">
@@ -962,6 +986,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 <script src="vendor/jspdf.plugin.autotable.min.js"></script>
 <script src="supabase-client.js?v=20261022-lifecycle-1"></script>
 <script src="auth.js"></script>
+<script src="unkeyed-statistics.js?v=20261104-1"></script>
 <script src="equipment-status.js?v=20261016-asset-status-1"></script>
 <script src="reports.js?v=20261102-workload-one-page-2"></script>
 <script>
@@ -1601,7 +1626,10 @@ async function renderFixJobHistory() {
 /* ============================================================ INIT ============================================================ */
 window.addEventListener('DOMContentLoaded', async () => {
   const profile = await memsGuard('dashboard');
-  if (profile) loadAll();
+  if (profile) {
+    document.getElementById('unkeyedMonth').value = bkkDateStr(new Date()).slice(0,7);
+    loadAll();
+  }
 });
 
 async function loadAll() {
