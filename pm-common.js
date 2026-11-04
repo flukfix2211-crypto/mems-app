@@ -40,6 +40,13 @@
     if(matches.length>1)throw new Error('พบทะเบียนซ้ำ กรุณาตรวจสอบ No. หรือ S/N');
     return matches[0]||null;
   }
+  function resolveInspectionMachine(rows,machine,kind) {
+    const found=resolveMachine(rows,machine);
+    if(found||kind!=='acceptance'||machine.identity_mode!=='serial')return found;
+    const matches=rows.filter(a=>String(a.serial_number||'').trim()===String(machine.identifier||'').trim());
+    if(matches.length>1)throw new Error('S/N ตรงกับหลายเครื่องในทะเบียน กรุณาเลือกชื่อเครื่องให้ตรง');
+    return matches[0]||null;
+  }
   function machineKey(machine,asset) {
     return asset ? 'asset:'+asset.id : JSON.stringify([typeKey(machine.equipment_type),machine.identity_mode,machine.identity_mode==='no'?String(Number(machine.identifier)):machine.identifier.trim()]);
   }
@@ -57,7 +64,7 @@
     }
     return result;
   }
-  const api={inspectionResults,fields,parseNumbers,matchAssets,today,esc,requestId,typeKey,resolveMachine,machineKey,validateInspection};
+  const api={resolveInspectionMachine,inspectionResults,fields,parseNumbers,matchAssets,today,esc,requestId,typeKey,resolveMachine,machineKey,validateInspection};
   if(typeof module!=='undefined') module.exports=api;
   else root.MemsPM=api;
 })(typeof window!=='undefined'?window:this);

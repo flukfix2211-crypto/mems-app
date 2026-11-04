@@ -162,3 +162,9 @@ summary small { color: var(--pm-muted); font-size: 12px; font-weight: 400; }
 #copyResultsModal h2 { color: var(--pm-brand); }
 #copyResultsMessage { line-height: 1.8; overflow-wrap: anywhere; }
 @media(max-width:650px){.pm-copy-results{width:100%;font-size:12px}}
+
+#duplicateAssetModal { width:min(540px,calc(100% - 32px)); border:1px solid var(--pm-line); border-radius:16px; padding:24px; font:inherit; color:var(--pm-ink); box-shadow:0 24px 65px #142b4033; }
+#duplicateAssetModal::backdrop { background:#142b4099; }
+#duplicateAssetModal h2 { color:var(--pm-brand); }
+#duplicateAssetList { white-space:pre-line; overflow-wrap:anywhere; padding:12px; background:var(--pm-soft); border-radius:10px; }
+.pm-status.pm-duplicate { background:#fff8e9; border-color:#e8d6a8; color:#775319; }

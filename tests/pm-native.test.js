@@ -160,3 +160,32 @@ test('center acceptance registers new assets atomically, reuses existing machine
  await save(db,111,[item(14,acceptance({no:'106',register_asset:false}))]);assert.equal((await db.query('select count(*)::int n from assets where no=106')).rows[0].n,0);
  }finally{await db.close();}
 });
+
+test('acceptance duplicate lookup checks serial across names without merging shared numbers across types',()=>{
+ const rows=[{id:1,type:'C2',no:41,serial_number:'SN41'}];
+ const serial={equipment_type:'Different Name',identity_mode:'serial',identifier:'SN41'};
+ assert.equal(pm.resolveInspectionMachine(rows,serial,'acceptance').id,1);
+ assert.equal(pm.resolveInspectionMachine(rows,serial,'pm'),null);
+ assert.equal(pm.resolveInspectionMachine(rows,{equipment_type:'Other',identity_mode:'no',identifier:'41'},'acceptance'),null);
+ assert.throws(()=>pm.resolveInspectionMachine([...rows,{id:2,type:'Pump',serial_number:'SN41'}],serial,'acceptance'),/หลายเครื่อง/);
+});
+test('duplicate acceptance requires acknowledgement, records inspection only and detects registry races',async()=>{
+ const db=await setup();try{
+ const acceptance={kind:'acceptance',section:'ศูนย์เครื่องมือแพทย์',register_asset:false,duplicate_policy:'confirm_existing',results:Object.fromEntries(pm.fields('acceptance').map(f=>[f,'ผ่าน']))};
+ await assert.rejects(save(db,100,[item(1,acceptance)]),/พบเครื่องในทะเบียนแล้ว/);
+ assert.equal((await db.query('select count(*)::int n from mems_reports')).rows[0].n,0);
+ const before=(await db.query('select * from assets order by id')).rows;
+ const acknowledged={...acceptance,existing_registration_confirmed:true,existing_asset_id:'1'};
+ const report=(await save(db,101,[item(2,acknowledged)])).rows[0].reports[0];
+ assert.equal(report.snapshot.asset_pk,1);assert.equal(report.snapshot.acceptance_existing_asset,true);assert.equal(report.snapshot.asset_registered,undefined);
+ await save(db,101,[item(2,acknowledged)]);assert.deepEqual((await db.query('select * from assets order by id')).rows,before);
+ await assert.rejects(save(db,102,[item(3,{...acknowledged,existing_asset_id:'2'})]),/เปลี่ยนแล้ว/);
+ await assert.rejects(save(db,103,[item(4,{...acknowledged,no:'99'})]),/ไม่พบทะเบียน/);
+ await assert.rejects(save(db,104,[item(5,{...acknowledged,register_asset:true})]),/ต้องไม่เพิ่มทะเบียนซ้ำ/);
+ await db.exec("reset role;update user_profiles set permissions=array['pm_reports','assets'] where role='user';set role authenticated");
+ // The request expected a new device, but another writer registered it before this save.
+ await assert.rejects(save(db,105,[item(6,{...acceptance,register_asset:true})]),/พบเครื่องในทะเบียนแล้ว/);
+ await assert.rejects(save(db,106,[item(7,{...acceptance,register_asset:true,equipment_type:'Different Name',identity_mode:'serial',no:null,serial_number:'SN41'})]),/S\/N ตรงกัน/);
+ assert.deepEqual((await db.query('select * from assets order by id')).rows,before);
+ }finally{await db.close();}
+});

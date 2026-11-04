@@ -4,13 +4,13 @@ const {chromium}=require('playwright');const {setup}=require('./fixtures/pm-nati
 const root=path.join(__dirname,'..');
 (async()=>{
  const db=await setup();const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
- const page=await browser.newPage({viewport:{width:1440,height:1000}});let calls=0,loseReply=false,errors=[];
+ const page=await browser.newPage({viewport:{width:1440,height:1000}});let calls=0,loseReply=false,abortBeforeSave=false,errors=[];
  page.on('pageerror',e=>errors.push(e.message));
  await page.route('**/*',async route=>{
   const req=route.request(),url=new URL(req.url());
   try{
    if(url.pathname.includes('/rest/v1/rpc/save_mems_report_batch')){
-    calls++;const body=req.postDataJSON();const data=(await db.query('select save_mems_report_batch($1,$2::jsonb) r',[body.request_id,JSON.stringify(body.batch_payload)])).rows[0].r;
+    calls++;if(abortBeforeSave){abortBeforeSave=false;return route.abort('failed');}const body=req.postDataJSON();const data=(await db.query('select save_mems_report_batch($1,$2::jsonb) r',[body.request_id,JSON.stringify(body.batch_payload)])).rows[0].r;
     if(loseReply){loseReply=false;return route.abort('failed');}
     return route.fulfill({json:data});
    }
@@ -136,6 +136,15 @@ const root=path.join(__dirname,'..');
   await page.locator('#reviewBtn').click();await page.locator('#reviewPanel').waitFor({state:'visible'});assert.match(await page.locator('#reviewSummary').textContent(),/เพิ่มทะเบียน/);await page.locator('#confirmed').check();await page.locator('#saveReports').click();await page.locator('#savedPanel').waitFor({state:'visible'});
   assert.match(await page.locator('#savedSummary').textContent(),/เพิ่มทะเบียนใหม่ 1/);assert.equal((await db.query("select count(*)::int n from assets where type='New Center Device' and no=77")).rows[0].n,1);
   await page.locator('#startNew').click();await row(0).locator('[data-registry]').selectOption('New Center Device');assert.ok((await row(0).locator('[data-key="identifier"] option').allTextContents()).includes('77'));
+  const assetCount=(await db.query('select count(*)::int n from assets')).rows[0].n;
+  await fill(0,'C2','no','41');await page.locator('#reviewBtn').click();await page.locator('#duplicateAssetModal').waitFor({state:'visible'});assert.match(await page.locator('#duplicateAssetList').textContent(),/C2 No.41/);
+  await page.locator('#cancelDuplicateAsset').click();assert.equal(await page.locator('#reviewPanel').isHidden(),true);assert.equal((await db.query('select count(*)::int n from mems_reports')).rows[0].n,4);
+  await page.locator('#reviewBtn').click();await page.locator('#recordExistingAsset').click();await page.locator('#reviewPanel').waitFor({state:'visible'});await page.locator('#confirmed').check();await page.locator('#saveReports').click();await page.locator('#savedPanel').waitFor({state:'visible'});
+  assert.equal((await db.query('select count(*)::int n from assets')).rows[0].n,assetCount);const extra=(await db.query("select snapshot,payload from mems_reports where snapshot->>'acceptance_existing_asset'='true'")).rows[0];assert.equal(extra.snapshot.asset_pk,1);assert.equal(extra.payload.register_asset,false);
+  await page.locator('#startNew').click();await fill(0,'Different Device Name','serial','SN41');await page.locator('#reviewBtn').click();await page.locator('#duplicateAssetModal').waitFor({state:'visible'});assert.match(await page.locator('#duplicateAssetList').textContent(),/C2 No.41/);await page.locator('#recordExistingAsset').click();await page.locator('#reviewPanel').waitFor({state:'visible'});assert.match(await page.locator('#reviewSummary').textContent(),/C2/);await page.locator('#confirmed').check();await page.locator('#saveReports').click();await page.locator('#savedPanel').waitFor({state:'visible'});assert.equal((await db.query('select count(*)::int n from assets')).rows[0].n,assetCount);
+  await page.locator('#startNew').click();await fill(0,'Race Device','no','78');await page.locator('#reviewBtn').click();await page.locator('#confirmed').check();abortBeforeSave=true;await page.locator('#saveReports').click();await page.waitForFunction(()=>document.getElementById('pmNotice').textContent.includes('ข้อมูลถูกล็อก'));
+  await db.exec("insert into assets(type,no,status) values('Race Device',78,'ใช้งานได้')");await page.locator('#saveReports').click();await page.waitForFunction(()=>!document.getElementById('pmForm').inert&&document.getElementById('reviewPanel').hidden);
+  await page.locator('#reviewBtn').click();await page.locator('#recordExistingAsset').click();await page.locator('#confirmed').check();await page.locator('#saveReports').click();await page.locator('#savedPanel').waitFor({state:'visible'});assert.equal((await db.query("select count(*)::int n from assets where type='Race Device' and no=78")).rows[0].n,1);
   // Long notes must flow across pages rather than truncate; use stored snapshot shapes.
   await page.evaluate(async saved=>{saved[0].payload.note=('หมายเหตุทดสอบข้อความยาว '.repeat(80))+' จบหมายเหตุ ENDNOTE';await memsExportInspectionPdf([saved[0]]);},saved);
   const longUrl=await page.locator('#memsPrintablePdf a[download]').getAttribute('href');const long=await page.evaluate(async u=>Array.from(new Uint8Array(await (await fetch(u)).arrayBuffer())),longUrl);fs.writeFileSync('/tmp/mems-native-long.pdf',Buffer.from(long));

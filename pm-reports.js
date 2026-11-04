@@ -1,7 +1,7 @@
 /* Native MEMs inspections: atomic batches and printable PDFs, without a Google bridge. */
 (() => {
   'use strict';
-  const {fields,today,esc,requestId,resolveMachine,machineKey,validateInspection}=MemsPM;
+  const {fields,today,esc,requestId,resolveInspectionMachine,machineKey,validateInspection}=MemsPM;
   const $=id=>document.getElementById(id);
   let copyResultsSource=null,brandModels=[],brandModelTarget=null,wards=[],toolTypes=[],toolTypeTarget=null,operators=[],assets=[],profile,rows=[],page=0,historyRows=[],savedRows=[],reviewed=null,pending=null,busy=false;
   const notice=(text,error=false)=>{$('pmNotice').textContent=text;$('pmNotice').className='notice'+(error?' error':'');};
@@ -102,9 +102,10 @@
     const status=$('machineStatus'+i);
     if(!row.identifier||!row.equipment_type){status.textContent='เลือกประเภทและกรอก No. หรือ S/N เพื่อค้นทะเบียน';return;}
     try{
-      const a=resolveMachine(assets,row);
+      const a=resolveInspectionMachine(assets,row,$('reportKind').value);
       status.textContent=a?'เชื่อมทะเบียน: '+a.type+' '+(a.no?'No.'+a.no:'')+' · ID '+(a.asset_id||'—')+' · เลขครุภัณฑ์ '+(a.asset_code||'—')+(a.serial_number?' · S/N '+a.serial_number:''):'ยังไม่พบในทะเบียน · กรอกรายละเอียดเพื่อบันทึกรายงานได้โดยไม่สร้างทะเบียนอัตโนมัติ';
-      status.className='pm-status';
+      status.className=a&&$('reportKind').value==='acceptance'?'pm-status pm-duplicate':'pm-status';
+      if(a&&$('reportKind').value==='acceptance')status.textContent='ซ้ำกับเครื่องที่ลงทะเบียนไว้: '+a.type+(a.no?' No.'+a.no:'')+(a.serial_number?' · S/N '+a.serial_number:'')+' · เลือกเก็บข้อมูลตรวจรับโดยไม่เพิ่มทะเบียนซ้ำได้ในขั้นตรวจทาน';
       if(!a&&isCenterAcceptance(row))status.textContent=canRegisterAssets()?'เมื่อบันทึกตรวจรับ จะเพิ่มเครื่องนี้ในจัดการเครื่องมือพร้อมกัน · S/N อย่างเดียวจะรอระบุ No. · ผลไม่ผ่านจะเป็นสถานะยังไม่พร้อมใช้งาน':'ยังไม่พบในทะเบียน · บันทึกรายงานได้ แต่การเพิ่มทะเบียนต้องมีสิทธิ์จัดการเครื่องมือ';
     }catch(error){status.textContent=error.message;status.className='pm-status error-text';}
   }
@@ -115,13 +116,24 @@
   }
   function lock(locked){$('pmForm').inert=locked;$('confirmed').disabled=locked;$('newTab').disabled=locked;$('historyTab').disabled=locked;}
   function makePayload(row){
-    const asset=resolveMachine(assets,row);
+    const asset=resolveInspectionMachine(assets,row,$('reportKind').value);
     const payload={form_version:2,register_asset:!asset&&isCenterAcceptance(row)&&canRegisterAssets(),kind:$('reportKind').value,date:$('reportDate').value,operator:$('operator').value.trim(),operator_position:$('operatorPosition').value.trim(),section:row.section.trim()||$('section').value.trim(),
-      equipment_type:row.equipment_type.trim(),identity_mode:row.identity_mode,no:row.identity_mode==='no'?String(Number(row.identifier)):null,
+      equipment_type:asset&&$('reportKind').value==='acceptance'?asset.type:row.equipment_type.trim(),requested_equipment_type:row.equipment_type.trim(),duplicate_policy:$('reportKind').value==='acceptance'?'confirm_existing':null,existing_asset_id:asset?String(asset.id):null,identity_mode:row.identity_mode,no:row.identity_mode==='no'?String(Number(row.identifier)):null,
       serial_number:row.identity_mode==='serial'?row.identifier.trim():(asset?.serial_number||''),
       tool_type:row.tool_type.trim(),brand:row.brand.trim(),model:row.model.trim(),note:row.note.trim(),replacement:row.replacement.trim(),results:row.results,confirmed:true};
     validateInspection(payload);
     return {payload,asset,key:machineKey(row,asset)};
+  }
+  function confirmExistingAcceptance(duplicates){
+    return new Promise(resolve=>{
+      const dialog=$('duplicateAssetModal');
+      $('duplicateAssetList').textContent=duplicates.map(({index,asset})=>'เครื่องที่ '+(index+1)+': '+asset.type+(asset.no?' No.'+asset.no:'')+(asset.serial_number?' · S/N '+asset.serial_number:'')).join('\n');
+      const finish=accepted=>{dialog.close();dialog.oncancel=null;resolve(accepted);};
+      $('cancelDuplicateAsset').onclick=()=>finish(false);
+      $('recordExistingAsset').onclick=()=>finish(true);
+      dialog.oncancel=event=>{event.preventDefault();finish(false);};
+      dialog.showModal();
+    });
   }
   async function review(event){
     event.preventDefault();if(busy||pending)return;
@@ -132,13 +144,14 @@
     $('reviewBtn').disabled=true;
     try{
       await loadAssets();
-      const seen=new Set(),items=[];
+      const seen=new Set(),items=[],duplicates=[];
       for(let i=0;i<rows.length;i++){
-        try{const item=makePayload(rows[i]);if(seen.has(item.key))throw new Error('เครื่องซ้ำในชุดงาน');seen.add(item.key);items.push({id:requestId(),payload:item.payload});}
+        try{const item=makePayload(rows[i]);if(seen.has(item.key))throw new Error('เครื่องซ้ำในชุดงาน');seen.add(item.key);items.push({id:requestId(),payload:item.payload});if(item.asset&&item.payload.kind==='acceptance')duplicates.push({index:i,asset:item.asset});}
         catch(error){$('machineList').children[i].open=true;$('machineList').children[i].scrollIntoView({behavior:'smooth',block:'center'});throw new Error('เครื่องที่ '+(i+1)+': '+error.message);}
       }
+      if(duplicates.length){if(!await confirmExistingAcceptance(duplicates))return;for(const duplicate of duplicates){items[duplicate.index].payload.register_asset=false;items[duplicate.index].payload.existing_registration_confirmed=true;}}
       reviewed=items;notice('ตรวจข้อมูลครบแล้ว กรุณาตรวจทานและยืนยันผลจริงก่อนบันทึก');
-      $('reviewSummary').innerHTML='<h2>ตรวจทาน '+items.length+' เครื่องก่อนบันทึก</h2>'+items.map(({payload:p},i)=>'<div class="pm-review-row"><strong>'+esc((i+1)+'. '+p.equipment_type+' '+(p.identity_mode==='no'?'No.'+p.no:'S/N '+p.serial_number))+'</strong>'+esc(p.brand+' · '+p.model+' · '+p.section)+'<p>'+esc(fields(p.kind).filter(f=>p.results[f]!=='ผ่าน').map(f=>f+': '+p.results[f]).join('\n')||'ผลตรวจผ่านครบทุกข้อ')+'</p>'+(p.register_asset?'<p>จะเพิ่มทะเบียนเครื่องมือพร้อมบันทึกตรวจรับ</p>':'')+'<p>ผู้ตรวจ: '+esc(p.operator+(p.operator_position?' · '+p.operator_position:''))+'</p><p>หมายเหตุ: '+esc(p.note||'—')+'</p></div>').join('');
+      $('reviewSummary').innerHTML='<h2>ตรวจทาน '+items.length+' เครื่องก่อนบันทึก</h2>'+items.map(({payload:p},i)=>'<div class="pm-review-row"><strong>'+esc((i+1)+'. '+p.equipment_type+' '+(p.identity_mode==='no'?'No.'+p.no:'S/N '+p.serial_number))+'</strong>'+esc(p.brand+' · '+p.model+' · '+p.section)+'<p>'+esc(fields(p.kind).filter(f=>p.results[f]!=='ผ่าน').map(f=>f+': '+p.results[f]).join('\n')||'ผลตรวจผ่านครบทุกข้อ')+'</p>'+(p.register_asset?'<p>จะเพิ่มทะเบียนเครื่องมือพร้อมบันทึกตรวจรับ</p>':p.existing_registration_confirmed?'<p>เก็บข้อมูลตรวจรับเพิ่มเติม เชื่อมทะเบียนเดิม ไม่เพิ่มเครื่องซ้ำ</p>':'')+'<p>ผู้ตรวจ: '+esc(p.operator+(p.operator_position?' · '+p.operator_position:''))+'</p><p>หมายเหตุ: '+esc(p.note||'—')+'</p></div>').join('');
       $('saveReports').textContent='บันทึกทั้งชุด '+items.length+' เครื่อง';$('saveReports').disabled=false;$('reviewPanel').hidden=false;
       $('reviewPanel').scrollIntoView({behavior:'smooth',block:'start'});
     }finally{$('reviewBtn').disabled=false;}
@@ -159,7 +172,8 @@
       $('newTab').disabled=false;$('historyTab').disabled=false;$('savedPanel').scrollIntoView({behavior:'smooth',block:'center'});
     }catch(error){
       // SQL errors confirm rollback. Network/ambiguous errors keep the original request frozen for a safe retry.
-      if(/^[0-9A-Z]{5}$/.test(error.code||'')&&!pending.uncertain){pending=null;lock(false);}
+      const registryConflict=error.code==='P0001'&&/พบเครื่องในทะเบียนแล้ว|ทะเบียนเครื่องที่ยืนยัน/.test(error.message||'');
+      if(/^[0-9A-Z]{5}$/.test(error.code||'')&&(!pending.uncertain||registryConflict)){pending=null;lock(false);if(registryConflict)invalidate();}
       else pending.uncertain=true;
       $('saveReports').disabled=false;$('saveReports').textContent='ลองบันทึกชุดเดิมอีกครั้ง';
       notice((error.message||'เครือข่ายขัดข้อง')+(pending?' · ข้อมูลถูกล็อกไว้ กดลองบันทึกชุดเดิมเพื่อยืนยันผลโดยไม่สร้างรายการซ้ำ':' · ยังไม่บันทึกทั้งชุด กรุณาแก้ข้อมูลแล้วตรวจทานอีกครั้ง'),true);
