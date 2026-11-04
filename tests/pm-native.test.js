@@ -65,3 +65,19 @@ test('legacy single reports remain readable and writable with the upgraded trigg
  assert.equal(result.rows[0].report.snapshot.asset_id,'real-id');assert.equal(result.rows[0].report.batch_id,null);
  }finally{await db.close();}
 });
+
+test('saved operators persist with titles, deduplicate, enforce permissions and preserve inspection titles',async()=>{
+ const db=await setup();try{
+ const savePerson=(name=' ผู้ตรวจทดสอบ ',title=' นายช่างเทคนิค ')=>db.query('select save_mems_report_operator($1,$2) person',[name,title]);
+ const person=(await savePerson()).rows[0].person;assert.equal(person.name,'ผู้ตรวจทดสอบ');assert.equal(person.position,'นายช่างเทคนิค');
+ assert.equal((await savePerson()).rows[0].person.id,person.id);assert.equal((await db.query('select count(*)::int n from mems_report_operators')).rows[0].n,1);
+ await assert.rejects(savePerson('','title'),/กรอกชื่อ/);await assert.rejects(savePerson('Name','x'.repeat(201)),/200/);
+ const report=(await save(db,100,[item(1,{operator:person.name,operator_position:person.position})])).rows[0].reports[0];assert.equal(report.snapshot.operator_position,person.position);
+ await savePerson(person.name,'ตำแหน่งใหม่');assert.equal((await db.query('select snapshot from mems_reports')).rows[0].snapshot.operator_position,'นายช่างเทคนิค');
+ await assert.rejects(save(db,101,[item(2,{operator_position:'x'.repeat(201)})]),/ตำแหน่ง/);
+ await db.exec(`set request.jwt.claim.sub='${other}'`);assert.equal((await db.query('select * from mems_report_operators')).rows.length,2);
+ await assert.rejects(db.exec("update mems_report_operators set name='changed'"),/permission denied/);
+ await db.exec(`reset role;update mems_report_settings set enabled=false;set role authenticated`);await assert.rejects(savePerson(),/ไม่มีสิทธิ์/);
+ assert.equal((await db.query("select has_table_privilege('anon','mems_report_operators','SELECT') allowed")).rows[0].allowed,false);
+ }finally{await db.close();}
+});

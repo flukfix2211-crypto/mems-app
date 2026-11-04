@@ -14,8 +14,12 @@ const root=path.join(__dirname,'..');
     if(loseReply){loseReply=false;return route.abort('failed');}
     return route.fulfill({json:data});
    }
+   if(url.pathname.includes('/rest/v1/rpc/save_mems_report_operator')){
+    const body=req.postDataJSON();const data=(await db.query('select save_mems_report_operator($1,$2) r',[body.operator_name,body.operator_position])).rows[0].r;
+    return route.fulfill({json:data});
+   }
    if(url.pathname.includes('/rest/v1/')){
-    const table=url.pathname.split('/').at(-1);assert.ok(['assets','mems_reports','mems_report_settings'].includes(table));
+    const table=url.pathname.split('/').at(-1);assert.ok(['assets','mems_reports','mems_report_settings','mems_report_operators'].includes(table));
     const params=[],filters=[];
     for(const [key,val] of url.searchParams){
       if(['select','order','offset','limit'].includes(key))continue;
@@ -43,6 +47,11 @@ const root=path.join(__dirname,'..');
  });
  try{
   await page.goto('http://mems.test/pm-reports.html');await page.waitForFunction(()=>document.querySelectorAll('.pm-machine').length===1);
+  await page.locator('#operator').fill('ผู้ตรวจทดสอบ');await page.locator('#operatorPosition').fill('นายช่างเทคนิค');await page.locator('#saveOperator').click();
+  await page.waitForFunction(()=>document.getElementById('operatorStatus').textContent.includes('บันทึก ผู้ตรวจทดสอบ'));
+  await page.reload();await page.waitForFunction(()=>document.querySelectorAll('.pm-machine').length===1);
+  const operatorId=(await db.query('select id from mems_report_operators')).rows[0].id;
+  await page.locator('#savedOperator').selectOption(operatorId);assert.equal(await page.locator('#operator').inputValue(),'ผู้ตรวจทดสอบ');assert.equal(await page.locator('#operatorPosition').inputValue(),'นายช่างเทคนิค');
   const row=n=>page.locator('.pm-machine').nth(n);
   async function fill(n,type,mode,identifier){
    await row(n).locator('[data-key="equipment_type"]').fill(type);await row(n).locator('[data-key="identity_mode"]').selectOption(mode);await row(n).locator('[data-key="identifier"]').fill(identifier);
@@ -64,7 +73,7 @@ const root=path.join(__dirname,'..');
   await db.exec('reset role;update mems_report_settings set enabled=true;set role authenticated');
   await page.locator('#saveReports').click();await page.locator('#savedPanel').waitFor({state:'visible'});
   assert.equal(calls,3);assert.equal((await db.query('select count(*)::int n from mems_reports')).rows[0].n,2);
-  const saved=(await db.query('select * from mems_reports order by batch_index')).rows;assert.equal(saved[1].snapshot.serial_number,'P41');assert.equal(saved[1].payload.note,'หมายเหตุเครื่องสอง');
+  const saved=(await db.query('select * from mems_reports order by batch_index')).rows;assert.equal(saved[1].snapshot.serial_number,'P41');assert.equal(saved[1].payload.note,'หมายเหตุเครื่องสอง');assert.equal(saved[0].snapshot.operator_position,'นายช่างเทคนิค');
   await page.locator('#savedPdf').click();await page.locator('#memsPrintablePdf').waitFor({state:'visible'});
   const url=await page.locator('#memsPrintablePdf a[download]').getAttribute('href');
   const bytes=await page.evaluate(async url=>Array.from(new Uint8Array(await (await fetch(url)).arrayBuffer())),url);

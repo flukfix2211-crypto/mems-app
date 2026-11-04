@@ -28,8 +28,11 @@ async function memsExportInspectionPdf(reports) {
     doc.setTextColor(25,50,60);doc.setFontSize(13);
     const date=new Intl.DateTimeFormat('th-TH',{timeZone:'Asia/Bangkok',dateStyle:'long'}).format(new Date(new Date(report.report_date).toISOString().slice(0,10)+'T12:00:00+07:00'));
     const signer=doc.splitTextToSize((report.kind==='pm'?'ผู้ปฏิบัติงาน: ':'ผู้ตรวจรับ: ')+p.operator,500);
-    if(y+signer.length*16+38>doc.internal.pageSize.getHeight()-58){doc.addPage();y=65;}
+    const position=p.operator_position||s.operator_position||'';
+    const positionLines=position?doc.splitTextToSize('ตำแหน่ง: '+position,500):[];
+    if(y+(signer.length+positionLines.length)*16+38>doc.internal.pageSize.getHeight()-58){doc.addPage();y=65;}
     doc.text(signer,40,y);y+=signer.length*16;
+    if(positionLines.length){doc.text(positionLines,40,y);y+=positionLines.length*16;}
     doc.text('วันที่ '+date,40,y);doc.text('ลงชื่อ ........................................................',320,y+23);
     doc.setFontSize(10);doc.text('ชื่อผู้ตรวจที่บันทึกใน MEMs · ช่องลงนามจริง',320,y+38);
     for(let page=firstPage;page<=doc.getNumberOfPages();page++)pageLabels[page]={label,id:report.id,continued:page!==firstPage};

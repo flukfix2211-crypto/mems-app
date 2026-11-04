@@ -3,12 +3,28 @@
   'use strict';
   const {fields,today,esc,requestId,resolveMachine,machineKey,validateInspection}=MemsPM;
   const $=id=>document.getElementById(id);
-  let assets=[],profile,rows=[],page=0,historyRows=[],savedRows=[],reviewed=null,pending=null,busy=false;
+  let operators=[],assets=[],profile,rows=[],page=0,historyRows=[],savedRows=[],reviewed=null,pending=null,busy=false;
   const notice=(text,error=false)=>{$('pmNotice').textContent=text;$('pmNotice').className='notice'+(error?' error':'');};
   const guard=fn=>async event=>{try{await fn(event);}catch(error){notice(error.message||String(error),true);}};
   function invalidate(){reviewed=null;$('reviewPanel').hidden=true;$('confirmed').checked=false;}
   function newMachine(type='',mode='no',identifier='') {
     return {equipment_type:type,identity_mode:mode,identifier,brand:'',model:'',tool_type:'',section:'',note:'',replacement:'',results:{}};
+  }
+  async function loadOperators(selectedId='') {
+    operators=await fetchAllPages(()=>supabase.from('mems_report_operators').select('id,name,position').order('name').order('id'));
+    $('savedOperator').innerHTML='<option value="">— เพิ่มชื่อใหม่ หรือกรอกชื่อด้านล่าง —</option>'+operators.map(person=>'<option value="'+esc(person.id)+'">'+esc(person.name+' — '+person.position)+'</option>').join('');
+    $('savedOperator').value=selectedId;
+  }
+  async function saveOperator() {
+    const name=$('operator').value.trim(),position=$('operatorPosition').value.trim();
+    if(!name||!position)throw new Error('กรอกชื่อผู้ปฏิบัติงานและตำแหน่งก่อนบันทึกรายชื่อ');
+    $('saveOperator').disabled=true;
+    try {
+      const {data,error}=await supabase.rpc('save_mems_report_operator',{operator_name:name,operator_position:position});
+      if(error)throw error;
+      await loadOperators(data.id);
+      $('operatorStatus').textContent='บันทึก '+name+' · '+position+' แล้ว เลือกใช้ครั้งต่อไปได้';
+    } finally { $('saveOperator').disabled=false; }
   }
   async function loadSettings(){
     const {data,error}=await supabase.from('mems_report_settings').select('enabled').eq('id',true).single();
@@ -52,7 +68,7 @@
   function lock(locked){$('pmForm').inert=locked;$('confirmed').disabled=locked;$('newTab').disabled=locked;$('historyTab').disabled=locked;}
   function makePayload(row){
     const asset=resolveMachine(assets,row);
-    const payload={form_version:2,kind:$('reportKind').value,date:$('reportDate').value,operator:$('operator').value.trim(),section:row.section.trim()||$('section').value.trim(),
+    const payload={form_version:2,kind:$('reportKind').value,date:$('reportDate').value,operator:$('operator').value.trim(),operator_position:$('operatorPosition').value.trim(),section:row.section.trim()||$('section').value.trim(),
       equipment_type:row.equipment_type.trim(),identity_mode:row.identity_mode,no:row.identity_mode==='no'?String(Number(row.identifier)):null,
       serial_number:row.identity_mode==='serial'?row.identifier.trim():(asset?.serial_number||''),
       tool_type:row.tool_type.trim(),brand:row.brand.trim(),model:row.model.trim(),note:row.note.trim(),replacement:row.replacement.trim(),results:row.results,confirmed:true};
@@ -74,7 +90,7 @@
         catch(error){$('machineList').children[i].open=true;$('machineList').children[i].scrollIntoView({behavior:'smooth',block:'center'});throw new Error('เครื่องที่ '+(i+1)+': '+error.message);}
       }
       reviewed=items;notice('ตรวจข้อมูลครบแล้ว กรุณาตรวจทานและยืนยันผลจริงก่อนบันทึก');
-      $('reviewSummary').innerHTML='<h2>ตรวจทาน '+items.length+' เครื่องก่อนบันทึก</h2>'+items.map(({payload:p},i)=>'<div class="pm-review-row"><strong>'+esc((i+1)+'. '+p.equipment_type+' '+(p.identity_mode==='no'?'No.'+p.no:'S/N '+p.serial_number))+'</strong>'+esc(p.brand+' · '+p.model+' · '+p.section)+'<p>'+esc(fields(p.kind).filter(f=>p.results[f]!=='ผ่าน').map(f=>f+': '+p.results[f]).join('\n')||'ผลตรวจผ่านครบทุกข้อ')+'</p><p>หมายเหตุ: '+esc(p.note||'—')+'</p></div>').join('');
+      $('reviewSummary').innerHTML='<h2>ตรวจทาน '+items.length+' เครื่องก่อนบันทึก</h2>'+items.map(({payload:p},i)=>'<div class="pm-review-row"><strong>'+esc((i+1)+'. '+p.equipment_type+' '+(p.identity_mode==='no'?'No.'+p.no:'S/N '+p.serial_number))+'</strong>'+esc(p.brand+' · '+p.model+' · '+p.section)+'<p>'+esc(fields(p.kind).filter(f=>p.results[f]!=='ผ่าน').map(f=>f+': '+p.results[f]).join('\n')||'ผลตรวจผ่านครบทุกข้อ')+'</p><p>ผู้ตรวจ: '+esc(p.operator+(p.operator_position?' · '+p.operator_position:''))+'</p><p>หมายเหตุ: '+esc(p.note||'—')+'</p></div>').join('');
       $('saveReports').textContent='บันทึกทั้งชุด '+items.length+' เครื่อง';$('saveReports').disabled=false;$('reviewPanel').hidden=false;
       $('reviewPanel').scrollIntoView({behavior:'smooth',block:'start'});
     }finally{$('reviewBtn').disabled=false;}
@@ -116,15 +132,19 @@
     if($('filterTo').value)q=q.lte('report_date',$('filterTo').value);
     const {data,error}=await q;if(error){$('historyList').textContent='โหลดประวัติไม่สำเร็จ กรุณากดรีเฟรช';throw error;}
     historyRows=data.slice(0,20);$('prevPage').disabled=page===0;$('nextPage').disabled=data.length<=20;$('pageLabel').textContent='หน้า '+(page+1);
-    $('historyList').innerHTML=historyRows.map((r,i)=>{const s=r.snapshot,p=r.payload;return `<article class="history-item"><h3><label class="pm-check"><input type="checkbox" data-select="${i}">${esc((r.kind==='pm'?'PM':'ตรวจรับ')+' · '+s.equipment_type+' '+(s.no?'No.'+s.no:'S/N '+(s.serial_number||'—')))}</label></h3><p class="muted">${esc(r.report_date+' · '+p.operator+' · '+p.section)}<br>${esc(s.serial_number?'S/N '+s.serial_number:'')} · ${r.batch_id?'ชุดงาน '+esc(r.batch_id.slice(0,8)):'ประวัติเดิม'}</p><details><summary>ผลตรวจและหมายเหตุ</summary>${fields(r.kind).map(f=>'<div>'+esc(f)+' — '+esc(p.results?.[f]||'—')+'</div>').join('')}<p class="pm-note">หมายเหตุ: ${esc(p.note||'—')}</p></details><div class="history-actions"><button type="button" data-pdf="${i}">PDF / พิมพ์เครื่องนี้</button>${r.batch_id?'<button type="button" data-batch="'+esc(r.batch_id)+'">PDF / พิมพ์ทั้งชุด</button>':''}${r.slides_id?'<a target="_blank" rel="noopener" href="https://docs.google.com/presentation/d/'+encodeURIComponent(r.slides_id)+'/edit">Slides เดิม ↗</a>':''}${r.pdf_id?'<a target="_blank" rel="noopener" href="https://drive.google.com/file/d/'+encodeURIComponent(r.pdf_id)+'/view">PDF เดิม ↗</a>':''}</div></article>`;}).join('')||'<p class="empty">ไม่พบรายงานในช่วงที่เลือก</p>';
+    $('historyList').innerHTML=historyRows.map((r,i)=>{const s=r.snapshot,p=r.payload;return `<article class="history-item"><h3><label class="pm-check"><input type="checkbox" data-select="${i}">${esc((r.kind==='pm'?'PM':'ตรวจรับ')+' · '+s.equipment_type+' '+(s.no?'No.'+s.no:'S/N '+(s.serial_number||'—')))}</label></h3><p class="muted">${esc(r.report_date+' · '+p.operator+(p.operator_position?' · '+p.operator_position:'')+' · '+p.section)}<br>${esc(s.serial_number?'S/N '+s.serial_number:'')} · ${r.batch_id?'ชุดงาน '+esc(r.batch_id.slice(0,8)):'ประวัติเดิม'}</p><details><summary>ผลตรวจและหมายเหตุ</summary>${fields(r.kind).map(f=>'<div>'+esc(f)+' — '+esc(p.results?.[f]||'—')+'</div>').join('')}<p class="pm-note">หมายเหตุ: ${esc(p.note||'—')}</p></details><div class="history-actions"><button type="button" data-pdf="${i}">PDF / พิมพ์เครื่องนี้</button>${r.batch_id?'<button type="button" data-batch="'+esc(r.batch_id)+'">PDF / พิมพ์ทั้งชุด</button>':''}${r.slides_id?'<a target="_blank" rel="noopener" href="https://docs.google.com/presentation/d/'+encodeURIComponent(r.slides_id)+'/edit">Slides เดิม ↗</a>':''}${r.pdf_id?'<a target="_blank" rel="noopener" href="https://drive.google.com/file/d/'+encodeURIComponent(r.pdf_id)+'/view">PDF เดิม ↗</a>':''}</div></article>`;}).join('')||'<p class="empty">ไม่พบรายงานในช่วงที่เลือก</p>';
   }
   function tabs(isHistory){$('newPanel').hidden=isHistory;$('historyPanel').hidden=!isHistory;$('newTab').setAttribute('aria-pressed',String(!isHistory));$('historyTab').setAttribute('aria-pressed',String(isHistory));}
   window.addEventListener('DOMContentLoaded',guard(async()=>{
     profile=await memsGuard('pm_reports');if(!profile)return;
     $('reportDate').value=today();$('operator').value=profile.display_name||profile.username||'';
-    const enabled=await loadSettings();await loadAssets();startNew();if(enabled)notice('พร้อมใช้งาน · บันทึกชุดงานและสร้าง PDF ใน MEMs ได้ทันที');
+    const enabled=await loadSettings();await loadAssets();if(enabled)await loadOperators();startNew();if(enabled)notice('พร้อมใช้งาน · บันทึกชุดงานและสร้าง PDF ใน MEMs ได้ทันที');
     if(typeof WARDS!=='undefined')$('pmWards').innerHTML=WARDS.map(w=>'<option value="'+esc(w)+'"></option>').join('');
-    $('saveSettings').onclick=guard(async()=>{const {error}=await supabase.from('mems_report_settings').update({enabled:$('pmEnabled').checked,updated_by:profile.id,updated_at:new Date().toISOString()}).eq('id',true);if(error)throw error;await loadSettings();});
+    $('saveSettings').onclick=guard(async()=>{const {error}=await supabase.from('mems_report_settings').update({enabled:$('pmEnabled').checked,updated_by:profile.id,updated_at:new Date().toISOString()}).eq('id',true);if(error)throw error;if(await loadSettings())await loadOperators();});
+    $('savedOperator').onchange=()=>{const selected=operators.find(p=>p.id===$('savedOperator').value);if(selected){$('operator').value=selected.name;$('operatorPosition').value=selected.position;}else{$('operator').value='';$('operatorPosition').value='';}invalidate();};
+    $('saveOperator').onclick=guard(saveOperator);
+    $('operator').addEventListener('input',()=>{$('savedOperator').value='';});
+    $('operatorPosition').addEventListener('input',()=>{$('savedOperator').value='';});
     $('pmForm').addEventListener('submit',guard(review));
     $('pmForm').addEventListener('input',event=>{if(pending)return;invalidate();const target=event.target;if(target.dataset.row!==undefined){const i=Number(target.dataset.row);if(target.dataset.key)rows[i][target.dataset.key]=target.value;else if(target.dataset.check!==undefined)rows[i].results[fields($('reportKind').value)[Number(target.dataset.check)]]=target.value;updateMachine(i);summary();}});
     $('reportKind').addEventListener('change',()=>{rows.forEach(r=>{r.results={};});invalidate();renderMachines();});
