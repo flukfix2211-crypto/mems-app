@@ -1,0 +1,15 @@
+.unkeyed-dashboard { margin: 24px 0; padding: 22px; border: 1px solid #d6e4e8; border-radius: 18px; background: #fff; }
+.unkeyed-dashboard h2 { margin: 0 0 8px; font-size: 20px; color: #153c49; }
+.unkeyed-dashboard p { color: #526c79; font-size: 13px; line-height: 1.7; }
+.unkeyed-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 16px 0; }
+.unkeyed-controls input, .unkeyed-controls button { padding: 9px 12px; border: 1px solid #bcd5dc; border-radius: 8px; background: #fff; font: inherit; color: #164e5c; }
+.unkeyed-controls button { cursor: pointer; }
+.unkeyed-metrics { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin: 16px 0; }
+.unkeyed-metrics > div { padding: 16px; border-radius: 12px; background: #edf6f7; }
+.unkeyed-metrics strong { display: block; font-size: 28px; color: #0b666c; }
+.unkeyed-metrics span { font-size: 13px; }
+.unkeyed-scroll { overflow-x: auto; margin: 12px 0; }
+.unkeyed-dashboard th, .unkeyed-dashboard td { padding: 10px; text-align: left; border-bottom: 1px solid #e1ebee; font-size: 13px; }
+.unkeyed-dashboard th { background: #edf6f7; white-space: nowrap; }
+.unkeyed-dashboard summary { cursor: pointer; font-weight: 700; padding: 12px 0; }
+@media(max-width:600px) { .unkeyed-dashboard { padding: 14px; } .unkeyed-metrics { grid-template-columns: 1fr; gap: 8px; } }

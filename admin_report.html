@@ -195,6 +195,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   <link rel="stylesheet" href="site-footer.css?v=20261016-footer-1">
   <link rel="stylesheet" href="mems-auth-theme.css?v=20260923-app-2">
   <link rel="stylesheet" href="report-office.css?v=20260923-report-3">
+<link rel="stylesheet" href="unkeyed-statistics.css?v=20261104-1">
 </head>
 <body class="mems-report">
 
@@ -254,6 +255,27 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       <span class="report-meta-chip">ข้อมูลล่าสุดจากระบบ</span>
       <span class="report-meta-chip">รองรับไฟล์ PDF</span>
     </div>
+  </section>
+
+  <section class="unkeyed-dashboard" aria-labelledby="unkeyedTitle">
+    <h2 id="unkeyedTitle">สถิติหน่วยงานไม่คีย์ยืม–คืนเครื่อง</h2>
+    <p>ไม่คีย์ยืม: เจ้าหน้าที่ลบรายการเตรียมด้วยเหตุผล “หน่วยงานนำเครื่องไปไม่คีย์ยืมเครื่อง”<br>ไม่คีย์คืน: เจ้าหน้าที่ยืนยันคืนเครื่องที่ยังมีสถานะยืม ก่อนบันทึกเตรียมครั้งใหม่</p>
+    <div class="unkeyed-controls">
+      <label for="unkeyedMonth">เดือน</label><input type="month" id="unkeyedMonth" onchange="memsLoadUnkeyedStatistics()">
+      <button type="button" onclick="document.getElementById('unkeyedMonth').value='';memsLoadUnkeyedStatistics()">ทุกช่วงเวลา</button>
+      <button type="button" onclick="memsLoadUnkeyedStatistics()">รีเฟรช</button>
+    </div>
+    <p id="unkeyedStatus" role="status" aria-live="polite">กำลังโหลดสถิติ…</p>
+    <div id="unkeyedResults" hidden>
+      <div class="unkeyed-metrics">
+        <div><strong id="unkeyedBorrow">0</strong><span>เครื่องที่ไม่คีย์ยืม</span></div>
+        <div><strong id="unkeyedReturn">0</strong><span>เครื่องที่ไม่คีย์คืน</span></div>
+        <div><strong id="unkeyedWards">0</strong><span>หน่วยงานที่พบรายการ</span></div>
+      </div>
+      <div class="unkeyed-scroll"><table><caption>สรุปแยกตามหน่วยงาน</caption><thead><tr><th scope="col">หน่วยงาน</th><th scope="col">ไม่คีย์ยืม</th><th scope="col">ไม่คีย์คืน</th><th scope="col">รวม (เครื่อง)</th></tr></thead><tbody id="unkeyedWardRows"></tbody></table></div>
+      <details><summary>ดูรายละเอียดรายการและเหตุผล</summary><div class="unkeyed-scroll"><table><thead><tr><th scope="col">วันที่</th><th scope="col">ประเภท</th><th scope="col">หน่วยงาน</th><th scope="col">เครื่อง</th><th scope="col">เจ้าหน้าที่</th><th scope="col">เหตุผล</th></tr></thead><tbody id="unkeyedIncidentRows"></tbody></table></div></details>
+    </div>
+    <p>ไม่คีย์ยืมนับตามวันที่เตรียมเครื่อง (รวมเหตุผลเดิม “หน่วยงานไม่คีย์ยืมเครื่องมือ”) ส่วนไม่คีย์คืนนับตามวันที่ยืนยันคืนเครื่อง</p>
   </section>
 
   <!-- ── PRIMARY REPORTS ── -->
@@ -389,8 +411,13 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 <script src="supabase-client.js"></script>
 <script src="auth.js"></script>
 <script src="reports.js?v=20260923-pdf-c2-1"></script>
+<script src="unkeyed-statistics.js?v=20261104-1"></script>
 <script>
-  window.addEventListener('DOMContentLoaded', () => { memsGuard('dashboard'); });
+  window.addEventListener('DOMContentLoaded', async () => {
+    if (!await memsGuard('dashboard')) return;
+    document.getElementById('unkeyedMonth').value = bkkDateStr(new Date()).slice(0,7);
+    memsLoadUnkeyedStatistics();
+  });
 </script>
 <script>
   // ── ประวัติในหน่วยความจำ (เซสชัน) ────────────────────────
