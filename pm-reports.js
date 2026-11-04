@@ -3,7 +3,7 @@
   'use strict';
   const {fields,today,esc,requestId,resolveMachine,machineKey,validateInspection}=MemsPM;
   const $=id=>document.getElementById(id);
-  let wards=[],toolTypes=[],toolTypeTarget=null,operators=[],assets=[],profile,rows=[],page=0,historyRows=[],savedRows=[],reviewed=null,pending=null,busy=false;
+  let brandModels=[],brandModelTarget=null,wards=[],toolTypes=[],toolTypeTarget=null,operators=[],assets=[],profile,rows=[],page=0,historyRows=[],savedRows=[],reviewed=null,pending=null,busy=false;
   const notice=(text,error=false)=>{$('pmNotice').textContent=text;$('pmNotice').className='notice'+(error?' error':'');};
   const guard=fn=>async event=>{try{await fn(event);}catch(error){notice(error.message||String(error),true);}};
   function invalidate(){reviewed=null;$('reviewPanel').hidden=true;$('confirmed').checked=false;}
@@ -25,6 +25,16 @@
       await loadOperators(data.id);
       $('operatorStatus').textContent='บันทึก '+name+' · '+position+' แล้ว เลือกใช้ครั้งต่อไปได้';
     } finally { $('saveOperator').disabled=false; }
+  }
+  async function loadBrandModels(){
+    brandModels=await fetchAllPages(()=>supabase.from('mems_report_brand_models').select('id,brand,model').order('brand').order('model').order('id'));
+    $('pmSavedBrands').innerHTML=[...new Set(brandModels.map(item=>item.brand))].map(brand=>'<option value="'+esc(brand)+'"></option>').join('');
+  }
+  function brandModelFields(row,i){
+    const brands=[...new Set(brandModels.map(item=>item.brand))];if(row.brand&&!brands.includes(row.brand))brands.push(row.brand);
+    const models=[...new Set(brandModels.filter(item=>item.brand.toLowerCase()===row.brand.toLowerCase()).map(item=>item.model).filter(Boolean))];if(row.model&&!models.includes(row.model))models.push(row.model);
+    const options=(values,current)=>values.map(value=>`<option value="${esc(value)}" ${value===current?'selected':''}>${esc(value)}</option>`).join('');
+    return `<label>ยี่ห้อ<select data-row="${i}" data-key="brand"><option value="">— เลือกยี่ห้อ —</option>${options(brands,row.brand)}</select><button type="button" data-add-brand-model="${i}" data-catalog-mode="brand">＋ เพิ่มยี่ห้อไว้ใช้ครั้งต่อไป</button></label><label>รุ่น<select data-row="${i}" data-key="model"><option value="">${row.brand?'— เลือกรุ่น —':'— เลือกยี่ห้อก่อน —'}</option>${options(models,row.model)}</select><button type="button" data-add-brand-model="${i}" data-catalog-mode="model">＋ เพิ่มรุ่นของยี่ห้อนี้</button></label>`;
   }
   async function loadToolTypes(){
     toolTypes=await fetchAllPages(()=>supabase.from('mems_report_tool_types').select('id,name,source').order('name').order('id'));
@@ -75,7 +85,7 @@
     $('machineList').innerHTML=rows.map((row,i)=>`<details class="pm-machine" ${i===openIndex?'open':''}><summary id="machineTitle${i}"></summary><div class="pm-machine-content"><div class="form-grid">
       ${machineNameField(row,i)}
       <label>ระบุเครื่องด้วย<select data-row="${i}" data-key="identity_mode"><option value="no" ${row.identity_mode==='no'?'selected':''}>No. เครื่อง</option><option value="serial" ${row.identity_mode==='serial'?'selected':''}>S/N</option></select></label>
-      ${identityField(row,i)}${toolTypeField(row,i)}${input(row,i,'brand','ยี่ห้อ')}${input(row,i,'model','รุ่น')}${wardField(row,i)}
+      ${identityField(row,i)}${toolTypeField(row,i)}${brandModelFields(row,i)}${wardField(row,i)}
       </div><div class="pm-status" id="machineStatus${i}"></div><div class="result-grid">${fields($('reportKind').value).map((field,j)=>`<label class="result-row"><span>${esc(field)}</span><select data-row="${i}" data-check="${j}" aria-label="เครื่องที่ ${i+1} ${esc(field)}"><option value="">เลือกผล</option>${['ผ่าน','ไม่ผ่าน','N/A'].map(value=>`<option ${row.results[field]===value?'selected':''}>${value}</option>`).join('')}</select></label>`).join('')}</div>
       ${$('reportKind').value==='pm'?input(row,i,'replacement','เปลี่ยนวัสดุตามอายุงาน (ถ้ามี)'):''}
       <label>หมายเหตุเฉพาะเครื่องนี้<textarea data-row="${i}" data-key="note" rows="3" maxlength="2000" placeholder="ระบุรายละเอียดกรณีไม่ผ่านหรือ N/A และหมายเหตุของเครื่องนี้">${esc(row.note)}</textarea></label>
@@ -171,19 +181,22 @@
   window.addEventListener('DOMContentLoaded',guard(async()=>{
     profile=await memsGuard('pm_reports');if(!profile)return;
     $('reportDate').value=today();$('operator').value=profile.display_name||profile.username||'';
-    const enabled=await loadSettings();await loadAssets();if(enabled){await loadOperators();await loadToolTypes();}await loadWards();startNew();if(enabled)notice('พร้อมใช้งาน · บันทึกชุดงานและสร้าง PDF ใน MEMs ได้ทันที');
-    $('saveSettings').onclick=guard(async()=>{const {error}=await supabase.from('mems_report_settings').update({enabled:$('pmEnabled').checked,updated_by:profile.id,updated_at:new Date().toISOString()}).eq('id',true);if(error)throw error;if(await loadSettings()){await loadOperators();await loadToolTypes();renderMachines();}});
+    const enabled=await loadSettings();await loadAssets();if(enabled){await loadOperators();await loadToolTypes();await loadBrandModels();}await loadWards();startNew();if(enabled)notice('พร้อมใช้งาน · บันทึกชุดงานและสร้าง PDF ใน MEMs ได้ทันที');
+    $('saveSettings').onclick=guard(async()=>{const {error}=await supabase.from('mems_report_settings').update({enabled:$('pmEnabled').checked,updated_by:profile.id,updated_at:new Date().toISOString()}).eq('id',true);if(error)throw error;if(await loadSettings()){await loadOperators();await loadToolTypes();await loadBrandModels();renderMachines();}});
     $('savedOperator').onchange=()=>{const selected=operators.find(p=>p.id===$('savedOperator').value);if(selected){$('operator').value=selected.name;$('operatorPosition').value=selected.position;}else{$('operator').value='';$('operatorPosition').value='';}invalidate();};
     $('saveOperator').onclick=guard(saveOperator);
     $('operator').addEventListener('input',()=>{$('savedOperator').value='';});
     $('operatorPosition').addEventListener('input',()=>{$('savedOperator').value='';});
     $('pmForm').addEventListener('submit',guard(review));
     $('pmForm').addEventListener('input',event=>{if(pending)return;invalidate();const target=event.target;if(target.dataset.row!==undefined){const i=Number(target.dataset.row);if(target.dataset.registry){rows[i].registry_manual=target.value==='__manual__';rows[i].equipment_type=rows[i].registry_manual?'':target.value;rows[i].identifier='';rows[i].manual_identifier=false;renderMachines(i);return;}
+      if(target.dataset.key==='brand'){rows[i].brand=target.value;rows[i].model='';renderMachines(i);return;}
       if(target.dataset.key==='identity_mode'){rows[i].identity_mode=target.value;rows[i].identifier='';rows[i].manual_identifier=false;renderMachines(i);return;}
       if(target.dataset.key==='identifier'&&target.tagName==='SELECT'&&target.value==='__manual__'){rows[i].identifier='';rows[i].manual_identifier=true;renderMachines(i);return;}
       if(target.dataset.key)rows[i][target.dataset.key]=target.value;else if(target.dataset.check!==undefined)rows[i].results[fields($('reportKind').value)[Number(target.dataset.check)]]=target.value;updateMachine(i);summary();}});
     $('reportKind').addEventListener('change',()=>{rows.forEach(r=>{r.results={};});invalidate();renderMachines();});
     $('machineList').addEventListener('click',event=>{
+      const addBrand=event.target.closest('[data-add-brand-model]');
+      if(addBrand&&!pending&&!busy){const index=Number(addBrand.dataset.addBrandModel);brandModelTarget=index;$('brandModelBrand').value=addBrand.dataset.catalogMode==='model'?rows[index].brand:'';$('brandModelModel').value='';$('brandModelModel').required=addBrand.dataset.catalogMode==='model';$('brandModelModal').showModal();return;}
       const addType=event.target.closest('[data-add-tool-type]');
       if(addType&&!pending&&!busy){toolTypeTarget=Number(addType.dataset.addToolType);$('toolTypeName').value='';$('toolTypeModal').showModal();return;}
       const copy=event.target.closest('[data-copy-details]');
@@ -196,6 +209,8 @@
     $('bulkType').onchange=()=>{$('bulkNewTypeLabel').hidden=$('bulkType').value!=='__manual__';};
     $('bulkAdd').onclick=()=>$('bulkModal').showModal();$('closeBulk').onclick=()=>$('bulkModal').close();
     $('bulkForm').onsubmit=guard(event=>{event.preventDefault();const mode=$('bulkMode').value,type=($('bulkType').value==='__manual__'?$('bulkNewType').value:$('bulkType').value).trim();const ids=mode==='no'?MemsPM.parseNumbers($('bulkValues').value).map(String):$('bulkValues').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);if(!type||!ids.length)throw new Error('กรอกประเภทและหมายเลขเครื่อง');if(rows.length===1&&!rows[0].equipment_type&&!rows[0].identifier&&!rows[0].note&&!rows[0].brand&&!Object.keys(rows[0].results).length)rows=[];if(rows.length+ids.length>50)throw new Error('รวมทั้งชุดได้ไม่เกิน 50 เครื่อง');rows.push(...ids.map(id=>newMachine(type,mode,id)));invalidate();renderMachines();$('bulkModal').close();$('bulkValues').value='';});
+    $('closeBrandModel').onclick=()=>$('brandModelModal').close();
+    $('brandModelForm').onsubmit=guard(async event=>{event.preventDefault();const brand=$('brandModelBrand').value.trim(),model=$('brandModelModel').value.trim();if(!brand)throw new Error('กรอกยี่ห้อก่อนบันทึก');$('saveBrandModel').disabled=true;try{const {data,error}=await supabase.rpc('save_mems_report_brand_model',{brand_name:brand,model_name:model});if(error)throw error;await loadBrandModels();if(rows[brandModelTarget]){const row=rows[brandModelTarget];if(row.brand!==data.brand)row.model='';row.brand=data.brand;if(data.model)row.model=data.model;}invalidate();renderMachines(brandModelTarget);$('brandModelModal').close();notice('บันทึก '+data.brand+(data.model?' · '+data.model:'')+' ไว้เลือกใช้ครั้งต่อไปแล้ว');}finally{$('saveBrandModel').disabled=false;}});
     $('closeToolType').onclick=()=>$('toolTypeModal').close();
     $('toolTypeForm').onsubmit=guard(async event=>{event.preventDefault();const name=$('toolTypeName').value.trim();if(!name)throw new Error('กรอกชื่อประเภทเครื่อง');$('saveToolType').disabled=true;try{const {data,error}=await supabase.rpc('save_mems_report_tool_type',{type_name:name});if(error)throw error;await loadToolTypes();if(rows[toolTypeTarget])rows[toolTypeTarget].tool_type=data.name;invalidate();renderMachines(toolTypeTarget);$('toolTypeModal').close();notice('บันทึกประเภท '+data.name+' แล้ว เลือกใช้ได้ในชุดงานครั้งต่อไป');}finally{$('saveToolType').disabled=false;}});
     $('saveReports').onclick=guard(save);$('startNew').onclick=startNew;$('savedPdf').onclick=guard(()=>pdf(savedRows,$('savedPdf')));

@@ -12,7 +12,7 @@ async function setup(){
  insert into assets values(1,41,'C2','real-code','real-id','SN41'),(2,41,'Pump','pump-code','pump-id','P41');
  alter table user_profiles enable row level security;create policy own on user_profiles for select to authenticated using(id=auth.uid());
  grant usage on schema public,auth,private to authenticated;grant select on user_profiles,assets to authenticated;set request.jwt.claim.sub='${actor}';`);
- for(const file of ['20261028081412_pm_acceptance_reports.sql','20261028083412_pm_report_explicit_grants.sql','20261104040109_pm_native_batch_reports.sql','20261104042536_pm_saved_operators.sql','20261104043729_pm_tool_type_catalog.sql','20261104044405_pm_confirmed_form_types.sql'])await db.exec(fs.readFileSync(path.join(root,'supabase/migrations',file),'utf8'));
+ for(const file of ['20261028081412_pm_acceptance_reports.sql','20261028083412_pm_report_explicit_grants.sql','20261104040109_pm_native_batch_reports.sql','20261104042536_pm_saved_operators.sql','20261104043729_pm_tool_type_catalog.sql','20261104044405_pm_confirmed_form_types.sql','20261104063433_pm_saved_brands_models.sql'])await db.exec(fs.readFileSync(path.join(root,'supabase/migrations',file),'utf8'));
  await db.exec('update mems_report_settings set enabled=true;set role authenticated');return db;
 }
 module.exports={setup,actor,other};

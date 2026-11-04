@@ -80,7 +80,7 @@ textarea { resize: vertical; }
 .pm-machine-content { padding: 18px; }
 .pm-machine .form-grid { grid-template-columns: repeat(3, minmax(0,1fr)); }
 .pm-machine textarea { min-height: 84px; }
-.pm-machine [data-add-tool-type] { min-height: 34px; padding: 6px 8px; margin-top: 6px; font-size: 11px; background: #f2f8fa; }
+.pm-machine :is([data-add-tool-type], [data-add-brand-model]) { min-height: 34px; padding: 6px 8px; margin-top: 6px; font-size: 11px; background: #f2f8fa; }
 .pm-machine [data-copy-details] { margin-top: 14px; }
 .pm-status { padding: 10px 12px; margin: 14px 0; border: 1px solid #dce9ed; border-radius: 9px; background: #f5f9fa; color: #4c6977; font-size: 12px; overflow-wrap: anywhere; }
 .pm-remove { margin-top: 12px; border-color: #efc7cd; color: #ad3443; }
@@ -104,10 +104,10 @@ textarea { resize: vertical; }
 #pmAdmin > details > summary { cursor: pointer; font-size: 14px; font-weight: 700; color: #355b6b; }
 #pmAdmin .check-label { margin: 18px 0; }
 summary small { color: var(--pm-muted); font-size: 12px; font-weight: 400; }
-#bulkModal, #toolTypeModal { width: min(500px,calc(100% - 32px)); border: 1px solid var(--pm-line); border-radius: 16px; padding: 24px; font: inherit; color: var(--pm-ink); box-shadow: 0 24px 65px #142b4033; }
-#bulkModal::backdrop, #toolTypeModal::backdrop { background: #142b4099; }
-#bulkModal h2, #toolTypeModal h2 { color: var(--pm-brand); }
-#bulkModal label, #toolTypeModal label { display: block; margin-top: 16px; font-size: 13px; font-weight: 700; }
+#bulkModal, #toolTypeModal, #brandModelModal { width: min(500px,calc(100% - 32px)); border: 1px solid var(--pm-line); border-radius: 16px; padding: 24px; font: inherit; color: var(--pm-ink); box-shadow: 0 24px 65px #142b4033; }
+#bulkModal::backdrop, #toolTypeModal::backdrop, #brandModelModal::backdrop { background: #142b4099; }
+#bulkModal h2, #toolTypeModal h2, #brandModelModal h2 { color: var(--pm-brand); }
+#bulkModal label, #toolTypeModal label, #brandModelModal label { display: block; margin-top: 16px; font-size: 13px; font-weight: 700; }
 #bulkModal textarea { min-height: 130px; }
 #savedPanel { border-top: 3px solid var(--pm-brand); }
 #savedPanel h2 { color: var(--pm-brand); }

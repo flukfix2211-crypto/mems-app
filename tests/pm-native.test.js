@@ -109,3 +109,20 @@ test('confirmed seven Form types hide historical guesses, preserve custom names 
  await db.exec('set role authenticated');assert.equal((await db.query("select count(*)::int n from mems_report_tool_types where name='Monitor'")).rows[0].n,1);
  }finally{await db.close();}
 });
+
+test('saved brands and models support brand-only entries, canonical casing, model pairs and permissions',async()=>{
+ const db=await setup();try{
+ const add=(b,m='')=>db.query('select save_mems_report_brand_model($1,$2) item',[b,m]);
+ const brand=(await add(' Hamilton ')).rows[0].item;assert.equal(brand.brand,'Hamilton');assert.equal(brand.model,'');
+ const model=(await add('hamilton',' C2 ')).rows[0].item;assert.equal(model.brand,'Hamilton');assert.equal(model.model,'C2');
+ assert.equal((await add('HAMILTON','c2')).rows[0].item.id,model.id);
+ const otherBrand=(await add('Other','C2')).rows[0].item;assert.notEqual(otherBrand.id,model.id);
+ await assert.rejects(add(''),/กรอกยี่ห้อ/);await assert.rejects(add('x'.repeat(201),'model'),/200/);await assert.rejects(add('Brand','x'.repeat(201)),/200/);
+ await assert.rejects(db.exec("update mems_report_brand_models set model='changed'"),/permission denied/);
+ const report=(await save(db,100,[item(1,{brand:'Hamilton',model:'C2'})])).rows[0].reports[0];assert.equal(report.snapshot.brand,'Hamilton');assert.equal(report.snapshot.model,'C2');
+ await add('Hamilton','New Model');assert.equal((await db.query('select snapshot from mems_reports')).rows[0].snapshot.model,'C2');
+ await db.exec(`set request.jwt.claim.sub='${other}'`);assert.ok((await db.query('select * from mems_report_brand_models')).rows.length>=3);
+ await db.exec('reset role;update mems_report_settings set enabled=false;set role authenticated');await assert.rejects(add('Next'),/ไม่มีสิทธิ์/);
+ assert.equal((await db.query("select has_table_privilege('anon','mems_report_brand_models','SELECT') allowed")).rows[0].allowed,false);
+ }finally{await db.close();}
+});

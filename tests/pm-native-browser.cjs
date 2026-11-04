@@ -22,8 +22,11 @@ const root=path.join(__dirname,'..');
     const body=req.postDataJSON();const data=(await db.query('select save_mems_report_tool_type($1) r',[body.type_name])).rows[0].r;return route.fulfill({json:data});
    }
    if(url.pathname.endsWith('/rest/v1/prepare_records'))return route.fulfill({json:[{ward:'หน่วยงานทดสอบ'}]});
+   if(url.pathname.includes('/rest/v1/rpc/save_mems_report_brand_model')){
+    const body=req.postDataJSON();const data=(await db.query('select save_mems_report_brand_model($1,$2) r',[body.brand_name,body.model_name])).rows[0].r;return route.fulfill({json:data});
+   }
    if(url.pathname.includes('/rest/v1/')){
-    const table=url.pathname.split('/').at(-1);assert.ok(['assets','mems_reports','mems_report_settings','mems_report_operators','mems_report_tool_types'].includes(table));
+    const table=url.pathname.split('/').at(-1);assert.ok(['assets','mems_reports','mems_report_settings','mems_report_operators','mems_report_tool_types','mems_report_brand_models'].includes(table));
     const params=[],filters=[];
     for(const [key,val] of url.searchParams){
       if(['select','order','offset','limit'].includes(key))continue;
@@ -65,10 +68,17 @@ const root=path.join(__dirname,'..');
    await row(n).locator('[data-key="identity_mode"]').selectOption(mode);
    const identity=row(n).locator('[data-key="identifier"]');
    if(await identity.evaluate(el=>el.tagName)==='SELECT')await identity.selectOption(identifier);else await identity.fill(identifier);
-   for(const [key,value] of [['brand','Hamilton'],['model','C2']])await row(n).locator('[data-key="'+key+'"]').fill(value);
+   for(const [key,value] of [['brand','Hamilton'],['model','C2']])await row(n).locator('[data-key="'+key+'"]').selectOption(value);
    await row(n).locator('[data-key="tool_type"]').selectOption('Ventilator');
    const choices=row(n).locator('[data-check]');for(let i=0;i<await choices.count();i++)await choices.nth(i).selectOption('ผ่าน');
   }
+  await row(0).locator('[data-add-brand-model][data-catalog-mode="brand"]').click();await page.locator('#brandModelBrand').fill('Hamilton');await page.locator('#saveBrandModel').click();await page.locator('#brandModelModal').waitFor({state:'hidden'});
+  assert.equal(await row(0).locator('[data-key="brand"]').inputValue(),'Hamilton');
+  await row(0).locator('[data-add-brand-model][data-catalog-mode="model"]').click();assert.equal(await page.locator('#brandModelBrand').inputValue(),'Hamilton');await page.locator('#brandModelModel').fill('C2');await page.locator('#saveBrandModel').click();await page.locator('#brandModelModal').waitFor({state:'hidden'});
+  await row(0).locator('[data-add-brand-model][data-catalog-mode="brand"]').click();await page.locator('#brandModelBrand').fill('Other');await page.locator('#brandModelModel').fill('Model B');await page.locator('#saveBrandModel').click();await page.locator('#brandModelModal').waitFor({state:'hidden'});
+  await page.reload();await page.waitForFunction(()=>document.querySelectorAll('.pm-machine').length===1);await page.locator('#savedOperator').selectOption(operatorId);
+  await row(0).locator('[data-key="brand"]').selectOption('Hamilton');assert.deepEqual(await row(0).locator('[data-key="model"] option').evaluateAll(els=>els.map(e=>e.value)),['','C2']);
+  await row(0).locator('[data-key="brand"]').selectOption('Other');assert.deepEqual(await row(0).locator('[data-key="model"] option').evaluateAll(els=>els.map(e=>e.value)),['','Model B']);
   assert.deepEqual(await row(0).locator('[data-registry] option').evaluateAll(els=>els.map(e=>e.value)),['','C2','Pump','__manual__']);
   await row(0).locator('[data-registry]').selectOption('C2');assert.deepEqual(await row(0).locator('select[data-key="identifier"] option').evaluateAll(els=>els.map(e=>e.value)),['','41','__manual__']);
   await row(0).locator('[data-add-tool-type]').click();const popup=await page.locator('#toolTypeModal').boundingBox();assert.ok(Math.abs(popup.x+popup.width/2-720)<3&&Math.abs(popup.y+popup.height/2-500)<3);await page.locator('#toolTypeName').fill('เครื่องทดสอบใหม่');await page.locator('#saveToolType').click();await page.locator('#toolTypeModal').waitFor({state:'hidden'});
@@ -79,8 +89,8 @@ const root=path.join(__dirname,'..');
   await fill(0,'C2','no','41');await row(0).locator('[data-key="note"]').fill('หมายเหตุเครื่องแรก');
   await page.locator('#addMachine').click();await fill(1,'C2','serial','SN41');await row(1).locator('[data-key="note"]').fill('หมายเหตุเครื่องสอง');
   await page.locator('#reviewBtn').click();await page.waitForFunction(()=>document.getElementById('pmNotice').textContent.includes('ซ้ำ'));assert.equal(calls,0);
-  await row(0).locator('summary').click();await row(0).locator('[data-key="brand"]').fill('Copied Brand');await row(0).locator('[data-copy-details]').click();
-  await row(1).locator('summary').click();assert.equal(await row(1).locator('[data-key="brand"]').inputValue(),'Copied Brand');assert.equal(await row(1).locator('[data-key="identifier"]').inputValue(),'SN41');assert.equal(await row(1).locator('[data-key="note"]').inputValue(),'หมายเหตุเครื่องสอง');
+  await row(0).locator('summary').click();await row(0).locator('[data-key="brand"]').selectOption('Other');await row(0).locator('[data-key="model"]').selectOption('Model B');await row(0).locator('[data-copy-details]').click();
+  await row(1).locator('summary').click();assert.equal(await row(1).locator('[data-key="brand"]').inputValue(),'Other');assert.equal(await row(1).locator('[data-key="identifier"]').inputValue(),'SN41');assert.equal(await row(1).locator('[data-key="note"]').inputValue(),'หมายเหตุเครื่องสอง');
   await fill(1,'Pump','serial','P41');await row(1).locator('[data-key="section"]').selectOption('PICU');
   await page.locator('#reviewBtn').click();await page.locator('#confirmed').check();loseReply=true;await page.locator('#saveReports').click();
   await page.waitForFunction(()=>document.getElementById('pmNotice').textContent.includes('ข้อมูลถูกล็อก'));
