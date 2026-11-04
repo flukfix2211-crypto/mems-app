@@ -55,6 +55,7 @@ const root=path.join(__dirname,'..');
   await page.reload();await page.waitForFunction(()=>document.querySelectorAll('.pm-machine').length===1);
   const operatorId=(await db.query('select id from mems_report_operators')).rows[0].id;
   await page.locator('#savedOperator').selectOption(operatorId);assert.equal(await page.locator('#operator').inputValue(),'ผู้ตรวจทดสอบ');assert.equal(await page.locator('#operatorPosition').inputValue(),'นายช่างเทคนิค');
+  await page.screenshot({path:'/tmp/mems-pm-themed-desktop.png',fullPage:true});
   const row=n=>page.locator('.pm-machine').nth(n);
   async function fill(n,type,mode,identifier){
    const typeSelect=row(n).locator('[data-registry]');
@@ -69,7 +70,7 @@ const root=path.join(__dirname,'..');
   }
   assert.deepEqual(await row(0).locator('[data-registry] option').evaluateAll(els=>els.map(e=>e.value)),['','C2','Pump','__manual__']);
   await row(0).locator('[data-registry]').selectOption('C2');assert.deepEqual(await row(0).locator('select[data-key="identifier"] option').evaluateAll(els=>els.map(e=>e.value)),['','41','__manual__']);
-  await row(0).locator('[data-add-tool-type]').click();await page.locator('#toolTypeName').fill('เครื่องทดสอบใหม่');await page.locator('#saveToolType').click();await page.locator('#toolTypeModal').waitFor({state:'hidden'});
+  await row(0).locator('[data-add-tool-type]').click();const popup=await page.locator('#toolTypeModal').boundingBox();assert.ok(Math.abs(popup.x+popup.width/2-720)<3&&Math.abs(popup.y+popup.height/2-500)<3);await page.locator('#toolTypeName').fill('เครื่องทดสอบใหม่');await page.locator('#saveToolType').click();await page.locator('#toolTypeModal').waitFor({state:'hidden'});
   assert.equal(await row(0).locator('[data-key="tool_type"]').inputValue(),'เครื่องทดสอบใหม่');
   await page.reload();await page.waitForFunction(()=>document.querySelectorAll('.pm-machine').length===1);assert.equal(await row(0).locator('[data-key="tool_type"] option').filter({hasText:'เครื่องทดสอบใหม่'}).count(),1);
   await page.locator('#savedOperator').selectOption(operatorId);
@@ -106,6 +107,8 @@ const root=path.join(__dirname,'..');
   await page.locator('#bulkAdd').click();await page.locator('#bulkType').selectOption('C2');await page.locator('#bulkValues').fill('41');await page.locator('#bulkForm button[type=submit]').click();assert.equal(await page.locator('.pm-machine').count(),1);assert.equal(await row(0).locator('[data-key="identifier"]').inputValue(),'41');
   await page.setViewportSize({width:390,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),true);
   await page.screenshot({path:'/tmp/mems-native-mobile.png',fullPage:true});
+  for(const width of [320,768,1440]){await page.setViewportSize({width,height:900});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,'no horizontal overflow at '+width);}
+  await page.setViewportSize({width:390,height:844});
   // Long notes must flow across pages rather than truncate; use stored snapshot shapes.
   await page.evaluate(async saved=>{saved[0].payload.note=('หมายเหตุทดสอบข้อความยาว '.repeat(80))+' จบหมายเหตุ ENDNOTE';await memsExportInspectionPdf([saved[0]]);},saved);
   const longUrl=await page.locator('#memsPrintablePdf a[download]').getAttribute('href');const long=await page.evaluate(async u=>Array.from(new Uint8Array(await (await fetch(u)).arrayBuffer())),longUrl);fs.writeFileSync('/tmp/mems-native-long.pdf',Buffer.from(long));
