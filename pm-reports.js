@@ -3,7 +3,7 @@
   'use strict';
   const {fields,today,esc,requestId,resolveMachine,machineKey,validateInspection}=MemsPM;
   const $=id=>document.getElementById(id);
-  let brandModels=[],brandModelTarget=null,wards=[],toolTypes=[],toolTypeTarget=null,operators=[],assets=[],profile,rows=[],page=0,historyRows=[],savedRows=[],reviewed=null,pending=null,busy=false;
+  let copyResultsSource=null,brandModels=[],brandModelTarget=null,wards=[],toolTypes=[],toolTypeTarget=null,operators=[],assets=[],profile,rows=[],page=0,historyRows=[],savedRows=[],reviewed=null,pending=null,busy=false;
   const notice=(text,error=false)=>{$('pmNotice').textContent=text;$('pmNotice').className='notice'+(error?' error':'');};
   const guard=fn=>async event=>{try{await fn(event);}catch(error){notice(error.message||String(error),true);}};
   function invalidate(){reviewed=null;$('reviewPanel').hidden=true;$('confirmed').checked=false;}
@@ -87,6 +87,7 @@
       <label>ระบุเครื่องด้วย<select data-row="${i}" data-key="identity_mode"><option value="no" ${row.identity_mode==='no'?'selected':''}>No. เครื่อง</option><option value="serial" ${row.identity_mode==='serial'?'selected':''}>S/N</option></select></label>
       ${identityField(row,i)}${toolTypeField(row,i)}${brandModelFields(row,i)}${wardField(row,i)}
       </div><div class="pm-status" id="machineStatus${i}"></div><div class="result-grid">${fields($('reportKind').value).map((field,j)=>`<label class="result-row"><span>${esc(field)}</span><select data-row="${i}" data-check="${j}" aria-label="เครื่องที่ ${i+1} ${esc(field)}"><option value="">เลือกผล</option>${['ผ่าน','ไม่ผ่าน','N/A'].map(value=>`<option ${row.results[field]===value?'selected':''}>${value}</option>`).join('')}</select></label>`).join('')}</div>
+      <button type="button" class="pm-copy-results" data-copy-results="${i}" ${rows.length<2?'disabled':''}>คัดลอกผลตรวจเครื่องนี้ไปทุกเครื่อง</button>
       ${$('reportKind').value==='pm'?input(row,i,'replacement','เปลี่ยนวัสดุตามอายุงาน (ถ้ามี)'):''}
       <label>หมายเหตุเฉพาะเครื่องนี้<textarea data-row="${i}" data-key="note" rows="3" maxlength="2000" placeholder="ระบุรายละเอียดกรณีไม่ผ่านหรือ N/A และหมายเหตุของเครื่องนี้">${esc(row.note)}</textarea></label>
       <button type="button" data-copy-details="${i}">ใช้รายละเอียดนี้กับเครื่องประเภทเดียวกัน</button>
@@ -195,6 +196,15 @@
       if(target.dataset.key)rows[i][target.dataset.key]=target.value;else if(target.dataset.check!==undefined)rows[i].results[fields($('reportKind').value)[Number(target.dataset.check)]]=target.value;updateMachine(i);summary();}});
     $('reportKind').addEventListener('change',()=>{rows.forEach(r=>{r.results={};});invalidate();renderMachines();});
     $('machineList').addEventListener('click',event=>{
+      const copyResults=event.target.closest('[data-copy-results]');
+      if(copyResults&&!pending&&!busy){
+        const index=Number(copyResults.dataset.copyResults),source=rows[index];
+        if(rows.length<2)return;
+        try{MemsPM.inspectionResults(source.results,$('reportKind').value);}catch(error){notice(error.message,true);return;}
+        copyResultsSource=index;
+        $('copyResultsMessage').textContent='คัดลอกผลตรวจ '+fields($('reportKind').value).length+' ข้อจาก '+source.equipment_type+' '+(source.identity_mode==='no'?'No.':'S/N ')+source.identifier+' ไปยังอีก '+(rows.length-1)+' เครื่องที่เพิ่มไว้ตอนนี้ โดยแทนที่ผลตรวจเดิมของเครื่องเหล่านั้น';
+        $('copyResultsModal').showModal();return;
+      }
       const addBrand=event.target.closest('[data-add-brand-model]');
       if(addBrand&&!pending&&!busy){const index=Number(addBrand.dataset.addBrandModel);brandModelTarget=index;$('brandModelBrand').value=addBrand.dataset.catalogMode==='model'?rows[index].brand:'';$('brandModelModel').value='';$('brandModelModel').required=addBrand.dataset.catalogMode==='model';$('brandModelModal').showModal();return;}
       const addType=event.target.closest('[data-add-tool-type]');
@@ -209,6 +219,16 @@
     $('bulkType').onchange=()=>{$('bulkNewTypeLabel').hidden=$('bulkType').value!=='__manual__';};
     $('bulkAdd').onclick=()=>$('bulkModal').showModal();$('closeBulk').onclick=()=>$('bulkModal').close();
     $('bulkForm').onsubmit=guard(event=>{event.preventDefault();const mode=$('bulkMode').value,type=($('bulkType').value==='__manual__'?$('bulkNewType').value:$('bulkType').value).trim();const ids=mode==='no'?MemsPM.parseNumbers($('bulkValues').value).map(String):$('bulkValues').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);if(!type||!ids.length)throw new Error('กรอกประเภทและหมายเลขเครื่อง');if(rows.length===1&&!rows[0].equipment_type&&!rows[0].identifier&&!rows[0].note&&!rows[0].brand&&!Object.keys(rows[0].results).length)rows=[];if(rows.length+ids.length>50)throw new Error('รวมทั้งชุดได้ไม่เกิน 50 เครื่อง');rows.push(...ids.map(id=>newMachine(type,mode,id)));invalidate();renderMachines();$('bulkModal').close();$('bulkValues').value='';});
+    $('cancelCopyResults').onclick=()=>$('copyResultsModal').close();
+    $('applyCopyResults').onclick=guard(()=>{
+      if(pending||busy||copyResultsSource===null)return;
+      const index=copyResultsSource,source=rows[index];
+      const results=MemsPM.inspectionResults(source.results,$('reportKind').value);
+      for(const target of rows)if(target!==source)target.results={...results};
+      $('copyResultsModal').close();copyResultsSource=null;invalidate();renderMachines(index);
+      $('machineList').querySelector('[data-copy-results="'+index+'"]').focus();
+      notice('คัดลอกผลตรวจไปอีก '+(rows.length-1)+' เครื่องแล้ว · ตรวจผลจริงของทุกเครื่องก่อนยืนยันบันทึก · หมายเหตุและวัสดุที่เปลี่ยนยังแยกรายเครื่อง');
+    });
     $('closeBrandModel').onclick=()=>$('brandModelModal').close();
     $('brandModelForm').onsubmit=guard(async event=>{event.preventDefault();const brand=$('brandModelBrand').value.trim(),model=$('brandModelModel').value.trim();if(!brand)throw new Error('กรอกยี่ห้อก่อนบันทึก');$('saveBrandModel').disabled=true;try{const {data,error}=await supabase.rpc('save_mems_report_brand_model',{brand_name:brand,model_name:model});if(error)throw error;await loadBrandModels();if(rows[brandModelTarget]){const row=rows[brandModelTarget];if(row.brand!==data.brand)row.model='';row.brand=data.brand;if(data.model)row.model=data.model;}invalidate();renderMachines(brandModelTarget);$('brandModelModal').close();notice('บันทึก '+data.brand+(data.model?' · '+data.model:'')+' ไว้เลือกใช้ครั้งต่อไปแล้ว');}finally{$('saveBrandModel').disabled=false;}});
     $('closeToolType').onclick=()=>$('toolTypeModal').close();

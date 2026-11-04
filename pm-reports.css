@@ -155,3 +155,10 @@ summary small { color: var(--pm-muted); font-size: 12px; font-weight: 400; }
   .pm-machine [data-copy-details], .pm-remove { width: 100%; font-size: 12px; }
   #saveOperator { width: 100%; font-size: 12px; }
 }
+
+.pm-copy-results { margin: 0 0 18px; background: var(--pm-soft); border-color: #99c6cf; color: var(--pm-brand); }
+#copyResultsModal { width: min(520px,calc(100% - 32px)); border: 1px solid var(--pm-line); border-radius: 16px; padding: 24px; font: inherit; color: var(--pm-ink); box-shadow: 0 24px 65px #142b4033; }
+#copyResultsModal::backdrop { background: #142b4099; }
+#copyResultsModal h2 { color: var(--pm-brand); }
+#copyResultsMessage { line-height: 1.8; overflow-wrap: anywhere; }
+@media(max-width:650px){.pm-copy-results{width:100%;font-size:12px}}

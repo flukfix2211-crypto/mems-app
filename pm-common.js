@@ -48,7 +48,16 @@
     if(fields(payload.kind).some(f=>!['ผ่าน','ไม่ผ่าน','N/A'].includes(payload.results[f])))throw new Error('เลือกผลตรวจให้ครบทุกข้อ');
     if(Object.values(payload.results).some(v=>v==='ไม่ผ่าน'||v==='N/A')&&!String(payload.note||'').trim())throw new Error('กรอกหมายเหตุรายเครื่องสำหรับผลไม่ผ่านหรือ N/A');
   }
-  const api={fields,parseNumbers,matchAssets,today,esc,requestId,typeKey,resolveMachine,machineKey,validateInspection};
+  function inspectionResults(source,kind) {
+    const result={};
+    for(const field of fields(kind)) {
+      const value=source?.[field];
+      if(!['ผ่าน','ไม่ผ่าน','N/A'].includes(value))throw new Error('เลือกผลตรวจของเครื่องต้นทางให้ครบทุกข้อก่อนคัดลอก');
+      result[field]=value;
+    }
+    return result;
+  }
+  const api={inspectionResults,fields,parseNumbers,matchAssets,today,esc,requestId,typeKey,resolveMachine,machineKey,validateInspection};
   if(typeof module!=='undefined') module.exports=api;
   else root.MemsPM=api;
 })(typeof window!=='undefined'?window:this);

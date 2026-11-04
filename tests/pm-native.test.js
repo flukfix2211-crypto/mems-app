@@ -126,3 +126,12 @@ test('saved brands and models support brand-only entries, canonical casing, mode
  assert.equal((await db.query("select has_table_privilege('anon','mems_report_brand_models','SELECT') allowed")).rows[0].allowed,false);
  }finally{await db.close();}
 });
+
+test('copy inspection results supports PM and acceptance, mixed outcomes and independent copies',()=>{
+ for(const kind of ['pm','acceptance']) {
+  const names=pm.fields(kind),source=Object.fromEntries(names.map((f,i)=>[f,['ผ่าน','ไม่ผ่าน','N/A'][i%3]]));
+  const result=pm.inspectionResults(source,kind);assert.deepEqual(result,source);
+  result[names[0]]='ไม่ผ่าน';assert.equal(source[names[0]],'ผ่าน');
+  delete source[names[1]];assert.throws(()=>pm.inspectionResults(source,kind),/ครบทุกข้อ/);
+ }
+});
