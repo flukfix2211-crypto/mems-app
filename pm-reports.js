@@ -89,7 +89,7 @@
       </div><div class="pm-status" id="machineStatus${i}"></div><div class="result-grid">${fields($('reportKind').value).map((field,j)=>`<label class="result-row"><span>${esc(field)}</span><select data-row="${i}" data-check="${j}" aria-label="เครื่องที่ ${i+1} ${esc(field)}"><option value="">เลือกผล</option>${['ผ่าน','ไม่ผ่าน','N/A'].map(value=>`<option ${row.results[field]===value?'selected':''}>${value}</option>`).join('')}</select></label>`).join('')}</div>
       <button type="button" class="pm-copy-results" data-copy-results="${i}" ${rows.length<2?'disabled':''}>คัดลอกผลตรวจเครื่องนี้ไปทุกเครื่อง</button>
       ${$('reportKind').value==='pm'?input(row,i,'replacement','เปลี่ยนวัสดุตามอายุงาน (ถ้ามี)'):''}
-      <label>หมายเหตุเฉพาะเครื่องนี้<textarea data-row="${i}" data-key="note" rows="3" maxlength="2000" placeholder="ระบุรายละเอียดกรณีไม่ผ่านหรือ N/A และหมายเหตุของเครื่องนี้">${esc(row.note)}</textarea></label>
+      <label>หมายเหตุเฉพาะเครื่องนี้<textarea data-row="${i}" data-key="note" rows="3" maxlength="2000" placeholder="ระบุรายละเอียดกรณีไม่ผ่าน หรือหมายเหตุเพิ่มเติม (N/A ไม่ต้องใส่เหตุผล)">${esc(row.note)}</textarea></label>
       <button type="button" data-copy-details="${i}">ใช้รายละเอียดนี้กับเครื่องประเภทเดียวกัน</button>
       <button type="button" class="pm-remove" data-remove="${i}">ลบเครื่องนี้จากชุดงาน</button></div></details>`).join('');
     rows.forEach((_,i)=>updateMachine(i));summary();

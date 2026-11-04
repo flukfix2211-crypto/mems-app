@@ -18,7 +18,8 @@ test('resolve No/SN and duplicate aliases using registry IDs, without requiring 
  assert.equal(pm.resolveMachine(rows,{...a,equipment_type:'Other'}),null);
  assert.throws(()=>pm.resolveMachine([...rows,rows[0]],a),/ซ้ำ/);
  assert.throws(()=>pm.validateInspection(p({results:{}})),/ผลตรวจ/);
- assert.throws(()=>pm.validateInspection(p({results:{...p().results,'Self Test':'N/A'}})),/หมายเหตุ/);
+ assert.doesNotThrow(()=>pm.validateInspection(p({results:{...p().results,'Self Test':'N/A'}})));
+ assert.throws(()=>pm.validateInspection(p({results:{...p().results,'Self Test':'ไม่ผ่าน'}})),/หมายเหตุ/);
 });
 test('native batch is atomic, snapshots registry identity, supports serial/manual/mixed types, and retries safely',async()=>{
  const db=await setup();try{
@@ -36,6 +37,10 @@ test('native batch is atomic, snapshots registry identity, supports serial/manua
  assert.equal((await save(db,104,[item(8,acceptance)])).rows[0].reports[0].kind,'acceptance');
  await assert.rejects(save(db,105,[item(9,{results:{...p().results,'Self Test':'ไม่ผ่าน'}})]),/หมายเหตุ/);
  const note=await save(db,106,[item(10,{note:'ไม่มีอุปกรณ์นี้',results:{...p().results,'Self Test':'N/A'}})]);assert.equal(note.rows[0].reports[0].payload.note,'ไม่มีอุปกรณ์นี้');
+ for(const [n,kind] of [[190,'pm'],[191,'acceptance']]){
+  const na=(await save(db,n,[item(n,{kind,note:'',results:Object.fromEntries(pm.fields(kind).map(f=>[f,'N/A']))})])).rows[0].reports[0];
+  assert.equal(na.payload.note,'');assert.ok(Object.values(na.payload.results).every(v=>v==='N/A'));
+ }
  await assert.rejects(save(db,107,[item(11),item(12,{date:'2026-11-03'})]),/วันที่เดียวกัน/);
  await assert.rejects(save(db,108,Array.from({length:51},(_,i)=>item(200+i))),/50/);
  await db.exec(`reset role;update assets set asset_id='changed';set role authenticated`);

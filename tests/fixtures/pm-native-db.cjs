@@ -17,7 +17,7 @@ async function setup(){
  grant insert on assets to authenticated;grant usage,select on sequence assets_id_seq to authenticated;
  alter table user_profiles enable row level security;create policy own on user_profiles for select to authenticated using(id=auth.uid());
  grant usage on schema public,auth,private to authenticated;grant select on user_profiles,assets to authenticated;set request.jwt.claim.sub='${actor}';`);
- for(const file of ['20261028081412_pm_acceptance_reports.sql','20261028083412_pm_report_explicit_grants.sql','20261104040109_pm_native_batch_reports.sql','20261104042536_pm_saved_operators.sql','20261104043729_pm_tool_type_catalog.sql','20261104044405_pm_confirmed_form_types.sql','20261104063433_pm_saved_brands_models.sql','20261104081030_pm_acceptance_register_center_assets.sql','20261104083953_pm_acceptance_duplicate_confirmation.sql'])await db.exec(fs.readFileSync(path.join(root,'supabase/migrations',file),'utf8'));
+ for(const file of ['20261028081412_pm_acceptance_reports.sql','20261028083412_pm_report_explicit_grants.sql','20261104040109_pm_native_batch_reports.sql','20261104042536_pm_saved_operators.sql','20261104043729_pm_tool_type_catalog.sql','20261104044405_pm_confirmed_form_types.sql','20261104063433_pm_saved_brands_models.sql','20261104081030_pm_acceptance_register_center_assets.sql','20261104083953_pm_acceptance_duplicate_confirmation.sql','20261104085713_pm_na_without_reason.sql'])await db.exec(fs.readFileSync(path.join(root,'supabase/migrations',file),'utf8'));
  await db.exec('update mems_report_settings set enabled=true;set role authenticated');return db;
 }
 module.exports={setup,actor,other};

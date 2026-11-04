@@ -53,7 +53,7 @@
   function validateInspection(payload) {
     for(const k of ['equipment_type','tool_type','brand','model','operator','section'])if(!String(payload[k]||'').trim())throw new Error('กรอกประเภท ยี่ห้อ รุ่น หน่วยงาน และผู้ตรวจให้ครบ');
     if(fields(payload.kind).some(f=>!['ผ่าน','ไม่ผ่าน','N/A'].includes(payload.results[f])))throw new Error('เลือกผลตรวจให้ครบทุกข้อ');
-    if(Object.values(payload.results).some(v=>v==='ไม่ผ่าน'||v==='N/A')&&!String(payload.note||'').trim())throw new Error('กรอกหมายเหตุรายเครื่องสำหรับผลไม่ผ่านหรือ N/A');
+    if(Object.values(payload.results).some(v=>v==='ไม่ผ่าน')&&!String(payload.note||'').trim())throw new Error('กรอกหมายเหตุรายเครื่องสำหรับผลไม่ผ่าน');
   }
   function inspectionResults(source,kind) {
     const result={};
