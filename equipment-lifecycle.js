@@ -1,4 +1,43 @@
 /* Registry-backed preparation and ward-scoped borrowing/returning. */
+function memsConfirmUnreturnedEquipment(items) {
+  return new Promise(resolve => {
+    const previousFocus = document.activeElement;
+    const dialog = document.createElement("dialog");
+    dialog.className = "lifecycle-return-confirm";
+    dialog.setAttribute("aria-labelledby", "unreturnedConfirmTitle");
+    const title = document.createElement("h2");
+    title.id = "unreturnedConfirmTitle";
+    title.textContent = "เครื่องยังมีสถานะยืมอยู่";
+    const message = document.createElement("p");
+    message.textContent = items.map(i => i.equipment + " No." + i.number + " ถูกยืมอยู่ที่ " + i.ward).join("\n") +
+      "\nเครื่องกลับมาที่ศูนย์แล้วโดยไม่ได้คีย์คืน ต้องการคืนเครื่องและเตรียมต่อเลยไหม?\nจะบันทึกเหตุผล: " +
+      items.map(i => "หน่วยงาน " + i.ward + " ไม่คีย์คืนเครื่อง").join("\n");
+    const actions = document.createElement("div");
+    actions.className = "lifecycle-return-confirm-actions";
+    const cancel = document.createElement("button");
+    cancel.type = "button";
+    cancel.textContent = "ยกเลิก";
+    cancel.autofocus = true;
+    const accept = document.createElement("button");
+    accept.type = "button";
+    accept.className = "lifecycle-return-confirm-accept";
+    accept.textContent = "คืนเลย";
+    const finish = accepted => {
+      dialog.close();
+      dialog.remove();
+      previousFocus?.focus();
+      resolve(accepted);
+    };
+    cancel.onclick = () => finish(false);
+    accept.onclick = () => finish(true);
+    dialog.addEventListener("cancel", event => { event.preventDefault(); finish(false); });
+    actions.append(cancel, accept);
+    dialog.append(title, message, actions);
+    document.body.append(dialog);
+    dialog.showModal();
+  });
+}
+
 (() => {
   const $ = (id) => document.getElementById(id);
   let registry = [],
@@ -7,6 +46,7 @@
     selected = new Map(),
     version = 0;
   let returnType = null;
+  let confirmingReturn = false;
   let saving = false,
     retry = null;
   const isPrepare = !!$("equipGrid");
@@ -459,7 +499,7 @@
       }
     };
     window.savePrepare = async () => {
-      if (saving) return;
+      if (saving || confirmingReturn) return;
       const qr =
         typeof memsPrepareQrBatchItems !== "undefined"
           ? memsPrepareQrBatchItems
@@ -494,9 +534,13 @@
           const holder = current.find(s => s.isBorrowed && key(s) === key(item));
           return holder ? [{ equipment: item.equipment, number: item.number, ward: holder.ward, lastUpdate: holder.lastUpdate }] : [];
         });
-        if (unreturned.length && !confirm(unreturned.map(i => i.equipment + " No." + i.number + " ถูกยืมอยู่ที่ " + i.ward).join("\n") +
-          "\nเครื่องกลับมาที่ศูนย์แล้วโดยไม่ได้คีย์คืน ต้องการคืนเครื่องและเตรียมต่อเลยไหม?\nจะบันทึกเหตุผล: " +
-          unreturned.map(i => "หน่วยงาน " + i.ward + " ไม่คีย์คืนเครื่อง").join("\n"))) return;
+        if (unreturned.length) {
+          confirmingReturn = true;
+          let accepted;
+          try { accepted = await memsConfirmUnreturnedEquipment(unreturned); }
+          finally { confirmingReturn = false; }
+          if (!accepted) return;
+        }
         await submit(
           prepareMode === "deliver" ? "deliver" : "prepare",
           items,

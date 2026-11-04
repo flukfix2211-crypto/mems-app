@@ -173,3 +173,11 @@
 @media (max-width: 360px) {
   #equipGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+.lifecycle-return-confirm { width: min(440px, calc(100% - 40px)); box-sizing: border-box; max-height: 85vh; overflow-y: auto; border: 0; border-radius: 18px; padding: 24px; color: #192d35; font-family: inherit; box-shadow: 0 16px 60px #0003; }
+.lifecycle-return-confirm::backdrop { background: rgba(10,30,40,.6); }
+.lifecycle-return-confirm h2 { margin: 0 0 12px; font-size: 19px; }
+.lifecycle-return-confirm p { white-space: pre-line; line-height: 1.8; font-size: 14px; }
+.lifecycle-return-confirm-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; }
+.lifecycle-return-confirm-actions button { padding: 11px 22px; border: 1px solid #bcd5dc; border-radius: 10px; background: #fff; color: #334155; font: inherit; font-weight: 700; cursor: pointer; }
+.lifecycle-return-confirm-actions .lifecycle-return-confirm-accept { background: #0b666c; border-color: #0b666c; color: #fff; }
