@@ -199,13 +199,51 @@ function rptPdfFooter(doc) {
   }
 }
 
+function rptOpenPrintablePdf(blob, filename) {
+  document.getElementById('memsPrintablePdf')?.close();
+  const url = URL.createObjectURL(blob);
+  const dialog = document.createElement('dialog');
+  dialog.id = 'memsPrintablePdf';
+  dialog.setAttribute('aria-label', 'ตัวอย่าง PDF สำหรับพิมพ์');
+  dialog.style.cssText = 'width:95vw;max-width:1100px;height:92vh;max-height:95vh;border:0;border-radius:16px;padding:16px;box-sizing:border-box;';
+  const layout = document.createElement('div');
+  layout.style.cssText = 'display:flex;flex-direction:column;height:100%;gap:12px;font-family:inherit';
+  const title = document.createElement('strong');
+  title.textContent = filename;
+  const frame = document.createElement('iframe');
+  frame.title = 'ตัวอย่างเอกสาร PDF';
+  frame.style.cssText = 'width:100%;flex:1;min-height:0;border:1px solid #d6e4e8';
+  const actions = document.createElement('div');
+  actions.style.cssText = 'display:flex;gap:12px;flex-wrap:wrap;justify-content:flex-end';
+  const print = document.createElement('button');
+  print.type = 'button'; print.textContent = 'พิมพ์'; print.disabled = true;
+  frame.onload = () => { print.disabled = false; };
+  print.onclick = () => {
+    try { frame.contentWindow.focus(); frame.contentWindow.print(); }
+    catch { window.open(url, '_blank', 'noopener'); }
+  };
+  const download = document.createElement('a');
+  download.href = url; download.download = filename; download.textContent = 'ดาวน์โหลด PDF';
+  const open = document.createElement('a');
+  open.href = url; open.target = '_blank'; open.rel = 'noopener'; open.textContent = 'เปิด PDF ในแท็บใหม่';
+  const close = document.createElement('button');
+  close.type = 'button'; close.textContent = 'ปิด'; close.onclick = () => dialog.close();
+  for (const control of [close,open,print,download]) {
+    control.style.cssText = 'padding:10px 16px;border:1px solid #bcd5dc;border-radius:8px;background:#edf6f7;color:#0a6478;font:inherit;cursor:pointer;text-decoration:none';
+    actions.append(control);
+  }
+  const previousFocus = document.activeElement;
+  dialog.addEventListener('close', () => { frame.src = 'about:blank'; URL.revokeObjectURL(url); dialog.remove(); previousFocus?.focus(); }, {once:true});
+  layout.append(title,frame,actions); dialog.append(layout); document.body.append(dialog);
+  frame.src = url; dialog.showModal();
+}
+
 function rptDeliverPdf(doc, filename, options) {
   if (options && options.preview) {
     const blob = doc.output('blob');
-    if (typeof window.memsOpenPdfPreview === 'function') {
-      window.memsOpenPdfPreview(blob, filename);
-      return { previewed: true, filename };
-    }
+    if (typeof window.memsOpenPdfPreview === 'function') window.memsOpenPdfPreview(blob, filename);
+    else rptOpenPrintablePdf(blob, filename);
+    return { previewed: true, filename };
   }
   doc.save(filename);
   return { previewed: false, filename };
@@ -495,7 +533,7 @@ async function exportWorkloadCalendarPDF(d) {
     }
   });
   rptPdfFooter(doc);
-  doc.save('Workload_' + d.month.replace('-', '_') + '.pdf');
+  return rptDeliverPdf(doc, 'Workload_' + d.month.replace('-', '_') + '.pdf', { preview: true });
 }
 
 /* ============================================================ MONTHLY REPORT (เทียบเท่า generateMonthlyReport()) ============================================================ */

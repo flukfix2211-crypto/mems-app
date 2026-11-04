@@ -39,6 +39,8 @@ async function memsLoadUnkeyedStatistics() {
   const request = (memsLoadUnkeyedStatistics.request || 0) + 1;
   memsLoadUnkeyedStatistics.request = request;
   results.hidden = true;
+  memsLoadUnkeyedStatistics.latest = null;
+  document.getElementById("unkeyedPdfBtn").disabled = true;
   status.textContent = 'กำลังโหลดสถิติ…';
   try {
     const range = memsUnkeyedMonthRange(month);
@@ -70,10 +72,38 @@ async function memsLoadUnkeyedStatistics() {
       row.kind === 'borrow' ? 'ไม่คีย์ยืม' : 'ไม่คีย์คืน', row.ward,
       (row.equipment || 'ไม่ระบุ') + ' No.' + (row.number || '—'), row.staff, row.reason,
     ]));
+    memsLoadUnkeyedStatistics.latest = { data, month };
+    document.getElementById("unkeyedPdfBtn").disabled = !data.incidents.length;
     results.hidden = false;
     status.textContent = data.incidents.length ? 'นับเป็นรายเครื่อง · ' + (month ? 'เดือนที่เลือก' : 'ทุกช่วงเวลา') : 'ไม่พบรายการในช่วงเวลานี้';
   } catch (error) {
     if (request !== memsLoadUnkeyedStatistics.request) return;
     status.textContent = 'โหลดสถิติไม่สำเร็จ: ' + (error.message || error) + ' กรุณากดรีเฟรชอีกครั้ง';
   }
+}
+
+async function memsExportUnkeyedPdf() {
+  const snapshot = memsLoadUnkeyedStatistics.latest;
+  if (!snapshot) return;
+  const button = document.getElementById('unkeyedPdfBtn');
+  button.disabled = true;
+  try {
+    const {data,month} = snapshot;
+    const doc = await newThaiPdf({orientation:'landscape'});
+    const start = rptPdfHeader(doc, 'สถิติหน่วยงานไม่คีย์ยืม–คืนเครื่อง', month ? 'เดือน ' + month : 'ทุกช่วงเวลา', new Date().toLocaleString('th-TH',{timeZone:'Asia/Bangkok'}));
+    thaiTable(doc, {startY:start,head:[['หน่วยงาน','ไม่คีย์ยืม (เครื่อง)','ไม่คีย์คืน (เครื่อง)','รวม']],body:data.wards.map(r=>[r.ward,r.borrow,r.return,r.total])});
+    let noteY = doc.lastAutoTable.finalY + 20;
+    if (noteY > doc.internal.pageSize.getHeight() - 60) { doc.addPage(); noteY = 40; }
+    doc.setFontSize(11);
+    doc.text('ไม่คีย์ยืมนับตามวันที่เตรียมเครื่อง · ไม่คีย์คืนนับตามวันที่ยืนยันคืนเครื่อง',40,noteY);
+    doc.addPage();
+    doc.setFontSize(16); doc.text('รายละเอียดรายการและเหตุผล',40,40);
+    thaiTable(doc, {startY:55,head:[['วันที่','ประเภท','หน่วยงาน','เครื่อง','เจ้าหน้าที่','เหตุผล']],body:data.incidents.map(r=>[
+      new Date(r.date).toLocaleString('th-TH',{timeZone:'Asia/Bangkok'}),r.kind==='borrow'?'ไม่คีย์ยืม':'ไม่คีย์คืน',r.ward,
+      (r.equipment||'—')+' No.'+(r.number||'—'),r.staff||'—',r.reason
+    ])});
+    rptPdfFooter(doc);
+    rptDeliverPdf(doc,'MEMs_Unkeyed_'+(month||'all')+'.pdf',{preview:true});
+  } catch(error) { alert('สร้าง PDF ไม่สำเร็จ: '+(error.message||error)); }
+  finally { button.disabled = !memsLoadUnkeyedStatistics.latest?.data.incidents.length; }
 }

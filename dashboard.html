@@ -650,6 +650,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       <button type="button" onclick="document.getElementById('unkeyedMonth').value='';memsLoadUnkeyedStatistics()">ทุกช่วงเวลา</button>
       <button type="button" onclick="memsLoadUnkeyedStatistics()">รีเฟรช</button>
     </div>
+    <div class="unkeyed-controls"><button type="button" id="unkeyedPdfBtn" onclick="memsExportUnkeyedPdf()" disabled>ส่งออก PDF / พิมพ์</button></div>
     <p id="unkeyedStatus" role="status" aria-live="polite">กำลังโหลดสถิติ…</p>
     <div id="unkeyedResults" hidden>
       <div class="unkeyed-metrics">
@@ -802,7 +803,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
             <input type="month" id="wklMonthSel" onchange="loadWorkloadCalendar()">
           </div>
           <button class="wkl-btn-refresh" id="wklRefreshBtn" onclick="loadWorkloadCalendar()"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7a9 9 0 0 0-15-1L3 9m0-5v5h5M4 17a9 9 0 0 0 15 1l2-3m0 5v-5h-5"/></svg> รีเฟรช</button>
-          <button class="wkl-btn-pdf" id="wklPdfBtn" onclick="exportWorkloadPDF()"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14v18H5zM8 7h8M8 11h8M8 15h5"/></svg> Export PDF</button>
+          <button class="wkl-btn-pdf" id="wklPdfBtn" onclick="exportWorkloadPDF()"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14v18H5zM8 7h8M8 11h8M8 15h5"/></svg> PDF / พิมพ์</button>
         </div>
         <div class="wkl-note" id="wklMeta"></div>
       </div>
@@ -986,9 +987,9 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 <script src="vendor/jspdf.plugin.autotable.min.js"></script>
 <script src="supabase-client.js?v=20261022-lifecycle-1"></script>
 <script src="auth.js"></script>
-<script src="unkeyed-statistics.js?v=20261104-1"></script>
+<script src="unkeyed-statistics.js?v=20261104-print-1"></script>
 <script src="equipment-status.js?v=20261016-asset-status-1"></script>
-<script src="reports.js?v=20261102-workload-one-page-2"></script>
+<script src="reports.js?v=20261104-print-1"></script>
 <script>
 /* ============================================================ RECORD MAPPING (borrow_records -> shape เดิมจาก GAS getRecords()) ============================================================ */
 function isoToSlashDate(iso) {

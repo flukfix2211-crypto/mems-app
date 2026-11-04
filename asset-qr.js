@@ -64,7 +64,7 @@ function updateQrSelectionBar() {
   if (countEl) countEl.textContent = 'เลือกแล้ว ' + count + ' เครื่อง';
   if (pdfBtn) {
     pdfBtn.disabled = count === 0;
-    pdfBtn.textContent = count ? '⬇ สร้าง PDF (' + count + ')' : '⬇ สร้าง PDF';
+    pdfBtn.textContent = count ? 'PDF / พิมพ์ (' + count + ')' : 'PDF / พิมพ์';
   }
   if (headerCheck) {
     const visibleIds = currentVisibleAssets.map(qrAssetKey);
