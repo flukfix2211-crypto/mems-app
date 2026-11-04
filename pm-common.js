@@ -27,7 +27,28 @@
     const h=Array.from(b,n=>n.toString(16).padStart(2,'0')).join('');
     return h.slice(0,8)+'-'+h.slice(8,12)+'-'+h.slice(12,16)+'-'+h.slice(16,20)+'-'+h.slice(20);
   }
-  const api={fields,parseNumbers,matchAssets,today,esc,requestId};
+  const typeKey = value => {
+    const k=String(value||'').trim().replace(/\s+/g,' ').toLowerCase();
+    return ({bird:'brid เขียว','bird เขียว':'brid เขียว',brid:'brid เขียว',highflow:'high flow','monnal t60':'monnal t60'})[k]||k;
+  };
+  function resolveMachine(rows,machine) {
+    const type=String(machine.equipment_type||'').trim(), value=String(machine.identifier||'').trim();
+    if(!type || !value) throw new Error('กรอกประเภทเครื่องและ No. หรือ S/N');
+    if(!['no','serial'].includes(machine.identity_mode))throw new Error('เลือก No. หรือ S/N');
+    if(machine.identity_mode==='no' && (!/^\d{1,6}$/.test(value)||Number(value)<1)) throw new Error('No. ต้องเป็นจำนวนเต็มบวก');
+    const matches=rows.filter(a=>typeKey(a.type)===typeKey(type) && (machine.identity_mode==='no'?Number(a.no)===Number(value):String(a.serial_number||'').trim()===value));
+    if(matches.length>1)throw new Error('พบทะเบียนซ้ำ กรุณาตรวจสอบ No. หรือ S/N');
+    return matches[0]||null;
+  }
+  function machineKey(machine,asset) {
+    return asset ? 'asset:'+asset.id : JSON.stringify([typeKey(machine.equipment_type),machine.identity_mode,machine.identity_mode==='no'?String(Number(machine.identifier)):machine.identifier.trim()]);
+  }
+  function validateInspection(payload) {
+    for(const k of ['equipment_type','tool_type','brand','model','operator','section'])if(!String(payload[k]||'').trim())throw new Error('กรอกประเภท ยี่ห้อ รุ่น หน่วยงาน และผู้ตรวจให้ครบ');
+    if(fields(payload.kind).some(f=>!['ผ่าน','ไม่ผ่าน','N/A'].includes(payload.results[f])))throw new Error('เลือกผลตรวจให้ครบทุกข้อ');
+    if(Object.values(payload.results).some(v=>v==='ไม่ผ่าน'||v==='N/A')&&!String(payload.note||'').trim())throw new Error('กรอกหมายเหตุรายเครื่องสำหรับผลไม่ผ่านหรือ N/A');
+  }
+  const api={fields,parseNumbers,matchAssets,today,esc,requestId,typeKey,resolveMachine,machineKey,validateInspection};
   if(typeof module!=='undefined') module.exports=api;
   else root.MemsPM=api;
 })(typeof window!=='undefined'?window:this);
