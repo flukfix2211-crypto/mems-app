@@ -347,6 +347,12 @@ async function fetchC2Status() {
   return numbers.map(k => map[k] || { number: k, isBorrowed: false, ward: '', borrowedBy: '', lastUpdate: '' });
 }
 
+// Canonical department choices used by preparation and PM / acceptance.
+const MEMS_WARDS = ['ER','อายุรกรรมหญิง (M.ญ)','EENT','ศัลยกรรมหญิง','ศัลยกรรมกระดูก','ศัลยกรรมชาย',
+  'อายุรกรรมชาย (M.ช)','Semi ICU','ICU 100 ปี','กจ.3','กจ.2','TM','เด็กล่าง','PICU','เด็กบน',
+  'ICU ญสส.','ห้องคลอด LR','หลังคลอด PP','ญสส.9','Premium ญสส.8','ญสส.7','ICU.S','ICU Neuro',
+  'NICU','SNB','กจ.4','AIIR','สธ.7','สธ.6','ศูนย์เปล','เคมีบำบัด'];
+
 /** Reuse saved preparation wards across pages, including completed preparations. */
 async function fetchPreparationWards() {
   const rows = await fetchAllPages(() => supabase.from('prepare_records')

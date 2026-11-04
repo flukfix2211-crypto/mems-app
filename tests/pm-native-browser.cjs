@@ -21,6 +21,7 @@ const root=path.join(__dirname,'..');
    if(url.pathname.includes('/rest/v1/rpc/save_mems_report_tool_type')){
     const body=req.postDataJSON();const data=(await db.query('select save_mems_report_tool_type($1) r',[body.type_name])).rows[0].r;return route.fulfill({json:data});
    }
+   if(url.pathname.endsWith('/rest/v1/prepare_records'))return route.fulfill({json:[{ward:'หน่วยงานทดสอบ'}]});
    if(url.pathname.includes('/rest/v1/')){
     const table=url.pathname.split('/').at(-1);assert.ok(['assets','mems_reports','mems_report_settings','mems_report_operators','mems_report_tool_types'].includes(table));
     const params=[],filters=[];
@@ -74,12 +75,13 @@ const root=path.join(__dirname,'..');
   assert.equal(await row(0).locator('[data-key="tool_type"]').inputValue(),'เครื่องทดสอบใหม่');
   await page.reload();await page.waitForFunction(()=>document.querySelectorAll('.pm-machine').length===1);assert.equal(await row(0).locator('[data-key="tool_type"] option').filter({hasText:'เครื่องทดสอบใหม่'}).count(),1);
   await page.locator('#savedOperator').selectOption(operatorId);
+  assert.ok((await page.locator('#section option').allTextContents()).includes('หน่วยงานทดสอบ'));await page.locator('#section').selectOption('ER');
   await fill(0,'C2','no','41');await row(0).locator('[data-key="note"]').fill('หมายเหตุเครื่องแรก');
   await page.locator('#addMachine').click();await fill(1,'C2','serial','SN41');await row(1).locator('[data-key="note"]').fill('หมายเหตุเครื่องสอง');
   await page.locator('#reviewBtn').click();await page.waitForFunction(()=>document.getElementById('pmNotice').textContent.includes('ซ้ำ'));assert.equal(calls,0);
   await row(0).locator('summary').click();await row(0).locator('[data-key="brand"]').fill('Copied Brand');await row(0).locator('[data-copy-details]').click();
   await row(1).locator('summary').click();assert.equal(await row(1).locator('[data-key="brand"]').inputValue(),'Copied Brand');assert.equal(await row(1).locator('[data-key="identifier"]').inputValue(),'SN41');assert.equal(await row(1).locator('[data-key="note"]').inputValue(),'หมายเหตุเครื่องสอง');
-  await fill(1,'Pump','serial','P41');
+  await fill(1,'Pump','serial','P41');await row(1).locator('[data-key="section"]').selectOption('PICU');
   await page.locator('#reviewBtn').click();await page.locator('#confirmed').check();loseReply=true;await page.locator('#saveReports').click();
   await page.waitForFunction(()=>document.getElementById('pmNotice').textContent.includes('ข้อมูลถูกล็อก'));
   assert.equal((await db.query('select count(*)::int n from mems_reports')).rows[0].n,2);
@@ -89,7 +91,7 @@ const root=path.join(__dirname,'..');
   await db.exec('reset role;update mems_report_settings set enabled=true;set role authenticated');
   await page.locator('#saveReports').click();await page.locator('#savedPanel').waitFor({state:'visible'});
   assert.equal(calls,3);assert.equal((await db.query('select count(*)::int n from mems_reports')).rows[0].n,2);
-  const saved=(await db.query('select * from mems_reports order by batch_index')).rows;assert.equal(saved[1].snapshot.serial_number,'P41');assert.equal(saved[1].payload.note,'หมายเหตุเครื่องสอง');assert.equal(saved[0].snapshot.operator_position,'นายช่างเทคนิค');
+  const saved=(await db.query('select * from mems_reports order by batch_index')).rows;assert.equal(saved[1].snapshot.serial_number,'P41');assert.equal(saved[0].payload.section,'ER');assert.equal(saved[1].payload.section,'PICU');assert.equal(saved[1].payload.note,'หมายเหตุเครื่องสอง');assert.equal(saved[0].snapshot.operator_position,'นายช่างเทคนิค');
   await page.locator('#savedPdf').click();await page.locator('#memsPrintablePdf').waitFor({state:'visible'});
   const url=await page.locator('#memsPrintablePdf a[download]').getAttribute('href');
   const bytes=await page.evaluate(async url=>Array.from(new Uint8Array(await (await fetch(url)).arrayBuffer())),url);

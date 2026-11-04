@@ -3,7 +3,7 @@
   'use strict';
   const {fields,today,esc,requestId,resolveMachine,machineKey,validateInspection}=MemsPM;
   const $=id=>document.getElementById(id);
-  let toolTypes=[],toolTypeTarget=null,operators=[],assets=[],profile,rows=[],page=0,historyRows=[],savedRows=[],reviewed=null,pending=null,busy=false;
+  let wards=[],toolTypes=[],toolTypeTarget=null,operators=[],assets=[],profile,rows=[],page=0,historyRows=[],savedRows=[],reviewed=null,pending=null,busy=false;
   const notice=(text,error=false)=>{$('pmNotice').textContent=text;$('pmNotice').className='notice'+(error?' error':'');};
   const guard=fn=>async event=>{try{await fn(event);}catch(error){notice(error.message||String(error),true);}};
   function invalidate(){reviewed=null;$('reviewPanel').hidden=true;$('confirmed').checked=false;}
@@ -52,6 +52,17 @@
     if(!data.enabled)notice('ฟังก์ชันยังปิดอยู่ แอดมินเปิดใช้งานได้จากการตั้งค่า');
     return data.enabled;
   }
+  async function loadWards(){
+    let saved=[];
+    try { saved=await fetchPreparationWards();$('wardStatus').textContent='รายชื่อเดียวกับหน้าเตรียมเครื่อง รวมหน่วยงานที่เคยบันทึกในระบบ'; }
+    catch(error){$('wardStatus').textContent='โหลดหน่วยงานเพิ่มเติมไม่สำเร็จ ใช้รายชื่อหลักของ MEMs ได้';console.warn(error);}
+    wards=[...new Set(['ศูนย์เครื่องมือแพทย์',...MEMS_WARDS,...saved].map(name=>String(name).trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'th'));
+    const current=$('section').value||'ศูนย์เครื่องมือแพทย์';
+    $('section').innerHTML=wards.map(name=>'<option value="'+esc(name)+'">'+esc(name)+'</option>').join('');$('section').value=wards.includes(current)?current:'ศูนย์เครื่องมือแพทย์';
+  }
+  function wardField(row,i){
+    return `<label>หน่วยงานของเครื่อง<select data-row="${i}" data-key="section"><option value="">ใช้หน่วยงานเริ่มต้นของชุดงาน</option>${wards.map(name=>`<option value="${esc(name)}" ${row.section===name?'selected':''}>${esc(name)}</option>`).join('')}</select></label>`;
+  }
   async function loadAssets(){
     assets=await fetchAllPages(()=>supabase.from('assets').select('id,type,no,asset_code,asset_id,serial_number').order('id'));
     const oldBulkType=$('bulkType').value;
@@ -64,7 +75,7 @@
     $('machineList').innerHTML=rows.map((row,i)=>`<details class="pm-machine" ${i===openIndex?'open':''}><summary id="machineTitle${i}"></summary><div class="pm-machine-content"><div class="form-grid">
       ${machineNameField(row,i)}
       <label>ระบุเครื่องด้วย<select data-row="${i}" data-key="identity_mode"><option value="no" ${row.identity_mode==='no'?'selected':''}>No. เครื่อง</option><option value="serial" ${row.identity_mode==='serial'?'selected':''}>S/N</option></select></label>
-      ${identityField(row,i)}${toolTypeField(row,i)}${input(row,i,'brand','ยี่ห้อ')}${input(row,i,'model','รุ่น')}${input(row,i,'section','หน่วยงานของเครื่อง','list="pmWards" placeholder="ใช้หน่วยงานเริ่มต้นของชุดงาน"')}
+      ${identityField(row,i)}${toolTypeField(row,i)}${input(row,i,'brand','ยี่ห้อ')}${input(row,i,'model','รุ่น')}${wardField(row,i)}
       </div><div class="pm-status" id="machineStatus${i}"></div><div class="result-grid">${fields($('reportKind').value).map((field,j)=>`<label class="result-row"><span>${esc(field)}</span><select data-row="${i}" data-check="${j}" aria-label="เครื่องที่ ${i+1} ${esc(field)}"><option value="">เลือกผล</option>${['ผ่าน','ไม่ผ่าน','N/A'].map(value=>`<option ${row.results[field]===value?'selected':''}>${value}</option>`).join('')}</select></label>`).join('')}</div>
       ${$('reportKind').value==='pm'?input(row,i,'replacement','เปลี่ยนวัสดุตามอายุงาน (ถ้ามี)'):''}
       <label>หมายเหตุเฉพาะเครื่องนี้<textarea data-row="${i}" data-key="note" rows="3" maxlength="2000" placeholder="ระบุรายละเอียดกรณีไม่ผ่านหรือ N/A และหมายเหตุของเครื่องนี้">${esc(row.note)}</textarea></label>
@@ -160,8 +171,7 @@
   window.addEventListener('DOMContentLoaded',guard(async()=>{
     profile=await memsGuard('pm_reports');if(!profile)return;
     $('reportDate').value=today();$('operator').value=profile.display_name||profile.username||'';
-    const enabled=await loadSettings();await loadAssets();if(enabled){await loadOperators();await loadToolTypes();}startNew();if(enabled)notice('พร้อมใช้งาน · บันทึกชุดงานและสร้าง PDF ใน MEMs ได้ทันที');
-    if(typeof WARDS!=='undefined')$('pmWards').innerHTML=WARDS.map(w=>'<option value="'+esc(w)+'"></option>').join('');
+    const enabled=await loadSettings();await loadAssets();if(enabled){await loadOperators();await loadToolTypes();}await loadWards();startNew();if(enabled)notice('พร้อมใช้งาน · บันทึกชุดงานและสร้าง PDF ใน MEMs ได้ทันที');
     $('saveSettings').onclick=guard(async()=>{const {error}=await supabase.from('mems_report_settings').update({enabled:$('pmEnabled').checked,updated_by:profile.id,updated_at:new Date().toISOString()}).eq('id',true);if(error)throw error;if(await loadSettings()){await loadOperators();await loadToolTypes();renderMachines();}});
     $('savedOperator').onchange=()=>{const selected=operators.find(p=>p.id===$('savedOperator').value);if(selected){$('operator').value=selected.name;$('operatorPosition').value=selected.position;}else{$('operator').value='';$('operatorPosition').value='';}invalidate();};
     $('saveOperator').onclick=guard(saveOperator);
