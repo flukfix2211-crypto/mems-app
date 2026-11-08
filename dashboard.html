@@ -763,7 +763,10 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
           <div style="font-size:12px;color:var(--muted)" id="prepHistCount"></div>
           <button onclick="renderPrepareHistory()" style="padding:6px 14px;background:var(--al);border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:12px;font-weight:700;color:var(--a);cursor:pointer"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7a9 9 0 0 0-15-1L3 9m0-5v5h5M4 17a9 9 0 0 0 15 1l2-3m0 5v-5h-5"/></svg> รีเฟรช</button>
         </div>
-        <div class="table-wrap" id="prepHistBody">
+        <div class="search-row">
+          <input type="search" id="prepHistSearch" aria-label="ค้นหาหมายเลขเครื่องหรือประเภทเครื่อง" placeholder="ค้นหาหมายเลขเครื่อง / ประเภทเครื่อง…" oninput="renderPrepareHistoryTable()">
+        </div>
+        <div class="table-wrap" id="prepHistBody" aria-live="polite">
           <div class="state-loading"><div class="spinner"></div>กำลังโหลด…</div>
         </div>
       </div>
@@ -1309,50 +1312,70 @@ function mergePrepareHistory(preparedItems, records) {
     .sort((a, b) => (Date.parse(b.timestamp) || 0) - (Date.parse(a.timestamp) || 0));
 }
 
+let prepareHistoryItems = [];
+
 async function renderPrepareHistory() {
   const body = document.getElementById('prepHistBody');
-  const cnt  = document.getElementById('prepHistCount');
   const todayBody = document.getElementById('prepareTodayBody');
   body.innerHTML = '<div class="state-loading"><div class="spinner"></div>กำลังโหลด…</div>';
   if (todayBody) todayBody.innerHTML = '<div class="state-loading"><div class="spinner"></div>กำลังสรุปรายการเตรียมวันนี้…</div>';
   try {
     const items = mergePrepareHistory(await fetchPrepareHistory(), allRecords);
     renderPrepareTodaySummary(items);
-    if (cnt) cnt.textContent = 'ทั้งหมด ' + items.length + ' รายการ';
-    if (!items.length) { body.innerHTML = '<div style="text-align:center;color:var(--muted);padding:30px">ยังไม่มีประวัติการเตรียม</div>'; return; }
-    const rows = items.map(it => {
-      const st = String(it.status || '');
-      let badge;
-      if (st === 'ยืมแล้ว') {
-        badge = '<span style="background:#DCF2E5;color:#14612D;font-size:11px;font-weight:700;border-radius:20px;padding:2px 9px">' + (it.isDelivery ? 'เตรียมพร้อมส่ง · ยืมแล้ว' : 'ยืมแล้ว') + '</span>';
-      } else if (st.indexOf('ยกเลิก') === 0) {
-        badge = '<span style="background:#FDEAEA;color:#B82E2E;font-size:11px;font-weight:700;border-radius:20px;padding:2px 9px">' + st + '</span>';
-      } else {
-        badge = '<span style="background:#FFF3CD;color:#8B5000;font-size:11px;font-weight:700;border-radius:20px;padding:2px 9px">เตรียม</span>';
-      }
-      const when = (it.date || '') + (it.time ? ' ' + it.time : '');
-      return `<tr>
-        <td style="font-weight:800;color:var(--a)">${escHtml(it.equipment)} No.${escHtml(it.number)}</td>
-        <td>${escHtml(it.ward)}</td>
-        <td style="font-size:12px">${escHtml(it.preparedBy)}</td>
-        <td style="white-space:nowrap;font-size:12px">${escHtml(when)}</td>
-        <td>${badge}</td>
-      </tr>`;
-    }).join('');
-    body.innerHTML = `<table style="width:100%;border-collapse:collapse;min-width:560px">
-      <thead><tr>
-        <th style="text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:2px solid var(--border)">เครื่อง</th>
-        <th style="text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:2px solid var(--border)">หน่วยงาน</th>
-        <th style="text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:2px solid var(--border)">ผู้เตรียม</th>
-        <th style="text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:2px solid var(--border)">เวลา</th>
-        <th style="text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:2px solid var(--border)">สถานะ</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table>`;
+    prepareHistoryItems = items;
+    renderPrepareHistoryTable();
   } catch (e) {
     body.innerHTML = '<div style="text-align:center;color:#B82E2E;padding:30px">โหลดประวัติไม่ได้</div>';
     if (todayBody) todayBody.innerHTML = '<div class="prepare-today-empty is-error">โหลดสรุปรายการเตรียมวันนี้ไม่ได้</div>';
   }
+}
+
+function renderPrepareHistoryTable() {
+  const body = document.getElementById('prepHistBody');
+  const cnt = document.getElementById('prepHistCount');
+  const query = String(document.getElementById('prepHistSearch')?.value || '').trim().toLocaleLowerCase('th-TH');
+  const terms = query.split(/\s+/).filter(Boolean);
+  const items = prepareHistoryItems.filter(item => {
+    const text = `${item.equipment || ''} ${item.number ?? ''}`.toLocaleLowerCase('th-TH');
+    return terms.every(term => text.includes(term));
+  });
+  if (cnt) cnt.textContent = query
+    ? 'พบ ' + items.length + ' จากทั้งหมด ' + prepareHistoryItems.length + ' รายการ'
+    : 'ทั้งหมด ' + items.length + ' รายการ';
+  if (!items.length) {
+    body.innerHTML = '<div style="text-align:center;color:var(--muted);padding:30px">' +
+      (query ? 'ไม่พบหมายเลขเครื่องหรือประเภทเครื่องที่ค้นหา' : 'ยังไม่มีประวัติการเตรียม') + '</div>';
+    return;
+  }
+  const rows = items.map(it => {
+    const st = String(it.status || '');
+    let badge;
+    if (st === 'ยืมแล้ว') {
+      badge = '<span style="background:#DCF2E5;color:#14612D;font-size:11px;font-weight:700;border-radius:20px;padding:2px 9px">' + (it.isDelivery ? 'เตรียมพร้อมส่ง · ยืมแล้ว' : 'ยืมแล้ว') + '</span>';
+    } else if (st.indexOf('ยกเลิก') === 0) {
+      badge = '<span style="background:#FDEAEA;color:#B82E2E;font-size:11px;font-weight:700;border-radius:20px;padding:2px 9px">' + st + '</span>';
+    } else {
+      badge = '<span style="background:#FFF3CD;color:#8B5000;font-size:11px;font-weight:700;border-radius:20px;padding:2px 9px">เตรียม</span>';
+    }
+    const when = (it.date || '') + (it.time ? ' ' + it.time : '');
+    return `<tr>
+      <td style="font-weight:800;color:var(--a)">${escHtml(it.equipment)} No.${escHtml(it.number)}</td>
+      <td>${escHtml(it.ward)}</td>
+      <td style="font-size:12px">${escHtml(it.preparedBy)}</td>
+      <td style="white-space:nowrap;font-size:12px">${escHtml(when)}</td>
+      <td>${badge}</td>
+    </tr>`;
+  }).join('');
+  body.innerHTML = `<table style="width:100%;border-collapse:collapse;min-width:560px">
+    <thead><tr>
+      <th style="text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:2px solid var(--border)">เครื่อง</th>
+      <th style="text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:2px solid var(--border)">หน่วยงาน</th>
+      <th style="text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:2px solid var(--border)">ผู้เตรียม</th>
+      <th style="text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:2px solid var(--border)">เวลา</th>
+      <th style="text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:2px solid var(--border)">สถานะ</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
 }
 
 function equipmentCounts(rows, nameForRow) {
