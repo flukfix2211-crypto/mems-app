@@ -39,3 +39,15 @@
   #viewEquipStatus .eq-machine-info>span { font-size:12px; }
 }
 @media(max-width:360px) { #viewEquipStatus .eq-status-grid { grid-template-columns:1fr; } }
+
+/* Per-machine loan history and separate Circuit action. */
+.eq-history-open{display:block;width:100%;border:0;background:none;color:inherit;font:inherit;text-align:left;padding:0;cursor:pointer;border-radius:8px}
+.eq-history-open:focus-visible,.eq-circuit-open:focus-visible{outline:3px solid #0a8793;outline-offset:4px}
+.eq-circuit-open{display:flex;width:100%;background:none;border:0;color:var(--a);font:inherit;text-align:left;cursor:pointer}
+.eq-history-dialog{width:min(960px,calc(100vw - 32px));max-height:85vh;padding:24px;border:1px solid var(--border);border-radius:18px;color:var(--text);background:#fff}
+.eq-history-dialog::backdrop{background:rgba(15,35,45,.5)}
+.eq-history-heading{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.eq-history-heading h2{font-size:18px;margin:0}
+.eq-history-heading button{font:inherit;cursor:pointer;padding:8px 14px;border:1px solid var(--border);border-radius:8px;background:#f2f8fa}
+.eq-history-dialog .table-wrap{max-height:60vh;overflow:auto}
+.eq-history-dialog table{min-width:650px;width:100%}
