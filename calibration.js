@@ -199,7 +199,7 @@
   }
 
   function populateCalibrationTypes() {
-    const groups = Object.groupBy(additionalCalibrationTypes, type => type.group);
+    const groups = Object.groupBy(additionalCalibrationTypes.filter(type => !type.legacy), type => type.group);
     for (const [name, types] of Object.entries(groups)) {
       const section = document.createElement("section");
       section.className = "cal-type-group";
@@ -357,20 +357,25 @@
       ];
       doc.autoTable({ startY: 72, body: metadata, theme: "plain",
         styles: { font: PDF_FONT, fontSize: 13, overflow: "linebreak" } });
+      const digital = record.method === "digital-bp";
+      const columns = digital
+        ? ["จุด", "STD", "เครื่อง 1", "เครื่อง 2", "เครื่อง 3", "Standard", "Mean", "Error", "SD", "UCA", "U (k=2)"]
+        : reportColumns;
       record.measurements.forEach((sheet, sheetIndex) => {
         const title = devices[record.method][sheetIndex].title + " (" + sheet.unit + ")";
         const rows = sheet.rows.map(row => {
           const [, nominal, s1, m1, s2, m2, s3, m3] = row;
           const result = calculatePoint({ nominal, standardReadings: [s1, s2, s3],
             measuredReadings: [m1, m2, m3], budget: sheet.budget, errorRule: calibrationErrorRule(record.method) });
-          return [...row, ...outputs.map(key => result[key])].map(display);
+          return (digital ? [row[0], nominal, m1, m2, m3] : row)
+            .concat(outputs.map(key => result[key])).map(display);
         });
         doc.autoTable({
           startY: doc.lastAutoTable.finalY + 12,
-          head: [[{ content: title, colSpan: reportColumns.length }], reportColumns],
+          head: [[{ content: title, colSpan: columns.length }], columns],
           body: rows,
           foot: [[{ content: sheet.budget.map((value, i) => "UCB" + (i + 1) + " = " + display(value)).join("   ·   "),
-            colSpan: reportColumns.length }]],
+            colSpan: columns.length }]],
           showFoot: "lastPage",
           rowPageBreak: "avoid",
           styles: { font: PDF_FONT, fontSize: 12, halign: "right", cellPadding: 4 },
