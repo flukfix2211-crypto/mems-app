@@ -9,9 +9,11 @@ function calculatePoint({ nominal, standardReadings, measuredReadings, budget, e
   const mean = average(measuredReadings);
   // Access IIf uses STD when MeanSTD > 0 is false, including Null.
   const standard = meanStandard > 0 ? meanStandard : nominal;
-  const reference = { "mean-std": meanStandard, nominal, reverse: standard, standard }[errorRule];
+  const reference = { "mean-std": meanStandard, nominal, reverse: standard, standard,
+    "mean-nominal": nominal }[errorRule];
   const difference = reference === null || mean === null ? null : reference - mean;
-  const error = errorRule === "reverse" && difference !== null ? -difference : difference;
+  const error = (errorRule === "reverse" || errorRule === "mean-nominal") && difference !== null
+    ? -difference : difference;
   const sd = mean === null ? null : Math.sqrt(
     measuredReadings.reduce((sum, value) => sum + (value - mean) ** 2, 0) / 2
   );

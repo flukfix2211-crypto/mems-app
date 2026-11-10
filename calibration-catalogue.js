@@ -6,14 +6,22 @@ const cal1Sources = {
   weight: "Zcer Weight Sub",
   spin: "Zcer Sub Speed / Zcer Sub Timer",
   timer: "Zcer Sub Timer",
-  pump: "Zcer Sub Flow R / Zcer Sub Volume"
+  pump: "Zcer Sub Flow R / Zcer Sub Volume",
+  "digital-bp": "Add New Digital BP · NIBP-Sub-BP/BPD/BPM/Heart Rate/Spo2"
 };
 
 const additionalCalibrationTypes = [
   ["flowmeter","Flowmeter","เครื่องวัดอัตราการไหล","ระบบก๊าซ","nominal","tour",[["อัตราการไหล","L/min"]]],
   ["suction","Suction","เครื่องดูดเสมหะ","ระบบก๊าซ","nominal","tour",[["แรงดูด","mmHg"]]],
   ["regulator","Regulator","ตัวควบคุมแรงดัน","ระบบก๊าซ","nominal","tour",[["แรงดัน","psi"]]],
-  ["blood-pressure","Blood Pressure","เครื่องวัดความดันโลหิต","สัญญาณชีพ","nominal","tour",[["ความดัน","mmHg"]]],
+  ["manual-bp","Manual Blood Pressure","เครื่องวัดความดันโลหิตแบบ Manual","สัญญาณชีพ","nominal","tour",[["ความดันโลหิต","mmHg"]]],
+  ["digital-bp","Digital Blood Pressure","เครื่องวัดความดันโลหิตแบบ Digital","สัญญาณชีพ","mean-nominal","digital-bp",[
+    ["ความดันตัวบน · Systolic (NIBP-BP)","mmHg"],
+    ["ความดันตัวล่าง · Diastolic (NIBP-BPD)","mmHg"],
+    ["ความดันเฉลี่ย · Mean pressure (NIBP-BPM)","mmHg"],
+    ["อัตราชีพจร · Heart rate","bpm"],
+    ["ออกซิเจนในเลือด · SpO₂","%"]
+  ]],
   ["ambient","Ambient Thermometer","เทอร์โมมิเตอร์วัดอุณหภูมิห้อง","อุณหภูมิ","mean-std","thermo",[["อุณหภูมิ","°C"]]],
   ["weight-adult","Weighting Machine (Adult)","เครื่องชั่งผู้ใหญ่","น้ำหนัก","reverse","weight",[["น้ำหนัก","kg"]]],
   ["weight-general","Weighting Machine (General)","เครื่องชั่งทั่วไป","น้ำหนัก","reverse","weight",[["น้ำหนัก","kg"]]],
@@ -29,6 +37,13 @@ const additionalCalibrationTypes = [
   fields: fields.map(([title, unit]) => ({ title, unit }))
 }));
 
+// Keep already registered records readable while new registrations use explicit methods.
+const legacyCalibrationTypes = [{
+  method: "blood-pressure", name: "Blood Pressure", label: "Blood Pressure (เดิม)", group: "สัญญาณชีพ",
+  errorRule: "nominal", source: cal1Sources.tour, legacy: true,
+  fields: [{ title: "ความดันโลหิต", unit: "mmHg" }]
+}];
+
 // Other names from cal1 Gain.Detail, pending a verified input form.
 const cal1CatalogueOnly = [
   "Amalgamator",
@@ -37,7 +52,6 @@ const cal1CatalogueOnly = [
   "Analytical Balance",
   "Blood Bank",
   "Defiblillator",
-  "Digital Blood Pressure",
   "Doptone",
   "Drainage Suction",
   "Dry Bath",
@@ -75,5 +89,6 @@ const cal1CatalogueOnly = [
 
 function calibrationErrorRule(method) {
   if (method === "general") return "mean-std";
-  return additionalCalibrationTypes.find(type => type.method === method)?.errorRule ?? "standard";
+  return additionalCalibrationTypes.find(type => type.method === method)?.errorRule
+    ?? legacyCalibrationTypes.find(type => type.method === method)?.errorRule ?? "standard";
 }
