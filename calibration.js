@@ -114,6 +114,7 @@
   function openRegistration(method) {
     if (registerMethod !== method) get("calRegister").reset();
     registerMethod = method;
+    get("calRegisterName").value = typeNames[method];
     get("calRegisterTitle").textContent = "ลงทะเบียน · " + typeNames[method];
     showView("register");
     notify("กรอกรายละเอียดเครื่องมือสำหรับทะเบียนสอบเทียบ");
