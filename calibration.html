@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mems Calibration · MEMs</title>
+<link rel="icon" href="icon.png">
+<link rel="stylesheet" href="mems-ui.css">
+<link rel="stylesheet" href="mems-auth-theme.css">
+<link rel="stylesheet" href="pm-reports.css">
+<link rel="stylesheet" href="calibration.css">
+<link rel="stylesheet" href="site-footer.css?v=20261016-footer-1">
+</head>
+<body class="mems-pm mems-calibration">
+<header class="pm-header"><div class="pm-header-inner"><a class="pm-brand" href="index.html"><img src="logo.png" alt=""><span><strong>MEMs</strong><small>ศูนย์เครื่องมือแพทย์</small></span></a><div class="pm-header-actions"><div id="memsUserBadge"></div><nav><a href="index.html">← หน้าหลัก</a></nav></div></div></header>
+<main class="pm-shell">
+  <div class="notice" id="status" role="status">กำลังตรวจสิทธิ์ใช้งาน…</div>
+  <div id="calWorkspace" hidden>
+  <nav class="pm-tabs" aria-label="Mems Calibration">
+    <button id="calNewTab" type="button" aria-pressed="true">01 ลงทะเบียนเครื่องมือ</button>
+    <button id="calQueueTab" type="button" aria-pressed="false">02 ผู้ปฏิบัติการ</button>
+    <button id="calHistoryTab" type="button" aria-pressed="false">03 ประวัติการสอบเทียบ</button>
+  </nav>
+
+  <section id="calPicker" class="cal-picker" aria-labelledby="calPickerTitle">
+    <div class="cal-picker-intro">
+      <span class="pill">งานสอบเทียบ</span>
+      <h1 id="calPickerTitle" tabindex="-1">Mems Calibration</h1>
+      <p>ลงทะเบียนเครื่องมือ · บันทึกผลการสอบเทียบ · ค้นและพิมพ์รายงาน</p>
+    </div>
+    <h2 class="cal-step-heading">01 / เลือกประเภทเครื่องมือที่จะลงทะเบียน</h2>
+    <div class="cal-type-grid">
+      <button class="cal-type" type="button" data-cal-method="general">
+        <span class="cal-type-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 14.8V5a3 3 0 0 1 6 0v9.8a5 5 0 1 1-6 0ZM12 8v9"/><circle cx="12" cy="18" r="1"/></svg></span>
+        <span><strong>เทอร์โมมิเตอร์ทั่วไป</strong><small>General Thermometer · อุณหภูมิ</small></span>
+        <span class="cal-type-arrow" aria-hidden="true">→</span>
+      </button>
+      <button class="cal-type" type="button" data-cal-method="refrig">
+        <span class="cal-type-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2v20M3.3 7l17.4 10M3.3 17 20.7 7M9 4l3 3 3-3M9 20l3-3 3 3"/></svg></span>
+        <span><strong>เทอร์โมมิเตอร์ตู้เย็น</strong><small>Refrig. Thermometer · อุณหภูมิ</small></span>
+        <span class="cal-type-arrow" aria-hidden="true">→</span>
+      </button>
+      <button class="cal-type" type="button" data-cal-method="infusion">
+        <span class="cal-type-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="15" rx="3"/><path d="M8 7h8v4H8zM9 14h.01M15 14h.01M12 18v4"/></svg></span>
+        <span><strong>เครื่องควบคุมการให้สารละลาย</strong><small>Infusion Pump · อัตราการไหลและปริมาตร</small></span>
+        <span class="cal-type-arrow" aria-hidden="true">→</span>
+      </button>
+    </div>
+    <div id="calExtraTypes"></div>
+    <details class="card cal-catalogue">
+      <summary>ประเภทอื่นจาก cal1 <span id="calCatalogueCount"></span></summary>
+      <p>รายการจากตาราง Gain ในโปรแกรมเดิม ส่วนนี้เปิดดูชื่อได้และยังไม่มีฟอร์มกรอกใน MEMS</p>
+      <ul id="calCatalogueNames"></ul>
+    </details>
+  </section>
+  <form id="calRegister" class="card" hidden>
+    <button id="calRegisterBack" class="cal-back" type="button">← กลับไปเลือกประเภท</button>
+    <h1 id="calRegisterTitle" tabindex="-1"></h1>
+    <p>กรอกรายละเอียดเพื่อเพิ่มเครื่องในทะเบียนสอบเทียบ</p>
+    <div class="fields">
+      <label>ชื่อเครื่องมือ<input name="name" required maxlength="160"></label>
+      <label>หน่วยงาน<select name="department" id="calRegisterDepartment" required></select></label>
+      <label>ID เครื่องมือ<input name="tool_code" required maxlength="100" autocomplete="off"></label>
+      <label>เลขครุภัณฑ์<input name="inventory_no" maxlength="100" autocomplete="off"></label>
+      <label>ยี่ห้อ<input name="manufacturer" maxlength="100"></label>
+      <label>รุ่น<input name="model" maxlength="100"></label>
+      <label>S/N<input name="serial_number" maxlength="100"></label>
+    </div>
+    <div class="cal-buttons"><button id="calRegisterSave" class="primary" type="submit">บันทึกทะเบียนเครื่องมือ</button></div>
+  </form>
+  <section id="calQueue" class="card" hidden>
+    <span class="pill">02 / ผู้ปฏิบัติการ</span>
+    <h1 id="calQueueTitle" tabindex="-1">คิวสอบเทียบเครื่องมือ</h1>
+    <p>ค้นหาเครื่องจากทะเบียน แล้วเลือกบันทึกผลสอบเทียบ</p>
+    <form id="calQueueFilters" class="fields">
+      <label>ค้นหา ID หรือเลขครุภัณฑ์<input id="calQueueSearch" type="search" maxlength="100" placeholder="พิมพ์ ID หรือเลขครุภัณฑ์"></label>
+      <label>หน่วยงาน<select id="calQueueDepartment"></select></label>
+      <label>ประเภทเครื่องมือ<select id="calQueueType"></select></label>
+      <label>จัดกลุ่มรายการ<select id="calQueueGroup"><option value="department">ตามหน่วยงาน</option><option value="method">ตามประเภทเครื่องมือ</option></select></label>
+    </form>
+    <p id="calQueueCount" aria-live="polite"></p>
+    <div id="calQueueList"></div>
+    <div class="cal-buttons"><button id="calQueuePrev" type="button">← ก่อนหน้า</button><button id="calQueueNext" type="button">ถัดไป →</button></div>
+  </section>
+  <form id="calForm" hidden>
+  <button id="calBack" class="cal-back" type="button">← กลับไปคิวสอบเทียบ</button>
+  <section class="hero">
+    <div><span class="pill">แบบบันทึกผลสอบเทียบ</span><h1 id="calFormTitle" tabindex="-1"></h1><p>ตรวจข้อมูลเครื่องและคีย์ค่าที่วัด 3 รอบ</p></div>
+    <div class="actions"><button id="reset" type="button">ล้างค่าที่วัด</button></div>
+  </section>
+  <section class="card" aria-labelledby="identity">
+    <h2 id="identity"><span>01</span> เครื่องมือและข้อมูลการสอบเทียบ</h2>
+    <dl id="calToolSummary" class="cal-tool-summary"></dl>
+    <div class="fields">
+      <select id="device" hidden aria-hidden="true"><option value="general">General Thermometer</option><option value="refrig">Refrig. Thermometer</option><option value="infusion">Infusion Pump</option></select>
+
+      <label>เลขที่ใบรับรอง<input id="calCertificate" required maxlength="80" autocomplete="off"></label>
+      <label>วันที่สอบเทียบ<input id="calDate" type="date" required min="2000-01-01" max="2100-12-31"></label>
+      <label>ผู้ปฏิบัติการ<input id="calOperator" required maxlength="160"></label>
+      <label>เครื่องมาตรฐาน / เลขอ้างอิง<input id="calStandardReference" maxlength="200"></label>
+      <label>อุณหภูมิแวดล้อม (°C)<input id="calAmbientTemperature" type="number" step="any"></label>
+      <label>ความชื้นสัมพัทธ์ (%)<input id="calHumidity" type="number" step="any" min="0" max="100"></label>
+      <label class="cal-notes">หมายเหตุ<textarea id="calNotes" rows="2" maxlength="1000"></textarea></label>
+    </div>
+  </section>
+  <section class="card" aria-labelledby="measurements">
+    <div class="section-head">
+      <div><h2 id="measurements"><span>02</span> บันทึกค่าที่วัด</h2><p>กด Tab หรือ Enter เพื่อเลื่อนไปช่องถัดไปในตาราง</p></div><span class="pill">วัด 3 รอบ</span>
+    </div>
+    <div id="sheets"></div>
+  </section>
+  <section class="card" aria-labelledby="uncertainty">
+    <h2 id="uncertainty"><span>03</span> ค่าความไม่แน่นอน</h2>
+    <p>กรอก UCB ครบ 4 ช่องต่อพารามิเตอร์เพื่อคำนวณ U (k = 2) หากรายการใดเป็นศูนย์ให้ใส่ 0</p>
+    <div id="budgets"></div>
+    <details><summary>ดูสูตรที่ใช้ในตาราง</summary><p id="rule"></p><p>SD ใช้ตัวหาร 2 จากการวัด 3 รอบ · UCA = SD ÷ √3 · U = 2 × √(UCA² + UCB1² + UCB2² + UCB3² + UCB4²)</p></details>
+  </section>
+
+  <div class="cal-buttons"><button class="primary" id="calSave" type="submit">บันทึกผลสอบเทียบ</button></div>
+  </form>
+  <section class="card" id="calHistory" hidden>
+    <span class="pill">03 / ผลการสอบเทียบ</span>
+    <h1>ประวัติการสอบเทียบ</h1>
+    <form id="calFilters" class="fields">
+      <label>ค้นหา ID, เลขครุภัณฑ์ หรือเลขใบรับรอง<input id="calHistorySearch" type="search" maxlength="100"></label>
+      <label>หน่วยงาน<select id="calFilterDepartment"></select></label>
+      <label>ประเภทเครื่องมือ<select id="calFilterType"></select></label>
+      <div class="cal-buttons"><button type="submit">ค้นหา</button></div>
+    </form>
+    <div class="cal-buttons"><button id="calPrintFiltered" type="button" disabled>PDF / พิมพ์รายการที่กรอง</button></div>
+    <p id="calCount" aria-live="polite"></p>
+    <div class="scroll">
+      <table class="cal-history"><thead><tr><th>วันที่</th><th>เลขที่ใบรับรอง</th><th>หน่วยงาน</th><th>ประเภทเครื่องมือ</th><th>เครื่องมือ</th><th>รายงาน</th></tr></thead><tbody id="calList"></tbody></table>
+    </div>
+    <div class="cal-buttons"><button id="calPrev" type="button" disabled>← ก่อนหน้า</button><button id="calNext" type="button" disabled>ถัดไป →</button></div>
+  </section>
+  </div>
+</main>
+<div id="loginOverlay" class="auth-overlay" style="display:none"><form class="auth-box" onsubmit="event.preventDefault();memsHandleLogin()"><h2>เข้าสู่ระบบ MEMs</h2><p>ใช้บัญชีเดียวกับระบบเดิม</p><input id="authUser" autocomplete="username" placeholder="ชื่อผู้ใช้" aria-label="ชื่อผู้ใช้" required><input id="authPass" type="password" autocomplete="current-password" placeholder="รหัสผ่าน" aria-label="รหัสผ่าน" required><div id="authErr" role="alert" style="display:none"></div><button id="authBtn" type="submit">เข้าสู่ระบบ</button></form></div><div id="forbiddenOverlay" class="auth-overlay" style="display:none"><div class="auth-box"><h2>ยังไม่มีสิทธิ์ใช้งาน</h2><p>ให้แอดมินอนุญาตเมนู Mems Calibration</p><a href="index.html">กลับหน้าหลัก</a></div></div>
+
+<script src="vendor/supabase.js"></script>
+<script src="supabase-client.js"></script>
+<script src="auth.js?v=calibration-1"></script>
+<script src="vendor/jspdf.umd.min.js"></script>
+<script src="vendor/jspdf.plugin.autotable.min.js"></script>
+<script src="reports.js"></script>
+<script src="calibration-catalogue.js"></script>
+<script src="calibration-calculation.js"></script>
+<script src="calibration-form.js"></script>
+<script src="calibration.js"></script>
+<script src="site-footer.js?v=20261016-footer-1"></script>
+</body>
+</html>
