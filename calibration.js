@@ -48,7 +48,28 @@
         context.globalCompositeOperation = "source-in";
         context.fillStyle = signatureBlue;
         context.fillRect(0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL("image/png"));
+        const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+        let minX = canvas.width, minY = canvas.height, maxX = -1, maxY = -1;
+        for (let y = 0; y < canvas.height; y++) {
+          for (let x = 0; x < canvas.width; x++) {
+            if (pixels[(y * canvas.width + x) * 4 + 3] <= 8) continue;
+            minX = Math.min(minX, x);
+            minY = Math.min(minY, y);
+            maxX = Math.max(maxX, x);
+            maxY = Math.max(maxY, y);
+          }
+        }
+        if (maxX < minX || maxY < minY) return resolve(canvas.toDataURL("image/png"));
+        const padding = 12;
+        minX = Math.max(0, minX - padding);
+        minY = Math.max(0, minY - padding);
+        maxX = Math.min(canvas.width - 1, maxX + padding);
+        maxY = Math.min(canvas.height - 1, maxY + padding);
+        const cropped = document.createElement("canvas");
+        cropped.width = maxX - minX + 1;
+        cropped.height = maxY - minY + 1;
+        cropped.getContext("2d").drawImage(canvas, minX, minY, cropped.width, cropped.height, 0, 0, cropped.width, cropped.height);
+        resolve(cropped.toDataURL("image/png"));
       };
       image.onerror = () => resolve(dataUrl);
       image.src = dataUrl;
@@ -737,7 +758,11 @@
         const centerX = x + width / 2;
         text(label + " : ................................................", centerX, signY, 11, { align: "center", maxWidth: width });
         if (signer?.signature_data_url?.startsWith("data:image/png;base64,")) {
-          doc.addImage(signer.signature_data_url, "PNG", centerX - 46, signY - 38, 92, 26);
+          const image = doc.getImageProperties(signer.signature_data_url);
+          const scale = Math.min(92 / image.width, 26 / image.height);
+          const imageWidth = image.width * scale;
+          const imageHeight = image.height * scale;
+          doc.addImage(signer.signature_data_url, "PNG", centerX - imageWidth / 2, signY - imageHeight - 7, imageWidth, imageHeight);
         }
         text(signer?.name || fallbackName || "", centerX, signY + 30, 11, { align: "center", maxWidth: width });
         text(signer?.position || "นายช่างเทคนิค (เครื่องมือแพทย์)", centerX, signY + 52, 10, { align: "center", maxWidth: width });
