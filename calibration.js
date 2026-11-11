@@ -34,12 +34,33 @@
     if (entries.some(([value]) => String(value) === previous)) select.value = previous;
   }
 
+  const signatureBlue = "#1554a3";
+
+  function recolorSignature(dataUrl) {
+    return new Promise(resolve => {
+      const image = new Image();
+      image.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = image.naturalWidth || image.width;
+        canvas.height = image.naturalHeight || image.height;
+        const context = canvas.getContext("2d");
+        context.drawImage(image, 0, 0);
+        context.globalCompositeOperation = "source-in";
+        context.fillStyle = signatureBlue;
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/png"));
+      };
+      image.onerror = () => resolve(dataUrl);
+      image.src = dataUrl;
+    });
+  }
+
   function createSignaturePad(id) {
     const canvas = get(id);
     const context = canvas.getContext("2d");
     let drawing = false;
     let hasInk = false;
-    context.strokeStyle = "#142b40";
+    context.strokeStyle = signatureBlue;
     context.lineWidth = 4;
     context.lineCap = "round";
     context.lineJoin = "round";
@@ -82,6 +103,10 @@
         const image = new Image();
         image.onload = () => {
           context.drawImage(image, 0, 0, canvas.width, canvas.height);
+          context.globalCompositeOperation = "source-in";
+          context.fillStyle = signatureBlue;
+          context.fillRect(0, 0, canvas.width, canvas.height);
+          context.globalCompositeOperation = "source-over";
           hasInk = true;
           resolve();
         };
@@ -539,6 +564,11 @@
   async function buildPdf(records) {
     const doc = await newThaiPdf({ orientation: "portrait" });
     const signatories = await loadCalibrationSignatories();
+    for (const signer of Object.values(signatories)) {
+      if (signer?.signature_data_url?.startsWith("data:image/png;base64,")) {
+        signer.signature_data_url = await recolorSignature(signer.signature_data_url);
+      }
+    }
     const hospitalLogoResponse = await fetch("hospital-seal.png");
     if (!hospitalLogoResponse.ok) throw new Error("โหลดตราโรงพยาบาลสำหรับใบรับรองไม่ได้");
     const hospitalLogoBytes = new Uint8Array(await hospitalLogoResponse.arrayBuffer());
@@ -821,3 +851,4 @@
     notify("เลือกประเภทเครื่องมือเพื่อเริ่มลงทะเบียน");
   })();
 })();
+
