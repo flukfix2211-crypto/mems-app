@@ -50,7 +50,7 @@ function render() {
       const cells = entryColumns.map(({ label, index: col }) =>
         '<td><input type="number" step="any" placeholder="—" aria-label="' +
         label + ' จุดที่ ' + (index + 1) + '" data-col="' + col + '" value="' +
-        escapeValue(row[col]) + '"></td>').join("");
+        escapeValue(row[col]) + '"' + (col === 0 ? " readonly" : "") + '></td>').join("");
       return '<tr data-row="' + index + '">' + cells +
         outputs.map(key => '<td class="calc" data-output="' + key + '">—</td>').join("") +
         '<td><button type="button" class="remove" data-remove="' + index +
@@ -146,15 +146,16 @@ sheets.addEventListener("click", event => {
   const state = rowsByDevice.get(device.value)[index];
   const { rows, standardAuto } = state;
   if (button.hasAttribute("data-add")) {
-    rows.push(Array(8).fill(""));
+    rows.push([String(rows.length + 1), ...Array(7).fill("")]);
     standardAuto.push(Array(3).fill(true));
     render();
-    sheets.querySelector('[data-sheet="' + index + '"] tr:last-child [data-col="0"]').focus();
+    sheets.querySelector('[data-sheet="' + index + '"] tr:last-child [data-col="1"]').focus();
   } else {
     rows.splice(Number(button.dataset.remove), 1);
     standardAuto.splice(Number(button.dataset.remove), 1);
+    rows.forEach((row, rowIndex) => { row[0] = String(rowIndex + 1); });
     if (!rows.length) {
-      rows.push(Array(8).fill(""));
+      rows.push(["1", ...Array(7).fill("")]);
       standardAuto.push(Array(3).fill(true));
     }
     render();
@@ -171,7 +172,7 @@ budgets.addEventListener("input", event => {
 
 function stateFor() {
   return devices[device.value].map(({ unit }) => ({
-    unit, rows: [Array(8).fill("")], standardAuto: [Array(3).fill(true)], budget: Array(4).fill("")
+    unit, rows: [["1", ...Array(7).fill("")]], standardAuto: [Array(3).fill(true)], budget: Array(4).fill("")
   }));
 }
 
