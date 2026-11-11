@@ -162,21 +162,33 @@
 <dialog id="calSignerDialog" class="cal-signer-dialog" aria-labelledby="calSignerTitle">
   <form id="calSignerForm">
     <div class="section-head"><h2 id="calSignerTitle">ตั้งค่าผู้ลงนามในใบรับรอง</h2><button id="calSignerClose" type="button" aria-label="ปิด">ปิด</button></div>
-    <p>บันทึกชื่อ ตำแหน่ง และลายเซ็นที่วาดบนจอ แล้วระบบจะใส่ลงใน PDF ใบรับรองอัตโนมัติ</p>
+    <p>เลือกหรือเพิ่มผู้ลงนาม วาดลายเซ็น แล้วปรับตำแหน่งแนวนอนและแนวตั้งแยกผู้ทดสอบกับผู้อนุมัติได้</p>
     <div class="cal-signer-grid">
       <fieldset class="cal-signer-card">
         <legend>ผู้ทดสอบ · Tested by</legend>
+        <label>เลือกผู้ลงนาม<select id="calTestSignerSelect" required></select></label>
+        <button id="calTestSignerAdd" type="button">+ เพิ่มชื่อและลายเซ็น</button>
         <label>ชื่อ<input id="calTestSignerName" list="calOperatorOptions" maxlength="160" required></label>
         <label>ตำแหน่ง<input id="calTestSignerPosition" maxlength="160" required></label>
         <canvas id="calTestSignerPad" class="cal-signature-pad" width="640" height="180" aria-label="วาดลายเซ็นผู้ทดสอบ"></canvas>
         <button id="calTestSignerClear" type="button">ล้างลายเซ็น</button>
+        <div class="cal-signature-position">
+          <label>เลื่อนซ้าย–ขวา <output id="calTestSignerXValue" for="calTestSignerX">4.2 มม.</output><input id="calTestSignerX" type="range" min="-20" max="20" step="0.5" value="4.2"></label>
+          <label>เลื่อนขึ้น–ลง <output id="calTestSignerYValue" for="calTestSignerY">0 มม.</output><input id="calTestSignerY" type="range" min="-20" max="20" step="0.5" value="0"></label>
+        </div>
       </fieldset>
       <fieldset class="cal-signer-card">
         <legend>ผู้อนุมัติ · Approved by</legend>
+        <label>เลือกผู้ลงนาม<select id="calApproveSignerSelect" required></select></label>
+        <button id="calApproveSignerAdd" type="button">+ เพิ่มชื่อและลายเซ็น</button>
         <label>ชื่อ<input id="calApproveSignerName" list="calOperatorOptions" maxlength="160" required></label>
         <label>ตำแหน่ง<input id="calApproveSignerPosition" maxlength="160" required></label>
         <canvas id="calApproveSignerPad" class="cal-signature-pad" width="640" height="180" aria-label="วาดลายเซ็นผู้อนุมัติ"></canvas>
         <button id="calApproveSignerClear" type="button">ล้างลายเซ็น</button>
+        <div class="cal-signature-position">
+          <label>เลื่อนซ้าย–ขวา <output id="calApproveSignerXValue" for="calApproveSignerX">4.2 มม.</output><input id="calApproveSignerX" type="range" min="-20" max="20" step="0.5" value="4.2"></label>
+          <label>เลื่อนขึ้น–ลง <output id="calApproveSignerYValue" for="calApproveSignerY">0 มม.</output><input id="calApproveSignerY" type="range" min="-20" max="20" step="0.5" value="0"></label>
+        </div>
       </fieldset>
     </div>
     <p id="calSignerStatus" role="status" aria-live="polite"></p>

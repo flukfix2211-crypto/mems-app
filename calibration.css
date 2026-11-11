@@ -47,10 +47,18 @@
 .cal-signer-card legend { padding: 0 6px; font-weight: 700; }
 .cal-signer-card label { display: block; margin: 8px 0; }
 .cal-signer-card input { display: block; width: 100%; margin-top: 4px; padding: 8px; }
+.cal-signer-card select { display: block; width: 100%; min-height: 44px; margin-top: 4px; padding: 8px; }
+.cal-signer-card button { min-height: 44px; }
 .cal-signature-pad { display: block; width: 100%; height: 150px; margin: 10px 0; border: 1px dashed #8aa9b5; border-radius: 8px; background: #fff; touch-action: none; }
+.cal-signature-position { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; padding: 12px; border-radius: 10px; background: var(--light); }
+.cal-signature-position label { margin: 0; }
+.cal-signature-position output { float: right; color: var(--brand); font-variant-numeric: tabular-nums; }
+.cal-signature-position input[type="range"] { accent-color: var(--brand); min-height: 32px; padding: 0; }
+.cal-signer-card :focus-visible { outline: 3px solid #087c8670; outline-offset: 2px; }
 
 @media (max-width: 680px) {
   .cal-signer-grid { grid-template-columns: 1fr; }
+  .cal-signature-position { grid-template-columns: 1fr; }
   .cal-signer-dialog { padding: 14px; }
 }
 

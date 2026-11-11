@@ -142,18 +142,50 @@
     approved: createSignaturePad("calApproveSignerPad")
   };
   const signerFields = {
-    tested: { name: "calTestSignerName", position: "calTestSignerPosition", title: "ผู้ทดสอบ" },
-    approved: { name: "calApproveSignerName", position: "calApproveSignerPosition", title: "ผู้อนุมัติ" }
+    tested: { select: "calTestSignerSelect", add: "calTestSignerAdd", name: "calTestSignerName", position: "calTestSignerPosition", pad: "tested", x: "calTestSignerX", y: "calTestSignerY", xValue: "calTestSignerXValue", yValue: "calTestSignerYValue", title: "ผู้ทดสอบ" },
+    approved: { select: "calApproveSignerSelect", add: "calApproveSignerAdd", name: "calApproveSignerName", position: "calApproveSignerPosition", pad: "approved", x: "calApproveSignerX", y: "calApproveSignerY", xValue: "calApproveSignerXValue", yValue: "calApproveSignerYValue", title: "ผู้อนุมัติ" }
   };
-  let calibrationSignatories = { tested: null, approved: null };
+  let calibrationSignatories = { profiles: { tested: [], approved: [] }, preferences: { tested: null, approved: null } };
 
   async function loadCalibrationSignatories() {
-    const { data, error } = await supabase.from("mems_calibration_signatories")
-      .select("role,name,position,signature_data_url");
-    if (error) throw error;
-    calibrationSignatories = { tested: null, approved: null };
-    for (const signer of data || []) calibrationSignatories[signer.role] = signer;
+    const [profilesResult, preferencesResult] = await Promise.all([
+      supabase.from("mems_calibration_signer_profiles")
+        .select("id,role,name,position,signature_data_url").order("name"),
+      supabase.from("mems_calibration_signer_preferences")
+        .select("role,profile_id,offset_x_mm,offset_y_mm")
+    ]);
+    if (profilesResult.error) throw profilesResult.error;
+    if (preferencesResult.error) throw preferencesResult.error;
+    calibrationSignatories = { profiles: { tested: [], approved: [] }, preferences: { tested: null, approved: null } };
+    for (const signer of profilesResult.data || []) calibrationSignatories.profiles[signer.role].push(signer);
+    for (const preference of preferencesResult.data || []) calibrationSignatories.preferences[preference.role] = preference;
     return calibrationSignatories;
+  }
+
+  function setSignerProfileOptions(role, selectedId) {
+    const fields = signerFields[role];
+    const select = get(fields.select);
+    const profiles = calibrationSignatories.profiles[role] || [];
+    select.replaceChildren(
+      new Option("เลือกผู้ลงนาม", ""),
+      new Option("+ เพิ่มชื่อและลายเซ็นใหม่", "__new__"),
+      ...profiles.map(signer => new Option(signer.name + " · " + signer.position, signer.id))
+    );
+    select.value = selectedId && profiles.some(signer => signer.id === selectedId) ? selectedId : "__new__";
+  }
+
+  async function showSignerProfile(role, profileId) {
+    const fields = signerFields[role];
+    const signer = calibrationSignatories.profiles[role].find(item => item.id === profileId);
+    get(fields.name).value = signer?.name || "";
+    get(fields.position).value = signer?.position || "";
+    await signaturePads[fields.pad].load(signer?.signature_data_url || "");
+  }
+
+  function updateSignerOffsetLabels(role) {
+    const fields = signerFields[role];
+    get(fields.xValue).textContent = Number(get(fields.x).value).toFixed(1).replace(/\.0$/, "") + " มม.";
+    get(fields.yValue).textContent = Number(get(fields.y).value).toFixed(1).replace(/\.0$/, "") + " มม.";
   }
 
   async function openCalibrationSignerSettings() {
@@ -162,12 +194,16 @@
     try {
       const signers = await loadCalibrationSignatories();
       for (const role of ["tested", "approved"]) {
-        const signer = signers[role];
-        get(signerFields[role].name).value = signer?.name || "";
-        get(signerFields[role].position).value = signer?.position || "";
-        await signaturePads[role].load(signer?.signature_data_url || "");
+        const fields = signerFields[role];
+        const preference = signers.preferences[role];
+        setSignerProfileOptions(role, preference?.profile_id || signers.profiles[role][0]?.id);
+        const selectedId = get(fields.select).value;
+        await showSignerProfile(role, selectedId === "__new__" ? "" : selectedId);
+        get(fields.x).value = String(preference?.offset_x_mm ?? 4.2);
+        get(fields.y).value = String(preference?.offset_y_mm ?? 0);
+        updateSignerOffsetLabels(role);
       }
-      get("calSignerStatus").textContent = "ลายเซ็นจะปรากฏใน PDF ทุกครั้งที่เปิดรายงานสอบเทียบ";
+      get("calSignerStatus").textContent = "เลือกผู้ลงนามที่บันทึกไว้ เพิ่มรายชื่อใหม่ และปรับตำแหน่งลายเซ็นแยกแต่ละฝั่งได้";
       get("calSignerDialog").showModal();
     } finally {
       get("calSignerSettings").disabled = false;
@@ -175,20 +211,38 @@
   }
 
   async function saveCalibrationSignatories() {
-    const rows = ["tested", "approved"].map(role => {
+    for (const role of ["tested", "approved"]) {
       const fields = signerFields[role];
       const name = get(fields.name).value.trim();
       const position = get(fields.position).value.trim();
-      if (!name || !position || !signaturePads[role].hasInk()) {
+      if (!name || !position || !signaturePads[fields.pad].hasInk()) {
         throw new Error("กรุณากรอกชื่อ ตำแหน่ง และวาดลายเซ็นของ" + fields.title + "ให้ครบ");
       }
-      return { role, name, position, signature_data_url: signaturePads[role].dataUrl(), updated_at: new Date().toISOString() };
-    });
-    const { error } = await supabase.from("mems_calibration_signatories").upsert(rows, { onConflict: "role" });
-    if (error) throw error;
+      const profileId = get(fields.select).value;
+      const profile = { role, name, position, signature_data_url: signaturePads[fields.pad].dataUrl(), updated_at: new Date().toISOString() };
+      let savedProfile;
+      if (profileId === "__new__") {
+        const { data, error } = await supabase.from("mems_calibration_signer_profiles").insert(profile).select("id").single();
+        if (error) throw error;
+        savedProfile = data;
+      } else {
+        const { data, error } = await supabase.from("mems_calibration_signer_profiles").update(profile)
+          .eq("id", profileId).select("id").single();
+        if (error) throw error;
+        savedProfile = data;
+      }
+      const { error } = await supabase.from("mems_calibration_signer_preferences").upsert({
+        role,
+        profile_id: savedProfile.id,
+        offset_x_mm: Number(get(fields.x).value),
+        offset_y_mm: Number(get(fields.y).value),
+        updated_at: new Date().toISOString()
+      }, { onConflict: "role" });
+      if (error) throw error;
+    }
     await loadCalibrationSignatories();
     get("calSignerDialog").close();
-    notify("บันทึกชื่อและลายเซ็นผู้ทดสอบ/ผู้อนุมัติแล้ว · PDF ครั้งต่อไปจะใส่ให้อัตโนมัติ");
+    notify("บันทึกผู้ลงนามและตำแหน่งลายเซ็นแล้ว · เลือกใช้รายชื่อเดิมหรือเพิ่มรายชื่อใหม่ได้");
   }
 
   async function loadCalibrationOperators() {
@@ -610,8 +664,13 @@
 
   async function buildPdf(records) {
     const doc = await newThaiPdf({ orientation: "portrait" });
-    const signatories = await loadCalibrationSignatories();
-    for (const signer of Object.values(signatories)) {
+    const signerSettings = await loadCalibrationSignatories();
+    const signatories = {};
+    for (const role of ["tested", "approved"]) {
+      const selectedId = signerSettings.preferences[role]?.profile_id;
+      const signer = signerSettings.profiles[role].find(item => item.id === selectedId)
+        || signerSettings.profiles[role][0] || null;
+      signatories[role] = signer;
       if (signer?.signature_data_url?.startsWith("data:image/png;base64,")) {
         signer.signature_data_url = await recolorSignature(signer.signature_data_url);
       }
@@ -754,15 +813,17 @@
       }
       text("วิธีทดสอบ : โดยการนำเครื่องมือที่ต้องการสอบเทียบต่อเข้ากับเครื่องมาตรฐาน แล้วควบคุมค่าตามจุดทดสอบ อ่านค่าแล้วบันทึกค่า", left + 43, finalY + 2, 10);
       const signY = pageH - 120;
-      const drawSigner = (label, signer, fallbackName, x, width) => {
+      const drawSigner = (label, signer, fallbackName, x, width, placement) => {
         const centerX = x + width / 2;
+        const offsetX = (Number(placement?.offset_x_mm) || 0) * 72 / 25.4;
+        const offsetY = (Number(placement?.offset_y_mm) || 0) * 72 / 25.4;
         text(label + " : ................................................", centerX, signY, 11, { align: "center", maxWidth: width });
         if (signer?.signature_data_url?.startsWith("data:image/png;base64,")) {
           const image = doc.getImageProperties(signer.signature_data_url);
           const scale = Math.min(92 / image.width, 26 / image.height);
           const imageWidth = image.width * scale;
           const imageHeight = image.height * scale;
-          doc.addImage(signer.signature_data_url, "PNG", centerX - imageWidth / 2 + 12, signY - imageHeight - 7, imageWidth, imageHeight);
+          doc.addImage(signer.signature_data_url, "PNG", centerX + offsetX - imageWidth / 2, signY - imageHeight - 7 + offsetY, imageWidth, imageHeight);
         }
         text(signer?.name || fallbackName || "", centerX, signY + 30, 11, { align: "center", maxWidth: width });
         text(signer?.position || "นายช่างเทคนิค (เครื่องมือแพทย์)", centerX, signY + 52, 10, { align: "center", maxWidth: width });
@@ -770,8 +831,8 @@
       const signerWidth = (right - left) / 2;
       const leftSignX = left;
       const rightSignX = left + signerWidth;
-      drawSigner("Tested by", signatories.tested, record.operator_name, leftSignX, signerWidth);
-      drawSigner("Approved by", signatories.approved, "", rightSignX, signerWidth);
+      drawSigner("Tested by", signatories.tested, record.operator_name, leftSignX, signerWidth, signerSettings.preferences.tested);
+      drawSigner("Approved by", signatories.approved, "", rightSignX, signerWidth, signerSettings.preferences.approved);
       text("Comment : This report certifies the test results as of the date, location and the conditions of testing only.", left, pageH - 48, 8.5);
       doc.setDrawColor(70, 80, 85).setLineWidth(.45).line(left, pageH - 37, right, pageH - 37);
       text("โรงพยาบาลพหลพลพยุหเสนา  572 ถ.แสงชูโต  ต.ปากแพรก  อ.เมืองกาญจนบุรี 71000 โทร 034-587800",
@@ -884,6 +945,20 @@
   }));
   get("calSignerSettings").addEventListener("click", guarded(openCalibrationSignerSettings));
   get("calSignerClose").addEventListener("click", () => get("calSignerDialog").close());
+  for (const role of ["tested", "approved"]) {
+    const fields = signerFields[role];
+    get(fields.select).addEventListener("change", () => {
+      showSignerProfile(role, get(fields.select).value === "__new__" ? "" : get(fields.select).value)
+        .catch(error => { get("calSignerStatus").textContent = error.message || "โหลดลายเซ็นไม่สำเร็จ"; });
+    });
+    get(fields.add).addEventListener("click", () => {
+      get(fields.select).value = "__new__";
+      showSignerProfile(role, "");
+      get(fields.name).focus();
+    });
+    get(fields.x).addEventListener("input", () => updateSignerOffsetLabels(role));
+    get(fields.y).addEventListener("input", () => updateSignerOffsetLabels(role));
+  }
   get("calTestSignerClear").addEventListener("click", () => signaturePads.tested.clear());
   get("calApproveSignerClear").addEventListener("click", () => signaturePads.approved.clear());
   get("calSignerForm").addEventListener("submit", guarded(saveCalibrationSignatories, get("calSignerSave")));

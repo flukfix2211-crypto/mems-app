@@ -1,0 +1,2 @@
+create index mems_calibration_signer_preferences_profile_id_idx
+  on public.mems_calibration_signer_preferences (profile_id);
