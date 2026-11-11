@@ -33,6 +33,22 @@
     if (entries.some(([value]) => String(value) === previous)) select.value = previous;
   }
 
+  async function loadCalibrationOperators() {
+    const { data, error } = await supabase.from("mems_report_operators")
+      .select("name,position").order("name").order("position");
+    if (error) throw error;
+    const list = get("calOperatorOptions");
+    list.replaceChildren(...data.map(person => {
+      const option = document.createElement("option");
+      option.value = person.name;
+      option.label = person.position;
+      return option;
+    }));
+    get("calOperatorHint").textContent = data.length
+      ? "รายชื่อจาก PM · " + data.length + " รายชื่อ · เลือกจากรายการหรือพิมพ์ชื่อได้"
+      : "ยังไม่มีรายชื่อใน PM · พิมพ์ชื่อผู้ปฏิบัติการได้";
+  }
+
   function assetLabel(asset) {
     return [asset.name || asset.type, asset.tool_code || asset.asset_id,
       asset.inventory_no || asset.asset_code, [asset.manufacturer, asset.model].filter(Boolean).join(" "),
@@ -608,6 +624,10 @@
     const profile = await memsGuard("calibration");
     if (!profile) return;
     operatorName = profile.display_name || "";
+    await loadCalibrationOperators().catch(error => {
+      console.warn("โหลดรายชื่อผู้ปฏิบัติงานจาก PM ไม่สำเร็จ", error);
+      get("calOperatorHint").textContent = "โหลดรายชื่อจาก PM ไม่สำเร็จ · ยังพิมพ์ชื่อเองได้";
+    });
     const savedDepartments = await fetchPreparationWards().catch(() => []);
     departments = [...new Set(["ศูนย์เครื่องมือแพทย์", ...MEMS_WARDS, ...savedDepartments])]
       .sort((left, right) => left.localeCompare(right, "th"));
