@@ -368,6 +368,14 @@
 
   async function buildPdf(records) {
     const doc = await newThaiPdf({ orientation: "portrait" });
+    const hospitalLogoResponse = await fetch("hospital-seal.png");
+    if (!hospitalLogoResponse.ok) throw new Error("โหลดตราโรงพยาบาลสำหรับใบรับรองไม่ได้");
+    const hospitalLogoBytes = new Uint8Array(await hospitalLogoResponse.arrayBuffer());
+    let hospitalLogoBinary = "";
+    for (let i = 0; i < hospitalLogoBytes.length; i += 0x8000) {
+      hospitalLogoBinary += String.fromCharCode.apply(null, hospitalLogoBytes.subarray(i, i + 0x8000));
+    }
+    const hospitalLogoDataUrl = "data:image/png;base64," + btoa(hospitalLogoBinary);
     const pageW = doc.internal.pageSize.getWidth();
     const pageH = doc.internal.pageSize.getHeight();
     const headerPages = new Set();
@@ -402,9 +410,9 @@
       if (headerPages.has(pageNumber)) return;
       headerPages.add(pageNumber);
       doc.setDrawColor(45, 55, 60).setLineWidth(1.1);
-      if (doc.__memsLogoDataUrl) doc.addImage(doc.__memsLogoDataUrl, "PNG", left, 26, 48, 48);
-      text("Phaholpolpayuhasena Hospital", left + 62, 45, 17);
-      text("Medical Device Center", left + 62, 65, 15);
+      doc.addImage(hospitalLogoDataUrl, "PNG", left, 24, 52, 52);
+      text("Phaholpolpayuhasena Hospital", left + 64, 45, 17);
+      text("Medical Device Center", left + 64, 65, 15);
       doc.line(left, 88, right, 88);
       text("Certificate of Testing", pageW / 2, 119, 19, { align: "center" });
       text("Cert. No. :  " + (record.certificate_no || "—"), right, 103, 13, { align: "right" });
@@ -501,7 +509,12 @@
       text("นายช่างเทคนิค (เครื่องมือแพทย์)", pageW / 2 + 130, signY + 52, 10, { align: "center" });
       text("Comment : This report certifies the test results as of the date, location and the conditions of testing only.", left, pageH - 48, 8.5);
       doc.setDrawColor(70, 80, 85).setLineWidth(.45).line(left, pageH - 37, right, pageH - 37);
-      text("โรงพยาบาลพหลพลพยุหเสนา  572 ถ.แสงชูโต  ต.ปากแพรก  อ.เมืองกาญจนบุรี 71000 โทร 034-587800", left, pageH - 22, 9);
+      text("โรงพยาบาลพหลพลพยุหเสนา  572 ถ.แสงชูโต  ต.ปากแพรก  อ.เมืองกาญจนบุรี 71000 โทร 034-587800",
+        left, pageH - 22, 8.2, { maxWidth: right - left - 43 });
+      if (doc.__memsLogoDataUrl) {
+        doc.addImage(doc.__memsLogoDataUrl, "PNG", right - 30, pageH - 31, 10, 10);
+        text("MEMs", right - 17, pageH - 22, 7, { align: "right" });
+      }
     });
     const totalPages = doc.getNumberOfPages();
     for (let i = 1; i <= totalPages; i++) {
