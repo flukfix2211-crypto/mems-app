@@ -402,10 +402,130 @@ button.cal-back {
   columns: 230px;
   padding-left: 24px;
 }
-.cal-step-heading {
-  margin: 22px 0 0;
-  font-size: 17px;
+
+/* Mems Calibration home: modern step-first operations dashboard. */
+.mems-calibration .pm-shell {
+  max-width: 1480px;
+  margin-top: 26px;
 }
+
+.mems-calibration .pm-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: 100%;
+  gap: 7px;
+  padding: 6px;
+  border-radius: 14px;
+}
+
+.mems-calibration .pm-tabs button {
+  min-height: 48px;
+  border-radius: 10px;
+  text-align: left;
+  padding-inline: 16px;
+}
+
+.cal-picker-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 24px;
+  padding: 8px 0 18px;
+}
+
+.cal-picker-intro h1 {
+  margin: 8px 0 4px;
+  font-size: clamp(30px, 3.4vw, 42px);
+  font-weight: 800;
+  letter-spacing: -.035em;
+}
+
+.cal-picker-intro p {
+  max-width: 740px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.cal-picker-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cal-picker-actions button {
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 8px 13px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+  transition: background-color .15s,border-color .15s,box-shadow .15s;
+}
+
+.cal-picker-actions button:hover {
+  border-color: var(--brand);
+  background: var(--light);
+  filter: none;
+}
+
+.cal-dashboard-stats {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 12px;
+  margin: 8px 0 26px;
+}
+
+.cal-dashboard-stat {
+  position: relative;
+  display: grid;
+  gap: 2px;
+  min-height: 104px;
+  padding: 14px 17px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--brand);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 3px 12px #173b4509;
+}
+
+.cal-dashboard-stat:nth-child(2) { border-top-color: #30b5b1; }
+.cal-dashboard-stat:nth-child(3) { border-top-color: #6c9b9e; }
+.cal-dashboard-stat-label { color: var(--muted); font-size: 12px; font-weight: 700; }
+.cal-dashboard-stat-value { color: var(--ink); font-size: 27px; font-weight: 800; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.cal-dashboard-stat-value[aria-label*="โหลดไม่สำเร็จ"] { font-size: 22px; color: var(--muted); }
+.cal-dashboard-stat-note { color: var(--muted); font-size: 11px; }
+.cal-dashboard-stat.is-unavailable { background: #f8fbfc; }
+
+.cal-step-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -.015em;
+}
+
+.cal-step-heading span {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  border-radius: 9px;
+  background: var(--light);
+  color: var(--brand);
+  font-size: 13px;
+}
+
+.cal-picker .cal-type-grid { margin-top: 13px; }
+.cal-picker .cal-type { min-height: 106px; }
+.cal-picker .cal-type:focus-visible,
+.cal-picker-actions button:focus-visible { outline: 3px solid #087c8670; outline-offset: 3px; }
 
 .cal-queue-group {
   margin-top: 14px;
@@ -463,8 +583,23 @@ button.cal-back {
 }
 
 @media (max-width: 520px) {
+  .mems-calibration .pm-shell { margin-top: 16px; }
+  .mems-calibration .pm-tabs { gap: 4px; padding: 4px; }
+  .mems-calibration .pm-tabs button { min-height: 48px; padding-inline: 7px; font-size: 11px; text-align: center; white-space: normal; line-height: 1.3; }
+  .cal-picker-heading { align-items: stretch; flex-direction: column; gap: 14px; }
+  .cal-picker-intro h1 { font-size: 30px; }
+  .cal-picker-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  .cal-picker-actions button { white-space: normal; }
+  .cal-dashboard-stats { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; margin: 4px 0 22px; }
+  .cal-dashboard-stat { min-height: 94px; padding: 11px; }
+  .cal-dashboard-stat:last-child { grid-column: 1 / -1; min-height: 82px; }
+  .cal-dashboard-stat-label { font-size: 11px; }
+  .cal-dashboard-stat-value { font-size: 23px; }
+  .cal-dashboard-stat-note { font-size: 10px; line-height: 1.35; }
+  .cal-step-heading { font-size: 16px; }
   .cal-queue-row {
     align-items: flex-start;
     flex-direction: column;
   }
 }
+
