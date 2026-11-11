@@ -512,8 +512,8 @@
       text("โรงพยาบาลพหลพลพยุหเสนา  572 ถ.แสงชูโต  ต.ปากแพรก  อ.เมืองกาญจนบุรี 71000 โทร 034-587800",
         left, pageH - 22, 8.2, { maxWidth: right - left - 43 });
       if (doc.__memsLogoDataUrl) {
-        doc.addImage(doc.__memsLogoDataUrl, "PNG", right - 30, pageH - 31, 10, 10);
-        text("MEMs", right - 17, pageH - 22, 7, { align: "right" });
+        doc.addImage(doc.__memsLogoDataUrl, "PNG", right - 40, pageH - 34, 16, 16);
+        text("MEMs", right - 21, pageH - 22, 8.5, { align: "right" });
       }
     });
     const totalPages = doc.getNumberOfPages();
