@@ -30,6 +30,9 @@ const numeric = value => value === "" ? null : Number(value);
 function render() {
   const state = rowsByDevice.get(device.value);
   const digital = device.value === "digital-bp";
+  document.querySelector("#calStandardsHint").textContent = digital
+    ? "กรอกค่า STD แล้วระบบใช้อ้างอิงค่านั้นในผลคำนวณทันที"
+    : "กรอกค่า STD แล้วระบบเติมค่ามาตรฐานทั้ง 3 รอบให้ตามค่า STD อัตโนมัติ แก้แต่ละรอบได้";
   const entryColumns = digital
     ? [{ label: "ค่า STD", index: 1 }, { label: "เครื่อง รอบ 1", index: 3 },
       { label: "เครื่อง รอบ 2", index: 5 }, { label: "เครื่อง รอบ 3", index: 7 }]
@@ -113,7 +116,17 @@ sheets.addEventListener("input", event => {
     return;
   }
   const row = Number(input.closest("[data-row]").dataset.row);
-  state.rows[row][Number(input.dataset.col)] = input.value;
+  const column = Number(input.dataset.col);
+  state.rows[row][column] = input.value;
+  if (column === 1 && device.value !== "digital-bp") {
+    [2, 4, 6].forEach((standardColumn, round) => {
+      if (!state.standardAuto[row][round]) return;
+      state.rows[row][standardColumn] = input.value;
+      sheets.querySelector('[data-sheet="' + index + '"] [data-row="' + row + '"] [data-col="' + standardColumn + '"]').value = input.value;
+    });
+  } else if ([2, 4, 6].includes(column)) {
+    state.standardAuto[row][[2, 4, 6].indexOf(column)] = false;
+  }
   updateSheet(index);
 });
 
@@ -130,14 +143,20 @@ sheets.addEventListener("click", event => {
   const button = event.target.closest("button");
   if (!button) return;
   const index = Number(button.closest("[data-sheet]").dataset.sheet);
-  const { rows } = rowsByDevice.get(device.value)[index];
+  const state = rowsByDevice.get(device.value)[index];
+  const { rows, standardAuto } = state;
   if (button.hasAttribute("data-add")) {
     rows.push(Array(8).fill(""));
+    standardAuto.push(Array(3).fill(true));
     render();
     sheets.querySelector('[data-sheet="' + index + '"] tr:last-child [data-col="0"]').focus();
   } else {
     rows.splice(Number(button.dataset.remove), 1);
-    if (!rows.length) rows.push(Array(8).fill(""));
+    standardAuto.splice(Number(button.dataset.remove), 1);
+    if (!rows.length) {
+      rows.push(Array(8).fill(""));
+      standardAuto.push(Array(3).fill(true));
+    }
     render();
     sheets.querySelector('[data-sheet="' + index + '"] [data-add]').focus();
   }
@@ -152,7 +171,7 @@ budgets.addEventListener("input", event => {
 
 function stateFor() {
   return devices[device.value].map(({ unit }) => ({
-    unit, rows: [Array(8).fill("")], budget: Array(4).fill("")
+    unit, rows: [Array(8).fill("")], standardAuto: [Array(3).fill(true)], budget: Array(4).fill("")
   }));
 }
 
