@@ -297,6 +297,32 @@
     setOptions(get("calFilterType"), data.equipment_types.map(name => [name, name]), "ทุกประเภท");
   }
 
+  async function loadDashboardMetrics() {
+    const monthStart = today().slice(0, 7) + "-01";
+    const [year, month] = monthStart.split("-").map(Number);
+    const nextMonth = new Date(Date.UTC(year, month, 1)).toISOString().slice(0, 10);
+    const monthLabel = new Intl.DateTimeFormat("th-TH", {
+      month: "long", year: "numeric", timeZone: "UTC"
+    }).format(new Date(monthStart + "T00:00:00Z"));
+    get("calMetricMonthLabel").textContent = "ข้อมูลเดือน " + monthLabel;
+
+    const results = await Promise.allSettled([
+      supabase.from("mems_calibration_tools").select("id", { count: "exact", head: true }),
+      supabase.from("mems_calibrations").select("id", { count: "exact", head: true }),
+      supabase.from("mems_calibrations").select("id", { count: "exact", head: true })
+        .gte("calibrated_on", monthStart).lt("calibrated_on", nextMonth)
+    ]);
+    const metricIds = ["calMetricTools", "calMetricRecords", "calMetricMonth"];
+    const labels = ["จำนวนเครื่องในทะเบียน", "จำนวนประวัติใบรับรอง", "จำนวนผลสอบเทียบเดือนนี้"];
+    results.forEach((result, index) => {
+      const value = get(metricIds[index]);
+      const failed = result.status !== "fulfilled" || result.value.error;
+      value.textContent = failed ? "—" : new Intl.NumberFormat("th-TH").format(result.value.count || 0);
+      value.setAttribute("aria-label", failed ? labels[index] + " โหลดไม่สำเร็จ" : labels[index] + " " + (result.value.count || 0));
+      if (failed) value.closest(".cal-dashboard-stat").classList.add("is-unavailable");
+    });
+  }
+
   function historyQuery(columns, options, criteria) {
     let query = supabase.from("mems_calibrations").select(columns, options)
       .order("calibrated_on", { ascending: false }).order("id", { ascending: false });
@@ -786,6 +812,8 @@
     }
   }, get("calSave")));
   get("calNewTab").addEventListener("click", openPicker);
+  get("calPickerQueueButton").addEventListener("click", guarded(openQueue));
+  get("calPickerHistoryButton").addEventListener("click", guarded(openHistory));
   get("calBack").addEventListener("click", guarded(async () => {
     if (editingRecordId) {
       editingRecordId = null;
@@ -849,6 +877,13 @@
     populateCalibrationTypes();
     get("calWorkspace").hidden = false;
     notify("เลือกประเภทเครื่องมือเพื่อเริ่มลงทะเบียน");
+    loadDashboardMetrics().catch(error => {
+      console.warn("โหลดภาพรวมงานสอบเทียบไม่สำเร็จ", error);
+      for (const id of ["calMetricTools", "calMetricRecords", "calMetricMonth"]) {
+        get(id).textContent = "—";
+        get(id).closest(".cal-dashboard-stat").classList.add("is-unavailable");
+      }
+    });
   })();
 })();
 
