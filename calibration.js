@@ -4,8 +4,6 @@
   const get = id => document.getElementById(id);
   const pageSize = 30;
   const typeNames = Object.fromEntries([...device.options].map(option => [option.value, option.text]));
-  const reportColumns = ["จุด", "STD", "STD 1", "เครื่อง 1", "STD 2", "เครื่อง 2", "STD 3", "เครื่อง 3",
-    "Standard", "Mean", "Error", "SD", "UCA", "U (k=2)"];
 
   const draftFields = ["calCertificate", "calDate", "calOperator", "calStandardReference", "calAmbientTemperature", "calHumidity", "calNotes"];
   const metadataDrafts = new Map();
@@ -369,52 +367,147 @@
   }
 
   async function buildPdf(records) {
-    const doc = await newThaiPdf({ orientation: "landscape" });
-    records.forEach((record, index) => {
-      if (index) doc.addPage();
-      const snapshot = record.asset_snapshot;
-      doc.setFont(PDF_FONT, "normal");
-      if (doc.__memsLogoDataUrl) doc.addImage(doc.__memsLogoDataUrl, "PNG", 38, 26, 34, 34);
-      doc.setFontSize(22).text("รายงานผลสอบเทียบเครื่องมือ", 82, 40);
-      doc.setFontSize(15).text(HOSPITAL_NAME, 82, 59);
-      const metadata = [
-        ["เลขที่ใบรับรอง", record.certificate_no, "วันที่สอบเทียบ", dateLabel(record.calibrated_on)],
-        ["หน่วยงาน", record.department, "วิธีสอบเทียบ", typeNames[record.method]],
-        ["เครื่องมือ", assetLabel(snapshot), "สูตร", record.formula_version],
-        ["ผู้ปฏิบัติการ", record.operator_name || "—", "เครื่องมาตรฐาน", record.standard_reference || "—"],
-        ["อุณหภูมิ (°C)", display(record.ambient_temperature), "ความชื้น (%)", display(record.relative_humidity)],
-        ["หมายเหตุ", record.notes || "—", "", ""]
-      ];
-      doc.autoTable({ startY: 72, body: metadata, theme: "plain",
-        styles: { font: PDF_FONT, fontSize: 13, overflow: "linebreak" } });
-      const digital = record.method === "digital-bp";
-      const columns = digital
-        ? ["จุด", "STD", "เครื่อง 1", "เครื่อง 2", "เครื่อง 3", "Standard", "Mean", "Error", "SD", "UCA", "U (k=2)"]
-        : reportColumns;
-      record.measurements.forEach((sheet, sheetIndex) => {
-        const title = devices[record.method][sheetIndex].title + " (" + sheet.unit + ")";
-        const rows = sheet.rows.map(row => {
+    const doc = await newThaiPdf({ orientation: "portrait" });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const headerPages = new Set();
+    const left = 46;
+    const right = pageW - 46;
+    const text = (value, x, y, size = 11, options) => {
+      doc.setFont(PDF_FONT, "normal").setFontSize(size).setTextColor(35, 43, 50)
+        .text(String(value ?? "—"), x, y, options || {});
+    };
+    const certificateNumber = (value, digits = 2) => Number.isFinite(value)
+      ? (Math.abs(value) < 0.00005 ? 0 : value).toFixed(digits) : "—";
+    const dateThai = value => {
+      if (!value) return "—";
+      const parsed = new Date(value + "T00:00:00Z");
+      return new Intl.DateTimeFormat("th-TH", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(parsed);
+    };
+    const standardRows = reference => {
+      const entries = String(reference || "").split(/\s+\/\s+/).filter(Boolean);
+      return (entries.length ? entries : ["—"]).map(entry => {
+        const fields = entry.split(" · ").map(value => value.trim()).filter(Boolean);
+        let manufacturer = fields[0] || "—";
+        let model = fields[1] || "—";
+        let serial = fields.find(value => /^S\/N\s*/i.test(value))?.replace(/^S\/N\s*/i, "") || "—";
+        let calDate = fields.find(value => /^(สอบเทียบ|Cal(?:ibration)?\s*date)/i.test(value))?.replace(/^(สอบเทียบ|Cal(?:ibration)?\s*date)\s*/i, "") || "—";
+        let cert = fields.find(value => /^(รหัส|Cert(?:ificate)?\.?\s*No\.?)/i.test(value))?.replace(/^(รหัส|Cert(?:ificate)?\.?\s*No\.?)\s*/i, "") || "—";
+        if (/^(S\/N|สอบเทียบ|Cal(?:ibration)?\s*date|รหัส|Cert)/i.test(model)) { manufacturer = fields[0] || "—"; model = "—"; }
+        return [manufacturer, model, serial, calDate, cert];
+      });
+    };
+    const drawHeader = record => {
+      const pageNumber = doc.internal.getCurrentPageInfo().pageNumber;
+      if (headerPages.has(pageNumber)) return;
+      headerPages.add(pageNumber);
+      doc.setDrawColor(45, 55, 60).setLineWidth(1.1);
+      if (doc.__memsLogoDataUrl) doc.addImage(doc.__memsLogoDataUrl, "PNG", left, 26, 48, 48);
+      text("Phaholpolpayuhasena Hospital", left + 62, 45, 17);
+      text("Medical Device Center", left + 62, 65, 15);
+      doc.line(left, 88, right, 88);
+      text("Certificate of Testing", pageW / 2, 119, 19, { align: "center" });
+      text("Cert. No. :  " + (record.certificate_no || "—"), right, 103, 13, { align: "right" });
+    };
+    const drawDetails = record => {
+      const snapshot = record.asset_snapshot || {};
+      const colLeft = left + 2;
+      const split = pageW / 2 + 3;
+      const rightText = split + 14;
+      doc.setDrawColor(130, 140, 145).setLineWidth(.5);
+      doc.line(split, 132, split, 263);
+      const labelValue = (label, value, x, y, width = 220) => {
+        text(label + " :", x, y, 11);
+        const lines = doc.splitTextToSize(String(value || "—"), width - 62);
+        text(lines, x + 62, y, 11);
+      };
+      labelValue("Detail", snapshot.name || typeNames[record.method], colLeft, 145, 238);
+      labelValue("Manufacture", snapshot.manufacturer, colLeft, 169, 238);
+      labelValue("Model", snapshot.model, colLeft, 193, 238);
+      labelValue("Serial No.", snapshot.serial_number, colLeft, 217, 238);
+      labelValue("ID No.", snapshot.tool_code, colLeft, 241, 238);
+      labelValue("Departments", HOSPITAL_NAME.replace(" จ.กาญจนบุรี", ""), rightText, 145, right - rightText);
+      labelValue("Address", "จังหวัดกาญจนบุรี", rightText, 169, right - rightText);
+      labelValue("Section", record.department, rightText, 193, right - rightText);
+      labelValue("Temperature", display(record.ambient_temperature) + " ± 2 °C", rightText, 217, 150);
+      labelValue("Humidity", display(record.relative_humidity) + " ±5% R.H.", rightText + 155, 217, right - (rightText + 155));
+      labelValue("Tested Date", dateThai(record.calibrated_on), colLeft, 265, 238);
+      labelValue("Appr. Date", dateThai(record.calibrated_on), rightText, 265, right - rightText);
+      doc.setDrawColor(45, 55, 60).setLineWidth(.8).line(left + 45, 278, right - 45, 278);
+    };
+    const drawCertificatePage = record => {
+      drawHeader(record);
+      drawDetails(record);
+    };
+    records.forEach((record, recordIndex) => {
+      if (recordIndex) doc.addPage();
+      drawCertificatePage(record);
+      let finalY = 289;
+      (record.measurements || []).forEach((sheet, sheetIndex) => {
+        const sheetTitle = devices[record.method]?.[sheetIndex]?.title || typeNames[record.method] || "ผลทดสอบ";
+        const rows = (sheet.rows || []).map(row => {
           const [, nominal, s1, m1, s2, m2, s3, m3] = row;
           const result = calculatePoint({ nominal, standardReadings: [s1, s2, s3],
-            measuredReadings: [m1, m2, m3], budget: sheet.budget, errorRule: calibrationErrorRule(record.method) });
-          return (digital ? [row[0], nominal, m1, m2, m3] : row)
-            .concat(outputs.map(key => result[key])).map(display);
+            measuredReadings: [m1, m2, m3], budget: sheet.budget || [], errorRule: calibrationErrorRule(record.method) });
+          const limit = calibrationAcceptanceLimit(record.method, sheetIndex, nominal);
+          return [certificateNumber(nominal), certificateNumber(result.mean), certificateNumber(result.error, 3),
+            limit === null ? "—" : "± " + certificateNumber(limit, 3)];
         });
         doc.autoTable({
-          startY: doc.lastAutoTable.finalY + 12,
-          head: [[{ content: title, colSpan: columns.length }], columns],
+          startY: finalY,
+          margin: { left: left + 42, right: left + 42, top: 290, bottom: 55 },
+          head: [[{ content: sheetTitle + "  (" + sheet.unit + ")", colSpan: 4 }],
+            ["UUT Setting\n(" + sheet.unit + ")", "STD Reading\n(" + sheet.unit + ")", "Error\n(" + sheet.unit + ")", "Accept value\n(" + sheet.unit + ")"]],
           body: rows,
-          foot: [[{ content: sheet.budget.map((value, i) => "UCB" + (i + 1) + " = " + display(value)).join("   ·   "),
-            colSpan: columns.length }]],
-          showFoot: "lastPage",
+          theme: "grid",
+          styles: { font: PDF_FONT, fontSize: 10.5, halign: "center", cellPadding: 4, lineColor: [90, 100, 105], lineWidth: .35 },
+          headStyles: { font: PDF_FONT, fontStyle: "normal", fillColor: [255, 255, 255], textColor: [35, 43, 50], lineColor: [60, 70, 75] },
+          columnStyles: { 0: { cellWidth: 98 }, 1: { cellWidth: 98 }, 2: { cellWidth: 85 }, 3: { cellWidth: 118 } },
           rowPageBreak: "avoid",
-          styles: { font: PDF_FONT, fontSize: 12, halign: "right", cellPadding: 4 },
-          headStyles: { font: PDF_FONT, fontStyle: "normal", fillColor: PDF_THEME.brand },
-          footStyles: { font: PDF_FONT, fontStyle: "normal", fillColor: PDF_THEME.soft, textColor: PDF_THEME.text }
+          didDrawPage: () => drawCertificatePage(record)
         });
+        finalY = doc.lastAutoTable.finalY + 12;
       });
+      if (finalY > 525) {
+        doc.addPage();
+        drawCertificatePage(record);
+        finalY = 135;
+      }
+      text("Standard Used", left + 43, finalY + 17, 12);
+      const references = standardRows(record.standard_reference);
+      doc.autoTable({
+        startY: finalY + 24,
+        margin: { left: left + 43, right: left + 43, bottom: 145 },
+        head: [["Manufacture", "Model", "S/N", "Cal date", "Cert No."]],
+        body: references,
+        theme: "grid",
+        styles: { font: PDF_FONT, fontSize: 10, halign: "center", cellPadding: 4, lineColor: [110, 120, 125], lineWidth: .35 },
+        headStyles: { font: PDF_FONT, fontStyle: "normal", fillColor: [255, 255, 255], textColor: [35, 43, 50] },
+        didDrawPage: () => drawCertificatePage(record)
+      });
+      finalY = doc.lastAutoTable.finalY + 16;
+      if (finalY > pageH - 175) {
+        doc.addPage();
+        drawCertificatePage(record);
+        finalY = 135;
+      }
+      text("วิธีทดสอบ : โดยการนำเครื่องมือที่ต้องการสอบเทียบต่อเข้ากับเครื่องมาตรฐาน แล้วควบคุมค่าตามจุดทดสอบ อ่านค่าแล้วบันทึกค่า", left + 43, finalY + 2, 10);
+      const signY = pageH - 120;
+      text("Tested by : .........................................................", left + 18, signY, 11);
+      text(record.operator_name || "", left + 115, signY + 30, 11, { align: "center" });
+      text("Approved by : .........................................................", pageW / 2 + 12, signY, 11);
+      text("", pageW / 2 + 120, signY + 30, 11, { align: "center" });
+      text("นายช่างเทคนิค (เครื่องมือแพทย์)", left + 115, signY + 52, 10, { align: "center" });
+      text("นายช่างเทคนิค (เครื่องมือแพทย์)", pageW / 2 + 130, signY + 52, 10, { align: "center" });
+      text("Comment : This report certifies the test results as of the date, location and the conditions of testing only.", left, pageH - 48, 8.5);
+      doc.setDrawColor(70, 80, 85).setLineWidth(.45).line(left, pageH - 37, right, pageH - 37);
+      text("โรงพยาบาลพหลพลพยุหเสนา  572 ถ.แสงชูโต  ต.ปากแพรก  อ.เมืองกาญจนบุรี 71000 โทร 034-587800", left, pageH - 22, 9);
     });
-    rptPdfFooter(doc);
+    const totalPages = doc.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      text("Page " + i + " of " + totalPages, right, 37, 9, { align: "right" });
+    }
     return doc;
   }
 

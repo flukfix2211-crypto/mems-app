@@ -92,3 +92,23 @@ function calibrationErrorRule(method) {
   return additionalCalibrationTypes.find(type => type.method === method)?.errorRule
     ?? legacyCalibrationTypes.find(type => type.method === method)?.errorRule ?? "standard";
 }
+
+// Access Print Cert queries display the acceptance limit as SSS; these rules mirror
+// the Gain-based expressions for the methods represented in the MEMS form.
+function calibrationAcceptanceLimit(method, sheetIndex, nominal) {
+  const absolute = {
+    general: 2, refrig: 1, suction: 0.1, regulator: 0.1, "manual-bp": 4,
+    "blood-pressure": 4, ambient: 2, "weight-adult": 2, "weight-general": 10,
+    "weight-neo": 100
+  };
+  if (method === "digital-bp") return [8, 8, 1, 2, 2][sheetIndex] ?? null;
+  if (absolute[method] !== undefined) return absolute[method];
+  if (method === "flowmeter") return Math.abs(nominal) * 0.2;
+  if (method === "alarm") return Math.abs(nominal) * 0.05;
+  if (method === "infusion") return Math.abs(nominal) * 0.1;
+  if (method === "syringe") return Math.abs(nominal) * 0.05;
+  if (["centrifuge", "hematocrit", "rotator", "serofuge"].includes(method)) {
+    return sheetIndex === 1 ? 10 : Math.abs(nominal) * 0.1;
+  }
+  return null;
+}
