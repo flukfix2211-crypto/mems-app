@@ -762,7 +762,7 @@
           const scale = Math.min(92 / image.width, 26 / image.height);
           const imageWidth = image.width * scale;
           const imageHeight = image.height * scale;
-          doc.addImage(signer.signature_data_url, "PNG", centerX - imageWidth / 2, signY - imageHeight - 7, imageWidth, imageHeight);
+          doc.addImage(signer.signature_data_url, "PNG", centerX - imageWidth / 2 + 6, signY - imageHeight - 7, imageWidth, imageHeight);
         }
         text(signer?.name || fallbackName || "", centerX, signY + 30, 11, { align: "center", maxWidth: width });
         text(signer?.position || "นายช่างเทคนิค (เครื่องมือแพทย์)", centerX, signY + 52, 10, { align: "center", maxWidth: width });
