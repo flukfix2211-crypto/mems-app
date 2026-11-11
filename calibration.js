@@ -378,6 +378,10 @@
     const hospitalLogoDataUrl = "data:image/png;base64," + btoa(hospitalLogoBinary);
     const pageW = doc.internal.pageSize.getWidth();
     const pageH = doc.internal.pageSize.getHeight();
+    const sealProperties = doc.getImageProperties(hospitalLogoDataUrl);
+    const sealScale = Math.min(60 / sealProperties.width, 52 / sealProperties.height);
+    const sealWidth = sealProperties.width * sealScale;
+    const sealHeight = sealProperties.height * sealScale;
     const headerPages = new Set();
     const left = 46;
     const right = pageW - 46;
@@ -410,7 +414,8 @@
       if (headerPages.has(pageNumber)) return;
       headerPages.add(pageNumber);
       doc.setDrawColor(45, 55, 60).setLineWidth(1.1);
-      doc.addImage(hospitalLogoDataUrl, "PNG", left, 24, 52, 52);
+      doc.addImage(hospitalLogoDataUrl, "PNG", left + (60 - sealWidth) / 2,
+        24 + (52 - sealHeight) / 2, sealWidth, sealHeight);
       text("Phaholpolpayuhasena Hospital", left + 64, 45, 17);
       text("Medical Device Center", left + 64, 65, 15);
       doc.line(left, 88, right, 88);
