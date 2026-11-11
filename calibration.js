@@ -245,7 +245,7 @@
     notify("บันทึกผู้ลงนามและตำแหน่งลายเซ็นแล้ว · เลือกใช้รายชื่อเดิมหรือเพิ่มรายชื่อใหม่ได้");
   }
 
-  async function loadCalibrationOperators  async function loadCalibrationOperators() {
+  async function loadCalibrationOperators() {
     const { data, error } = await supabase.from("mems_report_operators")
       .select("name,position").order("name").order("position");
     if (error) throw error;
