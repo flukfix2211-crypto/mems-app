@@ -23,6 +23,12 @@
   padding: 8px;
 }
 
+.cal-history-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .cal-buttons {
   display: flex;
   gap: 8px;

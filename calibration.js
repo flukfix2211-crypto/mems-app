@@ -14,6 +14,7 @@
   let queueRequest = 0;
   let registerMethod;
   let activeTool;
+  let editingRecordId = null;
   let operatorName = "";
   let page = 0;
   let count = 0;
@@ -192,16 +193,33 @@
       const tr = document.createElement("tr");
       for (const value of [dateLabel(row.calibrated_on), row.certificate_no, row.department,
         row.equipment_type, assetLabel(row.asset_snapshot)]) tr.insertCell().textContent = value;
+      const actions = document.createElement("div");
+      actions.className = "cal-history-actions";
+      const editButton = document.createElement("button");
+      editButton.type = "button";
+      editButton.textContent = "รายละเอียด / แก้ไข";
+      editButton.dataset.edit = row.id;
       const button = document.createElement("button");
       button.type = "button";
       button.textContent = "PDF / พิมพ์";
       button.dataset.report = row.id;
-      tr.insertCell().append(button);
+      actions.append(editButton, button);
+      tr.insertCell().append(actions);
       return tr;
     }));
     get("calPrev").disabled = page === 0;
     get("calNext").disabled = (page + 1) * pageSize >= count;
     get("calPrintFiltered").disabled = !count;
+  }
+
+  async function editHistoryRecord(id) {
+    const { data: record, error: recordError } = await supabase.from("mems_calibrations")
+      .select("*").eq("id", id).single();
+    if (recordError) throw recordError;
+    const { data: tool, error: toolError } = await supabase.from("mems_calibration_tools")
+      .select("*").eq("id", record.tool_id).single();
+    if (toolError) throw toolError;
+    await openForm(tool, record);
   }
 
   function showView(view) {
@@ -258,10 +276,10 @@
     if (currentYear !== expectedYear) await reserveCertificate(date);
   }
 
-  async function openForm(tool) {
+  async function openForm(tool, record = null) {
     let draft;
     let newToolForm = false;
-    if (tool.id !== activeTool?.id) {
+    if (tool.id !== activeTool?.id || record) {
       newToolForm = true;
       if (activeTool) {
         metadataDrafts.set(activeTool.id, {
@@ -270,20 +288,28 @@
         });
       }
       activeTool = tool;
-      draft = metadataDrafts.get(tool.id);
+      draft = record ? {
+        fields: [record.certificate_no, record.calibrated_on, record.operator_name,
+          record.standard_reference, record.ambient_temperature ?? "", record.relative_humidity ?? "", record.notes || ""],
+        measurements: record.measurements
+      } : metadataDrafts.get(tool.id);
       const fields = draft?.fields ?? ["", today(), operatorName, "", "", "", ""];
       draftFields.forEach((id, index) => { get(id).value = fields[index]; });
       device.value = tool.method;
-      rowsByDevice.set(tool.method, draft?.measurements ?? stateFor());
+      rowsByDevice.set(tool.method, draft?.measurements ? structuredClone(draft.measurements) : stateFor());
       render();
     }
+    editingRecordId = record?.id || null;
+    get("calCertificate").readOnly = !record;
+    get("calSave").textContent = record ? "บันทึกการแก้ไข" : "บันทึกผลสอบเทียบ";
+    get("calBack").textContent = record ? "← กลับไปประวัติ" : "← กลับไปคิวสอบเทียบ";
     const { data: standard, error: standardError } = await supabase.from("mems_calibration_standards")
       .select("standard_reference,source_note").eq("method", tool.method).maybeSingle();
     if (standardError) throw standardError;
     if (newToolForm && !draft && standard) get("calStandardReference").value = standard.standard_reference;
     get("calStandardHint").textContent = standard?.source_note
       || "ไม่พบประวัติของประเภทนี้ใน Access จึงเว้นไว้ให้ระบุเครื่องมาตรฐานที่ใช้จริง";
-    await ensureCertificateForDate();
+    if (!record) await ensureCertificateForDate();
     const summary = get("calToolSummary");
     summary.replaceChildren();
     for (const [label, value] of [
@@ -299,9 +325,9 @@
       item.append(dt, dd);
       summary.append(item);
     }
-    get("calFormTitle").textContent = tool.name;
+    get("calFormTitle").textContent = record ? "รายละเอียด / แก้ไข · " + tool.name : tool.name;
     showView("form");
-    notify("กรอกผลสอบเทียบสำหรับ ID " + tool.tool_code);
+    notify((record ? "แก้ไขผลสอบเทียบ" : "กรอกผลสอบเทียบ") + "สำหรับ ID " + tool.tool_code);
     get("calFormTitle").focus();
   }
 
@@ -344,6 +370,8 @@
   }
 
   async function save() {
+    const wasEditing = Boolean(editingRecordId);
+    const recordId = editingRecordId;
     const certificateNo = get("calCertificate").value.trim();
     const operator = get("calOperator").value.trim();
     if (!activeTool || !certificateNo || !operator) throw new Error("กรุณาระบุเครื่องมือ เลขที่ใบรับรอง และผู้ปฏิบัติการ");
@@ -358,27 +386,42 @@
       notes: get("calNotes").value.trim(),
       measurements: collectMeasurements()
     };
-    const fingerprint = JSON.stringify(input);
-    if (pending?.fingerprint !== fingerprint) pending = { fingerprint, id: crypto.randomUUID() };
-    const { error } = await supabase.from("mems_calibrations").insert({ id: pending.id, ...input });
-    if (error) {
-      if (error.code !== "23505") throw error;
-      const { data, error: lookupError } = await supabase.from("mems_calibrations")
-        .select("id").eq("id", pending.id).maybeSingle();
-      if (lookupError || !data) throw error;
+    if (wasEditing) {
+      const { tool_id, ...updates } = input;
+      const { data, error } = await supabase.from("mems_calibrations").update(updates)
+        .eq("id", recordId).select("id").maybeSingle();
+      if (error?.code === "23505") throw new Error("เลขที่ใบรับรองนี้ถูกใช้แล้ว");
+      if (error) throw error;
+      if (!data) throw new Error("ไม่พบรายการเดิม หรือไม่มีสิทธิ์แก้ไขรายการนี้");
+    } else {
+      const fingerprint = JSON.stringify(input);
+      if (pending?.fingerprint !== fingerprint) pending = { fingerprint, id: crypto.randomUUID() };
+      const { error } = await supabase.from("mems_calibrations").insert({ id: pending.id, ...input });
+      if (error) {
+        if (error.code !== "23505") throw error;
+        const { data, error: lookupError } = await supabase.from("mems_calibrations")
+          .select("id").eq("id", pending.id).maybeSingle();
+        if (lookupError || !data) throw error;
+      }
     }
     pending = null;
     metadataDrafts.delete(activeTool.id);
+    editingRecordId = null;
     activeTool = null;
     clearCalibrationMeasurements();
-    get("calFilterDepartment").value = "";
-    get("calFilterType").value = "";
-    get("calHistorySearch").value = "";
-    notify("บันทึกผลสอบเทียบแล้ว");
+    get("calCertificate").readOnly = true;
+    get("calSave").textContent = "บันทึกผลสอบเทียบ";
+    get("calBack").textContent = "← กลับไปคิวสอบเทียบ";
+    if (!wasEditing) {
+      get("calFilterDepartment").value = "";
+      get("calFilterType").value = "";
+      get("calHistorySearch").value = "";
+    }
+    notify(wasEditing ? "แก้ไขรายการสอบเทียบแล้ว" : "บันทึกผลสอบเทียบแล้ว");
     try {
       await openHistory();
     } catch (historyError) {
-      notify("บันทึกผลสอบเทียบแล้ว · โหลดประวัติไม่สำเร็จ: " + historyError.message);
+      notify((wasEditing ? "แก้ไขรายการแล้ว" : "บันทึกผลสอบเทียบแล้ว") + " · โหลดประวัติไม่สำเร็จ: " + historyError.message);
     }
   }
 
@@ -584,7 +627,7 @@
     if (tool) await openForm(tool);
   }));
   get("calDate").addEventListener("change", guarded(async () => {
-    await ensureCertificateForDate();
+    if (!editingRecordId) await ensureCertificateForDate();
   }));
   get("calForm").addEventListener("submit", guarded(async () => {
     get("calForm").inert = true;
@@ -595,7 +638,19 @@
     }
   }, get("calSave")));
   get("calNewTab").addEventListener("click", openPicker);
-  get("calBack").addEventListener("click", guarded(openQueue));
+  get("calBack").addEventListener("click", guarded(async () => {
+    if (editingRecordId) {
+      editingRecordId = null;
+      activeTool = null;
+      clearCalibrationMeasurements();
+      get("calCertificate").readOnly = true;
+      get("calSave").textContent = "บันทึกผลสอบเทียบ";
+      get("calBack").textContent = "← กลับไปคิวสอบเทียบ";
+      await openHistory();
+      return;
+    }
+    await openQueue();
+  }));
   get("calHistoryTab").addEventListener("click", guarded(openHistory));
   get("calPicker").addEventListener("click", event => {
     const button = event.target.closest("[data-cal-method]");
@@ -605,6 +660,11 @@
   get("calPrev").addEventListener("click", guarded(() => { page--; return loadHistory(); }));
   get("calNext").addEventListener("click", guarded(() => { page++; return loadHistory(); }));
   get("calList").addEventListener("click", guarded(async event => {
+    const editButton = event.target.closest("[data-edit]");
+    if (editButton && historyRows.some(row => row.id === editButton.dataset.edit)) {
+      await editHistoryRecord(editButton.dataset.edit);
+      return;
+    }
     const button = event.target.closest("[data-report]");
     if (!button || !historyRows.some(row => row.id === button.dataset.report)) return;
     const { data, error } = await supabase.from("mems_calibrations").select("*").eq("id", button.dataset.report).single();
