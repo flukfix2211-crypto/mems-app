@@ -734,17 +734,19 @@
       text("วิธีทดสอบ : โดยการนำเครื่องมือที่ต้องการสอบเทียบต่อเข้ากับเครื่องมาตรฐาน แล้วควบคุมค่าตามจุดทดสอบ อ่านค่าแล้วบันทึกค่า", left + 43, finalY + 2, 10);
       const signY = pageH - 120;
       const drawSigner = (label, signer, fallbackName, x, width) => {
-        text(label + " : ................................................", x, signY, 11);
+        const centerX = x + width / 2;
+        text(label + " : ................................................", centerX, signY, 11, { align: "center", maxWidth: width });
         if (signer?.signature_data_url?.startsWith("data:image/png;base64,")) {
-          doc.addImage(signer.signature_data_url, "PNG", x + width / 2 - 46, signY - 38, 92, 26);
+          doc.addImage(signer.signature_data_url, "PNG", centerX - 46, signY - 38, 92, 26);
         }
-        text(signer?.name || fallbackName || "", x, signY + 30, 11, { align: "center", maxWidth: width });
-        text(signer?.position || "นายช่างเทคนิค (เครื่องมือแพทย์)", x, signY + 52, 10, { align: "center", maxWidth: width });
+        text(signer?.name || fallbackName || "", centerX, signY + 30, 11, { align: "center", maxWidth: width });
+        text(signer?.position || "นายช่างเทคนิค (เครื่องมือแพทย์)", centerX, signY + 52, 10, { align: "center", maxWidth: width });
       };
-      const leftSignX = left + 18;
-      const rightSignX = pageW / 2 + 12;
-      drawSigner("Tested by", signatories.tested, record.operator_name, leftSignX, pageW / 2 - leftSignX - 8);
-      drawSigner("Approved by", signatories.approved, "", rightSignX, right - rightSignX);
+      const signerWidth = (right - left) / 2;
+      const leftSignX = left;
+      const rightSignX = left + signerWidth;
+      drawSigner("Tested by", signatories.tested, record.operator_name, leftSignX, signerWidth);
+      drawSigner("Approved by", signatories.approved, "", rightSignX, signerWidth);
       text("Comment : This report certifies the test results as of the date, location and the conditions of testing only.", left, pageH - 48, 8.5);
       doc.setDrawColor(70, 80, 85).setLineWidth(.45).line(left, pageH - 37, right, pageH - 37);
       text("โรงพยาบาลพหลพลพยุหเสนา  572 ถ.แสงชูโต  ต.ปากแพรก  อ.เมืองกาญจนบุรี 71000 โทร 034-587800",
