@@ -23,12 +23,35 @@
   </nav>
 
   <section id="calPicker" class="cal-picker" aria-labelledby="calPickerTitle">
-    <div class="cal-picker-intro">
-      <span class="pill">งานสอบเทียบ</span>
-      <h1 id="calPickerTitle" tabindex="-1">Mems Calibration</h1>
-      <p>ลงทะเบียนเครื่องมือ · บันทึกผลการสอบเทียบ · ค้นและพิมพ์รายงาน</p>
+    <div class="cal-picker-heading">
+      <div class="cal-picker-intro">
+        <span class="pill">งานสอบเทียบ</span>
+        <h1 id="calPickerTitle" tabindex="-1">Mems Calibration</h1>
+        <p>เลือกประเภทเครื่องมือเพื่อเริ่มลงทะเบียน หรือไปต่อที่คิวสอบเทียบและประวัติ</p>
+      </div>
+      <div class="cal-picker-actions" aria-label="ทางลัด">
+        <button id="calPickerQueueButton" type="button">เปิดคิวสอบเทียบ</button>
+        <button id="calPickerHistoryButton" type="button">ค้นประวัติ / PDF</button>
+      </div>
     </div>
-    <h2 class="cal-step-heading">01 / เลือกประเภทเครื่องมือที่จะลงทะเบียน</h2>
+    <section class="cal-dashboard-stats" aria-label="ภาพรวมงานสอบเทียบ" aria-live="polite">
+      <article class="cal-dashboard-stat">
+        <span class="cal-dashboard-stat-label">เครื่องในทะเบียน</span>
+        <strong id="calMetricTools" class="cal-dashboard-stat-value">กำลังโหลด…</strong>
+        <span class="cal-dashboard-stat-note">เครื่องมือที่พร้อมสอบเทียบ</span>
+      </article>
+      <article class="cal-dashboard-stat">
+        <span class="cal-dashboard-stat-label">ประวัติใบรับรอง</span>
+        <strong id="calMetricRecords" class="cal-dashboard-stat-value">กำลังโหลด…</strong>
+        <span class="cal-dashboard-stat-note">เปิดดูรายละเอียดและพิมพ์ PDF ได้</span>
+      </article>
+      <article class="cal-dashboard-stat">
+        <span class="cal-dashboard-stat-label">สอบเทียบเดือนนี้</span>
+        <strong id="calMetricMonth" class="cal-dashboard-stat-value">กำลังโหลด…</strong>
+        <span id="calMetricMonthLabel" class="cal-dashboard-stat-note">รายการที่บันทึกในเดือนปัจจุบัน</span>
+      </article>
+    </section>
+    <h2 class="cal-step-heading"><span>01</span> เลือกประเภทเครื่องมือที่จะลงทะเบียน</h2>
     <div class="cal-type-grid">
       <button class="cal-type" type="button" data-cal-method="general">
         <span class="cal-type-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 14.8V5a3 3 0 0 1 6 0v9.8a5 5 0 1 1-6 0ZM12 8v9"/><circle cx="12" cy="18" r="1"/></svg></span>
@@ -175,3 +198,4 @@
 <script src="site-footer.js?v=20261016-footer-1"></script>
 </body>
 </html>
+
