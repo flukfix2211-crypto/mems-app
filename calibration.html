@@ -127,7 +127,7 @@
       <label>ประเภทเครื่องมือ<select id="calFilterType"></select></label>
       <div class="cal-buttons"><button type="submit">ค้นหา</button></div>
     </form>
-    <div class="cal-buttons"><button id="calPrintFiltered" type="button" disabled>PDF / พิมพ์รายการที่กรอง</button></div>
+    <div class="cal-buttons"><button id="calPrintFiltered" type="button" disabled>PDF / พิมพ์รายการที่กรอง</button><button id="calSignerSettings" type="button">ตั้งค่าผู้ทดสอบ / ผู้อนุมัติ</button></div>
     <p id="calCount" aria-live="polite"></p>
     <div class="scroll">
       <table class="cal-history"><thead><tr><th>วันที่</th><th>เลขที่ใบรับรอง</th><th>หน่วยงาน</th><th>ประเภทเครื่องมือ</th><th>เครื่องมือ</th><th>รายละเอียด / รายงาน</th></tr></thead><tbody id="calList"></tbody></table>
@@ -136,6 +136,30 @@
   </section>
   </div>
 </main>
+<dialog id="calSignerDialog" class="cal-signer-dialog" aria-labelledby="calSignerTitle">
+  <form id="calSignerForm">
+    <div class="section-head"><h2 id="calSignerTitle">ตั้งค่าผู้ลงนามในใบรับรอง</h2><button id="calSignerClose" type="button" aria-label="ปิด">ปิด</button></div>
+    <p>บันทึกชื่อ ตำแหน่ง และลายเซ็นที่วาดบนจอ แล้วระบบจะใส่ลงใน PDF ใบรับรองอัตโนมัติ</p>
+    <div class="cal-signer-grid">
+      <fieldset class="cal-signer-card">
+        <legend>ผู้ทดสอบ · Tested by</legend>
+        <label>ชื่อ<input id="calTestSignerName" list="calOperatorOptions" maxlength="160" required></label>
+        <label>ตำแหน่ง<input id="calTestSignerPosition" maxlength="160" required></label>
+        <canvas id="calTestSignerPad" class="cal-signature-pad" width="640" height="180" aria-label="วาดลายเซ็นผู้ทดสอบ"></canvas>
+        <button id="calTestSignerClear" type="button">ล้างลายเซ็น</button>
+      </fieldset>
+      <fieldset class="cal-signer-card">
+        <legend>ผู้อนุมัติ · Approved by</legend>
+        <label>ชื่อ<input id="calApproveSignerName" list="calOperatorOptions" maxlength="160" required></label>
+        <label>ตำแหน่ง<input id="calApproveSignerPosition" maxlength="160" required></label>
+        <canvas id="calApproveSignerPad" class="cal-signature-pad" width="640" height="180" aria-label="วาดลายเซ็นผู้อนุมัติ"></canvas>
+        <button id="calApproveSignerClear" type="button">ล้างลายเซ็น</button>
+      </fieldset>
+    </div>
+    <p id="calSignerStatus" role="status" aria-live="polite"></p>
+    <div class="cal-buttons"><button id="calSignerSave" class="primary" type="submit">บันทึกผู้ลงนาม</button></div>
+  </form>
+</dialog>
 <div id="loginOverlay" class="auth-overlay" style="display:none"><form class="auth-box" onsubmit="event.preventDefault();memsHandleLogin()"><h2>เข้าสู่ระบบ MEMs</h2><p>ใช้บัญชีเดียวกับระบบเดิม</p><input id="authUser" autocomplete="username" placeholder="ชื่อผู้ใช้" aria-label="ชื่อผู้ใช้" required><input id="authPass" type="password" autocomplete="current-password" placeholder="รหัสผ่าน" aria-label="รหัสผ่าน" required><div id="authErr" role="alert" style="display:none"></div><button id="authBtn" type="submit">เข้าสู่ระบบ</button></form></div><div id="forbiddenOverlay" class="auth-overlay" style="display:none"><div class="auth-box"><h2>ยังไม่มีสิทธิ์ใช้งาน</h2><p>ให้แอดมินอนุญาตเมนู Mems Calibration</p><a href="index.html">กลับหน้าหลัก</a></div></div>
 
 <script src="vendor/supabase.js"></script>

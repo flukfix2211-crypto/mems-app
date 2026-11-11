@@ -34,6 +34,117 @@
     if (entries.some(([value]) => String(value) === previous)) select.value = previous;
   }
 
+  function createSignaturePad(id) {
+    const canvas = get(id);
+    const context = canvas.getContext("2d");
+    let drawing = false;
+    let hasInk = false;
+    context.strokeStyle = "#142b40";
+    context.lineWidth = 4;
+    context.lineCap = "round";
+    context.lineJoin = "round";
+    const point = event => {
+      const bounds = canvas.getBoundingClientRect();
+      return { x: (event.clientX - bounds.left) * canvas.width / bounds.width,
+        y: (event.clientY - bounds.top) * canvas.height / bounds.height };
+    };
+    canvas.addEventListener("pointerdown", event => {
+      event.preventDefault();
+      canvas.setPointerCapture(event.pointerId);
+      const p = point(event);
+      context.beginPath();
+      context.moveTo(p.x, p.y);
+      drawing = true;
+      hasInk = true;
+    });
+    canvas.addEventListener("pointermove", event => {
+      if (!drawing) return;
+      event.preventDefault();
+      const p = point(event);
+      context.lineTo(p.x, p.y);
+      context.stroke();
+    });
+    const endStroke = () => { drawing = false; };
+    canvas.addEventListener("pointerup", endStroke);
+    canvas.addEventListener("pointercancel", endStroke);
+    return {
+      hasInk: () => hasInk,
+      dataUrl: () => hasInk ? canvas.toDataURL("image/png") : "",
+      clear: () => {
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        hasInk = false;
+        drawing = false;
+      },
+      load: dataUrl => new Promise(resolve => {
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        hasInk = false;
+        if (!dataUrl) return resolve();
+        const image = new Image();
+        image.onload = () => {
+          context.drawImage(image, 0, 0, canvas.width, canvas.height);
+          hasInk = true;
+          resolve();
+        };
+        image.onerror = resolve;
+        image.src = dataUrl;
+      })
+    };
+  }
+
+  const signaturePads = {
+    tested: createSignaturePad("calTestSignerPad"),
+    approved: createSignaturePad("calApproveSignerPad")
+  };
+  const signerFields = {
+    tested: { name: "calTestSignerName", position: "calTestSignerPosition", title: "ผู้ทดสอบ" },
+    approved: { name: "calApproveSignerName", position: "calApproveSignerPosition", title: "ผู้อนุมัติ" }
+  };
+  let calibrationSignatories = { tested: null, approved: null };
+
+  async function loadCalibrationSignatories() {
+    const { data, error } = await supabase.from("mems_calibration_signatories")
+      .select("role,name,position,signature_data_url");
+    if (error) throw error;
+    calibrationSignatories = { tested: null, approved: null };
+    for (const signer of data || []) calibrationSignatories[signer.role] = signer;
+    return calibrationSignatories;
+  }
+
+  async function openCalibrationSignerSettings() {
+    get("calSignerStatus").textContent = "กำลังโหลดค่าผู้ลงนาม…";
+    get("calSignerSettings").disabled = true;
+    try {
+      const signers = await loadCalibrationSignatories();
+      for (const role of ["tested", "approved"]) {
+        const signer = signers[role];
+        get(signerFields[role].name).value = signer?.name || "";
+        get(signerFields[role].position).value = signer?.position || "";
+        await signaturePads[role].load(signer?.signature_data_url || "");
+      }
+      get("calSignerStatus").textContent = "ลายเซ็นจะปรากฏใน PDF ทุกครั้งที่เปิดรายงานสอบเทียบ";
+      get("calSignerDialog").showModal();
+    } finally {
+      get("calSignerSettings").disabled = false;
+    }
+  }
+
+  async function saveCalibrationSignatories() {
+    const rows = ["tested", "approved"].map(role => {
+      const fields = signerFields[role];
+      const name = get(fields.name).value.trim();
+      const position = get(fields.position).value.trim();
+      if (!name || !position || !signaturePads[role].hasInk()) {
+        throw new Error("กรุณากรอกชื่อ ตำแหน่ง และวาดลายเซ็นของ" + fields.title + "ให้ครบ");
+      }
+      return { role, name, position, signature_data_url: signaturePads[role].dataUrl(), updated_at: new Date().toISOString() };
+    });
+    const { error } = await supabase.from("mems_calibration_signatories").upsert(rows, { onConflict: "role" });
+    if (error) throw error;
+    await loadCalibrationSignatories();
+    get("calSignerDialog").close();
+    notify("บันทึกชื่อและลายเซ็นผู้ทดสอบ/ผู้อนุมัติแล้ว · PDF ครั้งต่อไปจะใส่ให้อัตโนมัติ");
+  }
+
   async function loadCalibrationOperators() {
     const { data, error } = await supabase.from("mems_report_operators")
       .select("name,position").order("name").order("position");
@@ -427,6 +538,7 @@
 
   async function buildPdf(records) {
     const doc = await newThaiPdf({ orientation: "portrait" });
+    const signatories = await loadCalibrationSignatories();
     const hospitalLogoResponse = await fetch("hospital-seal.png");
     if (!hospitalLogoResponse.ok) throw new Error("โหลดตราโรงพยาบาลสำหรับใบรับรองไม่ได้");
     const hospitalLogoBytes = new Uint8Array(await hospitalLogoResponse.arrayBuffer());
@@ -565,12 +677,18 @@
       }
       text("วิธีทดสอบ : โดยการนำเครื่องมือที่ต้องการสอบเทียบต่อเข้ากับเครื่องมาตรฐาน แล้วควบคุมค่าตามจุดทดสอบ อ่านค่าแล้วบันทึกค่า", left + 43, finalY + 2, 10);
       const signY = pageH - 120;
-      text("Tested by : .........................................................", left + 18, signY, 11);
-      text(record.operator_name || "", left + 115, signY + 30, 11, { align: "center" });
-      text("Approved by : .........................................................", pageW / 2 + 12, signY, 11);
-      text("", pageW / 2 + 120, signY + 30, 11, { align: "center" });
-      text("นายช่างเทคนิค (เครื่องมือแพทย์)", left + 115, signY + 52, 10, { align: "center" });
-      text("นายช่างเทคนิค (เครื่องมือแพทย์)", pageW / 2 + 130, signY + 52, 10, { align: "center" });
+      const drawSigner = (label, signer, fallbackName, x, width) => {
+        text(label + " : ................................................", x, signY, 11);
+        if (signer?.signature_data_url?.startsWith("data:image/png;base64,")) {
+          doc.addImage(signer.signature_data_url, "PNG", x + width / 2 - 46, signY - 38, 92, 26);
+        }
+        text(signer?.name || fallbackName || "", x, signY + 30, 11, { align: "center", maxWidth: width });
+        text(signer?.position || "นายช่างเทคนิค (เครื่องมือแพทย์)", x, signY + 52, 10, { align: "center", maxWidth: width });
+      };
+      const leftSignX = left + 18;
+      const rightSignX = pageW / 2 + 12;
+      drawSigner("Tested by", signatories.tested, record.operator_name, leftSignX, pageW / 2 - leftSignX - 8);
+      drawSigner("Approved by", signatories.approved, "", rightSignX, right - rightSignX);
       text("Comment : This report certifies the test results as of the date, location and the conditions of testing only.", left, pageH - 48, 8.5);
       doc.setDrawColor(70, 80, 85).setLineWidth(.45).line(left, pageH - 37, right, pageH - 37);
       text("โรงพยาบาลพหลพลพยุหเสนา  572 ถ.แสงชูโต  ต.ปากแพรก  อ.เมืองกาญจนบุรี 71000 โทร 034-587800",
@@ -679,6 +797,11 @@
     if (data.length > 200) throw new Error("กรุณากรองให้เหลือไม่เกิน 200 รายการต่อไฟล์ PDF");
     await showPdf(data);
   }));
+  get("calSignerSettings").addEventListener("click", guarded(openCalibrationSignerSettings));
+  get("calSignerClose").addEventListener("click", () => get("calSignerDialog").close());
+  get("calTestSignerClear").addEventListener("click", () => signaturePads.tested.clear());
+  get("calApproveSignerClear").addEventListener("click", () => signaturePads.approved.clear());
+  get("calSignerForm").addEventListener("submit", guarded(saveCalibrationSignatories, get("calSignerSave")));
 
   guarded(async () => {
     const profile = await memsGuard("calibration");

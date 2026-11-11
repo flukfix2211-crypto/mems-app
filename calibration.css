@@ -29,6 +29,31 @@
   flex-wrap: wrap;
 }
 
+.cal-signer-dialog {
+  width: min(920px, calc(100vw - 28px));
+  max-height: 92vh;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 20px;
+  color: var(--ink);
+}
+
+.cal-signer-dialog::backdrop { background: rgb(12 31 48 / 55%); }
+.cal-signer-dialog .section-head { align-items: center; }
+.cal-signer-dialog h2 { margin: 0; }
+.cal-signer-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; }
+.cal-signer-card { min-width: 0; border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+.cal-signer-card legend { padding: 0 6px; font-weight: 700; }
+.cal-signer-card label { display: block; margin: 8px 0; }
+.cal-signer-card input { display: block; width: 100%; margin-top: 4px; padding: 8px; }
+.cal-signature-pad { display: block; width: 100%; height: 150px; margin: 10px 0; border: 1px dashed #8aa9b5; border-radius: 8px; background: #fff; touch-action: none; }
+
+@media (max-width: 680px) {
+  .cal-signer-grid { grid-template-columns: 1fr; }
+  .cal-signer-dialog { padding: 14px; }
+}
+
 .cal-buttons {
   display: flex;
   gap: 8px;
