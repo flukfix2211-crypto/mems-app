@@ -224,8 +224,31 @@
     get("calPickerTitle").focus();
   }
 
-  function openForm(tool) {
+  async function reserveCertificate(date) {
+    const { data, error } = await supabase.rpc("mems_next_calibration_certificate", {
+      p_calibration_date: date || today()
+    });
+    if (error) throw error;
+    if (typeof data !== "string" || !data.startsWith("CA-5-")) {
+      throw new Error("ระบบออกเลขใบรับรองไม่สำเร็จ กรุณาลองเปิดแบบบันทึกอีกครั้ง");
+    }
+    get("calCertificate").value = data;
+    return data;
+  }
+
+  async function ensureCertificateForDate() {
+    const date = get("calDate").value;
+    if (!date) return;
+    const expectedYear = String(Number(date.slice(0, 4)) + 543).slice(-2);
+    const currentYear = get("calCertificate").value.match(/^CA-5-(\d{2})-/)?.[1];
+    if (currentYear !== expectedYear) await reserveCertificate(date);
+  }
+
+  async function openForm(tool) {
+    let draft;
+    let newToolForm = false;
     if (tool.id !== activeTool?.id) {
+      newToolForm = true;
       if (activeTool) {
         metadataDrafts.set(activeTool.id, {
           fields: draftFields.map(id => get(id).value),
@@ -233,13 +256,20 @@
         });
       }
       activeTool = tool;
-      const draft = metadataDrafts.get(tool.id);
+      draft = metadataDrafts.get(tool.id);
       const fields = draft?.fields ?? ["", today(), operatorName, "", "", "", ""];
       draftFields.forEach((id, index) => { get(id).value = fields[index]; });
       device.value = tool.method;
       rowsByDevice.set(tool.method, draft?.measurements ?? stateFor());
       render();
     }
+    const { data: standard, error: standardError } = await supabase.from("mems_calibration_standards")
+      .select("standard_reference,source_note").eq("method", tool.method).maybeSingle();
+    if (standardError) throw standardError;
+    if (newToolForm && !draft && standard) get("calStandardReference").value = standard.standard_reference;
+    get("calStandardHint").textContent = standard?.source_note
+      || "ไม่พบประวัติของประเภทนี้ใน Access จึงเว้นไว้ให้ระบุเครื่องมาตรฐานที่ใช้จริง";
+    await ensureCertificateForDate();
     const summary = get("calToolSummary");
     summary.replaceChildren();
     for (const [label, value] of [
@@ -421,11 +451,14 @@
   get("calQueueFilters").addEventListener("input", () => { queuePage = 0; renderQueue(); });
   get("calQueuePrev").addEventListener("click", () => { queuePage--; renderQueue(); });
   get("calQueueNext").addEventListener("click", () => { queuePage++; renderQueue(); });
-  get("calQueueList").addEventListener("click", event => {
+  get("calQueueList").addEventListener("click", guarded(async event => {
     const button = event.target.closest("[data-tool-id]");
     const tool = button && tools.find(item => item.id === button.dataset.toolId);
-    if (tool) openForm(tool);
-  });
+    if (tool) await openForm(tool);
+  }));
+  get("calDate").addEventListener("change", guarded(async () => {
+    await ensureCertificateForDate();
+  }));
   get("calForm").addEventListener("submit", guarded(async () => {
     get("calForm").inert = true;
     try {
