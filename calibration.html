@@ -30,6 +30,7 @@
         <p>เลือกประเภทเครื่องมือเพื่อเริ่มลงทะเบียน หรือไปต่อที่คิวสอบเทียบและประวัติ</p>
       </div>
       <div class="cal-picker-actions" aria-label="ทางลัด">
+        <button id="calRegisteredOpen" type="button">รายการที่ลงทะเบียนแล้ว</button>
         <button id="calPickerQueueButton" type="button">เปิดคิวสอบเทียบ</button>
         <button id="calPickerHistoryButton" type="button">ค้นประวัติ / PDF</button>
       </div>
@@ -83,14 +84,23 @@
     <div class="fields">
       <label>ชื่อเครื่องมือ<input name="name" id="calRegisterName" readonly required maxlength="160"></label>
       <label>หน่วยงาน<select name="department" id="calRegisterDepartment" required></select></label>
-      <label>ID เครื่องมือ<input name="tool_code" required maxlength="100" autocomplete="off"></label>
+      <label>ID เครื่องมือ<input id="calRegisterCode" name="tool_code" required maxlength="100" autocomplete="off" aria-describedby="calDuplicateNotice"></label>
       <label>เลขครุภัณฑ์<input name="inventory_no" maxlength="100" autocomplete="off"></label>
       <label>ยี่ห้อ<input name="manufacturer" maxlength="100"></label>
       <label>รุ่น<input name="model" maxlength="100"></label>
       <label>S/N<input name="serial_number" maxlength="100"></label>
     </div>
-    <div class="cal-buttons"><button id="calRegisterSave" class="primary" type="submit">บันทึกทะเบียนเครื่องมือ</button></div>
+    <p id="calDuplicateNotice" class="notice" role="status" hidden></p>
+    <div class="cal-buttons"><button id="calRegisterSave" class="primary" type="submit">บันทึกทะเบียนเครื่องมือ</button><button id="calRegisteredFromForm" type="button">รายการที่ลงทะเบียนแล้ว</button></div>
   </form>
+  <section id="calRegistered" class="card" hidden aria-labelledby="calRegisteredTitle">
+    <button id="calRegisteredBack" class="cal-back" type="button">← กลับไปเลือกประเภท</button>
+    <h1 id="calRegisteredTitle" tabindex="-1">รายการที่ลงทะเบียนแล้ว</h1>
+    <label>ค้นหาจาก ID ชื่อเครื่อง หรือหน่วยงาน<input id="calRegisteredSearch" type="search" maxlength="100"></label>
+    <p id="calRegisteredCount" role="status"></p>
+    <div id="calRegisteredList"></div>
+    <div class="cal-buttons"><button id="calRegisteredPrev" type="button" disabled>← ก่อนหน้า</button><button id="calRegisteredNext" type="button" disabled>ถัดไป →</button></div>
+  </section>
   <section id="calQueue" class="card" hidden>
     <span class="pill">02 / ผู้ปฏิบัติการ</span>
     <h1 id="calQueueTitle" tabindex="-1">คิวสอบเทียบเครื่องมือ</h1>
@@ -247,7 +257,7 @@
 <script src="calibration-catalogue.js"></script>
 <script src="calibration-calculation.js"></script>
 <script src="calibration-form.js"></script>
-<script src="calibration.js?v=optional-ucb-1"></script>
+<script src="calibration.js?v=registration-list-1"></script>
 <script src="site-footer.js?v=20261016-footer-1"></script>
 </body>
 </html>\n
