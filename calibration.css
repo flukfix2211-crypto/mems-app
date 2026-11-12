@@ -911,3 +911,4 @@ body:has(#calForm:not([hidden])) .pm-tabs button{min-height:36px;padding:5px 12p
 #calForm #calSave{min-height:38px;padding:6px 20px}
 @media(max-width:800px){#calForm .cal-entry-overview{grid-template-columns:1fr}#calForm section[aria-labelledby=uncertainty]{display:block}#calForm #budgets{margin-top:6px}#calForm .cal-standard-used{grid-template-columns:1fr}}
 @media(pointer:coarse){#calForm input,#calForm button,#calForm select{min-height:44px!important}}
+#calForm .cal-entry-fields select{display:block;width:100%;min-height:32px;height:32px;margin-top:2px;padding:4px 8px;font-size:13px;border:1px solid #b9cdd3;border-radius:8px;background:#fff}
