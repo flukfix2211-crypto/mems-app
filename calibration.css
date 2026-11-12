@@ -304,6 +304,210 @@ td.calc {
   }
 }
 
+/* Access-inspired calibration entry: equipment and record details above a focused measurement grid. */
+.cal-entry-overview {
+  display: grid;
+  grid-template-columns: minmax(290px, .82fr) minmax(0, 1.65fr);
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.cal-entry-equipment,
+.cal-entry-work {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  overflow: hidden;
+}
+
+.cal-entry-equipment { background: #f8fbfc; }
+.cal-certificate-field {
+  display: block;
+  padding: 14px 16px 12px;
+  color: #184858;
+  background: #e8f0d7;
+  font-size: 13px;
+}
+
+.cal-certificate-field input {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  margin-top: 6px;
+  border: 1px solid #c5d8a3;
+  border-radius: 9px;
+  padding: 8px 12px;
+  color: #153d50;
+  background: #fff;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: .02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.cal-certificate-field small,
+.cal-entry-fields small,
+.cal-standard-used small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.cal-entry-equipment > h3 {
+  margin: 0;
+  padding: 9px 15px;
+  border-bottom: 1px solid var(--line);
+  color: var(--brand);
+  font-size: 13px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.cal-tool-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  margin: 0;
+}
+
+.cal-tool-summary > div {
+  min-width: 0;
+  padding: 9px 14px;
+  border-bottom: 1px solid #e7eef0;
+}
+
+.cal-tool-summary > div:nth-child(odd) { border-right: 1px solid #e7eef0; }
+.cal-tool-summary > div:nth-last-child(-n+2) { border-bottom: 0; }
+.cal-tool-summary dt { color: var(--muted); font-size: 11px; }
+.cal-tool-summary dd {
+  margin: 2px 0 0;
+  overflow-wrap: anywhere;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.cal-entry-work { padding: 13px 15px; background: #fff; }
+.cal-work-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 11px;
+  border-bottom: 1px solid var(--line);
+}
+.cal-work-heading > div { display: grid; gap: 1px; }
+.cal-work-heading span { color: var(--muted); font-size: 11px; }
+.cal-work-heading strong { color: var(--ink); font-size: 15px; }
+.cal-entry-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: var(--light);
+  color: var(--brand)!important;
+  font-size: 11px!important;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.cal-entry-status i { width: 7px; height: 7px; border-radius: 50%; background: #31a5a0; }
+.cal-entry-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 12px;
+  padding-top: 12px;
+}
+.cal-entry-fields label { min-width: 0; }
+.cal-entry-fields input,
+.cal-entry-fields textarea,
+.cal-standard-used input {
+  display: block;
+  width: 100%;
+  min-height: 42px;
+  margin-top: 4px;
+  padding: 8px 10px;
+  border: 1px solid #b9cdd3;
+  border-radius: 8px;
+  background: #fff;
+}
+.cal-entry-fields .cal-notes { grid-column: 1 / -1; }
+.cal-entry-fields textarea { min-height: 56px; resize: vertical; }
+
+#measurements.card { padding-bottom: 14px; }
+#measurements .section-head { align-items: center; }
+#measurements .section-head > div > p:first-of-type { margin-top: 5px; }
+#sheets .sheet {
+  margin-top: 13px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fbfdfd;
+}
+#sheets .sheet h3 { color: var(--ink); font-size: 16px; }
+#sheets .scroll { border-radius: 9px; }
+#sheets table { min-width: 1120px; }
+#sheets thead { background: #e8f3f4; }
+#sheets th { color: #135564; font-size: 12px; }
+#sheets th[scope=colgroup] { border-left-color: #cfdee1; }
+#sheets td { padding: 5px 4px; }
+#sheets td input {
+  min-width: 58px;
+  max-width: 102px;
+  min-height: 40px;
+  border-radius: 8px;
+  text-align: center;
+}
+#sheets td:first-child input { background: #f1f6f7; font-weight: 750; }
+#sheets td.calc { background: #f1f7fa; font-size: 12px; font-weight: 650; }
+#sheets .add { min-height: 40px; border-color: #b8d5d8; border-radius: 8px; }
+
+.cal-standard-used {
+  display: grid;
+  grid-template-columns: minmax(190px, .55fr) minmax(0, 1.45fr);
+  align-items: center;
+  gap: 14px;
+  margin: 0 0 14px;
+  padding: 13px 16px;
+  border: 1px solid #b7c7c9;
+  border-radius: 12px;
+  background: #f5f8f5;
+}
+.cal-standard-used-title { display: flex; align-items: center; gap: 10px; }
+.cal-standard-used-title h2 { margin: 0; color: var(--ink); font-size: 15px; }
+.cal-standard-used-title p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
+.cal-standard-mark {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid #b5ccbb;
+  border-radius: 9px;
+  color: #26714c;
+  background: #e8f4ea;
+  font-weight: 800;
+}
+.cal-standard-used label { min-width: 0; }
+.cal-standard-used input { min-height: 40px; }
+.cal-standard-used small:empty { display: none; }
+
+.cal-buttons .primary { min-height: 48px; padding-inline: 22px; border-radius: 9px; }
+
+@media (max-width: 900px) {
+  .cal-entry-overview { grid-template-columns: 1fr; }
+  .cal-entry-work { padding: 12px; }
+}
+
+@media (max-width: 580px) {
+  .cal-entry-fields { grid-template-columns: 1fr; }
+  .cal-entry-fields .cal-notes { grid-column: auto; }
+  .cal-tool-summary { grid-template-columns: 1fr 1fr; }
+  .cal-standard-used { grid-template-columns: 1fr; gap: 8px; }
+  #measurements .section-head { align-items: start; }
+}
+
 
 .cal-picker {
   padding: 18px 0 40px;
@@ -650,3 +854,61 @@ button.cal-back {
   .cal-picker .cal-type-grid { grid-template-columns: minmax(0, 1fr); gap: 8px; }
   .cal-picker .cal-type { min-height: 76px; }
 }
+
+/* Compact production calibration workspace */
+body:has(#calForm:not([hidden])) .pm-header{padding-block:5px}
+body:has(#calForm:not([hidden])) .pm-shell{margin-top:10px}
+body:has(#calForm:not([hidden])) #status{padding:6px 12px;margin-bottom:8px;font-size:12px}
+body:has(#calForm:not([hidden])) .pm-tabs{margin-bottom:10px}
+body:has(#calForm:not([hidden])) .pm-tabs button{min-height:36px;padding:5px 12px}
+#calForm{font-size:13px}
+#calForm .hero{margin:4px 0 8px;align-items:center}
+#calForm .hero h1{font-size:23px;margin:0}
+#calForm .hero p,#calForm .hero .pill{display:none}
+#calForm .cal-back{padding:4px 8px;font-size:12px}
+#calForm .card{padding:10px 12px;margin-bottom:8px;border-radius:8px;box-shadow:none}
+#calForm .card h2{font-size:14px}
+#calForm .cal-entry-overview{margin-top:7px;gap:10px;grid-template-columns:1fr 1.25fr}
+#calForm .cal-certificate-field{padding:8px 10px;font-size:12px}
+#calForm .cal-certificate-field input{min-height:32px;height:32px;font-size:15px;padding:4px 8px}
+#calForm .cal-certificate-field small{display:none}
+#calForm .cal-entry-equipment>h3{padding:5px 10px;font-size:12px}
+#calForm .cal-tool-summary{grid-template-columns:repeat(3,minmax(0,1fr));margin:0;padding:0;gap:0;border-radius:0;background:#f7fafb}
+#calForm .cal-tool-summary>div{padding:6px 10px;border:0}
+#calForm .cal-tool-summary dt{font-size:11px}
+#calForm .cal-tool-summary dd{font-size:13px;margin:2px 0}
+#calForm .cal-entry-work{padding:8px 10px}
+#calForm .cal-work-heading{padding-bottom:5px}
+#calForm .cal-work-heading>div>span{display:none}
+#calForm .cal-entry-fields{padding-top:5px;gap:5px 10px;grid-template-columns:repeat(2,minmax(0,1fr))}
+#calForm label{font-size:12px}
+#calForm .cal-entry-fields input,#calForm .cal-entry-fields textarea{min-height:32px;height:32px;margin-top:2px;padding:4px 8px;font-size:13px}
+#calForm .cal-entry-fields small{font-size:10px;margin:2px 0 0}
+#calForm section[aria-labelledby=measurements]>.section-head{margin-bottom:4px;align-items:center}
+#calForm section[aria-labelledby=measurements]>.section-head p{font-size:11px;display:inline;margin-right:10px}
+#calForm #sheets .sheet{margin-top:5px;padding:0;border:0;background:none}
+#calForm #sheets .section-head{margin-bottom:4px;align-items:center}
+#calForm #sheets h3{font-size:13px;margin:0}
+#calForm #sheets .unit input{height:28px;width:70px;min-height:28px}
+#calForm #sheets table{min-width:950px;table-layout:fixed}
+#calForm #sheets th{font-size:10px;padding:4px 2px}
+#calForm #sheets td{padding:3px 2px}
+#calForm #sheets td input{min-height:32px;height:32px;min-width:0;max-width:none;padding:3px;font-size:13px;border-radius:4px}
+#calForm #sheets td.calc{font-size:11px}
+#calForm #sheets .add{min-height:30px;margin-top:4px;padding:3px 8px;font-size:12px}
+#calForm .cal-standard-used{padding:7px 12px;margin-bottom:8px;gap:10px;grid-template-columns:180px 1fr;border-radius:8px}
+#calForm .cal-standard-used input{height:32px;min-height:32px;padding:4px 8px}
+#calForm .cal-standard-used-title h2{font-size:13px}
+#calForm section[aria-labelledby=uncertainty]{display:grid;grid-template-columns:170px 1fr;gap:4px 12px;align-items:start}
+#calForm section[aria-labelledby=uncertainty]>p{font-size:11px;grid-column:1;grid-row:2}
+#calForm #budgets{grid-column:2;grid-row:1 / span 2;display:flex;gap:12px;flex-wrap:wrap}
+#calForm #budgets .sheet{margin:0;flex:1;min-width:250px}
+#calForm #budgets h3{font-size:11px;margin:0 0 3px}
+#calForm #budgets .fields{grid-template-columns:repeat(4,1fr);gap:6px;margin:0}
+#calForm #budgets input{height:30px;min-height:30px;padding:3px 6px;margin-top:2px}
+#calForm details{margin:0;grid-column:1/-1;font-size:11px}
+#calForm>.cal-buttons{margin:6px 0;justify-content:flex-end;position:sticky;bottom:0;background:#f2f7f8;padding:6px 0;z-index:3}
+#calForm #calSave{min-height:38px;padding:6px 20px}
+@media(max-width:800px){#calForm .cal-entry-overview{grid-template-columns:1fr}#calForm section[aria-labelledby=uncertainty]{display:block}#calForm #budgets{margin-top:6px}#calForm .cal-standard-used{grid-template-columns:1fr}}
+@media(pointer:coarse){#calForm input,#calForm button,#calForm select{min-height:44px!important}}
+#calForm .cal-entry-fields select{display:block;width:100%;min-height:32px;height:32px;margin-top:2px;padding:4px 8px;font-size:13px;border:1px solid #b9cdd3;border-radius:8px;background:#fff}
