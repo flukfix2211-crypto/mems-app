@@ -256,9 +256,10 @@
       option.label = person.position;
       return option;
     }));
+    setOptions(get("calOperator"), [...new Set(data.map(person => person.name))].map(name => [name, name]), "เลือกผู้ปฏิบัติการ");
     get("calOperatorHint").textContent = data.length
-      ? "รายชื่อจาก PM · " + data.length + " รายชื่อ · เลือกจากรายการหรือพิมพ์ชื่อได้"
-      : "ยังไม่มีรายชื่อใน PM · พิมพ์ชื่อผู้ปฏิบัติการได้";
+      ? "รายชื่อจาก PM · " + data.length + " รายชื่อ · กดเลือกผู้ปฏิบัติการ"
+      : "ยังไม่มีรายชื่อใน PM · กรุณาเพิ่มรายชื่อใน PM ก่อน";
   }
 
   function assetLabel(asset) {
@@ -530,7 +531,9 @@
           record.standard_reference, record.ambient_temperature ?? "", record.relative_humidity ?? "", record.notes || ""],
         measurements: record.measurements
       } : metadataDrafts.get(tool.id);
-      const fields = draft?.fields ?? ["", today(), operatorName, "", "", "", ""];
+      const fields = draft?.fields ?? ["", today(), operatorName, "", "23", "50", ""];
+      const operatorSelect = get("calOperator");
+      if (draft && fields[2] && !Array.from(operatorSelect.options).some(option => option.value === fields[2])) operatorSelect.add(new Option(fields[2] + " (ข้อมูลเดิม)", fields[2]));
       draftFields.forEach((id, index) => { get(id).value = fields[index]; });
       device.value = tool.method;
       rowsByDevice.set(tool.method, draft?.measurements ? structuredClone(draft.measurements) : stateFor());
@@ -978,7 +981,7 @@
     operatorName = profile.display_name || "";
     await loadCalibrationOperators().catch(error => {
       console.warn("โหลดรายชื่อผู้ปฏิบัติงานจาก PM ไม่สำเร็จ", error);
-      get("calOperatorHint").textContent = "โหลดรายชื่อจาก PM ไม่สำเร็จ · ยังพิมพ์ชื่อเองได้";
+      get("calOperatorHint").textContent = "โหลดรายชื่อจาก PM ไม่สำเร็จ · กรุณาโหลดหน้าใหม่";
     });
     const savedDepartments = await fetchPreparationWards().catch(() => []);
     departments = [...new Set(["ศูนย์เครื่องมือแพทย์", ...MEMS_WARDS, ...savedDepartments])]
@@ -997,4 +1000,3 @@
     });
   })();
 })();
-
