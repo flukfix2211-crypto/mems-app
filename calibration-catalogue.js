@@ -1,6 +1,8 @@
 "use strict";
 
 const cal1Sources = {
+  infusion: "Infusion Pump 228 INF-104450.xlsx",
+  nibp: "NIBP 120 BPD-137309.xlsx",
   tour: "Add New Zcer Sub Tour",
   thermo: "Add New Zcer Sub",
   weight: "Zcer Weight Sub",
@@ -11,6 +13,9 @@ const cal1Sources = {
 };
 
 const additionalCalibrationTypes = [
+  ["infusion","Infusion Pump","เครื่องควบคุมการให้สารละลาย","เครื่องให้สารละลาย","mean-std","infusion",[
+    ["อัตราการไหล · Flow Rate","mL/h"], ["ปริมาตร · Volume","mL"]
+  ]],
   ["flowmeter","Flowmeter","เครื่องวัดอัตราการไหล","ระบบก๊าซ","nominal","tour",[["อัตราการไหล","L/min"]]],
   ["suction","Suction","เครื่องดูดเสมหะ","ระบบก๊าซ","nominal","tour",[["แรงดูด","mmHg"]]],
   ["regulator","Regulator","ตัวควบคุมแรงดัน","ระบบก๊าซ","nominal","tour",[["แรงดัน","psi"]]],
@@ -21,6 +26,11 @@ const additionalCalibrationTypes = [
     ["ความดันเฉลี่ย · Mean pressure (NIBP-BPM)","mmHg"],
     ["อัตราชีพจร · Heart rate","bpm"],
     ["ออกซิเจนในเลือด · SpO₂","%"]
+  ]],
+  ["nibp","NIBP","เครื่องวัดความดันโลหิตแบบ NIBP","สัญญาณชีพ","mean-nominal","nibp",[
+    ["ความดันตัวบน · Systolic","mmHg"],
+    ["ความดันตัวล่าง · Diastolic","mmHg"],
+    ["อัตราชีพจร · Pulse rate","bpm"]
   ]],
   ["ambient","Ambient Thermometer","เทอร์โมมิเตอร์วัดอุณหภูมิห้อง","อุณหภูมิ","standard","thermo",[["อุณหภูมิ","°C"]]],
   ["weight-adult","Weighting Machine (Adult)","เครื่องชั่งผู้ใหญ่","น้ำหนัก","reverse","weight",[["น้ำหนัก","kg"]]],
@@ -115,6 +125,7 @@ function calibrationAcceptanceLimit(method, sheetIndex, nominal) {
     "weight-neo": 100
   };
   if (method === "digital-bp") return [8, 8, 1, 2, 2][sheetIndex] ?? null;
+  if (method === "nibp" || method === "infusion") return null;
   const legacyType = cal1VerifiedTypes.find(type => type.method === method);
   if (legacyType) {
     const { formula, gainPlus } = legacyType.acceptance;
@@ -137,7 +148,6 @@ function calibrationAcceptanceLimit(method, sheetIndex, nominal) {
   if (absolute[method] !== undefined) return absolute[method];
   if (method === "flowmeter") return Math.abs(nominal) * 0.2;
   if (method === "alarm") return Math.abs(nominal) * 0.05;
-  if (method === "infusion") return Math.abs(nominal) * 0.1;
   if (method === "syringe") return Math.abs(nominal) * 0.05;
   if (["centrifuge", "hematocrit", "rotator", "serofuge"].includes(method)) {
     return sheetIndex === 1 ? 10 : Math.abs(nominal) * 0.1;

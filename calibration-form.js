@@ -30,20 +30,29 @@ const numeric = value => value === "" ? null : Number(value);
 function render() {
   const state = rowsByDevice.get(device.value);
   const digital = device.value === "digital-bp";
-  document.querySelector("#calStandardsHint").textContent = digital
+  const nibp = device.value === "nibp";
+  const infusion = device.value === "infusion";
+  document.querySelector("#calStandardsHint").textContent = infusion
+    ? "กรอก UUC setting และ Standard Reading 2 ครั้งต่อจุด ตามแบบ Infusion Analyzer"
+    : digital || nibp
     ? "กรอกค่า STD แล้วระบบใช้อ้างอิงค่านั้นในผลคำนวณทันที"
     : "กรอกค่า STD แล้วระบบเติมค่ามาตรฐานทั้ง 3 รอบให้ตามค่า STD อัตโนมัติ แก้แต่ละรอบได้";
-  const entryColumns = digital
-    ? [{ label: "ค่า STD", index: 1 }, { label: "เครื่อง รอบ 1", index: 3 },
+  const entryColumns = infusion
+    ? [{ label: "จุดทดสอบ", index: 0 }, { label: "UUC setting", index: 1 },
+      { label: "STD Reading 1", index: 2 }, { label: "STD Reading 2", index: 4 }]
+    : digital || nibp
+    ? [{ label: "จุดทดสอบ", index: 0 }, { label: "ค่า STD", index: 1 }, { label: "เครื่อง รอบ 1", index: 3 },
       { label: "เครื่อง รอบ 2", index: 5 }, { label: "เครื่อง รอบ 3", index: 7 }]
     : columns.map((label, index) => ({ label, index }));
-  const outputColumns = device.value.startsWith("x-ray") ? [...outputs, "cv"] : outputs;
-  const tableHeader = '<tr><th scope="col" rowspan="2">จุดทดสอบ</th><th scope="col" rowspan="2">ค่า STD</th>' +
-    (digital ? [1, 2, 3].map(round => '<th scope="col">เครื่อง รอบ ' + round + '</th>').join("")
-      : [1, 2, 3].map(round => '<th scope="colgroup" colspan="2">รอบที่ ' + round + '</th>').join("")) +
+  const outputColumns = device.value.startsWith("x-ray") ? [...outputs, "cv"] : infusion ? [...outputs, "errorPercent"] : outputs;
+  const tableHeader = '<tr>' + (infusion
+    ? '<th scope="col" rowspan="2">จุดทดสอบ</th><th scope="col" rowspan="2">UUC setting</th><th scope="colgroup" colspan="2">Standard Reading</th>'
+    : '<th scope="col" rowspan="2">จุดทดสอบ</th><th scope="col" rowspan="2">ค่า STD</th>' +
+      (digital || nibp ? [1, 2, 3].map(round => '<th scope="col" rowspan="2">เครื่อง รอบ ' + round + '</th>').join("")
+        : [1, 2, 3].map(round => '<th scope="colgroup" colspan="2">รอบที่ ' + round + '</th>').join(""))) +
     '<th scope="colgroup" colspan="' + outputColumns.length + '">ผลคำนวณ</th><th scope="col" rowspan="2">ลบ</th></tr><tr>' +
-    (digital ? [] : ["มาตรฐาน", "เครื่อง", "มาตรฐาน", "เครื่อง", "มาตรฐาน", "เครื่อง"])
-      .concat(["Standard", "Mean", outputColumns.includes("cv") ? "Error (%)" : "Error", "SD", "UCA", "U (k=2)"], outputColumns.includes("cv") ? ["CV (%)"] : [])
+    (infusion ? ["ครั้งที่ 1", "ครั้งที่ 2"] : digital || nibp ? [] : ["มาตรฐาน", "เครื่อง", "มาตรฐาน", "เครื่อง", "มาตรฐาน", "เครื่อง"])
+      .concat(["Setting", "Mean", "Error", "SD", "uc", "Ureport"], outputColumns.includes("errorPercent") ? ["Error (%)"] : [], outputColumns.includes("cv") ? ["CV (%)"] : [])
       .map(label => '<th scope="col">' + label + '</th>').join("") + '</tr>';
   sheets.innerHTML = devices[device.value].map((config, i) => {
     const { rows, unit } = state[i];
@@ -63,10 +72,12 @@ function render() {
       config.title + '"><thead>' + tableHeader + '</thead><tbody>' + body + '</tbody></table></div><button type="button" class="add" data-add>+ เพิ่มจุดทดสอบ</button></section>';
   }).join("");
 
-  budgets.innerHTML = devices[device.value].map((config, i) =>
+  budgets.innerHTML = infusion || nibp
+    ? '<p class="hint">uncertainty และ Ureport คำนวณอัตโนมัติตามสูตรใน Excel ต้นฉบับ</p>'
+    : devices[device.value].map((config, i) =>
     '<section class="sheet"><h3>' + config.title + '</h3><div class="fields">' +
     state[i].budget.map((value, j) => '<label>UCB' + (j + 1) +
-      '<input type="number" step="any" data-budget="' + i + '" data-item="' + j +
+    '<input type="number" step="any" data-budget="' + i + '" data-item="' + j +
       '" value="' + escapeValue(value) + '"></label>').join("") + '</div></section>').join("");
 
   const rules = {
@@ -80,13 +91,16 @@ function render() {
   const source = [...additionalCalibrationTypes, ...legacyCalibrationTypes].find(type => type.method === device.value)?.source;
   document.querySelector("#rule").textContent = "Error = " + rules[calibrationErrorRule(device.value)] +
     (source ? " · Query " + source : "") +
-    (digital ? " · Digital บันทึกค่า STD จุดเดียวและค่าเครื่อง 3 รอบ แยก 5 พารามิเตอร์ตามแบบ Access" :
+    (infusion ? " · Infusion: Error = ค่าเฉลี่ย Standard Reading − UUC setting; ใช้ 2 รอบ" :
+      nibp ? " · NIBP: Error = ค่าเฉลี่ยเครื่อง − STD setting; uncertainty ใช้ CMC และ repeatability จาก Excel" :
+      digital ? " · บันทึกค่า STD จุดเดียวและค่าเครื่อง 3 รอบตามแบบต้นทาง" :
       " · Standard ใช้ค่าเฉลี่ยมาตรฐานเมื่อมากกว่า 0 และใช้ค่า STD ในกรณีอื่น");
   state.forEach((_, index) => updateSheet(index));
 }
 
 function updateSheet(index) {
   const { rows, budget } = rowsByDevice.get(device.value)[index];
+  const infusion = device.value === "infusion";
   const table = sheets.querySelector('[data-sheet="' + index + '"]');
   const xray = device.value.startsWith("x-ray");
   const rowMeans = rows.map(row => {
@@ -96,12 +110,15 @@ function updateSheet(index) {
   const cv = xray && rowMeans.every(Number.isFinite) ? calculateCoefficientVariation(rowMeans) : null;
   rows.forEach((row, rowIndex) => {
     const [, nominal, s1, m1, s2, m2, s3, m3] = row.map(numeric);
-    const results = calculatePoint({
+    const results = infusion ? calculateInfusionPoint({ nominal, standardReadings: [s1, s2] })
+      : nibp ? calculateNibpPoint({ nominal, measuredReadings: [m1, m2, m3],
+        pulseRate: /pulse|อัตราชีพจร/i.test(devices[device.value][index].title) })
+      : calculatePoint({
       nominal, standardReadings: [s1, s2, s3], measuredReadings: [m1, m2, m3],
       budget: budget.map(numeric), errorRule: calibrationErrorRule(device.value, index)
     });
     const tr = table.querySelector('[data-row="' + rowIndex + '"]');
-    [...outputs, ...(xray ? ["cv"] : [])].forEach(key => {
+    [...outputColumns].forEach(key => {
       if (key === "cv") {
         tr.querySelector('[data-output="cv"]').textContent = rowIndex === 0 && Number.isFinite(cv)
           ? formatter.format(cv) : "—";
@@ -131,7 +148,7 @@ sheets.addEventListener("input", event => {
   const row = Number(input.closest("[data-row]").dataset.row);
   const column = Number(input.dataset.col);
   state.rows[row][column] = input.value;
-  if (column === 1 && device.value !== "digital-bp") {
+  if (column === 1 && device.value !== "digital-bp" && device.value !== "nibp" && device.value !== "infusion") {
     [2, 4, 6].forEach((standardColumn, round) => {
       if (!state.standardAuto[row][round]) return;
       state.rows[row][standardColumn] = input.value;
@@ -185,7 +202,8 @@ budgets.addEventListener("input", event => {
 
 function stateFor() {
   return devices[device.value].map(({ unit }) => ({
-    unit, rows: [["1", ...Array(7).fill("")]], standardAuto: [Array(3).fill(true)], budget: Array(4).fill("")
+    unit, rows: [["1", ...Array(7).fill("")]], standardAuto: [Array(3).fill(true)],
+    budget: ["infusion", "nibp"].includes(device.value) ? ["0", "0", "0", "0"] : Array(4).fill("")
   }));
 }
 

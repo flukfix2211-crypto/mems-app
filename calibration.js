@@ -329,6 +329,7 @@
     get("calQueueNext").disabled = true;
     get("calQueueTitle").focus();
     notify("ค้นหาและเลือกเครื่องที่จะสอบเทียบ");
+    await ensureWorkbookCalibrationTools();
     const data = await fetchAllPages(() => supabase.from("mems_calibration_tools").select("*").order("id"));
     if (request !== queueRequest) return;
     tools = data;
@@ -336,6 +337,24 @@
     setOptions(get("calQueueDepartment"), queueDepartments.map(name => [name, name]), "ทุกหน่วยงาน");
     queuePage = 0;
     renderQueue();
+  }
+
+  async function ensureWorkbookCalibrationTools() {
+    const workbookTools = [
+      { method: "infusion", name: "Infusion Pump", department: "ไม่ระบุในไฟล์ต้นทาง", tool_code: "104450",
+        inventory_no: "6515-025-1001-104/51", manufacturer: "Terumo", model: "TE-171", serial_number: "07050178" },
+      { method: "nibp", name: "NIBP", department: "ธนาคารเลือด", tool_code: "137309",
+        inventory_no: "6515-069-3102-63/63", manufacturer: "Omron", model: "HBP-9020", serial_number: "02008795LF" }
+    ];
+    const { data: found, error: lookupError } = await supabase.from("mems_calibration_tools")
+      .select("tool_code").in("tool_code", workbookTools.map(tool => tool.tool_code));
+    if (lookupError) throw lookupError;
+    const known = new Set(found.map(tool => tool.tool_code));
+    const missing = workbookTools.filter(tool => !known.has(tool.tool_code));
+    for (const tool of missing) {
+      const { error } = await supabase.from("mems_calibration_tools").insert(tool);
+      if (error && error.code !== "23505") throw error;
+    }
   }
 
   function openRegistration(method) {
@@ -592,16 +611,24 @@
       const { title } = devices[device.value][i];
       const unit = sheet.unit.trim();
       const rows = sheet.rows.filter(row => row.some(value => value !== "")).map(row => row.map(numeric));
-      const budget = sheet.budget.map(numeric);
+        const budget = ["infusion", "nibp"].includes(device.value)
+          ? [0, 0, 0, 0] : sheet.budget.map(numeric);
       if (rows.length > 100) throw new Error(title + " · เพิ่มได้ไม่เกิน 100 จุดต่อพารามิเตอร์");
       if (!unit || !rows.length || !budget.every(value => Number.isFinite(value) && value >= 0)) {
         throw new Error(title + " · กรุณาระบุหน่วย จุดทดสอบ และ UCB ให้ครบ");
       }
       for (const row of rows) {
         const [point, nominal, s1, m1, s2, m2, s3, m3] = row;
-        if (![point, nominal, m1, m2, m3].every(Number.isFinite)
-          || (calibrationErrorRule(device.value, i) === "mean-std" && ![s1, s2, s3].every(Number.isFinite))
-          || (![s1, s2, s3].every(value => value === null) && ![s1, s2, s3].every(Number.isFinite))) {
+        const validInfusion = device.value === "infusion"
+          && [point, nominal, s1, s2].every(Number.isFinite)
+          && [m1, m2, s3, m3].every(value => value === null);
+        const readingsValid = [point, nominal, m1, m2, m3].every(Number.isFinite);
+        const standardReadings = [s1, s2, s3];
+        const standardsValid = standardReadings.every(Number.isFinite)
+          || (!["general", "ambient"].includes(device.value) && standardReadings.every(value => value === null));
+        if (!validInfusion && !(readingsValid && standardsValid)) {
+          if (device.value === "infusion") throw new Error(title + " · กรอก UUC setting และ Standard Reading ให้ครบ 2 รอบ");
+          if (device.value === "nibp") throw new Error(title + " · กรอกค่า STD และค่าเครื่องให้ครบ 3 รอบ");
           throw new Error(title + " · กรอกจุดทดสอบ ค่า STD และค่าเครื่องให้ครบ 3 รอบ ช่องมาตรฐานให้กรอกครบหรือเว้นทั้ง 3 ช่องเมื่อใช้ STD");
         }
       }
@@ -665,8 +692,24 @@
     }
   }
 
-  async function buildPdf(records) {
-    const doc = await newThaiPdf({ orientation: "portrait" });
+  const pdfLayoutKey = "mems.calibration.pdf-layout.v1";
+  const defaultPdfLayout = {
+    orientation: "portrait", titleAlign: "center", title: "Certificate of Testing",
+    titleSize: 19, hospital: "Phaholpolpayuhasena Hospital", center: "Medical Device Center",
+    headerSize: 17, titleY: 0, logoX: 0, logoY: 0, logoScale: 100, logo: "",
+    comment: "Comment : This report certifies the test results as of the date, location and the conditions of testing only.",
+    address: "โรงพยาบาลพหลพลพยุหเสนา  572 ถ.แสงชูโต  ต.ปากแพรก  อ.เมืองกาญจนบุรี 71000 โทร 034-587800"
+  };
+  function loadPdfLayout() {
+    try {
+      return { ...defaultPdfLayout, ...JSON.parse(localStorage.getItem(pdfLayoutKey)) };
+    } catch {
+      return { ...defaultPdfLayout };
+    }
+  }
+
+  async function buildPdf(records, layout = loadPdfLayout()) {
+    const doc = await newThaiPdf({ orientation: layout.orientation });
     const signerSettings = await loadCalibrationSignatories();
     const signatories = {};
     for (const role of ["tested", "approved"]) {
@@ -678,7 +721,7 @@
         signer.signature_data_url = await recolorSignature(signer.signature_data_url);
       }
     }
-    const hospitalLogoResponse = await fetch("hospital-seal.png");
+    const hospitalLogoResponse = await fetch(layout.logo || "hospital-seal.png");
     if (!hospitalLogoResponse.ok) throw new Error("โหลดตราโรงพยาบาลสำหรับใบรับรองไม่ได้");
     const hospitalLogoBytes = new Uint8Array(await hospitalLogoResponse.arrayBuffer());
     let hospitalLogoBinary = "";
@@ -689,15 +732,21 @@
     const pageW = doc.internal.pageSize.getWidth();
     const pageH = doc.internal.pageSize.getHeight();
     const sealProperties = doc.getImageProperties(hospitalLogoDataUrl);
-    const sealScale = Math.min(60 / sealProperties.width, 52 / sealProperties.height);
+    const sealScale = Math.min(60 / sealProperties.width, 52 / sealProperties.height) * layout.logoScale / 100;
     const sealWidth = sealProperties.width * sealScale;
     const sealHeight = sealProperties.height * sealScale;
     const headerPages = new Set();
     const left = 46;
     const right = pageW - 46;
+    const mm = value => Number(value) * 72 / 25.4;
     const text = (value, x, y, size = 11, options) => {
       doc.setFont(PDF_FONT, "normal").setFontSize(size).setTextColor(35, 43, 50)
         .text(String(value ?? "—"), x, y, options || {});
+    };
+    const fittedText = (value, x, y, size, width, align = "left") => {
+      doc.setFont(PDF_FONT, "normal").setFontSize(size);
+      const measured = doc.getTextWidth(value);
+      text(value, x, y, measured > width ? size * width / measured : size, { align });
     };
     const certificateNumber = (value, digits = 2) => Number.isFinite(value)
       ? (Math.abs(value) < 0.00005 ? 0 : value).toFixed(digits) : "—";
@@ -724,12 +773,14 @@
       if (headerPages.has(pageNumber)) return;
       headerPages.add(pageNumber);
       doc.setDrawColor(45, 55, 60).setLineWidth(1.1);
-      doc.addImage(hospitalLogoDataUrl, "PNG", left + (60 - sealWidth) / 2,
-        24 + (52 - sealHeight) / 2, sealWidth, sealHeight);
-      text("Phaholpolpayuhasena Hospital", left + 64, 45, 17);
-      text("Medical Device Center", left + 64, 65, 15);
+      doc.addImage(hospitalLogoDataUrl, "PNG", left + (60 - sealWidth) / 2 + mm(layout.logoX),
+        24 + (52 - sealHeight) / 2 + mm(layout.logoY), sealWidth, sealHeight);
+      const headerWidth = right - left - 124;
+      fittedText(layout.hospital, left + 70, 45, Number(layout.headerSize), headerWidth);
+      fittedText(layout.center, left + 70, 65, Number(layout.headerSize) - 2, headerWidth);
       doc.line(left, 88, right, 88);
-      text("Certificate of Testing", pageW / 2, 119, 19, { align: "center" });
+      const titleX = { left, center: pageW / 2, right }[layout.titleAlign];
+      fittedText(layout.title, titleX, 119 + mm(layout.titleY), Number(layout.titleSize), right - left, layout.titleAlign);
       text("Cert. No. :  " + (record.certificate_no || "—"), right, 103, 13, { align: "right" });
     };
     const drawDetails = record => {
@@ -774,13 +825,20 @@
           return values.every(Number.isFinite) ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
         });
         const cv = xray && rowMeans.every(Number.isFinite) ? calculateCoefficientVariation(rowMeans) : null;
+        const uncertaintyReport = ["infusion", "nibp"].includes(record.method);
         const rows = (sheet.rows || []).map((row, rowIndex) => {
           const [, nominal, s1, m1, s2, m2, s3, m3] = row;
-          const result = calculatePoint({ nominal, standardReadings: [s1, s2, s3],
+          const result = record.method === "infusion"
+            ? calculateInfusionPoint({ nominal, standardReadings: [s1, s2] })
+            : record.method === "nibp"
+            ? calculateNibpPoint({ nominal, measuredReadings: [m1, m2, m3],
+              pulseRate: /pulse|อัตราชีพจร/i.test(sheetTitle) })
+            : calculatePoint({ nominal, standardReadings: [s1, s2, s3],
             measuredReadings: [m1, m2, m3], budget: sheet.budget || [], errorRule: calibrationErrorRule(record.method, sheetIndex) });
           const limit = calibrationAcceptanceLimit(record.method, sheetIndex, nominal);
           const rowData = [certificateNumber(nominal), certificateNumber(result.mean), certificateNumber(result.error, 3),
-            limit === null ? "—" : "± " + certificateNumber(limit, 3)];
+            uncertaintyReport ? "± " + certificateNumber(result.expanded, 3)
+              : limit === null ? "—" : "± " + certificateNumber(limit, 3)];
           if (xray) rowData.push(rowIndex === 0 && cv !== null ? certificateNumber(cv, 3) : "—");
           return rowData;
         });
@@ -788,7 +846,9 @@
           startY: finalY,
           margin: { left: left + 42, right: left + 42, top: 290, bottom: 55 },
           head: [[{ content: sheetTitle + "  (" + sheet.unit + ")", colSpan: 4 }],
-            ["UUT Setting\n(" + sheet.unit + ")", "STD Reading\n(" + sheet.unit + ")", "Error\n(" + (xray ? "%" : sheet.unit) + ")", "Accept value\n(" + sheet.unit + ")"]
+            [record.method === "infusion" ? "UUC setting\n(" + sheet.unit + ")" : "STD setting\n(" + sheet.unit + ")",
+              record.method === "infusion" ? "STD Reading\n(" + sheet.unit + ")" : "Mean Reading\n(" + sheet.unit + ")",
+              "Error\n(" + (xray ? "%" : sheet.unit) + ")", uncertaintyReport ? "Ureport\n(" + sheet.unit + ")" : "Accept value\n(" + sheet.unit + ")"]
               .concat(xray ? ["CV (%)"] : [])],
           body: rows,
           theme: "grid",
@@ -800,16 +860,16 @@
         });
         finalY = doc.lastAutoTable.finalY + 12;
       });
-      if (finalY > 525) {
+      if (finalY > Math.min(525, pageH - 235)) {
         doc.addPage();
         drawCertificatePage(record);
-        finalY = 135;
+        finalY = 289;
       }
       text("Standard Used", left + 43, finalY + 17, 12);
       const references = standardRows(record.standard_reference);
       doc.autoTable({
         startY: finalY + 24,
-        margin: { left: left + 43, right: left + 43, bottom: 145 },
+        margin: { left: left + 43, right: left + 43, top: 289, bottom: 175 },
         head: [["Manufacture", "Model", "S/N", "Cal date", "Cert No."]],
         body: references,
         theme: "grid",
@@ -821,7 +881,7 @@
       if (finalY > pageH - 175) {
         doc.addPage();
         drawCertificatePage(record);
-        finalY = 135;
+        finalY = 289;
       }
       text("วิธีทดสอบ : โดยการนำเครื่องมือที่ต้องการสอบเทียบต่อเข้ากับเครื่องมาตรฐาน แล้วควบคุมค่าตามจุดทดสอบ อ่านค่าแล้วบันทึกค่า", left + 43, finalY + 2, 10);
       const signY = pageH - 120;
@@ -845,10 +905,9 @@
       const rightSignX = left + signerWidth;
       drawSigner("Tested by", signatories.tested, record.operator_name, leftSignX, signerWidth, signerSettings.preferences.tested);
       drawSigner("Approved by", signatories.approved, "", rightSignX, signerWidth, signerSettings.preferences.approved);
-      text("Comment : This report certifies the test results as of the date, location and the conditions of testing only.", left, pageH - 48, 8.5);
+      fittedText(layout.comment, left, pageH - 48, 8.5, right - left);
       doc.setDrawColor(70, 80, 85).setLineWidth(.45).line(left, pageH - 37, right, pageH - 37);
-      text("โรงพยาบาลพหลพลพยุหเสนา  572 ถ.แสงชูโต  ต.ปากแพรก  อ.เมืองกาญจนบุรี 71000 โทร 034-587800",
-        left, pageH - 22, 8.2, { maxWidth: right - left - 43 });
+      fittedText(layout.address, left, pageH - 22, 8.2, right - left - 43);
       if (doc.__memsLogoDataUrl) {
         doc.addImage(doc.__memsLogoDataUrl, "PNG", right - 40, pageH - 34, 16, 16);
         text("MEMs", right - 21, pageH - 22, 8.5, { align: "right" });
@@ -869,6 +928,116 @@
     rptDeliverPdf(doc, filename + ".pdf", { preview: true });
     notify("สร้าง PDF แล้ว · เลือกพิมพ์หรือดาวน์โหลดจากหน้าตัวอย่าง");
   }
+
+  const pdfDialog = get("calPdfDialog");
+  const pdfForm = get("calPdfLayoutForm");
+  const pdfLogo = get("calPdfLogo");
+  const pdfPreview = get("calPdfLayoutPreview");
+  const pdfStatus = get("calPdfLayoutStatus");
+  let draftLogo = "";
+  let previewUrl = "";
+  let previewVersion = 0;
+
+  function clearLayoutPreview() {
+    previewVersion++;
+    pdfPreview.hidden = true;
+    pdfPreview.removeAttribute("src");
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    previewUrl = "";
+  }
+
+  function fillLayoutForm(layout) {
+    for (const [name, value] of Object.entries(layout)) {
+      const field = pdfForm.elements.namedItem(name);
+      if (field) field.value = value;
+    }
+    draftLogo = layout.logo;
+    pdfLogo.value = "";
+    get("calPdfLogoPreview").src = draftLogo || "hospital-seal.png";
+    clearLayoutPreview();
+  }
+
+  function readLayoutForm() {
+    const layout = { ...defaultPdfLayout, logo: draftLogo };
+    for (const [name, value] of new FormData(pdfForm)) {
+      layout[name] = typeof defaultPdfLayout[name] === "number" ? Number(value) : value.trim();
+    }
+    return layout;
+  }
+
+  get("calPdfSettings").addEventListener("click", () => {
+    fillLayoutForm(loadPdfLayout());
+    pdfStatus.textContent = "";
+    pdfDialog.showModal();
+  });
+  get("calPdfClose").addEventListener("click", () => pdfDialog.close());
+  pdfDialog.addEventListener("close", () => {
+    pdfLogo.value = "";
+    clearLayoutPreview();
+  });
+  get("calPdfReset").addEventListener("click", () => {
+    fillLayoutForm(defaultPdfLayout);
+    pdfStatus.textContent = "คืนค่าเริ่มต้นแล้ว กดบันทึกเพื่อใช้งาน";
+  });
+  pdfForm.addEventListener("input", clearLayoutPreview);
+  pdfLogo.addEventListener("change", async () => {
+    const file = pdfLogo.files[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    try {
+      if (!["image/png", "image/jpeg"].includes(file.type) || file.size > 5 * 1024 * 1024) {
+        throw new Error("เลือกไฟล์ PNG หรือ JPEG ขนาดไม่เกิน 5 MB");
+      }
+      const image = new Image();
+      image.src = url;
+      await image.decode();
+      if (pdfLogo.files[0] !== file || !pdfDialog.open) return;
+      const scale = Math.min(1, 320 / Math.max(image.naturalWidth, image.naturalHeight));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+      canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
+      draftLogo = canvas.toDataURL("image/png");
+      get("calPdfLogoPreview").src = draftLogo;
+      clearLayoutPreview();
+      pdfStatus.textContent = "โหลดโลโก้แล้ว";
+    } catch (error) {
+      if (pdfLogo.files[0] === file) pdfStatus.textContent = error.message || "อ่านไฟล์โลโก้ไม่ได้";
+    } finally {
+      URL.revokeObjectURL(url);
+      if (pdfLogo.files[0] === file) pdfLogo.value = "";
+    }
+  });
+  pdfForm.addEventListener("submit", event => {
+    event.preventDefault();
+    if (pdfLogo.files.length) return;
+    try {
+      localStorage.setItem(pdfLayoutKey, JSON.stringify(readLayoutForm()));
+      pdfStatus.textContent = "บันทึกโครงร่าง PDF แล้ว";
+    } catch {
+      pdfStatus.textContent = "เบราว์เซอร์บันทึกการตั้งค่าไม่ได้";
+    }
+  });
+  get("calPdfPreviewLayout").addEventListener("click", async () => {
+    if (!pdfForm.reportValidity() || pdfLogo.files.length) return;
+    clearLayoutPreview();
+    const version = previewVersion;
+    pdfStatus.textContent = "กำลังสร้างตัวอย่าง PDF";
+    try {
+      const doc = await buildPdf([{
+        certificate_no: "PREVIEW", method: "infusion", department: "หน่วยงานตัวอย่าง",
+        calibrated_on: today(), asset_snapshot: { name: "เครื่องมือตัวอย่าง", tool_code: "SAMPLE" },
+        measurements: [{ unit: "mL/h", rows: [[1, 10, 9.8, null, 9.9, null, null, null]] }]
+      }], readLayoutForm());
+      if (version !== previewVersion || !pdfDialog.open) return;
+      previewUrl = URL.createObjectURL(doc.output("blob"));
+      pdfPreview.src = previewUrl;
+      pdfPreview.hidden = false;
+      pdfStatus.textContent = "ตัวอย่าง PDF พร้อมดู";
+    } catch (error) {
+      if (version === previewVersion) pdfStatus.textContent = error.message || "สร้างตัวอย่างไม่ได้";
+    }
+  });
 
   function guarded(action, button) {
     return async event => {
@@ -1000,3 +1169,4 @@
     });
   })();
 })();
+

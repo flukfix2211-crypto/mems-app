@@ -160,7 +160,7 @@
       <label>ประเภทเครื่องมือ<select id="calFilterType"></select></label>
       <div class="cal-buttons"><button type="submit">ค้นหา</button></div>
     </form>
-    <div class="cal-buttons"><button id="calPrintFiltered" type="button" disabled>PDF / พิมพ์รายการที่กรอง</button><button id="calSignerSettings" type="button">ตั้งค่าผู้ทดสอบ / ผู้อนุมัติ</button></div>
+    <div class="cal-buttons"><button id="calPrintFiltered" type="button" disabled>PDF / พิมพ์รายการที่กรอง</button><button id="calSignerSettings" type="button">ตั้งค่าผู้ทดสอบ / ผู้อนุมัติ</button><button id="calPdfSettings" type="button">ตั้งค่าโครงร่าง PDF</button></div>
     <p id="calCount" aria-live="polite"></p>
     <div class="scroll">
       <table class="cal-history"><thead><tr><th>วันที่</th><th>เลขที่ใบรับรอง</th><th>หน่วยงาน</th><th>ประเภทเครื่องมือ</th><th>เครื่องมือ</th><th>รายละเอียด / รายงาน</th></tr></thead><tbody id="calList"></tbody></table>
@@ -169,6 +169,37 @@
   </section>
   </div>
 </main>
+<dialog id="calPdfDialog" class="cal-signer-dialog" aria-labelledby="calPdfTitle">
+  <form id="calPdfLayoutForm">
+    <div class="section-head"><h2 id="calPdfTitle">ตั้งค่าโครงร่าง PDF</h2><button id="calPdfClose" type="button">ปิด</button></div>
+    <p>การตั้งค่าจะบันทึกในเบราว์เซอร์นี้</p>
+    <div class="fields">
+      <label>แนวกระดาษ A4<select name="orientation"><option value="portrait">แนวตั้ง</option><option value="landscape">แนวนอน</option></select></label>
+      <label>จัดแนวชื่อใบรับรอง<select name="titleAlign"><option value="center">กลาง</option><option value="left">ซ้าย</option><option value="right">ขวา</option></select></label>
+      <label>ชื่อใบรับรอง<input name="title" maxlength="90" required></label>
+      <label>ขนาดชื่อใบรับรอง (pt)<input name="titleSize" type="number" min="10" max="24" required></label>
+      <label>ชื่อโรงพยาบาล<input name="hospital" maxlength="90" required></label>
+      <label>ชื่อหน่วยงาน<input name="center" maxlength="90" required></label>
+      <label>ขนาดข้อความหัวกระดาษ (pt)<input name="headerSize" type="number" min="10" max="20" required></label>
+      <label>ขยับชื่อใบรับรองขึ้น / ลง (มม.)<input name="titleY" type="number" min="-3" max="3" required></label>
+      <label>ขยับโลโก้ซ้าย / ขวา (มม.)<input name="logoX" type="number" min="-12" max="3" required></label>
+      <label>ขยับโลโก้ขึ้น / ลง (มม.)<input name="logoY" type="number" min="-6" max="3" required></label>
+      <label>ขนาดโลโก้ (%)<input name="logoScale" type="number" min="40" max="100" required></label>
+      <label>โลโก้โรงพยาบาล (PNG / JPEG)<input id="calPdfLogo" type="file" accept="image/png,image/jpeg"></label>
+      <label>ข้อความหมายเหตุท้ายกระดาษ<input name="comment" maxlength="160"></label>
+      <label>ที่อยู่ท้ายกระดาษ<input name="address" maxlength="160"></label>
+    </div>
+    <p>ค่าติดลบขยับไปทางซ้ายหรือขึ้น</p>
+    <p><img id="calPdfLogoPreview" src="hospital-seal.png" width="56" height="56" style="object-fit:contain" alt="ตัวอย่างโลโก้โรงพยาบาล"></p>
+    <div class="cal-buttons">
+      <button id="calPdfReset" type="button">คืนค่าเริ่มต้น</button>
+      <button id="calPdfPreviewLayout" type="button">ดูตัวอย่าง PDF</button>
+      <button type="submit" class="primary">บันทึกการตั้งค่า</button>
+    </div>
+    <p id="calPdfLayoutStatus" role="status"></p>
+    <iframe id="calPdfLayoutPreview" title="ตัวอย่างโครงร่างใบรับรอง PDF" hidden style="width:100%;height:55vh;border:0"></iframe>
+  </form>
+</dialog>
 <dialog id="calSignerDialog" class="cal-signer-dialog" aria-labelledby="calSignerTitle">
   <form id="calSignerForm">
     <div class="section-head"><h2 id="calSignerTitle">ตั้งค่าผู้ลงนามในใบรับรอง</h2><button id="calSignerClose" type="button" aria-label="ปิด">ปิด</button></div>
@@ -216,7 +247,7 @@
 <script src="calibration-catalogue.js"></script>
 <script src="calibration-calculation.js"></script>
 <script src="calibration-form.js"></script>
-<script src="calibration.js?v=20261112-operator-defaults"></script>
+<script src="calibration.js?v=pdf-layout-1"></script>
 <script src="site-footer.js?v=20261016-footer-1"></script>
 </body>
-</html>
+</html>\n
