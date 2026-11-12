@@ -30,6 +30,152 @@
     ? formatter.format(Math.abs(value) < 0.00005 ? 0 : value) : "—";
   const dateLabel = date => new Intl.DateTimeFormat("th-TH", { dateStyle: "medium", timeZone: "UTC" })
     .format(new Date(date + "T00:00:00Z"));
+  const standardTable = "mems_calibration_standard_equipment";
+  const workbookStandards = {
+    "infusion:104450": "Infusion Analyzer · S/N 3749056 · รหัส MMP-0063-26",
+    "nibp:137309": "Vital sign simulator · S/N 3240040 · รหัส MMP-0061-26"
+  };
+  const splitStandards = value => (value || "").split(/\s+\/\s+/).filter(Boolean);
+  const standardDate = iso => iso ? iso.split("-").reverse().join("/") : "";
+  const standardReference = item => [item.manufacturer, item.model, item.serial_number && "S/N " + item.serial_number,
+    item.calibrated_on && "สอบเทียบ " + standardDate(item.calibrated_on),
+    item.certificate_no && "รหัส " + item.certificate_no,
+    item.due_on && "ครบกำหนด " + standardDate(item.due_on)].filter(Boolean).join(" · ");
+
+  function accessStandards(method) {
+    const type = {
+      general: "general thermometer", refrig: "refrig.thermometer",
+      "manual-bp": "blood pressure", "blood-pressure": "blood pressure",
+      defibrillator: "defibrillator", tourniquet: "tourniquct"
+    }[method] || (method.startsWith("x-ray") ? "x-ray" : typeNames[method]?.toLowerCase());
+    return calibrationAccessStandards[type] || [];
+  }
+
+  function historicalStandard(method, value) {
+    if (method === "general") return "Alpha Technics · 4600 · S/N 15GA10793 · สอบเทียบ 04/09/2025 · รหัส 25I966";
+    return ["infusion", "nibp", "digital-bp"].includes(method) ? "" : value;
+  }
+
+  async function loadStandardEquipment() {
+    const { data, error } = await supabase.from(standardTable).select("*").order("source_reference");
+    if (error && error.code !== "PGRST205" && error.code !== "42P01") throw error;
+    return { rows: data || [], available: !error };
+  }
+
+  function standardFields(reference) {
+    const [manufacturer, ...parts] = reference.split(" · ");
+    const date = prefix => {
+      const value = parts.find(part => part.startsWith(prefix))?.slice(prefix.length);
+      return /^\d{2}\/\d{2}\/\d{4}$/.test(value || "") ? value.split("/").reverse().join("-") : "";
+    };
+    return { manufacturer,
+      model: parts.find(part => !/^(S\/N |รหัส |สอบเทียบ |ครบกำหนด )/.test(part)) || "",
+      serial_number: parts.find(part => part.startsWith("S/N "))?.slice(4) || "",
+      certificate_no: parts.find(part => part.startsWith("รหัส "))?.slice(5) || "",
+      calibrated_on: date("สอบเทียบ "), due_on: date("ครบกำหนด ") };
+  }
+
+  function standardKey(reference) {
+    const { manufacturer, serial_number } = standardFields(reference);
+    return serial_number && serial_number !== "-"
+      ? manufacturer.toLowerCase() + "|" + serial_number.toLowerCase() : reference;
+  }
+
+  const standardEditor = get("calStandardForm");
+  const standardDialog = get("calStandardDialog");
+  const standardEdit = get("calStandardEdit");
+  const standardStatus = get("calStandardStatus");
+  let standardCatalogue = new Map();
+
+  function fillStandardEditor() {
+    const item = standardCatalogue.get(standardEdit.value);
+    for (const name of Object.keys(standardFields(""))) {
+      standardEditor.elements.namedItem(name).value = item?.[name] || "";
+    }
+    for (const input of get("calStandardMethods").querySelectorAll("input")) {
+      input.checked = item?.methods.includes(input.value) || false;
+    }
+  }
+
+  async function openStandardSettings() {
+    const [{ rows, available }, { data, error }] = await Promise.all([
+      loadStandardEquipment(), supabase.from("mems_calibration_standards").select("method,standard_reference")
+    ]);
+    if (error) throw error;
+    const defaults = new Map(data.map(item => [item.method, item.standard_reference]));
+    standardCatalogue = new Map();
+    for (const method of Object.keys(typeNames)) {
+      const references = [...splitStandards(historicalStandard(method, defaults.get(method))),
+        ...accessStandards(method), ...Object.entries(workbookStandards)
+          .filter(([key]) => key.startsWith(method + ":")).map(([, value]) => value)];
+      for (const reference of references) {
+        const key = standardKey(reference);
+        if (!standardCatalogue.has(key)) {
+          standardCatalogue.set(key, { ...standardFields(reference), source_reference: key, methods: [] });
+        }
+        const item = standardCatalogue.get(key);
+        if (!item.methods.includes(method)) item.methods.push(method);
+      }
+    }
+    for (const item of rows) standardCatalogue.set(item.source_reference, item);
+    const choices = [...standardCatalogue].map(([key, item]) => [key, standardReference(item)]);
+    choices.sort((a, b) => a[1].localeCompare(b[1], "th"));
+    setOptions(standardEdit, choices, "เพิ่มเครื่องมาตรฐานใหม่");
+    const labels = Object.entries(typeNames).map(([method, title]) => {
+      const label = document.createElement("label");
+      const input = document.createElement("input");
+      input.type = "checkbox";
+      input.name = "methods";
+      input.value = method;
+      label.append(input, document.createTextNode(" " + title));
+      return label;
+    });
+    get("calStandardMethods").replaceChildren(...labels);
+    fillStandardEditor();
+    get("calStandardSave").disabled = !available;
+    standardStatus.textContent = available ? "" : "ต้องอัปเดตฐานข้อมูลก่อนจึงจะบันทึกการตั้งค่าได้";
+    standardDialog.showModal();
+  }
+
+  get("calStandardSettings").addEventListener("click", guarded(openStandardSettings, get("calStandardSettings")));
+  get("calStandardClose").addEventListener("click", () => standardDialog.close());
+  standardEdit.addEventListener("change", fillStandardEditor);
+  standardEditor.addEventListener("submit", async event => {
+    event.preventDefault();
+    const button = get("calStandardSave");
+    if (button.disabled) return;
+    const data = new FormData(standardEditor);
+    const item = Object.fromEntries(Object.keys(standardFields("")).map(key => [key, data.get(key).trim()]));
+    if (!item.manufacturer || Object.values(item).some(value => /\s+\/\s+| · /.test(value))) {
+      standardStatus.textContent = "กรุณาระบุชื่อเครื่อง และเว้นเครื่องหมายคั่น / หรือ · ในรายละเอียด";
+      return;
+    }
+    item.calibrated_on ||= null;
+    item.due_on ||= null;
+    if (item.calibrated_on && item.due_on && item.due_on < item.calibrated_on) {
+      standardStatus.textContent = "วันครบกำหนดต้องอยู่หลังหรือเท่ากับวันสอบเทียบ";
+      return;
+    }
+    item.methods = data.getAll("methods");
+    item.source_reference = standardEdit.value || "new:" + crypto.randomUUID();
+    button.disabled = true;
+    standardEdit.disabled = true;
+    standardStatus.textContent = "กำลังบันทึก…";
+    try {
+      const { error } = await supabase.from(standardTable).upsert(item, { onConflict: "source_reference" });
+      if (error) throw error;
+      standardCatalogue.set(item.source_reference, item);
+      if (!standardEdit.value) standardEdit.add(new Option("", item.source_reference));
+      standardEdit.value = item.source_reference;
+      standardEdit.selectedOptions[0].text = standardReference(item);
+      standardStatus.textContent = "บันทึกเครื่องมาตรฐานแล้ว";
+    } catch (error) {
+      standardStatus.textContent = error.message || "บันทึกเครื่องมาตรฐานไม่สำเร็จ";
+    } finally {
+      button.disabled = false;
+      standardEdit.disabled = false;
+    }
+  });
 
   function setOptions(select, entries, placeholder) {
     const previous = select.value;
@@ -660,30 +806,28 @@
       .select("standard_reference,source_note").eq("method", tool.method).maybeSingle();
     if (standardError) throw standardError;
     if (activeTool !== tool) return;
-    const accessType = {
-      general: "general thermometer", refrig: "refrig.thermometer",
-      "manual-bp": "blood pressure", "blood-pressure": "blood pressure",
-      defibrillator: "defibrillator", tourniquet: "tourniquct"
-    }[tool.method] || (tool.method.startsWith("x-ray") ? "x-ray" : typeNames[tool.method]?.toLowerCase());
-    const accessOptions = calibrationAccessStandards[accessType] || [];
-    const reference = {
-      "infusion:104450": "Infusion Analyzer · S/N 3749056 · รหัส MMP-0063-26",
-      "nibp:137309": "Vital sign simulator · S/N 3240040 · รหัส MMP-0061-26"
-    }[tool.method + ":" + tool.tool_code];
-    const historical = tool.method === "general"
-      ? "Alpha Technics · 4600 · S/N 15GA10793 · สอบเทียบ 04/09/2025 · รหัส 25I966"
-      : ["infusion", "nibp", "digital-bp"].includes(tool.method) ? "" : standard?.standard_reference;
-    const options = [...new Set([historical, ...accessOptions].filter(Boolean))];
+    const { rows: managed } = await loadStandardEquipment();
+    if (activeTool !== tool) return;
+    const overrides = new Map(managed.map(item => [item.source_reference, item]));
+    const resolve = value => {
+      const item = overrides.get(standardKey(value));
+      return item ? (item.methods.includes(tool.method) ? standardReference(item) : "") : value;
+    };
+    const reference = workbookStandards[tool.method + ":" + tool.tool_code];
+    const historical = historicalStandard(tool.method, standard?.standard_reference);
+    const defaults = splitStandards(reference || historical).map(resolve).filter(Boolean);
+    const options = [...new Set([
+      ...defaults, ...accessStandards(tool.method).map(resolve),
+      ...managed.filter(item => item.methods.includes(tool.method)).map(standardReference)
+    ].filter(Boolean))];
     const select = get("calAccessStandard");
     setOptions(select, options.map(value => [value, value]), "เลือกเครื่องที่ใช้จริง");
     select.value = "";
     get("calAccessStandardField").hidden = !options.length;
-    if (newToolForm && !draft) get("calStandardReference").value = reference || historical ||
+    if (newToolForm && !draft) get("calStandardReference").value = defaults.join(" / ") ||
       (options.length === 1 ? options[0] : "");
-    get("calStandardHint").textContent = reference ? "เครื่องมาตรฐานจากใบงานของเครื่องนี้"
-      : historical ? (standard?.source_note || "ใบ General Thermometer ล่าสุดใน Access · ID CER 2391")
-      : options.length ? "เลือกเครื่องที่ใช้จริงจากรายการ Access เพื่อแสดงใน PDF"
-      : "ไม่พบเครื่องมาตรฐานของประเภทนี้ใน Access กรุณาระบุเครื่องที่ใช้จริง";
+    get("calStandardHint").textContent = options.length ? "ตรวจและเลือกเครื่องมาตรฐานที่ใช้จริงสำหรับใบรับรอง"
+      : "ยังไม่มีเครื่องมาตรฐานที่กำหนดให้ประเภทนี้ สามารถระบุเครื่องที่ใช้จริงได้";
     if (!record) await ensureCertificateForDate();
     const summary = get("calToolSummary");
     summary.replaceChildren();
@@ -886,8 +1030,9 @@
         let serial = fields.find(value => /^S\/N\s*/i.test(value))?.replace(/^S\/N\s*/i, "") || "—";
         let calDate = fields.find(value => /^(สอบเทียบ|Cal(?:ibration)?\s*date)/i.test(value))?.replace(/^(สอบเทียบ|Cal(?:ibration)?\s*date)\s*/i, "") || "—";
         let cert = fields.find(value => /^(รหัส|Cert(?:ificate)?\.?\s*No\.?)/i.test(value))?.replace(/^(รหัส|Cert(?:ificate)?\.?\s*No\.?)\s*/i, "") || "—";
-        if (/^(S\/N|สอบเทียบ|Cal(?:ibration)?\s*date|รหัส|Cert)/i.test(model)) { manufacturer = fields[0] || "—"; model = "—"; }
-        return [manufacturer, model, serial, calDate, cert];
+        const dueDate = fields.find(value => value.startsWith("ครบกำหนด "))?.slice("ครบกำหนด ".length) || "—";
+        if (/^(S\/N|สอบเทียบ|Cal(?:ibration)?\s*date|รหัส|Cert|ครบกำหนด)/i.test(model)) { manufacturer = fields[0] || "—"; model = "—"; }
+        return [manufacturer, model, serial, calDate, cert, dueDate];
       });
     };
     const drawHeader = record => {
@@ -993,7 +1138,7 @@
       doc.autoTable({
         startY: finalY + 24,
         margin: { left: left + 43, right: left + 43, top: 289, bottom: 175 },
-        head: [["Manufacture", "Model", "S/N", "Cal date", "Cert No."]],
+        head: [["Manufacture", "Model", "S/N", "Cal date", "Cert No.", "Due date"]],
         body: references,
         theme: "grid",
         styles: { font: PDF_FONT, fontSize: 10, halign: "center", cellPadding: 4, lineColor: [110, 120, 125], lineWidth: .35 },
@@ -1190,7 +1335,7 @@
     const input = get("calStandardReference");
     const entries = [input.value.trim(), selected].flatMap(value => value.split(/\s+\/\s+/)).filter(Boolean);
     const value = [...new Set(entries)].join(" / ");
-    if (value.length > input.maxLength) throw new Error("รายการเครื่องมาตรฐานยาวเกิน 200 ตัวอักษร กรุณาตรวจช่องเครื่องมาตรฐาน");
+    if (value.length > input.maxLength) throw new Error("รายการเครื่องมาตรฐานยาวเกิน " + input.maxLength + " ตัวอักษร");
     input.value = value;
   }));
   get("calRegisteredOpen").addEventListener("click", guarded(openRegisteredTools));

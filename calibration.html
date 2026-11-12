@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="mems-ui.css">
 <link rel="stylesheet" href="mems-auth-theme.css">
 <link rel="stylesheet" href="pm-reports.css">
-<link rel="stylesheet" href="calibration.css?v=20261112-compact-live">
+<link rel="stylesheet" href="calibration.css?v=standard-settings-1">
 <link rel="stylesheet" href="site-footer.css?v=20261016-footer-1">
 </head>
 <body class="mems-pm mems-calibration">
@@ -31,6 +31,7 @@
       </div>
       <div class="cal-picker-actions" aria-label="ทางลัด">
         <button id="calRegisteredOpen" type="button">รายการที่ลงทะเบียนแล้ว</button>
+        <button id="calStandardSettings" type="button">ตั้งค่า Standard Used</button>
         <button id="calPickerQueueButton" type="button">เปิดคิวสอบเทียบ</button>
         <button id="calPickerHistoryButton" type="button">ค้นประวัติ / PDF</button>
       </div>
@@ -150,8 +151,8 @@
   </section>
   <section class="cal-standard-used" aria-labelledby="calStandardTitle">
     <div class="cal-standard-used-title"><span class="cal-standard-mark" aria-hidden="true">✓</span><div><h2 id="calStandardTitle">Standard Used</h2><p>เครื่องมาตรฐานและเลขอ้างอิง</p></div></div>
-    <label>เครื่องมาตรฐาน / เลขอ้างอิง<input id="calStandardReference" maxlength="200" aria-describedby="calStandardHint"><small id="calStandardHint"></small></label>
-    <label id="calAccessStandardField" hidden>เพิ่มเครื่องมาตรฐานจาก Access<select id="calAccessStandard"></select></label>
+    <label>เครื่องมาตรฐาน / เลขอ้างอิง<input id="calStandardReference" maxlength="2000" aria-describedby="calStandardHint"><small id="calStandardHint"></small></label>
+    <label id="calAccessStandardField" hidden>เพิ่มเครื่องมาตรฐานที่ใช้<select id="calAccessStandard"></select></label>
   </section>
   <section class="card" aria-labelledby="uncertainty">
     <h2 id="uncertainty"><span>03</span> ค่าความไม่แน่นอน</h2>
@@ -180,6 +181,26 @@
   </section>
   </div>
 </main>
+<dialog id="calStandardDialog" class="cal-signer-dialog" aria-labelledby="calStandardTitle">
+  <form id="calStandardForm">
+    <div class="section-head"><h2 id="calStandardTitle">ตั้งค่า Standard Used</h2><button id="calStandardClose" type="button">ปิด</button></div>
+    <label>เครื่องมาตรฐาน<select id="calStandardEdit"></select></label>
+    <div class="fields">
+      <label>ยี่ห้อ / ชื่อเครื่อง<input name="manufacturer" maxlength="80" required></label>
+      <label>รุ่น<input name="model" maxlength="80"></label>
+      <label>S/N<input name="serial_number" maxlength="80"></label>
+      <label>Cert No.<input name="certificate_no" maxlength="80"></label>
+      <label>Cal Date<input name="calibrated_on" type="date"></label>
+      <label>Due Date<input name="due_on" type="date"></label>
+    </div>
+    <fieldset class="cal-signer-card">
+      <legend>ประเภทเครื่องที่ใช้มาตรฐานนี้</legend>
+      <div id="calStandardMethods" style="max-height:14rem;overflow:auto"></div>
+    </fieldset>
+    <div class="cal-buttons"><button id="calStandardSave" class="primary" type="submit">บันทึกเครื่องมาตรฐาน</button></div>
+    <p id="calStandardStatus" role="status"></p>
+  </form>
+</dialog>
 <dialog id="calPdfDialog" class="cal-signer-dialog" aria-labelledby="calPdfTitle">
   <form id="calPdfLayoutForm">
     <div class="section-head"><h2 id="calPdfTitle">ตั้งค่าโครงร่าง PDF</h2><button id="calPdfClose" type="button">ปิด</button></div>
@@ -259,7 +280,7 @@
 <script src="calibration-access-standards.js"></script>
 <script src="calibration-calculation.js"></script>
 <script src="calibration-form.js"></script>
-<script src="calibration.js?v=access-standards-1"></script>
+<script src="calibration.js?v=standard-settings-1"></script>
 <script src="site-footer.js?v=20261016-footer-1"></script>
 </body>
 </html>\n

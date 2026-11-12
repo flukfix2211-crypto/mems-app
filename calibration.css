@@ -55,6 +55,8 @@
 .cal-signature-position output { float: right; color: var(--brand); font-variant-numeric: tabular-nums; }
 .cal-signature-position input[type="range"] { accent-color: var(--brand); min-height: 32px; padding: 0; }
 .cal-signer-card :focus-visible { outline: 3px solid #087c8670; outline-offset: 2px; }
+#calStandardMethods label { display: flex; align-items: center; gap: 8px; min-height: 44px; margin: 0; }
+#calStandardMethods input { flex: none; width: auto; min-height: 0; margin: 0; }
 
 @media (max-width: 680px) {
   .cal-signer-grid { grid-template-columns: 1fr; }
