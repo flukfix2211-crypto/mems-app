@@ -13,6 +13,9 @@
   let queuePage = 0;
   let queueRequest = 0;
   let registerMethod;
+  let registeredTools = [];
+  let registeredPage = 0;
+  let duplicateRequest = 0;
   let activeTool;
   let editingRecordId = null;
   let operatorName = "";
@@ -360,6 +363,7 @@
   function openRegistration(method) {
     if (registerMethod !== method) get("calRegister").reset();
     registerMethod = method;
+    clearDuplicateNotice();
     get("calRegisterName").value = typeNames[method];
     get("calRegisterTitle").textContent = "ลงทะเบียน · " + typeNames[method];
     showView("register");
@@ -367,22 +371,106 @@
     get("calRegisterTitle").focus();
   }
 
+  function loadRegisteredTools() {
+    return fetchAllPages(() => supabase.from("mems_calibration_tools")
+      .select("id,tool_code,name,department,method,manufacturer,model,created_at")
+      .order("created_at", { ascending: false }).order("id", { ascending: false }));
+  }
+
+  const registrationDate = value => value
+    ? new Intl.DateTimeFormat("th-TH", { dateStyle: "medium", timeZone: "Asia/Bangkok" }).format(new Date(value))
+    : "ไม่พบวันที่";
+
+  function clearDuplicateNotice() {
+    duplicateRequest++;
+    get("calDuplicateNotice").hidden = true;
+    get("calDuplicateNotice").textContent = "";
+    get("calRegisterCode").removeAttribute("aria-invalid");
+  }
+
+  async function warnDuplicate(code) {
+    const request = ++duplicateRequest;
+    const match = (await loadRegisteredTools()).find(item => item.tool_code.toLowerCase() === code.toLowerCase());
+    if (!match) return false;
+    const { data, error } = await supabase.from("mems_calibrations")
+      .select("calibrated_on").eq("tool_id", match.id)
+      .order("calibrated_on", { ascending: false }).limit(1).maybeSingle();
+    if (request === duplicateRequest && get("calRegisterCode").value.trim() === code && !get("calRegister").hidden) {
+      const notice = get("calDuplicateNotice");
+      notice.hidden = false;
+      const machine = [match.name, match.manufacturer, match.model].filter(Boolean).join(" ");
+      const last = error ? "ตรวจสอบวันที่สอบเทียบล่าสุดไม่ได้"
+        : data ? "สอบเทียบล่าสุด " + dateLabel(data.calibrated_on) : "ยังไม่มีประวัติสอบเทียบ";
+      notice.textContent = "ID " + match.tool_code + " ซ้ำ · " + machine + " · หน่วยงาน " + match.department +
+        " · ลงทะเบียนเมื่อ " + registrationDate(match.created_at) + " · " + last;
+      get("calRegisterCode").setAttribute("aria-invalid", "true");
+    }
+    return true;
+  }
+
+  function renderRegisteredTools() {
+    const term = get("calRegisteredSearch").value.trim().toLowerCase();
+    const matches = registeredTools.filter(tool => [tool.tool_code, tool.name, tool.department]
+      .some(value => value.toLowerCase().includes(term)));
+    const list = get("calRegisteredList");
+    list.replaceChildren();
+    for (const tool of matches.slice(registeredPage * pageSize, (registeredPage + 1) * pageSize)) {
+      const row = document.createElement("div");
+      row.className = "cal-queue-row";
+      const content = document.createElement("div");
+      const name = document.createElement("strong");
+      name.textContent = [tool.name, tool.manufacturer, tool.model].filter(Boolean).join(" ");
+      const details = document.createElement("p");
+      details.textContent = "ID " + tool.tool_code + " · " + tool.department + " · ลงทะเบียนเมื่อ " + registrationDate(tool.created_at);
+      content.append(name, details);
+      row.append(content);
+      list.append(row);
+    }
+    get("calRegisteredCount").textContent = matches.length
+      ? "พบ " + matches.length + " เครื่อง · หน้า " + (registeredPage + 1) : "ไม่พบเครื่องมือในทะเบียน";
+    get("calRegisteredPrev").disabled = registeredPage === 0;
+    get("calRegisteredNext").disabled = (registeredPage + 1) * pageSize >= matches.length;
+  }
+
+  async function openRegisteredTools() {
+    showView("registered");
+    get("calRegisteredTitle").focus();
+    get("calRegisteredSearch").value = "";
+    get("calRegisteredSearch").disabled = true;
+    get("calRegisteredList").replaceChildren();
+    get("calRegisteredPrev").disabled = true;
+    get("calRegisteredNext").disabled = true;
+    get("calRegisteredCount").textContent = "กำลังโหลดทะเบียน…";
+    try {
+      registeredTools = await loadRegisteredTools();
+      registeredPage = 0;
+      renderRegisteredTools();
+    } catch (error) {
+      get("calRegisteredCount").textContent = "โหลดทะเบียนไม่สำเร็จ";
+      throw error;
+    } finally {
+      get("calRegisteredSearch").disabled = false;
+    }
+  }
+
   async function registerTool() {
+    const method = registerMethod;
     const tool = Object.fromEntries([...new FormData(get("calRegister"))].map(([key, value]) => [key, value.trim()]));
     if (!tool.name || !tool.tool_code) throw new Error("กรุณากรอกชื่อและ ID เครื่องมือ");
-    const { error } = await supabase.from("mems_calibration_tools").insert({ ...tool, method: registerMethod });
-    if (error?.code === "23505") throw new Error("ID เครื่องมือนี้มีในทะเบียนสอบเทียบแล้ว");
-    if (error) throw error;
-    get("calRegister").reset();
-    get("calQueueSearch").value = "";
-    get("calQueueDepartment").value = "";
-    get("calQueueType").value = "";
-    try {
-      await openQueue();
-      notify("ลงทะเบียน " + tool.tool_code + " แล้ว · เลือกเครื่องเพื่อเริ่มสอบเทียบ");
-    } catch (error) {
-      notify("ลงทะเบียน " + tool.tool_code + " แล้ว · โหลดคิวไม่สำเร็จ: " + error.message);
+    if (await warnDuplicate(tool.tool_code)) return;
+    const { error } = await supabase.from("mems_calibration_tools").insert({ ...tool, method });
+    if (error?.code === "23505") {
+      if (await warnDuplicate(tool.tool_code)) return;
+      throw new Error("ID เครื่องมือนี้มีในทะเบียนสอบเทียบแล้ว");
     }
+    if (error) throw error;
+    if (registerMethod === method) {
+      get("calRegister").reset();
+      get("calRegisterName").value = typeNames[method];
+      clearDuplicateNotice();
+    }
+    notify("ลงทะเบียนเครื่อง ID " + tool.tool_code + " สำเร็จ");
+    loadDashboardMetrics().catch(error => console.warn("อัปเดตภาพรวมทะเบียนไม่สำเร็จ", error));
   }
 
   async function refreshFilters() {
@@ -480,9 +568,9 @@
   }
 
   function showView(view) {
-    const views = { picker: "calPicker", register: "calRegister", queue: "calQueue", form: "calForm", history: "calHistory" };
+    const views = { picker: "calPicker", register: "calRegister", registered: "calRegistered", queue: "calQueue", form: "calForm", history: "calHistory" };
     for (const [key, id] of Object.entries(views)) get(id).hidden = key !== view;
-    get("calNewTab").setAttribute("aria-pressed", String(view === "picker" || view === "register"));
+    get("calNewTab").setAttribute("aria-pressed", String(["picker", "register", "registered"].includes(view)));
     get("calQueueTab").setAttribute("aria-pressed", String(view === "queue" || view === "form"));
     get("calHistoryTab").setAttribute("aria-pressed", String(view === "history"));
   }
@@ -1072,6 +1160,20 @@
     try { await registerTool(); } finally { get("calRegister").inert = false; }
   }, get("calRegisterSave")));
   get("calRegisterBack").addEventListener("click", openPicker);
+  get("calRegisteredOpen").addEventListener("click", guarded(openRegisteredTools));
+  get("calRegisteredFromForm").addEventListener("click", guarded(openRegisteredTools));
+  get("calRegisteredBack").addEventListener("click", openPicker);
+  get("calRegisteredSearch").addEventListener("input", () => {
+    registeredPage = 0;
+    renderRegisteredTools();
+  });
+  get("calRegisteredPrev").addEventListener("click", () => { registeredPage--; renderRegisteredTools(); });
+  get("calRegisteredNext").addEventListener("click", () => { registeredPage++; renderRegisteredTools(); });
+  get("calRegisterCode").addEventListener("input", clearDuplicateNotice);
+  get("calRegisterCode").addEventListener("blur", guarded(async () => {
+    const code = get("calRegisterCode").value.trim();
+    if (code && !get("calRegister").inert && !get("calRegister").hidden) await warnDuplicate(code);
+  }));
   get("calQueueTab").addEventListener("click", guarded(openQueue));
   get("calQueueFilters").addEventListener("submit", event => event.preventDefault());
   get("calQueueFilters").addEventListener("input", () => { queuePage = 0; renderQueue(); });
