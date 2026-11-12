@@ -150,7 +150,8 @@
   </section>
   <section class="cal-standard-used" aria-labelledby="calStandardTitle">
     <div class="cal-standard-used-title"><span class="cal-standard-mark" aria-hidden="true">✓</span><div><h2 id="calStandardTitle">Standard Used</h2><p>เครื่องมาตรฐานและเลขอ้างอิง</p></div></div>
-    <label>เครื่องมาตรฐาน / เลขอ้างอิง<input id="calStandardReference" maxlength="200"><small id="calStandardHint"></small></label>
+    <label>เครื่องมาตรฐาน / เลขอ้างอิง<input id="calStandardReference" maxlength="200" aria-describedby="calStandardHint"><small id="calStandardHint"></small></label>
+    <label id="calAccessStandardField" hidden>เพิ่มเครื่องมาตรฐานจาก Access<select id="calAccessStandard"></select></label>
   </section>
   <section class="card" aria-labelledby="uncertainty">
     <h2 id="uncertainty"><span>03</span> ค่าความไม่แน่นอน</h2>
@@ -255,9 +256,10 @@
 <script src="vendor/jspdf.plugin.autotable.min.js"></script>
 <script src="reports.js"></script>
 <script src="calibration-catalogue.js"></script>
+<script src="calibration-access-standards.js"></script>
 <script src="calibration-calculation.js"></script>
 <script src="calibration-form.js"></script>
-<script src="calibration.js?v=registration-list-1"></script>
+<script src="calibration.js?v=access-standards-1"></script>
 <script src="site-footer.js?v=20261016-footer-1"></script>
 </body>
 </html>\n
