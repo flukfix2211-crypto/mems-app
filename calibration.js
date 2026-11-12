@@ -597,7 +597,7 @@
       for (const row of rows) {
         const [point, nominal, s1, m1, s2, m2, s3, m3] = row;
         if (![point, nominal, m1, m2, m3].every(Number.isFinite)
-          || (calibrationErrorRule(device.value) === "mean-std" && ![s1, s2, s3].every(Number.isFinite))
+          || (calibrationErrorRule(device.value, i) === "mean-std" && ![s1, s2, s3].every(Number.isFinite))
           || (![s1, s2, s3].every(value => value === null) && ![s1, s2, s3].every(Number.isFinite))) {
           throw new Error(title + " · กรอกจุดทดสอบ ค่า STD และค่าเครื่องให้ครบ 3 รอบ ช่องมาตรฐานให้กรอกครบหรือเว้นทั้ง 3 ช่องเมื่อใช้ STD");
         }
@@ -765,19 +765,28 @@
       let finalY = 289;
       (record.measurements || []).forEach((sheet, sheetIndex) => {
         const sheetTitle = devices[record.method]?.[sheetIndex]?.title || typeNames[record.method] || "ผลทดสอบ";
-        const rows = (sheet.rows || []).map(row => {
+        const xray = record.method.startsWith("x-ray");
+        const rowMeans = (sheet.rows || []).map(row => {
+          const values = [row[3], row[5], row[7]];
+          return values.every(Number.isFinite) ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
+        });
+        const cv = xray && rowMeans.every(Number.isFinite) ? calculateCoefficientVariation(rowMeans) : null;
+        const rows = (sheet.rows || []).map((row, rowIndex) => {
           const [, nominal, s1, m1, s2, m2, s3, m3] = row;
           const result = calculatePoint({ nominal, standardReadings: [s1, s2, s3],
-            measuredReadings: [m1, m2, m3], budget: sheet.budget || [], errorRule: calibrationErrorRule(record.method) });
+            measuredReadings: [m1, m2, m3], budget: sheet.budget || [], errorRule: calibrationErrorRule(record.method, sheetIndex) });
           const limit = calibrationAcceptanceLimit(record.method, sheetIndex, nominal);
-          return [certificateNumber(nominal), certificateNumber(result.mean), certificateNumber(result.error, 3),
+          const rowData = [certificateNumber(nominal), certificateNumber(result.mean), certificateNumber(result.error, 3),
             limit === null ? "—" : "± " + certificateNumber(limit, 3)];
+          if (xray) rowData.push(rowIndex === 0 && cv !== null ? certificateNumber(cv, 3) : "—");
+          return rowData;
         });
         doc.autoTable({
           startY: finalY,
           margin: { left: left + 42, right: left + 42, top: 290, bottom: 55 },
           head: [[{ content: sheetTitle + "  (" + sheet.unit + ")", colSpan: 4 }],
-            ["UUT Setting\n(" + sheet.unit + ")", "STD Reading\n(" + sheet.unit + ")", "Error\n(" + sheet.unit + ")", "Accept value\n(" + sheet.unit + ")"]],
+            ["UUT Setting\n(" + sheet.unit + ")", "STD Reading\n(" + sheet.unit + ")", "Error\n(" + (xray ? "%" : sheet.unit) + ")", "Accept value\n(" + sheet.unit + ")"]
+              .concat(xray ? ["CV (%)"] : [])],
           body: rows,
           theme: "grid",
           styles: { font: PDF_FONT, fontSize: 10.5, halign: "center", cellPadding: 4, lineColor: [90, 100, 105], lineWidth: .35 },
