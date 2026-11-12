@@ -20,6 +20,7 @@
     <button id="calNewTab" type="button" aria-pressed="true">01 ลงทะเบียนเครื่องมือ</button>
     <button id="calQueueTab" type="button" aria-pressed="false">02 ผู้ปฏิบัติการ</button>
     <button id="calHistoryTab" type="button" aria-pressed="false">03 ประวัติการสอบเทียบ</button>
+    <button id="calTrashTab" type="button" aria-haspopup="dialog">ถังขยะ</button>
   </nav>
 
   <section id="calPicker" class="cal-picker" aria-labelledby="calPickerTitle">
@@ -181,6 +182,12 @@
   </section>
   </div>
 </main>
+<dialog id="calTrashDialog" class="cal-signer-dialog" aria-labelledby="calTrashTitle">
+  <div class="section-head"><h2 id="calTrashTitle">ถังขยะสอบเทียบ</h2><button id="calTrashClose" type="button">ปิด</button></div>
+  <p>กู้คืนได้ภายใน 30 วัน ระบบจะลบถาวรอัตโนมัติเมื่อครบกำหนด</p>
+  <p id="calTrashStatus" role="status"></p>
+  <div id="calTrashList"></div>
+</dialog>
 <dialog id="calStandardDialog" class="cal-signer-dialog" aria-labelledby="calStandardTitle">
   <form id="calStandardForm">
     <div class="section-head"><h2 id="calStandardTitle">ตั้งค่า Standard Used</h2><button id="calStandardClose" type="button">ปิด</button></div>
@@ -280,7 +287,7 @@
 <script src="calibration-access-standards.js"></script>
 <script src="calibration-calculation.js"></script>
 <script src="calibration-form.js"></script>
-<script src="calibration.js?v=standard-settings-1"></script>
+<script src="calibration.js?v=calibration-trash-1"></script>
 <script src="site-footer.js?v=20261016-footer-1"></script>
 </body>
 </html>\n
