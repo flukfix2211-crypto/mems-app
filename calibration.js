@@ -659,9 +659,31 @@
     const { data: standard, error: standardError } = await supabase.from("mems_calibration_standards")
       .select("standard_reference,source_note").eq("method", tool.method).maybeSingle();
     if (standardError) throw standardError;
-    if (newToolForm && !draft && standard) get("calStandardReference").value = standard.standard_reference;
-    get("calStandardHint").textContent = standard?.source_note
-      || "ไม่พบประวัติของประเภทนี้ใน Access จึงเว้นไว้ให้ระบุเครื่องมาตรฐานที่ใช้จริง";
+    if (activeTool !== tool) return;
+    const accessType = {
+      general: "general thermometer", refrig: "refrig.thermometer",
+      "manual-bp": "blood pressure", "blood-pressure": "blood pressure",
+      defibrillator: "defibrillator", tourniquet: "tourniquct"
+    }[tool.method] || (tool.method.startsWith("x-ray") ? "x-ray" : typeNames[tool.method]?.toLowerCase());
+    const accessOptions = calibrationAccessStandards[accessType] || [];
+    const reference = {
+      "infusion:104450": "Infusion Analyzer · S/N 3749056 · รหัส MMP-0063-26",
+      "nibp:137309": "Vital sign simulator · S/N 3240040 · รหัส MMP-0061-26"
+    }[tool.method + ":" + tool.tool_code];
+    const historical = tool.method === "general"
+      ? "Alpha Technics · 4600 · S/N 15GA10793 · สอบเทียบ 04/09/2025 · รหัส 25I966"
+      : ["infusion", "nibp", "digital-bp"].includes(tool.method) ? "" : standard?.standard_reference;
+    const options = [...new Set([historical, ...accessOptions].filter(Boolean))];
+    const select = get("calAccessStandard");
+    setOptions(select, options.map(value => [value, value]), "เลือกเครื่องที่ใช้จริง");
+    select.value = "";
+    get("calAccessStandardField").hidden = !options.length;
+    if (newToolForm && !draft) get("calStandardReference").value = reference || historical ||
+      (options.length === 1 ? options[0] : "");
+    get("calStandardHint").textContent = reference ? "เครื่องมาตรฐานจากใบงานของเครื่องนี้"
+      : historical ? (standard?.source_note || "ใบ General Thermometer ล่าสุดใน Access · ID CER 2391")
+      : options.length ? "เลือกเครื่องที่ใช้จริงจากรายการ Access เพื่อแสดงใน PDF"
+      : "ไม่พบเครื่องมาตรฐานของประเภทนี้ใน Access กรุณาระบุเครื่องที่ใช้จริง";
     if (!record) await ensureCertificateForDate();
     const summary = get("calToolSummary");
     summary.replaceChildren();
@@ -1160,6 +1182,17 @@
     try { await registerTool(); } finally { get("calRegister").inert = false; }
   }, get("calRegisterSave")));
   get("calRegisterBack").addEventListener("click", openPicker);
+  get("calAccessStandard").addEventListener("change", guarded(() => {
+    const select = get("calAccessStandard");
+    const selected = select.value;
+    select.value = "";
+    if (!selected) return;
+    const input = get("calStandardReference");
+    const entries = [input.value.trim(), selected].flatMap(value => value.split(/\s+\/\s+/)).filter(Boolean);
+    const value = [...new Set(entries)].join(" / ");
+    if (value.length > input.maxLength) throw new Error("รายการเครื่องมาตรฐานยาวเกิน 200 ตัวอักษร กรุณาตรวจช่องเครื่องมาตรฐาน");
+    input.value = value;
+  }));
   get("calRegisteredOpen").addEventListener("click", guarded(openRegisteredTools));
   get("calRegisteredFromForm").addEventListener("click", guarded(openRegisteredTools));
   get("calRegisteredBack").addEventListener("click", openPicker);

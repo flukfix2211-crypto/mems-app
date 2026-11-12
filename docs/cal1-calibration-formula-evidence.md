@@ -1,5 +1,11 @@
 # cal1 calibration formula evidence
 
+## Standard Used
+
+MEMS offers reference instruments from `Cal 05 รพ.พหล  2569.accdb` using the same join as the Access reference pickers: `Manufactory.Detail` identifies the equipment type, and `Manufactory.Code` joins to `Standard Tool.Code`. The exported options contain manufacturer, model, serial number and reference certificate. The X-Ray variants offer the three X-Ray devices listed in `Standard Tool` for operator selection. No per-type mapping was found for Heart rate or Julse, so those fields remain editable.
+
+The latest populated cal1 `ZCER` certificate supplies the General Thermometer default (ID CER 2391). The device workbooks supply the defaults for Infusion 104450 and NIBP 137309. PDFs use the reference saved on the individual calibration record.
+
 Source: `D:\โปรแกรมสอบเทียบ\cal1 ถ่ายโอน รพ พหล.-พื้นฐาน 29 มิย 69 - 17 กค 69.mdb`
 
 SHA-256: `A181AF0BE5AA0F6803BDEEEE231C5DDD3EFED455C53B19E7FA454D20E370C27C`
