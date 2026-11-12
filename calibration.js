@@ -548,7 +548,13 @@
       draft = record ? {
         fields: [record.certificate_no, record.calibrated_on, record.operator_name,
           record.standard_reference, record.ambient_temperature ?? "", record.relative_humidity ?? "", record.notes || ""],
-        measurements: record.measurements
+        measurements: record.measurements.map(sheet => ({
+          ...sheet,
+          rows: sheet.rows.map(row => row.map(value => String(value ?? ""))),
+          standardAuto: sheet.rows.map(row => [2, 4, 6].map(index => row[index] == null)),
+          budget: sheet.budget.map((value, index) =>
+            sheet.budget_missing?.includes(index) ? "" : String(value ?? ""))
+        }))
       } : metadataDrafts.get(tool.id);
       const fields = draft?.fields ?? ["", today(), operatorName, "", "23", "50", ""];
       const operatorSelect = get("calOperator");
@@ -611,11 +617,14 @@
       const { title } = devices[device.value][i];
       const unit = sheet.unit.trim();
       const rows = sheet.rows.filter(row => row.some(value => value !== "")).map(row => row.map(numeric));
-        const budget = ["infusion", "nibp"].includes(device.value)
-          ? [0, 0, 0, 0] : sheet.budget.map(numeric);
+      const budget = ["infusion", "nibp"].includes(device.value)
+        ? [0, 0, 0, 0] : sheet.budget.map(numeric);
       if (rows.length > 100) throw new Error(title + " · เพิ่มได้ไม่เกิน 100 จุดต่อพารามิเตอร์");
-      if (!unit || !rows.length || !budget.every(value => Number.isFinite(value) && value >= 0)) {
-        throw new Error(title + " · กรุณาระบุหน่วย จุดทดสอบ และ UCB ให้ครบ");
+      if (!unit || !rows.length) {
+        throw new Error(title + " · กรุณาระบุหน่วยและจุดทดสอบ");
+      }
+      if (budget.some(value => value !== null && (!Number.isFinite(value) || value < 0))) {
+        throw new Error(title + " · ค่า UCB ที่กรอกต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป");
       }
       for (const row of rows) {
         const [point, nominal, s1, m1, s2, m2, s3, m3] = row;
@@ -632,7 +641,10 @@
           throw new Error(title + " · กรอกจุดทดสอบ ค่า STD และค่าเครื่องให้ครบ 3 รอบ ช่องมาตรฐานให้กรอกครบหรือเว้นทั้ง 3 ช่องเมื่อใช้ STD");
         }
       }
-      return { unit, rows, budget };
+      const missing = budget.flatMap((value, index) => value === null ? [index] : []);
+      // The database validator requires four numbers. Keep track of any blank fields separately.
+      return { unit, rows, budget: budget.map(value => value ?? 0),
+        ...(missing.length ? { budget_missing: missing } : {}) };
     });
   }
 
@@ -834,7 +846,8 @@
             ? calculateNibpPoint({ nominal, measuredReadings: [m1, m2, m3],
               pulseRate: /pulse|อัตราชีพจร/i.test(sheetTitle) })
             : calculatePoint({ nominal, standardReadings: [s1, s2, s3],
-            measuredReadings: [m1, m2, m3], budget: sheet.budget || [], errorRule: calibrationErrorRule(record.method, sheetIndex) });
+            measuredReadings: [m1, m2, m3], budget: (sheet.budget || []).map((value, index) =>
+              sheet.budget_missing?.includes(index) ? null : value), errorRule: calibrationErrorRule(record.method, sheetIndex) });
           const limit = calibrationAcceptanceLimit(record.method, sheetIndex, nominal);
           const rowData = [certificateNumber(nominal), certificateNumber(result.mean), certificateNumber(result.error, 3),
             uncertaintyReport ? "± " + certificateNumber(result.expanded, 3)

@@ -144,7 +144,7 @@
   </section>
   <section class="card" aria-labelledby="uncertainty">
     <h2 id="uncertainty"><span>03</span> ค่าความไม่แน่นอน</h2>
-    <p>กรอก UCB ครบ 4 ช่องต่อพารามิเตอร์เพื่อคำนวณ U (k = 2) หากรายการใดเป็นศูนย์ให้ใส่ 0</p>
+    <p>เว้นช่อง UCB แล้วบันทึกได้ ระบบจะแสดง U (k = 2) เมื่อกรอกครบ 4 ค่า หากค่าใดเป็นศูนย์ให้ใส่ 0</p>
     <div id="budgets"></div>
     <details><summary>ดูสูตรที่ใช้ในตาราง</summary><p id="rule"></p><p>SD ใช้ตัวหาร 2 จากการวัด 3 รอบ · UCA = SD ÷ √3 · U = 2 × √(UCA² + UCB1² + UCB2² + UCB3² + UCB4²)</p></details>
   </section>
@@ -247,7 +247,7 @@
 <script src="calibration-catalogue.js"></script>
 <script src="calibration-calculation.js"></script>
 <script src="calibration-form.js"></script>
-<script src="calibration.js?v=pdf-layout-1"></script>
+<script src="calibration.js?v=optional-ucb-1"></script>
 <script src="site-footer.js?v=20261016-footer-1"></script>
 </body>
 </html>\n
