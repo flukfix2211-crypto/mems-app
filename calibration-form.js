@@ -37,12 +37,13 @@ function render() {
     ? [{ label: "ค่า STD", index: 1 }, { label: "เครื่อง รอบ 1", index: 3 },
       { label: "เครื่อง รอบ 2", index: 5 }, { label: "เครื่อง รอบ 3", index: 7 }]
     : columns.map((label, index) => ({ label, index }));
+  const outputColumns = device.value.startsWith("x-ray") ? [...outputs, "cv"] : outputs;
   const tableHeader = '<tr><th scope="col" rowspan="2">จุดทดสอบ</th><th scope="col" rowspan="2">ค่า STD</th>' +
     (digital ? [1, 2, 3].map(round => '<th scope="col">เครื่อง รอบ ' + round + '</th>').join("")
       : [1, 2, 3].map(round => '<th scope="colgroup" colspan="2">รอบที่ ' + round + '</th>').join("")) +
-    '<th scope="colgroup" colspan="6">ผลคำนวณ</th><th scope="col" rowspan="2">ลบ</th></tr><tr>' +
+    '<th scope="colgroup" colspan="' + outputColumns.length + '">ผลคำนวณ</th><th scope="col" rowspan="2">ลบ</th></tr><tr>' +
     (digital ? [] : ["มาตรฐาน", "เครื่อง", "มาตรฐาน", "เครื่อง", "มาตรฐาน", "เครื่อง"])
-      .concat(["Standard", "Mean", "Error", "SD", "UCA", "U (k=2)"])
+      .concat(["Standard", "Mean", outputColumns.includes("cv") ? "Error (%)" : "Error", "SD", "UCA", "U (k=2)"], outputColumns.includes("cv") ? ["CV (%)"] : [])
       .map(label => '<th scope="col">' + label + '</th>').join("") + '</tr>';
   sheets.innerHTML = devices[device.value].map((config, i) => {
     const { rows, unit } = state[i];
@@ -52,7 +53,7 @@ function render() {
         label + ' จุดที่ ' + (index + 1) + '" data-col="' + col + '" value="' +
         escapeValue(row[col]) + '"' + (col === 0 ? " readonly" : "") + '></td>').join("");
       return '<tr data-row="' + index + '">' + cells +
-        outputs.map(key => '<td class="calc" data-output="' + key + '">—</td>').join("") +
+        outputColumns.map(key => '<td class="calc" data-output="' + key + '">—</td>').join("") +
         '<td><button type="button" class="remove" data-remove="' + index +
         '" aria-label="ลบจุดที่ ' + (index + 1) + '">×</button></td></tr>';
     }).join("");
@@ -73,7 +74,8 @@ function render() {
     nominal: "ค่า STD − ค่าเฉลี่ยเครื่อง",
     reverse: "ค่าเฉลี่ยเครื่อง − Standard",
     standard: "Standard − ค่าเฉลี่ยเครื่อง",
-    "mean-nominal": "ค่าเฉลี่ยเครื่อง − ค่า STD"
+    "mean-nominal": "ค่าเฉลี่ยเครื่อง − ค่า STD",
+    "xray-percent": "((ค่า setting − ค่าอ่านเฉลี่ย) ÷ ค่า setting) × 100 · % error"
   };
   const source = [...additionalCalibrationTypes, ...legacyCalibrationTypes].find(type => type.method === device.value)?.source;
   document.querySelector("#rule").textContent = "Error = " + rules[calibrationErrorRule(device.value)] +
@@ -86,14 +88,25 @@ function render() {
 function updateSheet(index) {
   const { rows, budget } = rowsByDevice.get(device.value)[index];
   const table = sheets.querySelector('[data-sheet="' + index + '"]');
+  const xray = device.value.startsWith("x-ray");
+  const rowMeans = rows.map(row => {
+    const readings = [numeric(row[3]), numeric(row[5]), numeric(row[7])];
+    return readings.every(Number.isFinite) ? readings.reduce((sum, value) => sum + value, 0) / readings.length : null;
+  });
+  const cv = xray && rowMeans.every(Number.isFinite) ? calculateCoefficientVariation(rowMeans) : null;
   rows.forEach((row, rowIndex) => {
     const [, nominal, s1, m1, s2, m2, s3, m3] = row.map(numeric);
     const results = calculatePoint({
       nominal, standardReadings: [s1, s2, s3], measuredReadings: [m1, m2, m3],
-      budget: budget.map(numeric), errorRule: calibrationErrorRule(device.value)
+      budget: budget.map(numeric), errorRule: calibrationErrorRule(device.value, index)
     });
     const tr = table.querySelector('[data-row="' + rowIndex + '"]');
-    outputs.forEach(key => {
+    [...outputs, ...(xray ? ["cv"] : [])].forEach(key => {
+      if (key === "cv") {
+        tr.querySelector('[data-output="cv"]').textContent = rowIndex === 0 && Number.isFinite(cv)
+          ? formatter.format(cv) : "—";
+        return;
+      }
       const value = results[key];
       tr.querySelector('[data-output="' + key + '"]').textContent = Number.isFinite(value)
         ? formatter.format(Math.abs(value) < 0.00005 ? 0 : value) : "—";
