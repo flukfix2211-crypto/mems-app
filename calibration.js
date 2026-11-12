@@ -478,7 +478,6 @@
     get("calQueueNext").disabled = true;
     get("calQueueTitle").focus();
     notify("ค้นหาและเลือกเครื่องที่จะสอบเทียบ");
-    await ensureWorkbookCalibrationTools();
     const data = await fetchAllPages(() => supabase.from("mems_calibration_tools").select("*").order("id"));
     if (request !== queueRequest) return;
     tools = data;
@@ -486,24 +485,6 @@
     setOptions(get("calQueueDepartment"), queueDepartments.map(name => [name, name]), "ทุกหน่วยงาน");
     queuePage = 0;
     renderQueue();
-  }
-
-  async function ensureWorkbookCalibrationTools() {
-    const workbookTools = [
-      { method: "infusion", name: "Infusion Pump", department: "ไม่ระบุในไฟล์ต้นทาง", tool_code: "104450",
-        inventory_no: "6515-025-1001-104/51", manufacturer: "Terumo", model: "TE-171", serial_number: "07050178" },
-      { method: "nibp", name: "NIBP", department: "ธนาคารเลือด", tool_code: "137309",
-        inventory_no: "6515-069-3102-63/63", manufacturer: "Omron", model: "HBP-9020", serial_number: "02008795LF" }
-    ];
-    const { data: found, error: lookupError } = await supabase.from("mems_calibration_tools")
-      .select("tool_code").in("tool_code", workbookTools.map(tool => tool.tool_code));
-    if (lookupError) throw lookupError;
-    const known = new Set(found.map(tool => tool.tool_code));
-    const missing = workbookTools.filter(tool => !known.has(tool.tool_code));
-    for (const tool of missing) {
-      const { error } = await supabase.from("mems_calibration_tools").insert(tool);
-      if (error && error.code !== "23505") throw error;
-    }
   }
 
   function openRegistration(method) {
@@ -569,7 +550,7 @@
       const details = document.createElement("p");
       details.textContent = "ID " + tool.tool_code + " · " + tool.department + " · ลงทะเบียนเมื่อ " + registrationDate(tool.created_at);
       content.append(name, details);
-      row.append(content);
+      row.append(content, trashButton("tool", tool.id, name.textContent));
       list.append(row);
     }
     get("calRegisteredCount").textContent = matches.length
@@ -694,7 +675,7 @@
       button.type = "button";
       button.textContent = "PDF / พิมพ์";
       button.dataset.report = row.id;
-      actions.append(editButton, button);
+      actions.append(editButton, button, trashButton("record", row.id, row.certificate_no));
       tr.insertCell().append(actions);
       return tr;
     }));
@@ -712,6 +693,94 @@
     if (toolError) throw toolError;
     await openForm(tool, record);
   }
+
+  async function changeTrash(kind, id, restore) {
+    const { error } = await supabase.rpc("mems_change_calibration_trash", {
+      p_kind: kind, p_id: id, p_restore: restore
+    });
+    if (error) throw error;
+    loadDashboardMetrics().catch(console.warn);
+  }
+
+  function trashButton(kind, id, label) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = "ย้ายลงถังขยะ";
+    button.setAttribute("aria-label", "ย้ายลงถังขยะ " + label);
+    button.addEventListener("click", guarded(async () => {
+      const details = kind === "tool" ? " ประวัติสอบเทียบของเครื่องนี้จะย้ายไปด้วย" : "";
+      if (!window.confirm("ย้าย " + label + " ลงถังขยะหรือไม่?" + details + " กู้คืนได้ภายใน 30 วัน")) return;
+      await changeTrash(kind, id, false);
+      if (kind === "tool") {
+        metadataDrafts.delete(id);
+        if (activeTool?.id === id) activeTool = null;
+        registeredTools = registeredTools.filter(item => item.id !== id);
+        registeredPage = 0;
+        renderRegisteredTools();
+      } else {
+        page = 0;
+        await loadHistory();
+      }
+      notify("ย้ายลงถังขยะแล้ว กู้คืนได้ภายใน 30 วัน");
+    }, button));
+    return button;
+  }
+
+  const trashDialog = get("calTrashDialog");
+  async function loadTrash() {
+    const status = get("calTrashStatus");
+    const list = get("calTrashList");
+    status.textContent = "กำลังโหลดถังขยะ…";
+    list.replaceChildren();
+    try {
+      const items = await fetchAllPages(() => supabase.rpc("mems_list_calibration_trash"));
+      const expiry = new Intl.DateTimeFormat("th-TH", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Bangkok" });
+      for (const item of items) {
+        const row = document.createElement("div");
+        row.className = "cal-queue-row";
+        const content = document.createElement("div");
+        const title = document.createElement("strong");
+        title.textContent = item.label;
+        const detail = document.createElement("p");
+        detail.textContent = (item.kind === "tool" ? "ทะเบียนเครื่องมือ" : "ประวัติสอบเทียบ") +
+          " · ครบกำหนด " + expiry.format(new Date(item.expires_at)) +
+          (item.can_restore ? "" : " · กู้คืนเครื่องมือก่อน");
+        content.append(title, detail);
+        row.append(content);
+        if (item.can_restore) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.textContent = "กู้คืน";
+          button.setAttribute("aria-label", "กู้คืน " + item.label);
+          button.addEventListener("click", async () => {
+            button.disabled = true;
+            try {
+              await changeTrash(item.kind, item.id, true);
+              await loadTrash();
+              if (!get("calRegistered").hidden) await openRegisteredTools();
+              if (!get("calHistory").hidden) await loadHistory();
+              status.textContent = "กู้คืนแล้ว · " + status.textContent;
+            } catch (error) {
+              status.textContent = error.message || "กู้คืนไม่สำเร็จ";
+            } finally {
+              button.disabled = false;
+            }
+          });
+          row.append(button);
+        }
+        list.append(row);
+      }
+      status.textContent = items.length ? items.length + " รายการในถังขยะ" : "ถังขยะว่าง";
+    } catch (error) {
+      status.textContent = error.message || "โหลดถังขยะไม่สำเร็จ";
+    }
+  }
+
+  get("calTrashTab").addEventListener("click", () => {
+    trashDialog.showModal();
+    loadTrash();
+  });
+  get("calTrashClose").addEventListener("click", () => trashDialog.close());
 
   function showView(view) {
     const views = { picker: "calPicker", register: "calRegister", registered: "calRegistered", queue: "calQueue", form: "calForm", history: "calHistory" };
