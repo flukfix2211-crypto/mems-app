@@ -1189,11 +1189,15 @@
       if (headerPages.has(pageNumber)) return;
       headerPages.add(pageNumber);
       doc.setDrawColor(45, 55, 60).setLineWidth(1.1);
-      doc.addImage(hospitalLogoDataUrl, "PNG", left + (60 - sealWidth) / 2 + mm(layout.logoX),
-        24 + (52 - sealHeight) / 2 + mm(layout.logoY), sealWidth, sealHeight);
-      const headerWidth = right - left - 124;
-      fittedText(layout.hospital, left + 70, 45, Number(layout.headerSize), headerWidth);
-      fittedText(layout.center, left + 70, 65, Number(layout.headerSize) - 2, headerWidth);
+      const sealX = left + (60 - sealWidth) / 2 + mm(layout.logoX);
+      const sealY = 24 + (52 - sealHeight) / 2 + mm(layout.logoY);
+      // Keep the expanded seal above the header rule while allowing position adjustments.
+      const headerSealY = layout.logoScale > 100 ? Math.max(5, Math.min(sealY, 85 - sealHeight)) : sealY;
+      doc.addImage(hospitalLogoDataUrl, "PNG", sealX, headerSealY, sealWidth, sealHeight);
+      const headerX = Math.max(left + 70, sealX + sealWidth + 10);
+      const headerWidth = right - headerX - 54;
+      fittedText(layout.hospital, headerX, 45, Number(layout.headerSize), headerWidth);
+      fittedText(layout.center, headerX, 65, Number(layout.headerSize) - 2, headerWidth);
       doc.line(left, 88, right, 88);
       const titleX = { left, center: pageW / 2, right }[layout.titleAlign];
       fittedText(layout.title, titleX, 119 + mm(layout.titleY), Number(layout.titleSize), right - left, layout.titleAlign);
