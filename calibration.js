@@ -1217,7 +1217,7 @@
       const references = standardRows(record.standard_reference);
       doc.autoTable({
         startY,
-        margin: { left: left + 43, right: left + 43, top: 289, bottom: workbook ? 115 : 181 },
+        margin: { left: left + 43, right: left + 43, top: 289, bottom: workbook ? 200 : 181 },
         head: [[{ content: workbook ? "ความสามารถในการตรวจสอบย้อนกลับ" : "Standard Used",
           colSpan: 6, styles: { halign: "left", fontSize: 12, lineWidth: 0 } }],
         workbook ? ["Item", "Instrument", "S/N", "Cer.No", "Cal Date", "Due Date"]
@@ -1238,20 +1238,6 @@
       const workbookLayout = record.method === "digital-bp";
       drawCertificatePage(record);
       let finalY = 289;
-      const resultsTop = workbookLayout ? 155 : 290;
-      if (workbookLayout) {
-        drawStandardTable(record, finalY, () => drawCertificatePage(record), true);
-        const notesY = doc.lastAutoTable.finalY + 20;
-        text("วิธีการสอบเทียบ", left + 43, notesY, 12);
-        fittedText("อ่านค่าที่เครื่องแสดง 3 รอบต่อจุดทดสอบ แล้วเปรียบเทียบค่าเฉลี่ยกับค่า STD",
-          left + 43, notesY + 16, 11, right - left - 86);
-        text("ความไม่แน่นอนของการวัด", left + 43, notesY + 37, 12);
-        fittedText("ผลแสดงความไม่แน่นอนขยายที่ระดับความเชื่อมั่นประมาณ 95%",
-          left + 43, notesY + 53, 11, right - left - 86);
-        doc.addPage();
-        drawHeader(record);
-        finalY = resultsTop;
-      }
       const tables = (record.measurements || []).flatMap((sheet, sheetIndex) => {
         if (devices[record.method]?.[sheetIndex]?.optional && !sheet.rows.length) return [];
         const sheetTitle = (devices[record.method]?.[sheetIndex]?.title || typeNames[record.method] || "ผลทดสอบ")
@@ -1298,7 +1284,8 @@
         const levels = ["สูง", "กลาง", "ต่ำ"];
         const groupRows = levels.flatMap((level, index) => fixedTables.flatMap(table => {
           const point = fixedSetpoints[record.method][table.sheetIndex].at(-1 - index);
-          const label = { 0: "ความดันตัวบน (mmHg)", 1: "ความดันตัวล่าง (mmHg)", 3: "ชีพจร (bpm)" }[table.sheetIndex];
+          const label = { 0: "ความดันตัวบน (mmHg)", 1: "ความดันตัวล่าง (mmHg)",
+            3: "ชีพจรช่วง" + levels[levels.length - 1 - index] + " (bpm)" }[table.sheetIndex];
           return table.rows.filter(row => Number(row[0]) === point)
             .map(row => [level, label, ...row]);
         }));
@@ -1308,14 +1295,14 @@
           tables.splice(0, tables.length, {
             grouped: true, rows: groupRows,
             head: [[{ content: "ตารางรายงานความดันโลหิต", colSpan: 6 }],
-              ["ระดับ", { content: "STD Setting", colSpan: 2 }, "UUC Reading", "Error", "Uncertainty"]]
+              ["ช่วงความดัน", { content: "STD Setting", colSpan: 2 }, "UUC Reading", "Error", "Uncertainty"]]
           }, ...tables.filter(table => !usesNibpWorkbook(record.method, table.sheetIndex)));
         }
       }
       for (const { head, rows, xray, grouped } of tables) {
         doc.autoTable({
           startY: finalY,
-          margin: { left: left + 42, right: left + 42, top: resultsTop, bottom: workbookLayout ? 215 : 55 },
+          margin: { left: left + 42, right: left + 42, top: 290, bottom: 55 },
           head,
           body: rows,
           theme: "grid",
@@ -1325,12 +1312,18 @@
           tableWidth: xray ? "auto" : 399,
           columnStyles: xray || grouped ? {} : { 0: { cellWidth: 98 }, 1: { cellWidth: 98 }, 2: { cellWidth: 85 }, 3: { cellWidth: 118 } },
           rowPageBreak: "avoid",
-          didDrawPage: () => workbookLayout ? drawHeader(record) : drawCertificatePage(record)
+          didDrawPage: () => drawCertificatePage(record)
         });
         finalY = doc.lastAutoTable.finalY + 4;
       }
-      if (!workbookLayout) {
-        drawStandardTable(record, finalY + 3, () => drawCertificatePage(record));
+      drawStandardTable(record, finalY + 3, () => drawCertificatePage(record), workbookLayout);
+      if (workbookLayout) {
+        const notesY = doc.lastAutoTable.finalY + 12;
+        fittedText("วิธีการสอบเทียบ: อ่านค่าที่เครื่องแสดง 3 รอบต่อจุด แล้วเปรียบเทียบค่าเฉลี่ยกับค่า STD",
+          left + 43, notesY, 10, right - left - 86);
+        fittedText("ความไม่แน่นอนขยายแสดงที่ระดับความเชื่อมั่นประมาณ 95%",
+          left + 43, notesY + 12, 10, right - left - 86);
+      } else {
         text("วิธีทดสอบ : โดยการนำเครื่องมือที่ต้องการสอบเทียบต่อเข้ากับเครื่องมาตรฐาน แล้วควบคุมค่าตามจุดทดสอบ อ่านค่าแล้วบันทึกค่า",
           left + 43, doc.lastAutoTable.finalY + 12, 10);
       }
