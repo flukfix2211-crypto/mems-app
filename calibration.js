@@ -1344,12 +1344,9 @@
         text(signer?.position || (workbookLayout ? "" : "นายช่างเทคนิค (เครื่องมือแพทย์)"),
           centerX, signY + 52, 10, { align: "center", maxWidth: width });
       };
-      const signerWidth = (right - left) / (workbookLayout ? 3 : 2);
+      const signerWidth = (right - left) / 2;
       drawSigner(workbookLayout ? "Calibration by" : "Tested by", signatories.tested, record.operator_name,
         left, signerWidth, signerSettings.preferences.tested);
-      if (workbookLayout) {
-        drawSigner("Checked by", null, "", left + signerWidth, signerWidth);
-      }
       drawSigner("Approved by", signatories.approved, "", right - signerWidth, signerWidth, signerSettings.preferences.approved);
       if (workbookLayout) {
         text("วันที่ออกรายงาน ........ / ........ / ........", right, pageH - 53, 10, { align: "right" });
@@ -1360,7 +1357,7 @@
       fittedText(layout.address, left, pageH - 22, 8.2, right - left - 43);
       if (doc.__memsLogoDataUrl) {
         doc.addImage(doc.__memsLogoDataUrl, "PNG", right - 40, pageH - 34, 16, 16);
-        text("MEMs", right - 21, pageH - 22, 8.5, { align: "right" });
+        fittedText("MEMs", right - 19, pageH - 22, 8.5, 19);
       }
       if (workbookLayout) certificatePages.push({ firstPage, lastPage: doc.internal.getCurrentPageInfo().pageNumber });
     });
