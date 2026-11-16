@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="mems-ui.css">
 <link rel="stylesheet" href="mems-auth-theme.css">
 <link rel="stylesheet" href="pm-reports.css">
-<link rel="stylesheet" href="calibration.css?v=standard-settings-1">
+<link rel="stylesheet" href="calibration.css?v=standard-equipment-super-admin">
 <link rel="stylesheet" href="site-footer.css?v=20261016-footer-1">
 </head>
 <body class="mems-pm mems-calibration">
@@ -201,7 +201,10 @@
 <dialog id="calStandardDialog" class="cal-signer-dialog" aria-labelledby="calStandardTitle">
   <form id="calStandardForm">
     <div class="section-head"><h2 id="calStandardTitle">ตั้งค่า Standard Used</h2><button id="calStandardClose" type="button">ปิด</button></div>
-    <label>เครื่องมาตรฐาน<select id="calStandardEdit"></select></label>
+    <div class="cal-standard-picker">
+      <label>เครื่องมาตรฐาน<select id="calStandardEdit"></select></label>
+      <button id="calStandardDelete" type="button" hidden disabled>ลบเครื่องที่เลือก</button>
+    </div>
     <div class="fields">
       <label>ยี่ห้อ / ชื่อเครื่อง<input name="manufacturer" maxlength="80" required></label>
       <label>รุ่น<input name="model" maxlength="80"></label>
@@ -214,7 +217,7 @@
       <legend>ประเภทเครื่องที่ใช้มาตรฐานนี้</legend>
       <div id="calStandardMethods" style="max-height:14rem;overflow:auto"></div>
     </fieldset>
-    <div class="cal-buttons"><button id="calStandardDelete" type="button" disabled>ลบเครื่องมาตรฐาน</button><button id="calStandardSave" class="primary" type="submit">บันทึกเครื่องมาตรฐาน</button></div>
+    <div class="cal-buttons"><button id="calStandardSave" class="primary" type="submit">บันทึกเครื่องมาตรฐาน</button></div>
     <p id="calStandardStatus" role="status"></p>
   </form>
 </dialog>
@@ -297,7 +300,7 @@
 <script src="calibration-access-standards.js"></script>
 <script src="calibration-calculation.js"></script>
 <script src="calibration-form.js?v=optional-ucb"></script>
-<script src="calibration.js?v=standard-equipment-admin"></script>
+<script src="calibration.js?v=standard-equipment-super-admin"></script>
 <script src="site-footer.js?v=20261016-footer-1"></script>
 </body>
 </html>\n

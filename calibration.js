@@ -87,6 +87,7 @@
   const standardEdit = get("calStandardEdit");
   const standardStatus = get("calStandardStatus");
   const standardDelete = get("calStandardDelete");
+  let canRemoveStandard = false;
   let standardCatalogue = new Map();
 
   function fillStandardEditor() {
@@ -149,7 +150,7 @@
   standardDelete.addEventListener("click", async () => {
     const item = standardCatalogue.get(standardEdit.value);
     const save = get("calStandardSave");
-    if (!memsIsAdmin() || !item || save.disabled ||
+    if (!canRemoveStandard || !item || save.disabled ||
       !confirm("ลบเครื่องมาตรฐาน " + standardReference(item) + " ออกจากรายการใช้งาน?")) return;
     standardDelete.disabled = standardEdit.disabled = save.disabled = true;
     try {
@@ -1611,6 +1612,8 @@
     const profile = await memsGuard("calibration");
     if (!profile) return;
     get("calStandardSettings").hidden = !memsIsAdmin();
+    canRemoveStandard = memsIsSuperAdmin(profile);
+    standardDelete.hidden = !canRemoveStandard;
     operatorName = profile.display_name || "";
     await loadCalibrationOperators().catch(error => {
       console.warn("โหลดรายชื่อผู้ปฏิบัติงานจาก PM ไม่สำเร็จ", error);
