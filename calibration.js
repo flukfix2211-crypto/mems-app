@@ -1003,7 +1003,7 @@
       const { title, optional, unit: defaultUnit } = devices[device.value][i];
       const rows = sheet.rows.filter(row => (optional ? row.slice(1) : row).some(value => value !== "")).map(row => row.map(numeric));
       const unit = sheet.unit.trim() || (optional && !rows.length ? defaultUnit : "");
-      const budget = ["infusion", "nibp"].includes(device.value)
+      const budget = device.value === "infusion" || usesNibpWorkbook(device.value, i)
         ? [0, 0, 0, 0] : sheet.budget.map(numeric);
       if (rows.length > 100) throw new Error(title + " · เพิ่มได้ไม่เกิน 100 จุดต่อพารามิเตอร์");
       if (!unit || (!optional && !rows.length)) {
@@ -1226,14 +1226,15 @@
           return values.every(Number.isFinite) ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
         });
         const cv = xray && rowMeans.every(Number.isFinite) ? calculateCoefficientVariation(rowMeans) : null;
-        const uncertaintyReport = ["infusion", "nibp"].includes(record.method);
+        const nibpWorkbook = usesNibpWorkbook(record.method, sheetIndex);
+        const uncertaintyReport = record.method === "infusion" || nibpWorkbook;
         const rows = (sheet.rows || []).map((row, rowIndex) => {
           const [, nominal, s1, m1, s2, m2, s3, m3] = row;
           const result = record.method === "infusion"
             ? calculateInfusionPoint({ nominal, standardReadings: [s1, s2] })
-            : record.method === "nibp"
+            : nibpWorkbook
             ? calculateNibpPoint({ nominal, measuredReadings: [m1, m2, m3],
-              pulseRate: /pulse|อัตราชีพจร/i.test(sheetTitle) })
+              pulseRate: devices[record.method][sheetIndex].unit === "bpm" })
             : calculatePoint({ nominal, standardReadings: [s1, s2, s3],
             measuredReadings: [m1, m2, m3], budget: (sheet.budget || []).map((value, index) =>
               sheet.budget_missing?.includes(index) ? null : value), errorRule: calibrationErrorRule(record.method, sheetIndex) });

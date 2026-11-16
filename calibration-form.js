@@ -27,6 +27,7 @@ const fixedSetpoints = {
   nibp: nibpSetpoints,
   "digital-bp": [nibpSetpoints[0], nibpSetpoints[1], null, nibpSetpoints[2], null]
 };
+const usesNibpWorkbook = (method, sheetIndex) => Boolean(fixedSetpoints[method]?.[sheetIndex]);
 const formatter = new Intl.NumberFormat("en-US", { maximumFractionDigits: 4 });
 const escapeValue = value => String(value).replace(/[&"<>]/g, char => ({
   "&": "&amp;", '"': "&quot;", "<": "&lt;", ">": "&gt;"
@@ -84,14 +85,15 @@ function render() {
       (fixed ? '' : '<button type="button" class="add" data-add>+ เพิ่มจุดทดสอบ</button>') + '</section>';
   }).join("");
 
-  budgets.innerHTML = infusion || nibp
-    ? '<p class="hint">uncertainty และ Ureport คำนวณอัตโนมัติตามสูตรใน Excel ต้นฉบับ</p>'
-    : '<p>เว้นช่อง UCB บางช่องหรือทั้งหมดแล้วบันทึกได้ ระบบจะแสดง U (k = 2) เมื่อกรอกครบ 4 ค่า หากค่าใดเป็นศูนย์ให้ใส่ 0</p>' +
-    devices[device.value].map((config, i) =>
+  const manualBudgets = devices[device.value].map((config, i) =>
+    infusion || usesNibpWorkbook(device.value, i) ? "" :
     '<section class="sheet"><h3>' + config.title + '</h3><div class="fields">' +
     state[i].budget.map((value, j) => '<label>UCB' + (j + 1) +
     '<input type="number" step="any" data-budget="' + i + '" data-item="' + j +
       '" value="' + escapeValue(value) + '"></label>').join("") + '</div></section>').join("");
+  budgets.innerHTML = (infusion || nibp || digital
+    ? '<p class="hint">Ureport คำนวณอัตโนมัติตามสูตรใน Excel สำหรับพารามิเตอร์ที่กำหนดไว้</p>' : "") +
+    (manualBudgets ? '<p>เว้นช่อง UCB บางช่องหรือทั้งหมดแล้วบันทึกได้ ระบบจะแสดง U (k = 2) เมื่อกรอกครบ 4 ค่า หากค่าใดเป็นศูนย์ให้ใส่ 0</p>' + manualBudgets : "");
 
   const rules = {
     "mean-std": "ค่าเฉลี่ยมาตรฐาน − ค่าเฉลี่ยเครื่อง",
@@ -106,7 +108,7 @@ function render() {
     (source ? " · Query " + source : "") +
     (infusion ? " · Infusion: Error = ค่าเฉลี่ย Standard Reading − UUC setting; ใช้ 2 รอบ" :
       nibp ? " · NIBP: Error = ค่าเฉลี่ยเครื่อง − STD setting; uncertainty ใช้ CMC และ repeatability จาก Excel" :
-      digital ? " · บันทึกค่า STD จุดเดียวและค่าเครื่อง 3 รอบตามแบบต้นทาง" :
+      digital ? " · ความดันตัวบน ตัวล่าง และชีพจรคำนวณ uncertainty จาก CMC และ repeatability ตาม Excel" :
       " · Standard ใช้ค่าเฉลี่ยมาตรฐานเมื่อมากกว่า 0 และใช้ค่า STD ในกรณีอื่น");
   state.forEach((_, index) => updateSheet(index));
 }
@@ -114,7 +116,6 @@ function render() {
 function updateSheet(index) {
   const { rows, budget } = rowsByDevice.get(device.value)[index];
   const infusion = device.value === "infusion";
-  const nibp = device.value === "nibp";
   const table = sheets.querySelector('[data-sheet="' + index + '"]');
   const xray = device.value.startsWith("x-ray");
   const rowMeans = rows.map(row => {
@@ -125,8 +126,8 @@ function updateSheet(index) {
   rows.forEach((row, rowIndex) => {
     const [, nominal, s1, m1, s2, m2, s3, m3] = row.map(numeric);
     const results = infusion ? calculateInfusionPoint({ nominal, standardReadings: [s1, s2] })
-      : nibp ? calculateNibpPoint({ nominal, measuredReadings: [m1, m2, m3],
-        pulseRate: /pulse|อัตราชีพจร/i.test(devices[device.value][index].title) })
+      : usesNibpWorkbook(device.value, index) ? calculateNibpPoint({ nominal, measuredReadings: [m1, m2, m3],
+        pulseRate: devices[device.value][index].unit === "bpm" })
       : calculatePoint({
       nominal, standardReadings: [s1, s2, s3], measuredReadings: [m1, m2, m3],
       budget: budget.map(numeric), errorRule: calibrationErrorRule(device.value, index)
@@ -223,7 +224,7 @@ function stateFor() {
       : [blankMeasurementRow()];
     return {
       unit, rows, standardAuto: rows.map(() => Array(3).fill(true)),
-      budget: ["infusion", "nibp"].includes(device.value) ? ["0", "0", "0", "0"] : Array(4).fill("")
+      budget: Array(4).fill(device.value === "infusion" || usesNibpWorkbook(device.value, index) ? "0" : "")
     };
   });
 }
