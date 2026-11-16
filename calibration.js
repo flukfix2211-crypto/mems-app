@@ -1317,19 +1317,30 @@
         }
       }
       for (const { head, rows, xray, grouped } of tables) {
+        const resultTableWidth = 399;
+        const resultRule = y => doc.setDrawColor(60, 70, 75).setLineWidth(.55)
+          .line(left + 42, y, left + 42 + resultTableWidth, y);
         doc.autoTable({
           startY: finalY,
           margin: { left: left + 42, right: left + 42, top: 290, bottom: 55 },
           head,
           body: rows,
-          theme: "grid",
+          theme: workbookLayout ? "plain" : "grid",
           styles: { font: certificateFont, fontSize: 10.5, halign: "center",
-            cellPadding: { vertical: 1, horizontal: 3 }, lineColor: [90, 100, 105], lineWidth: .35 },
+            cellPadding: { vertical: 1, horizontal: 3 }, lineColor: [90, 100, 105], lineWidth: workbookLayout ? 0 : .35 },
           headStyles: { font: certificateFont, fontStyle: "normal", fillColor: [255, 255, 255], textColor: [35, 43, 50], lineColor: [60, 70, 75] },
-          tableWidth: xray ? "auto" : 399,
+          tableWidth: xray ? "auto" : resultTableWidth,
           columnStyles: xray || grouped ? {} : { 0: { cellWidth: 98 }, 1: { cellWidth: 98 }, 2: { cellWidth: 85 }, 3: { cellWidth: 118 } },
           rowPageBreak: "avoid",
-          didDrawPage: () => drawCertificatePage(record)
+          didDrawCell: ({ section, row, column, cell }) => {
+            if (!workbookLayout || section !== "head" || column.index !== 0) return;
+            if (row.index === 0) resultRule(cell.y);
+            if (row.index === head.length - 1) resultRule(cell.y + cell.height);
+          },
+          didDrawPage: ({ cursor }) => {
+            if (workbookLayout) resultRule(cursor.y);
+            drawCertificatePage(record);
+          }
         });
         finalY = doc.lastAutoTable.finalY + 4;
       }
