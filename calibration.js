@@ -1515,7 +1515,13 @@
       draftLogo = canvas.toDataURL("image/png");
       get("calPdfLogoPreview").src = draftLogo;
       clearLayoutPreview();
-      pdfStatus.textContent = "โหลดโลโก้แล้ว";
+      try {
+        const savedLayout = { ...loadPdfLayout(), logo: draftLogo };
+        localStorage.setItem(pdfLayoutKey, JSON.stringify(savedLayout));
+        pdfStatus.textContent = "เปลี่ยนและบันทึกโลโก้ในเบราว์เซอร์นี้แล้ว";
+      } catch {
+        pdfStatus.textContent = "ดูตัวอย่างโลโก้ได้ แต่เบราว์เซอร์บันทึกโลโก้ไม่ได้";
+      }
     } catch (error) {
       if (pdfLogo.files[0] === file) pdfStatus.textContent = error.message || "อ่านไฟล์โลโก้ไม่ได้";
     } finally {
