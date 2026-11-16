@@ -1106,6 +1106,28 @@
     }
   }
 
+  const pdfBrandingTable = "mems_calibration_pdf_branding";
+  async function loadSharedPdfLogo() {
+    const { data, error } = await supabase.from(pdfBrandingTable).select("logo").eq("id", true).maybeSingle();
+    if (error?.code === "PGRST205" || error?.code === "42P01") return null;
+    if (error) throw error;
+    return data?.logo ?? null;
+  }
+
+  async function saveSharedPdfLogo(logo) {
+    const { error } = await supabase.from(pdfBrandingTable).upsert({ id: true, logo });
+    if (error?.code === "PGRST205" || error?.code === "42P01") {
+      throw new Error("ต้องอัปเดตฐานข้อมูลก่อนบันทึกโลโก้ส่วนกลาง");
+    }
+    if (error) throw error;
+  }
+
+  async function loadCertificateLayout() {
+    const layout = loadPdfLayout();
+    const logo = await loadSharedPdfLogo();
+    return { ...layout, logo: logo ?? layout.logo };
+  }
+
   function applyCertificateFont(doc, fontData) {
     if (!fontData) return PDF_FONT;
     const name = "CalibrationUpload";
@@ -1396,7 +1418,7 @@
 
   async function showPdf(records) {
     if (!records.length) throw new Error("ไม่พบรายงานตามตัวกรอง");
-    const doc = await buildPdf(records);
+    const doc = await buildPdf(records, await loadCertificateLayout());
     const filename = records.length === 1 ? "calibration-" + records[0].certificate_no.replace(/[^a-z0-9_-]/gi, "_") : "calibration-filtered";
     rptDeliverPdf(doc, filename + ".pdf", { preview: true });
     notify("สร้าง PDF แล้ว · เลือกพิมพ์หรือดาวน์โหลดจากหน้าตัวอย่าง");
@@ -1409,6 +1431,7 @@
   const pdfPreview = get("calPdfLayoutPreview");
   const pdfStatus = get("calPdfLayoutStatus");
   let draftLogo = "";
+  let sharedLogo = null;
   let draftFont = { fontData: "", fontName: "" };
   let previewUrl = "";
   let previewVersion = 0;
@@ -1449,11 +1472,15 @@
     return layout;
   }
 
-  get("calPdfSettings").addEventListener("click", () => {
-    fillLayoutForm(loadPdfLayout());
-    pdfStatus.textContent = "";
+  get("calPdfSettings").addEventListener("click", guarded(async () => {
+    sharedLogo = await loadSharedPdfLogo();
+    const layout = loadPdfLayout();
+    fillLayoutForm({ ...layout, logo: sharedLogo ?? layout.logo });
+    get("calPdfLogoField").hidden = !memsIsAdmin();
+    pdfStatus.textContent = sharedLogo === null && layout.logo && memsIsAdmin()
+      ? "กดบันทึกการตั้งค่าเพื่อให้ทุกเครื่องใช้โลโก้ที่บันทึกไว้ในเบราว์เซอร์นี้" : "";
     pdfDialog.showModal();
-  });
+  }, get("calPdfSettings")));
   get("calPdfClose").addEventListener("click", () => pdfDialog.close());
   pdfDialog.addEventListener("close", () => {
     pdfLogo.value = "";
@@ -1461,7 +1488,7 @@
     clearLayoutPreview();
   });
   get("calPdfReset").addEventListener("click", () => {
-    fillLayoutForm(defaultPdfLayout);
+    fillLayoutForm({ ...defaultPdfLayout, logo: memsIsAdmin() ? "" : (sharedLogo ?? draftLogo) });
     pdfStatus.textContent = "คืนค่าเริ่มต้นแล้ว กดบันทึกเพื่อใช้งาน";
   });
   pdfForm.addEventListener("input", clearLayoutPreview);
@@ -1497,7 +1524,8 @@
   });
   pdfLogo.addEventListener("change", async () => {
     const file = pdfLogo.files[0];
-    if (!file) return;
+    if (!file || !memsIsAdmin()) return;
+    pdfLogo.disabled = true;
     const url = URL.createObjectURL(file);
     try {
       if (!["image/png", "image/jpeg"].includes(file.type) || file.size > 5 * 1024 * 1024) {
@@ -1512,31 +1540,39 @@
       canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
       canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
       canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
-      draftLogo = canvas.toDataURL("image/png");
-      get("calPdfLogoPreview").src = draftLogo;
+      const uploadedLogo = canvas.toDataURL("image/png");
+      await saveSharedPdfLogo(uploadedLogo);
+      sharedLogo = uploadedLogo;
+      if (pdfLogo.files[0] !== file || !pdfDialog.open) return;
+      draftLogo = uploadedLogo;
+      get("calPdfLogoPreview").src = uploadedLogo;
       clearLayoutPreview();
-      try {
-        const savedLayout = { ...loadPdfLayout(), logo: draftLogo };
-        localStorage.setItem(pdfLayoutKey, JSON.stringify(savedLayout));
-        pdfStatus.textContent = "เปลี่ยนและบันทึกโลโก้ในเบราว์เซอร์นี้แล้ว";
-      } catch {
-        pdfStatus.textContent = "ดูตัวอย่างโลโก้ได้ แต่เบราว์เซอร์บันทึกโลโก้ไม่ได้";
-      }
+      pdfStatus.textContent = "บันทึกโลโก้สำหรับทุกเครื่องแล้ว";
     } catch (error) {
       if (pdfLogo.files[0] === file) pdfStatus.textContent = error.message || "อ่านไฟล์โลโก้ไม่ได้";
     } finally {
+      pdfLogo.disabled = false;
       URL.revokeObjectURL(url);
       if (pdfLogo.files[0] === file) pdfLogo.value = "";
     }
   });
-  pdfForm.addEventListener("submit", event => {
+  pdfForm.addEventListener("submit", async event => {
     event.preventDefault();
-    if (pdfLogo.files.length || pdfFont.files.length) return;
+    const saveButton = pdfForm.querySelector('[type="submit"]');
+    if (saveButton.disabled || pdfLogo.files.length || pdfFont.files.length) return;
+    saveButton.disabled = true;
     try {
-      localStorage.setItem(pdfLayoutKey, JSON.stringify(readLayoutForm()));
+      const { logo, ...layout } = readLayoutForm();
+      if (memsIsAdmin() && logo !== (sharedLogo ?? "")) {
+        await saveSharedPdfLogo(logo);
+        sharedLogo = logo;
+      }
+      localStorage.setItem(pdfLayoutKey, JSON.stringify(layout));
       pdfStatus.textContent = "บันทึกโครงร่าง PDF แล้ว";
-    } catch {
-      pdfStatus.textContent = "เบราว์เซอร์บันทึกการตั้งค่าไม่ได้";
+    } catch (error) {
+      pdfStatus.textContent = error.message || "บันทึกการตั้งค่าไม่ได้";
+    } finally {
+      saveButton.disabled = false;
     }
   });
   get("calPdfPreviewLayout").addEventListener("click", async () => {
