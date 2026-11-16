@@ -86,7 +86,8 @@ function render() {
 
   budgets.innerHTML = infusion || nibp
     ? '<p class="hint">uncertainty และ Ureport คำนวณอัตโนมัติตามสูตรใน Excel ต้นฉบับ</p>'
-    : devices[device.value].map((config, i) =>
+    : '<p>เว้นช่อง UCB บางช่องหรือทั้งหมดแล้วบันทึกได้ ระบบจะแสดง U (k = 2) เมื่อกรอกครบ 4 ค่า หากค่าใดเป็นศูนย์ให้ใส่ 0</p>' +
+    devices[device.value].map((config, i) =>
     '<section class="sheet"><h3>' + config.title + '</h3><div class="fields">' +
     state[i].budget.map((value, j) => '<label>UCB' + (j + 1) +
     '<input type="number" step="any" data-budget="' + i + '" data-item="' + j +
