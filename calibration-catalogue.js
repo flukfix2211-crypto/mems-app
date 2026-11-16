@@ -23,9 +23,9 @@ const additionalCalibrationTypes = [
   ["digital-bp","Digital Blood Pressure","เครื่องวัดความดันโลหิตแบบ Digital","สัญญาณชีพ","mean-nominal","digital-bp",[
     ["ความดันตัวบน · Systolic (NIBP-BP)","mmHg"],
     ["ความดันตัวล่าง · Diastolic (NIBP-BPD)","mmHg"],
-    ["ความดันเฉลี่ย · Mean pressure (NIBP-BPM)","mmHg"],
+    ["ความดันเฉลี่ย · Mean pressure (NIBP-BPM)","mmHg",true],
     ["อัตราชีพจร · Heart rate","bpm"],
-    ["ออกซิเจนในเลือด · SpO₂","%"]
+    ["ออกซิเจนในเลือด · SpO₂","%",true]
   ]],
   ["nibp","NIBP","เครื่องวัดความดันโลหิตแบบ NIBP","สัญญาณชีพ","mean-nominal","nibp",[
     ["ความดันตัวบน · Systolic","mmHg"],
@@ -44,7 +44,7 @@ const additionalCalibrationTypes = [
   ["syringe","Syringe Pump","เครื่องควบคุมการฉีดยา","เครื่องให้สารละลาย","standard","pump",[["อัตราการไหล","mL/h"],["ปริมาตร","mL"]]]
 ].map(([method, name, label, group, errorRule, source, fields]) => ({
   method, name, label, group, errorRule, source: cal1Sources[source],
-  fields: fields.map(([title, unit]) => ({ title, unit }))
+  fields: fields.map(([title, unit, optional = false]) => ({ title, unit, optional }))
 }));
 
 // Keep already registered records readable while new registrations use explicit methods.

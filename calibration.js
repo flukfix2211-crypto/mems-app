@@ -31,9 +31,10 @@
   const dateLabel = date => new Intl.DateTimeFormat("th-TH", { dateStyle: "medium", timeZone: "UTC" })
     .format(new Date(date + "T00:00:00Z"));
   const standardTable = "mems_calibration_standard_equipment";
+  const nibpStandard = "Vital sign simulator · S/N 3240040 · รหัส MMP-0061-26";
   const workbookStandards = {
     "infusion:104450": "Infusion Analyzer · S/N 3749056 · รหัส MMP-0063-26",
-    "nibp:137309": "Vital sign simulator · S/N 3240040 · รหัส MMP-0061-26"
+    "nibp:137309": nibpStandard
   };
   const splitStandards = value => (value || "").split(/\s+\/\s+/).filter(Boolean);
   const standardDate = iso => iso ? iso.split("-").reverse().join("/") : "";
@@ -862,13 +863,16 @@
       draft = record ? {
         fields: [record.certificate_no, record.calibrated_on, record.operator_name,
           record.standard_reference, record.ambient_temperature ?? "", record.relative_humidity ?? "", record.notes || ""],
-        measurements: record.measurements.map(sheet => ({
-          ...sheet,
-          rows: sheet.rows.map(row => row.map(value => String(value ?? ""))),
-          standardAuto: sheet.rows.map(row => [2, 4, 6].map(index => row[index] == null)),
-          budget: sheet.budget.map((value, index) =>
-            sheet.budget_missing?.includes(index) ? "" : String(value ?? ""))
-        }))
+        measurements: record.measurements.map(sheet => {
+          const rows = sheet.rows.map(row => row.map(value => String(value ?? "")));
+          if (!rows.length) rows.push(blankMeasurementRow());
+          return {
+            ...sheet, rows,
+            standardAuto: rows.map(row => [2, 4, 6].map(index => row[index] === "")),
+            budget: sheet.budget.map((value, index) =>
+              sheet.budget_missing?.includes(index) ? "" : String(value ?? ""))
+          };
+        })
       } : metadataDrafts.get(tool.id);
       const fields = draft?.fields ?? ["", today(), operatorName, "", "23", "50", ""];
       const operatorSelect = get("calOperator");
@@ -882,6 +886,41 @@
     get("calCertificate").readOnly = !record;
     get("calSave").textContent = record ? "บันทึกการแก้ไข" : "บันทึกผลสอบเทียบ";
     get("calBack").textContent = record ? "← กลับไปประวัติ" : "← กลับไปคิวสอบเทียบ";
+    const standardInput = get("calStandardReference");
+    const fixedStandard = tool.method === "nibp" && !record;
+    standardInput.readOnly = fixedStandard;
+    if (fixedStandard) {
+      standardInput.value = nibpStandard;
+      get("calAccessStandard").value = "";
+      get("calAccessStandardField").hidden = true;
+      get("calStandardHint").textContent = "เครื่องมาตรฐานที่กำหนดสำหรับ NIBP ตามแบบสอบเทียบ";
+    } else if (!await loadFormStandardOptions(tool, newToolForm && !draft)) {
+      return;
+    }
+    if (!record) await ensureCertificateForDate();
+    if (activeTool !== tool) return;
+    const summary = get("calToolSummary");
+    summary.replaceChildren();
+    for (const [label, value] of [
+      ["ประเภท", typeNames[tool.method]], ["หน่วยงาน", tool.department], ["ID เครื่องมือ", tool.tool_code],
+      ["เลขครุภัณฑ์", tool.inventory_no], ["ยี่ห้อ / รุ่น", [tool.manufacturer, tool.model].filter(Boolean).join(" ")],
+      ["S/N", tool.serial_number]
+    ]) {
+      const dt = document.createElement("dt");
+      const dd = document.createElement("dd");
+      dt.textContent = label;
+      dd.textContent = value || "—";
+      const item = document.createElement("div");
+      item.append(dt, dd);
+      summary.append(item);
+    }
+    get("calFormTitle").textContent = record ? "รายละเอียด / แก้ไข · " + tool.name : tool.name;
+    showView("form");
+    notify((record ? "แก้ไขผลสอบเทียบ" : "กรอกผลสอบเทียบ") + "สำหรับ ID " + tool.tool_code);
+    get("calFormTitle").focus();
+  }
+
+  async function loadFormStandardOptions(tool, fillDefault) {
     const { data: standard, error: standardError } = await supabase.from("mems_calibration_standards")
       .select("standard_reference,source_note").eq("method", tool.method).maybeSingle();
     if (standardError) throw standardError;
@@ -904,30 +943,11 @@
     setOptions(select, options.map(value => [value, value]), "เลือกเครื่องที่ใช้จริง");
     select.value = "";
     get("calAccessStandardField").hidden = !options.length;
-    if (newToolForm && !draft) get("calStandardReference").value = defaults.join(" / ") ||
+    if (fillDefault) get("calStandardReference").value = defaults.join(" / ") ||
       (options.length === 1 ? options[0] : "");
     get("calStandardHint").textContent = options.length ? "ตรวจและเลือกเครื่องมาตรฐานที่ใช้จริงสำหรับใบรับรอง"
       : "ยังไม่มีเครื่องมาตรฐานที่กำหนดให้ประเภทนี้ สามารถระบุเครื่องที่ใช้จริงได้";
-    if (!record) await ensureCertificateForDate();
-    const summary = get("calToolSummary");
-    summary.replaceChildren();
-    for (const [label, value] of [
-      ["ประเภท", typeNames[tool.method]], ["หน่วยงาน", tool.department], ["ID เครื่องมือ", tool.tool_code],
-      ["เลขครุภัณฑ์", tool.inventory_no], ["ยี่ห้อ / รุ่น", [tool.manufacturer, tool.model].filter(Boolean).join(" ")],
-      ["S/N", tool.serial_number]
-    ]) {
-      const dt = document.createElement("dt");
-      const dd = document.createElement("dd");
-      dt.textContent = label;
-      dd.textContent = value || "—";
-      const item = document.createElement("div");
-      item.append(dt, dd);
-      summary.append(item);
-    }
-    get("calFormTitle").textContent = record ? "รายละเอียด / แก้ไข · " + tool.name : tool.name;
-    showView("form");
-    notify((record ? "แก้ไขผลสอบเทียบ" : "กรอกผลสอบเทียบ") + "สำหรับ ID " + tool.tool_code);
-    get("calFormTitle").focus();
+    return true;
   }
 
   async function openHistory() {
@@ -948,13 +968,13 @@
 
   function collectMeasurements() {
     return rowsByDevice.get(device.value).map((sheet, i) => {
-      const { title } = devices[device.value][i];
-      const unit = sheet.unit.trim();
-      const rows = sheet.rows.filter(row => row.some(value => value !== "")).map(row => row.map(numeric));
+      const { title, optional, unit: defaultUnit } = devices[device.value][i];
+      const rows = sheet.rows.filter(row => (optional ? row.slice(1) : row).some(value => value !== "")).map(row => row.map(numeric));
+      const unit = sheet.unit.trim() || (optional && !rows.length ? defaultUnit : "");
       const budget = ["infusion", "nibp"].includes(device.value)
         ? [0, 0, 0, 0] : sheet.budget.map(numeric);
       if (rows.length > 100) throw new Error(title + " · เพิ่มได้ไม่เกิน 100 จุดต่อพารามิเตอร์");
-      if (!unit || !rows.length) {
+      if (!unit || (!optional && !rows.length)) {
         throw new Error(title + " · กรุณาระบุหน่วยและจุดทดสอบ");
       }
       if (budget.some(value => value !== null && (!Number.isFinite(value) || value < 0))) {
@@ -993,7 +1013,8 @@
       calibrated_on: get("calDate").value,
       certificate_no: certificateNo,
       operator_name: operator,
-      standard_reference: get("calStandardReference").value.trim(),
+      standard_reference: activeTool.method === "nibp" && !wasEditing
+        ? nibpStandard : get("calStandardReference").value.trim(),
       ambient_temperature: numeric(get("calAmbientTemperature").value),
       relative_humidity: numeric(get("calHumidity").value),
       notes: get("calNotes").value.trim(),
@@ -1165,6 +1186,7 @@
       drawCertificatePage(record);
       let finalY = 289;
       (record.measurements || []).forEach((sheet, sheetIndex) => {
+        if (devices[record.method]?.[sheetIndex]?.optional && !sheet.rows.length) return;
         const sheetTitle = devices[record.method]?.[sheetIndex]?.title || typeNames[record.method] || "ผลทดสอบ";
         const xray = record.method.startsWith("x-ray");
         const rowMeans = (sheet.rows || []).map(row => {
@@ -1455,8 +1477,8 @@
     const select = get("calAccessStandard");
     const selected = select.value;
     select.value = "";
-    if (!selected) return;
     const input = get("calStandardReference");
+    if (!selected || input.readOnly) return;
     const entries = [input.value.trim(), selected].flatMap(value => value.split(/\s+\/\s+/)).filter(Boolean);
     const value = [...new Set(entries)].join(" / ");
     if (value.length > input.maxLength) throw new Error("รายการเครื่องมาตรฐานยาวเกิน " + input.maxLength + " ตัวอักษร");

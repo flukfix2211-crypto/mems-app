@@ -21,6 +21,8 @@ const status = document.querySelector("#status");
 const rowsByDevice = new Map();
 const columns = ["จุดทดสอบ", "ค่า STD", "มาตรฐาน รอบ 1", "เครื่อง รอบ 1", "มาตรฐาน รอบ 2", "เครื่อง รอบ 2", "มาตรฐาน รอบ 3", "เครื่อง รอบ 3"];
 const outputs = ["standard", "mean", "error", "sd", "uca", "expanded"];
+// STD setpoints for systolic, diastolic, and pulse rate in NIBP workbook 137309.
+const nibpSetpoints = [[60, 120, 200], [30, 80, 150], [120, 80, 60]];
 const formatter = new Intl.NumberFormat("en-US", { maximumFractionDigits: 4 });
 const escapeValue = value => String(value).replace(/[&"<>]/g, char => ({
   "&": "&amp;", '"': "&quot;", "<": "&lt;", ">": "&gt;"
@@ -34,7 +36,9 @@ function render() {
   const infusion = device.value === "infusion";
   document.querySelector("#calStandardsHint").textContent = infusion
     ? "กรอก UUC setting และ Standard Reading 2 ครั้งต่อจุด ตามแบบ Infusion Analyzer"
-    : digital || nibp
+    : nibp
+    ? "ค่า STD กำหนดไว้ตามแบบสอบเทียบ NIBP กรอกเฉพาะค่าที่เครื่องอ่านทั้ง 3 รอบ"
+    : digital
     ? "กรอกค่า STD แล้วระบบใช้อ้างอิงค่านั้นในผลคำนวณทันที"
     : "กรอกค่า STD แล้วระบบเติมค่ามาตรฐานทั้ง 3 รอบให้ตามค่า STD อัตโนมัติ แก้แต่ละรอบได้";
   const entryColumns = infusion
@@ -50,7 +54,8 @@ function render() {
     : '<th scope="col" rowspan="2">จุดทดสอบ</th><th scope="col" rowspan="2">ค่า STD</th>' +
       (digital || nibp ? [1, 2, 3].map(round => '<th scope="col" rowspan="2">เครื่อง รอบ ' + round + '</th>').join("")
         : [1, 2, 3].map(round => '<th scope="colgroup" colspan="2">รอบที่ ' + round + '</th>').join(""))) +
-    '<th scope="colgroup" colspan="' + outputColumns.length + '">ผลคำนวณ</th><th scope="col" rowspan="2">ลบ</th></tr><tr>' +
+    '<th scope="colgroup" colspan="' + outputColumns.length + '">ผลคำนวณ</th>' +
+    (nibp ? "" : '<th scope="col" rowspan="2">ลบ</th>') + '</tr><tr>' +
     (infusion ? ["ครั้งที่ 1", "ครั้งที่ 2"] : digital || nibp ? [] : ["มาตรฐาน", "เครื่อง", "มาตรฐาน", "เครื่อง", "มาตรฐาน", "เครื่อง"])
       .concat(["Setting", "Mean", "Error", "SD", "uc", "Ureport"], outputColumns.includes("errorPercent") ? ["Error (%)"] : [], outputColumns.includes("cv") ? ["CV (%)"] : [])
       .map(label => '<th scope="col">' + label + '</th>').join("") + '</tr>';
@@ -60,16 +65,17 @@ function render() {
       const cells = entryColumns.map(({ label, index: col }) =>
         '<td><input type="number" step="any" placeholder="—" aria-label="' +
         label + ' จุดที่ ' + (index + 1) + '" data-col="' + col + '" value="' +
-        escapeValue(row[col]) + '"' + (col === 0 ? " readonly" : "") + '></td>').join("");
+        escapeValue(row[col]) + '"' + (col === 0 || (nibp && col === 1) ? ' readonly tabindex="-1"' : "") + '></td>').join("");
       return '<tr data-row="' + index + '">' + cells +
         outputColumns.map(key => '<td class="calc" data-output="' + key + '">—</td>').join("") +
-        '<td><button type="button" class="remove" data-remove="' + index +
-        '" aria-label="ลบจุดที่ ' + (index + 1) + '">×</button></td></tr>';
+        (nibp ? "" : '<td><button type="button" class="remove" data-remove="' + index +
+        '" aria-label="ลบจุดที่ ' + (index + 1) + '">×</button></td>') + '</tr>';
     }).join("");
     return '<section class="sheet" data-sheet="' + i + '"><div class="section-head"><h3>' +
-      config.title + '</h3><label class="unit">หน่วย <input data-unit maxlength="12" value="' +
+      config.title + (config.optional ? ' (ไม่บังคับ)' : '') + '</h3><label class="unit">หน่วย <input data-unit maxlength="12" value="' +
       escapeValue(unit) + '"></label></div><div class="scroll"><table aria-label="' +
-      config.title + '"><thead>' + tableHeader + '</thead><tbody>' + body + '</tbody></table></div><button type="button" class="add" data-add>+ เพิ่มจุดทดสอบ</button></section>';
+      config.title + '"><thead>' + tableHeader + '</thead><tbody>' + body + '</tbody></table></div>' +
+      (nibp ? '' : '<button type="button" class="add" data-add>+ เพิ่มจุดทดสอบ</button>') + '</section>';
   }).join("");
 
   budgets.innerHTML = infusion || nibp
@@ -101,6 +107,7 @@ function render() {
 function updateSheet(index) {
   const { rows, budget } = rowsByDevice.get(device.value)[index];
   const infusion = device.value === "infusion";
+  const nibp = device.value === "nibp";
   const table = sheets.querySelector('[data-sheet="' + index + '"]');
   const xray = device.value.startsWith("x-ray");
   const rowMeans = rows.map(row => {
@@ -118,14 +125,10 @@ function updateSheet(index) {
       budget: budget.map(numeric), errorRule: calibrationErrorRule(device.value, index)
     });
     const tr = table.querySelector('[data-row="' + rowIndex + '"]');
-    [...outputColumns].forEach(key => {
-      if (key === "cv") {
-        tr.querySelector('[data-output="cv"]').textContent = rowIndex === 0 && Number.isFinite(cv)
-          ? formatter.format(cv) : "—";
-        return;
-      }
-      const value = results[key];
-      tr.querySelector('[data-output="' + key + '"]').textContent = Number.isFinite(value)
+    tr.querySelectorAll("[data-output]").forEach(cell => {
+      const key = cell.dataset.output;
+      const value = key === "cv" ? (rowIndex === 0 ? cv : null) : results[key];
+      cell.textContent = Number.isFinite(value)
         ? formatter.format(Math.abs(value) < 0.00005 ? 0 : value) : "—";
     });
   });
@@ -161,12 +164,13 @@ sheets.addEventListener("input", event => {
 });
 
 sheets.addEventListener("keydown", event => {
-  if (event.key !== "Enter" || !event.target.matches("[data-col]")) return;
+  if (event.key !== "Enter" || !event.target.matches("[data-col]:not([readonly])")) return;
   event.preventDefault();
   const sheet = event.target.closest("[data-sheet]");
-  const inputs = Array.from(sheet.querySelectorAll("[data-col]"));
+  const inputs = Array.from(sheet.querySelectorAll("[data-col]:not([readonly])"));
   const next = inputs[inputs.indexOf(event.target) + 1];
-  (next ?? sheet.querySelector("[data-add]")).focus();
+  (next ?? sheet.querySelector("[data-add]") ??
+    sheet.nextElementSibling?.querySelector("[data-col]:not([readonly])"))?.focus();
 });
 
 sheets.addEventListener("click", event => {
@@ -185,7 +189,7 @@ sheets.addEventListener("click", event => {
     standardAuto.splice(Number(button.dataset.remove), 1);
     rows.forEach((row, rowIndex) => { row[0] = String(rowIndex + 1); });
     if (!rows.length) {
-      rows.push(["1", ...Array(7).fill("")]);
+      rows.push(blankMeasurementRow());
       standardAuto.push(Array(3).fill(true));
     }
     render();
@@ -200,11 +204,20 @@ budgets.addEventListener("input", event => {
 });
 
 
+function blankMeasurementRow(point = 1, nominal = "") {
+  return [String(point), String(nominal), ...Array(6).fill("")];
+}
+
 function stateFor() {
-  return devices[device.value].map(({ unit }) => ({
-    unit, rows: [["1", ...Array(7).fill("")]], standardAuto: [Array(3).fill(true)],
-    budget: ["infusion", "nibp"].includes(device.value) ? ["0", "0", "0", "0"] : Array(4).fill("")
-  }));
+  return devices[device.value].map(({ unit }, index) => {
+    const rows = device.value === "nibp"
+      ? nibpSetpoints[index].map((nominal, point) => blankMeasurementRow(point + 1, nominal))
+      : [blankMeasurementRow()];
+    return {
+      unit, rows, standardAuto: rows.map(() => Array(3).fill(true)),
+      budget: ["infusion", "nibp"].includes(device.value) ? ["0", "0", "0", "0"] : Array(4).fill("")
+    };
+  });
 }
 
 function clearCalibrationMeasurements() {
