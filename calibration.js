@@ -1216,8 +1216,8 @@
       if (recordIndex) doc.addPage();
       drawCertificatePage(record);
       let finalY = 289;
-      (record.measurements || []).forEach((sheet, sheetIndex) => {
-        if (devices[record.method]?.[sheetIndex]?.optional && !sheet.rows.length) return;
+      const tables = (record.measurements || []).flatMap((sheet, sheetIndex) => {
+        if (devices[record.method]?.[sheetIndex]?.optional && !sheet.rows.length) return [];
         const sheetTitle = (devices[record.method]?.[sheetIndex]?.title || typeNames[record.method] || "ผลทดสอบ")
           .replaceAll("SpO₂", "SpO2");
         const xray = record.method.startsWith("x-ray");
@@ -1245,26 +1245,51 @@
           if (xray) rowData.push(rowIndex === 0 && cv !== null ? certificateNumber(cv, 3) : "—");
           return rowData;
         });
-        doc.autoTable({
-          startY: finalY,
-          margin: { left: left + 42, right: left + 42, top: 290, bottom: 55 },
+        return [{
+          sheetIndex, rows, xray,
           head: [[{ content: sheetTitle + "  (" + sheet.unit + ")", colSpan: xray ? 5 : 4 }],
             [record.method === "infusion" ? "UUC setting" : "STD setting",
               record.method === "infusion" ? "STD Reading" : "Mean Reading",
               xray ? "Error (%)" : "Error", uncertaintyReport ? "Ureport" : "Accept value"]
               .concat(xray ? ["CV (%)"] : [])],
+        }];
+      });
+      if (record.method === "digital-bp") {
+        const fixedTables = tables.filter(table => usesNibpWorkbook(record.method, table.sheetIndex));
+        const levels = ["สูง", "กลาง", "ต่ำ"];
+        const groupRows = levels.flatMap((level, index) => fixedTables.flatMap(table => {
+          const point = fixedSetpoints[record.method][table.sheetIndex].at(-1 - index);
+          const label = { 0: "ความดันตัวบน (mmHg)", 1: "ความดันตัวล่าง (mmHg)", 3: "ชีพจร (bpm)" }[table.sheetIndex];
+          return table.rows.filter(row => Number(row[0]) === point)
+            .map(row => [level, label, ...row]);
+        }));
+        // Older records can contain different setpoints. Keep their original tables.
+        if (fixedTables.length === 3 && fixedTables.every(table => table.rows.length === 3) &&
+          groupRows.length === 9 && new Set(groupRows.map(row => row.slice(0, 2).join("|"))).size === 9) {
+          tables.splice(0, tables.length, {
+            grouped: true, rows: groupRows,
+            head: [[{ content: "Digital Blood Pressure", colSpan: 6 }],
+              ["ระดับ", "พารามิเตอร์", "STD setting", "Mean Reading", "Error", "Ureport"]]
+          }, ...tables.filter(table => !usesNibpWorkbook(record.method, table.sheetIndex)));
+        }
+      }
+      for (const { head, rows, xray, grouped } of tables) {
+        doc.autoTable({
+          startY: finalY,
+          margin: { left: left + 42, right: left + 42, top: 290, bottom: 55 },
+          head,
           body: rows,
           theme: "grid",
           styles: { font: PDF_FONT, fontSize: 10.5, halign: "center",
             cellPadding: { vertical: 1, horizontal: 3 }, lineColor: [90, 100, 105], lineWidth: .35 },
           headStyles: { font: PDF_FONT, fontStyle: "normal", fillColor: [255, 255, 255], textColor: [35, 43, 50], lineColor: [60, 70, 75] },
           tableWidth: xray ? "auto" : 399,
-          columnStyles: xray ? {} : { 0: { cellWidth: 98 }, 1: { cellWidth: 98 }, 2: { cellWidth: 85 }, 3: { cellWidth: 118 } },
+          columnStyles: xray || grouped ? {} : { 0: { cellWidth: 98 }, 1: { cellWidth: 98 }, 2: { cellWidth: 85 }, 3: { cellWidth: 118 } },
           rowPageBreak: "avoid",
           didDrawPage: () => drawCertificatePage(record)
         });
         finalY = doc.lastAutoTable.finalY + 4;
-      });
+      }
       const references = standardRows(record.standard_reference);
       doc.autoTable({
         startY: finalY + 3,
