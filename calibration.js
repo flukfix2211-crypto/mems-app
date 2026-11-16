@@ -887,13 +887,13 @@
     get("calSave").textContent = record ? "บันทึกการแก้ไข" : "บันทึกผลสอบเทียบ";
     get("calBack").textContent = record ? "← กลับไปประวัติ" : "← กลับไปคิวสอบเทียบ";
     const standardInput = get("calStandardReference");
-    const fixedStandard = tool.method === "nibp" && !record;
+    const fixedStandard = Boolean(fixedSetpoints[tool.method]) && !record;
     standardInput.readOnly = fixedStandard;
     if (fixedStandard) {
       standardInput.value = nibpStandard;
       get("calAccessStandard").value = "";
       get("calAccessStandardField").hidden = true;
-      get("calStandardHint").textContent = "เครื่องมาตรฐานที่กำหนดสำหรับ NIBP ตามแบบสอบเทียบ";
+      get("calStandardHint").textContent = "เครื่องมาตรฐานที่กำหนดตามแบบสอบเทียบ NIBP";
     } else if (!await loadFormStandardOptions(tool, newToolForm && !draft)) {
       return;
     }
@@ -1013,7 +1013,7 @@
       calibrated_on: get("calDate").value,
       certificate_no: certificateNo,
       operator_name: operator,
-      standard_reference: activeTool.method === "nibp" && !wasEditing
+      standard_reference: fixedSetpoints[activeTool.method] && !wasEditing
         ? nibpStandard : get("calStandardReference").value.trim(),
       ambient_temperature: numeric(get("calAmbientTemperature").value),
       relative_humidity: numeric(get("calHumidity").value),

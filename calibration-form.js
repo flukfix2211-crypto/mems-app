@@ -23,6 +23,10 @@ const columns = ["จุดทดสอบ", "ค่า STD", "มาตรฐ�
 const outputs = ["standard", "mean", "error", "sd", "uca", "expanded"];
 // STD setpoints for systolic, diastolic, and pulse rate in NIBP workbook 137309.
 const nibpSetpoints = [[60, 120, 200], [30, 80, 150], [120, 80, 60]];
+const fixedSetpoints = {
+  nibp: nibpSetpoints,
+  "digital-bp": [nibpSetpoints[0], nibpSetpoints[1], null, nibpSetpoints[2], null]
+};
 const formatter = new Intl.NumberFormat("en-US", { maximumFractionDigits: 4 });
 const escapeValue = value => String(value).replace(/[&"<>]/g, char => ({
   "&": "&amp;", '"': "&quot;", "<": "&lt;", ">": "&gt;"
@@ -39,7 +43,7 @@ function render() {
     : nibp
     ? "ค่า STD กำหนดไว้ตามแบบสอบเทียบ NIBP กรอกเฉพาะค่าที่เครื่องอ่านทั้ง 3 รอบ"
     : digital
-    ? "กรอกค่า STD แล้วระบบใช้อ้างอิงค่านั้นในผลคำนวณทันที"
+    ? "ค่า STD ของความดันตัวบน ตัวล่าง และชีพจรกำหนดไว้แล้ว หากวัดความดันเฉลี่ยหรือ SpO₂ ให้กรอกค่า STD และค่าที่เครื่องอ่าน 3 รอบ"
     : "กรอกค่า STD แล้วระบบเติมค่ามาตรฐานทั้ง 3 รอบให้ตามค่า STD อัตโนมัติ แก้แต่ละรอบได้";
   const entryColumns = infusion
     ? [{ label: "จุดทดสอบ", index: 0 }, { label: "UUC setting", index: 1 },
@@ -54,28 +58,30 @@ function render() {
     : '<th scope="col" rowspan="2">จุดทดสอบ</th><th scope="col" rowspan="2">ค่า STD</th>' +
       (digital || nibp ? [1, 2, 3].map(round => '<th scope="col" rowspan="2">เครื่อง รอบ ' + round + '</th>').join("")
         : [1, 2, 3].map(round => '<th scope="colgroup" colspan="2">รอบที่ ' + round + '</th>').join(""))) +
-    '<th scope="colgroup" colspan="' + outputColumns.length + '">ผลคำนวณ</th>' +
-    (nibp ? "" : '<th scope="col" rowspan="2">ลบ</th>') + '</tr><tr>' +
+    '<th scope="colgroup" colspan="' + outputColumns.length + '">ผลคำนวณ</th>';
+  const resultHeader = '<tr>' +
     (infusion ? ["ครั้งที่ 1", "ครั้งที่ 2"] : digital || nibp ? [] : ["มาตรฐาน", "เครื่อง", "มาตรฐาน", "เครื่อง", "มาตรฐาน", "เครื่อง"])
       .concat(["Setting", "Mean", "Error", "SD", "uc", "Ureport"], outputColumns.includes("errorPercent") ? ["Error (%)"] : [], outputColumns.includes("cv") ? ["CV (%)"] : [])
       .map(label => '<th scope="col">' + label + '</th>').join("") + '</tr>';
   sheets.innerHTML = devices[device.value].map((config, i) => {
     const { rows, unit } = state[i];
+    const fixed = Boolean(fixedSetpoints[device.value]?.[i]);
     const body = rows.map((row, index) => {
       const cells = entryColumns.map(({ label, index: col }) =>
         '<td><input type="number" step="any" placeholder="—" aria-label="' +
         label + ' จุดที่ ' + (index + 1) + '" data-col="' + col + '" value="' +
-        escapeValue(row[col]) + '"' + (col === 0 || (nibp && col === 1) ? ' readonly tabindex="-1"' : "") + '></td>').join("");
+        escapeValue(row[col]) + '"' + (col === 0 || (fixed && col === 1) ? ' readonly tabindex="-1"' : "") + '></td>').join("");
       return '<tr data-row="' + index + '">' + cells +
         outputColumns.map(key => '<td class="calc" data-output="' + key + '">—</td>').join("") +
-        (nibp ? "" : '<td><button type="button" class="remove" data-remove="' + index +
+        (fixed ? "" : '<td><button type="button" class="remove" data-remove="' + index +
         '" aria-label="ลบจุดที่ ' + (index + 1) + '">×</button></td>') + '</tr>';
     }).join("");
     return '<section class="sheet" data-sheet="' + i + '"><div class="section-head"><h3>' +
       config.title + (config.optional ? ' (ไม่บังคับ)' : '') + '</h3><label class="unit">หน่วย <input data-unit maxlength="12" value="' +
       escapeValue(unit) + '"></label></div><div class="scroll"><table aria-label="' +
-      config.title + '"><thead>' + tableHeader + '</thead><tbody>' + body + '</tbody></table></div>' +
-      (nibp ? '' : '<button type="button" class="add" data-add>+ เพิ่มจุดทดสอบ</button>') + '</section>';
+      config.title + '"><thead>' + tableHeader + (fixed ? "" : '<th scope="col" rowspan="2">ลบ</th>') +
+      '</tr>' + resultHeader + '</thead><tbody>' + body + '</tbody></table></div>' +
+      (fixed ? '' : '<button type="button" class="add" data-add>+ เพิ่มจุดทดสอบ</button>') + '</section>';
   }).join("");
 
   budgets.innerHTML = infusion || nibp
@@ -210,8 +216,9 @@ function blankMeasurementRow(point = 1, nominal = "") {
 
 function stateFor() {
   return devices[device.value].map(({ unit }, index) => {
-    const rows = device.value === "nibp"
-      ? nibpSetpoints[index].map((nominal, point) => blankMeasurementRow(point + 1, nominal))
+    const setpoints = fixedSetpoints[device.value]?.[index];
+    const rows = setpoints
+      ? setpoints.map((nominal, point) => blankMeasurementRow(point + 1, nominal))
       : [blankMeasurementRow()];
     return {
       unit, rows, standardAuto: rows.map(() => Array(3).fill(true)),
