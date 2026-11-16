@@ -1094,7 +1094,7 @@
   const defaultPdfLayout = {
     orientation: "portrait", titleAlign: "center", title: "Certificate of Testing",
     titleSize: 19, hospital: "Phaholpolpayuhasena Hospital", center: "Medical Device Center",
-    headerSize: 17, titleY: 0, logoX: 0, logoY: 0, logoScale: 100, logo: "",
+    headerSize: 17, titleY: 0, logoX: 0, logoY: 0, logoScale: 100, logo: "", fontData: "", fontName: "",
     comment: "Comment : This report certifies the test results as of the date, location and the conditions of testing only.",
     address: "โรงพยาบาลพหลพลพยุหเสนา  572 ถ.แสงชูโต  ต.ปากแพรก  อ.เมืองกาญจนบุรี 71000 โทร 034-587800"
   };
@@ -1106,8 +1106,25 @@
     }
   }
 
+  function applyCertificateFont(doc, fontData) {
+    if (!fontData) return PDF_FONT;
+    const name = "CalibrationUpload";
+    const filename = name + ".ttf";
+    doc.addFileToVFS(filename, fontData);
+    doc.addFont(filename, name, "normal");
+    doc.setFont(name, "normal");
+    const metadata = doc.getFont().metadata;
+    if (typeof metadata?.characterToGlyph !== "function" ||
+      [..."สอบเทียบเครื่องมือแพทย์ความดันผู้อนุมัติABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"]
+        .some(char => !metadata.characterToGlyph(char.codePointAt(0)))) {
+      throw new Error("เลือกไฟล์ TTF ที่รองรับภาษาไทย อังกฤษ และตัวเลข");
+    }
+    return name;
+  }
+
   async function buildPdf(records, layout = loadPdfLayout()) {
     const doc = await newThaiPdf({ orientation: layout.orientation });
+    const certificateFont = applyCertificateFont(doc, layout.fontData);
     const signerSettings = await loadCalibrationSignatories();
     const signatories = {};
     for (const role of ["tested", "approved"]) {
@@ -1138,11 +1155,11 @@
     const right = pageW - 46;
     const mm = value => Number(value) * 72 / 25.4;
     const text = (value, x, y, size = 11, options) => {
-      doc.setFont(PDF_FONT, "normal").setFontSize(size).setTextColor(35, 43, 50)
+      doc.setFont(certificateFont, "normal").setFontSize(size).setTextColor(35, 43, 50)
         .text(String(value ?? "—"), x, y, options || {});
     };
     const fittedText = (value, x, y, size, width, align = "left") => {
-      doc.setFont(PDF_FONT, "normal").setFontSize(size);
+      doc.setFont(certificateFont, "normal").setFontSize(size);
       const measured = doc.getTextWidth(value);
       text(value, x, y, measured > width ? size * width / measured : size, { align });
     };
@@ -1226,8 +1243,8 @@
           [index + 1, [manufacturer, model].filter(value => value !== "—").join(" ") || "—",
             serial, cert, calDate, dueDate]) : references,
         theme: "grid",
-        styles: { font: PDF_FONT, fontSize: 10, halign: "center", cellPadding: 2, lineColor: [110, 120, 125], lineWidth: .35 },
-        headStyles: { font: PDF_FONT, fontStyle: "normal", fillColor: [255, 255, 255], textColor: [35, 43, 50] },
+        styles: { font: certificateFont, fontSize: 10, halign: "center", cellPadding: 2, lineColor: [110, 120, 125], lineWidth: .35 },
+        headStyles: { font: certificateFont, fontStyle: "normal", fillColor: [255, 255, 255], textColor: [35, 43, 50] },
         pageBreak: "avoid",
         didDrawPage: onPage
       });
@@ -1306,9 +1323,9 @@
           head,
           body: rows,
           theme: "grid",
-          styles: { font: PDF_FONT, fontSize: 10.5, halign: "center",
+          styles: { font: certificateFont, fontSize: 10.5, halign: "center",
             cellPadding: { vertical: 1, horizontal: 3 }, lineColor: [90, 100, 105], lineWidth: .35 },
-          headStyles: { font: PDF_FONT, fontStyle: "normal", fillColor: [255, 255, 255], textColor: [35, 43, 50], lineColor: [60, 70, 75] },
+          headStyles: { font: certificateFont, fontStyle: "normal", fillColor: [255, 255, 255], textColor: [35, 43, 50], lineColor: [60, 70, 75] },
           tableWidth: xray ? "auto" : 399,
           columnStyles: xray || grouped ? {} : { 0: { cellWidth: 98 }, 1: { cellWidth: 98 }, 2: { cellWidth: 85 }, 3: { cellWidth: 118 } },
           rowPageBreak: "avoid",
@@ -1382,9 +1399,11 @@
   const pdfDialog = get("calPdfDialog");
   const pdfForm = get("calPdfLayoutForm");
   const pdfLogo = get("calPdfLogo");
+  const pdfFont = get("calPdfFont");
   const pdfPreview = get("calPdfLayoutPreview");
   const pdfStatus = get("calPdfLayoutStatus");
   let draftLogo = "";
+  let draftFont = { fontData: "", fontName: "" };
   let previewUrl = "";
   let previewVersion = 0;
 
@@ -1403,12 +1422,21 @@
     }
     draftLogo = layout.logo;
     pdfLogo.value = "";
+    setDraftFont(layout.fontData, layout.fontName);
     get("calPdfLogoPreview").src = draftLogo || "hospital-seal.png";
     clearLayoutPreview();
   }
 
+  function setDraftFont(fontData, fontName) {
+    draftFont = { fontData, fontName };
+    pdfFont.value = "";
+    get("calPdfFontName").textContent = fontName || "TH Sarabun (ค่าเริ่มต้น)";
+    get("calPdfClearFont").disabled = !fontData;
+    clearLayoutPreview();
+  }
+
   function readLayoutForm() {
-    const layout = { ...defaultPdfLayout, logo: draftLogo };
+    const layout = { ...defaultPdfLayout, logo: draftLogo, ...draftFont };
     for (const [name, value] of new FormData(pdfForm)) {
       layout[name] = typeof defaultPdfLayout[name] === "number" ? Number(value) : value.trim();
     }
@@ -1423,6 +1451,7 @@
   get("calPdfClose").addEventListener("click", () => pdfDialog.close());
   pdfDialog.addEventListener("close", () => {
     pdfLogo.value = "";
+    pdfFont.value = "";
     clearLayoutPreview();
   });
   get("calPdfReset").addEventListener("click", () => {
@@ -1430,6 +1459,36 @@
     pdfStatus.textContent = "คืนค่าเริ่มต้นแล้ว กดบันทึกเพื่อใช้งาน";
   });
   pdfForm.addEventListener("input", clearLayoutPreview);
+  get("calPdfClearFont").addEventListener("click", () => {
+    setDraftFont("", "");
+    pdfStatus.textContent = "เลือกฟอนต์เดิมแล้ว กดบันทึกเพื่อใช้งาน";
+  });
+  pdfFont.addEventListener("change", async () => {
+    const file = pdfFont.files[0];
+    if (!file) return;
+    try {
+      if (!/\.ttf$/i.test(file.name) || file.size > 2 * 1024 * 1024) {
+        throw new Error("เลือกไฟล์ .ttf ขนาดไม่เกิน 2 MB");
+      }
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      if (pdfFont.files[0] !== file || !pdfDialog.open) return;
+      if (bytes.length < 12 || new DataView(bytes.buffer).getUint32(0) !== 0x00010000) {
+        throw new Error("ไฟล์นี้ไม่ใช่ฟอนต์ TrueType (.ttf) ที่รองรับ");
+      }
+      let binary = "";
+      for (let i = 0; i < bytes.length; i += 0x8000) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+      }
+      const fontData = btoa(binary);
+      applyCertificateFont(new window.jspdf.jsPDF(), fontData);
+      setDraftFont(fontData, file.name);
+      pdfStatus.textContent = "โหลดฟอนต์แล้ว ดูตัวอย่าง PDF หรือกดบันทึกการตั้งค่าได้";
+    } catch (error) {
+      if (pdfFont.files[0] === file) pdfStatus.textContent = error.message || "อ่านฟอนต์ไม่ได้";
+    } finally {
+      if (pdfFont.files[0] === file) pdfFont.value = "";
+    }
+  });
   pdfLogo.addEventListener("change", async () => {
     const file = pdfLogo.files[0];
     if (!file) return;
@@ -1460,7 +1519,7 @@
   });
   pdfForm.addEventListener("submit", event => {
     event.preventDefault();
-    if (pdfLogo.files.length) return;
+    if (pdfLogo.files.length || pdfFont.files.length) return;
     try {
       localStorage.setItem(pdfLayoutKey, JSON.stringify(readLayoutForm()));
       pdfStatus.textContent = "บันทึกโครงร่าง PDF แล้ว";
@@ -1469,7 +1528,7 @@
     }
   });
   get("calPdfPreviewLayout").addEventListener("click", async () => {
-    if (!pdfForm.reportValidity() || pdfLogo.files.length) return;
+    if (!pdfForm.reportValidity() || pdfLogo.files.length || pdfFont.files.length) return;
     clearLayoutPreview();
     const version = previewVersion;
     pdfStatus.textContent = "กำลังสร้างตัวอย่าง PDF";
