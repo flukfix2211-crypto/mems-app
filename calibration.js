@@ -1357,9 +1357,9 @@
           const imageHeight = image.height * scale;
           doc.addImage(signer.signature_data_url, "PNG", centerX + offsetX - imageWidth / 2, signY - imageHeight - 7 + offsetY, imageWidth, imageHeight);
         }
-        text(signer?.name || fallbackName || "", centerX, signY + 30, 11, { align: "center", maxWidth: width });
+        text(signer?.name || fallbackName || "", centerX, signY + 16, 11, { align: "center", maxWidth: width });
         text(signer?.position || (workbookLayout ? "" : "นายช่างเทคนิค (เครื่องมือแพทย์)"),
-          centerX, signY + 52, 10, { align: "center", maxWidth: width });
+          centerX, signY + 30, 10, { align: "center", maxWidth: width });
       };
       const signerWidth = (right - left) / 2;
       drawSigner(workbookLayout ? "Calibration by" : "Tested by", signatories.tested, record.operator_name,
