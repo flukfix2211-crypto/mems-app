@@ -1261,7 +1261,9 @@
       let finalY = 289;
       const tables = (record.measurements || []).flatMap((sheet, sheetIndex) => {
         if (devices[record.method]?.[sheetIndex]?.optional && !sheet.rows.length) return [];
-        const sheetTitle = (devices[record.method]?.[sheetIndex]?.title || typeNames[record.method] || "ผลทดสอบ")
+        const digitalTitles = ["Systolic", "Dias", "Mean Arterial Pressure", "Pulse Rate", "SpO2"];
+        const sheetTitle = ((workbookLayout ? digitalTitles[sheetIndex] : null) ||
+          devices[record.method]?.[sheetIndex]?.title || typeNames[record.method] || "ผลทดสอบ")
           .replaceAll("SpO₂", "SpO2");
         const xray = record.method.startsWith("x-ray");
         const rowMeans = (sheet.rows || []).map(row => {
@@ -1302,11 +1304,11 @@
       });
       if (record.method === "digital-bp") {
         const fixedTables = tables.filter(table => usesNibpWorkbook(record.method, table.sheetIndex));
-        const levels = ["สูง", "กลาง", "ต่ำ"];
+        const levels = ["High", "Medium", "Low"];
         const groupRows = levels.flatMap((level, index) => fixedTables.flatMap(table => {
           const point = fixedSetpoints[record.method][table.sheetIndex].at(-1 - index);
-          const label = { 0: "ความดันตัวบน (mmHg)", 1: "ความดันตัวล่าง (mmHg)",
-            3: "ชีพจรช่วง" + levels[levels.length - 1 - index] + " (bpm)" }[table.sheetIndex];
+          const label = { 0: "Systolic (mmHg)", 1: "Dias (mmHg)",
+            3: "Pulse Rate, " + levels[levels.length - 1 - index] + " (bpm)" }[table.sheetIndex];
           return table.rows.filter(row => Number(row[0]) === point)
             .map(row => [level, label, ...row]);
         }));
@@ -1315,8 +1317,7 @@
           groupRows.length === 9 && new Set(groupRows.map(row => row.slice(0, 2).join("|"))).size === 9) {
           tables.splice(0, tables.length, {
             grouped: true, rows: groupRows,
-            head: [[{ content: "ตารางรายงานความดันโลหิต", colSpan: 6 }],
-              ["ช่วงความดัน", { content: "STD Setting", colSpan: 2 }, "UUC Reading", "Error", "Uncertainty"]]
+            head: [["Pressure Range", { content: "STD Setting", colSpan: 2 }, "UUC Reading", "Error", "Uncertainty"]]
           }, ...tables.filter(table => !usesNibpWorkbook(record.method, table.sheetIndex)));
         }
       }
