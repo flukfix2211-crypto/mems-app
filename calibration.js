@@ -86,10 +86,12 @@
   const standardDialog = get("calStandardDialog");
   const standardEdit = get("calStandardEdit");
   const standardStatus = get("calStandardStatus");
+  const standardDelete = get("calStandardDelete");
   let standardCatalogue = new Map();
 
   function fillStandardEditor() {
     const item = standardCatalogue.get(standardEdit.value);
+    standardDelete.disabled = !item || get("calStandardSave").disabled;
     for (const name of Object.keys(standardFields(""))) {
       standardEditor.elements.namedItem(name).value = item?.[name] || "";
     }
@@ -118,7 +120,10 @@
         if (!item.methods.includes(method)) item.methods.push(method);
       }
     }
-    for (const item of rows) standardCatalogue.set(item.source_reference, item);
+    for (const item of rows) {
+      if (item.removed) standardCatalogue.delete(item.source_reference);
+      else standardCatalogue.set(item.source_reference, item);
+    }
     const choices = [...standardCatalogue].map(([key, item]) => [key, standardReference(item)]);
     choices.sort((a, b) => a[1].localeCompare(b[1], "th"));
     setOptions(standardEdit, choices, "เพิ่มเครื่องมาตรฐานใหม่");
@@ -132,8 +137,8 @@
       return label;
     });
     get("calStandardMethods").replaceChildren(...labels);
-    fillStandardEditor();
     get("calStandardSave").disabled = !available;
+    fillStandardEditor();
     standardStatus.textContent = available ? "" : "ต้องอัปเดตฐานข้อมูลก่อนจึงจะบันทึกการตั้งค่าได้";
     standardDialog.showModal();
   }
@@ -141,10 +146,32 @@
   get("calStandardSettings").addEventListener("click", guarded(openStandardSettings, get("calStandardSettings")));
   get("calStandardClose").addEventListener("click", () => standardDialog.close());
   standardEdit.addEventListener("change", fillStandardEditor);
+  standardDelete.addEventListener("click", async () => {
+    const item = standardCatalogue.get(standardEdit.value);
+    const save = get("calStandardSave");
+    if (!memsIsAdmin() || !item || save.disabled ||
+      !confirm("ลบเครื่องมาตรฐาน " + standardReference(item) + " ออกจากรายการใช้งาน?")) return;
+    standardDelete.disabled = standardEdit.disabled = save.disabled = true;
+    try {
+      const { error } = await supabase.from(standardTable).upsert({ ...item, removed: true },
+        { onConflict: "source_reference" });
+      if (error) throw error;
+      standardCatalogue.delete(item.source_reference);
+      standardEdit.selectedOptions[0].remove();
+      standardEdit.value = "";
+      fillStandardEditor();
+      standardStatus.textContent = "ลบเครื่องมาตรฐานออกจากรายการแล้ว";
+    } catch (error) {
+      standardStatus.textContent = error.message || "ลบเครื่องมาตรฐานไม่สำเร็จ";
+    } finally {
+      standardEdit.disabled = save.disabled = false;
+      standardDelete.disabled = !standardEdit.value;
+    }
+  });
   standardEditor.addEventListener("submit", async event => {
     event.preventDefault();
     const button = get("calStandardSave");
-    if (button.disabled) return;
+    if (button.disabled || !memsIsAdmin()) return;
     const data = new FormData(standardEditor);
     const item = Object.fromEntries(Object.keys(standardFields("")).map(key => [key, data.get(key).trim()]));
     if (!item.manufacturer || Object.values(item).some(value => /\s+\/\s+| · /.test(value))) {
@@ -160,6 +187,7 @@
     item.methods = data.getAll("methods");
     item.source_reference = standardEdit.value || "new:" + crypto.randomUUID();
     button.disabled = true;
+    standardDelete.disabled = true;
     standardEdit.disabled = true;
     standardStatus.textContent = "กำลังบันทึก…";
     try {
@@ -175,6 +203,7 @@
     } finally {
       button.disabled = false;
       standardEdit.disabled = false;
+      standardDelete.disabled = !standardEdit.value;
     }
   });
 
@@ -887,14 +916,18 @@
     get("calSave").textContent = record ? "บันทึกการแก้ไข" : "บันทึกผลสอบเทียบ";
     get("calBack").textContent = record ? "← กลับไปประวัติ" : "← กลับไปคิวสอบเทียบ";
     const standardInput = get("calStandardReference");
-    const fixedStandard = Boolean(fixedSetpoints[tool.method]) && !record;
+    const { rows: managed } = await loadStandardEquipment();
+    if (activeTool !== tool) return;
+    const fixedEquipment = managed.find(item => item.source_reference === standardKey(nibpStandard));
+    const fixedMethod = Boolean(fixedSetpoints[tool.method]) && !record;
+    const fixedStandard = fixedMethod && !fixedEquipment?.removed;
     standardInput.readOnly = fixedStandard;
     if (fixedStandard) {
-      standardInput.value = nibpStandard;
+      standardInput.value = fixedEquipment ? standardReference(fixedEquipment) : nibpStandard;
       get("calAccessStandard").value = "";
       get("calAccessStandardField").hidden = true;
       get("calStandardHint").textContent = "เครื่องมาตรฐานที่กำหนดตามแบบสอบเทียบ NIBP";
-    } else if (!await loadFormStandardOptions(tool, newToolForm && !draft)) {
+    } else if (!await loadFormStandardOptions(tool, fixedMethod || (newToolForm && !draft), managed)) {
       return;
     }
     if (!record) await ensureCertificateForDate();
@@ -920,24 +953,22 @@
     get("calFormTitle").focus();
   }
 
-  async function loadFormStandardOptions(tool, fillDefault) {
+  async function loadFormStandardOptions(tool, fillDefault, managed) {
     const { data: standard, error: standardError } = await supabase.from("mems_calibration_standards")
       .select("standard_reference,source_note").eq("method", tool.method).maybeSingle();
     if (standardError) throw standardError;
     if (activeTool !== tool) return;
-    const { rows: managed } = await loadStandardEquipment();
-    if (activeTool !== tool) return;
     const overrides = new Map(managed.map(item => [item.source_reference, item]));
     const resolve = value => {
       const item = overrides.get(standardKey(value));
-      return item ? (item.methods.includes(tool.method) ? standardReference(item) : "") : value;
+      return item ? (!item.removed && item.methods.includes(tool.method) ? standardReference(item) : "") : value;
     };
     const reference = workbookStandards[tool.method + ":" + tool.tool_code];
     const historical = historicalStandard(tool.method, standard?.standard_reference);
     const defaults = splitStandards(reference || historical).map(resolve).filter(Boolean);
     const options = [...new Set([
       ...defaults, ...accessStandards(tool.method).map(resolve),
-      ...managed.filter(item => item.methods.includes(tool.method)).map(standardReference)
+      ...managed.filter(item => !item.removed && item.methods.includes(tool.method)).map(standardReference)
     ].filter(Boolean))];
     const select = get("calAccessStandard");
     setOptions(select, options.map(value => [value, value]), "เลือกเครื่องที่ใช้จริง");
@@ -1013,8 +1044,7 @@
       calibrated_on: get("calDate").value,
       certificate_no: certificateNo,
       operator_name: operator,
-      standard_reference: fixedSetpoints[activeTool.method] && !wasEditing
-        ? nibpStandard : get("calStandardReference").value.trim(),
+      standard_reference: get("calStandardReference").value.trim(),
       ambient_temperature: numeric(get("calAmbientTemperature").value),
       relative_humidity: numeric(get("calHumidity").value),
       notes: get("calNotes").value.trim(),
@@ -1580,6 +1610,7 @@
   guarded(async () => {
     const profile = await memsGuard("calibration");
     if (!profile) return;
+    get("calStandardSettings").hidden = !memsIsAdmin();
     operatorName = profile.display_name || "";
     await loadCalibrationOperators().catch(error => {
       console.warn("โหลดรายชื่อผู้ปฏิบัติงานจาก PM ไม่สำเร็จ", error);
