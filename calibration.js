@@ -1349,7 +1349,6 @@
         left, signerWidth, signerSettings.preferences.tested);
       drawSigner("Approved by", signatories.approved, "", right - signerWidth, signerWidth, signerSettings.preferences.approved);
       if (workbookLayout) {
-        text("วันที่ออกรายงาน ........ / ........ / ........", right, pageH - 53, 10, { align: "right" });
         text("End of Certificate", right, pageH - 41, 8.5, { align: "right" });
       }
       fittedText(layout.comment, left, pageH - 48, 8.5, right - left);
