@@ -1239,7 +1239,7 @@
       doc.autoTable({
         startY,
         margin: { left: left + 43, right: left + 43, top: 289, bottom: workbook ? 200 : 181 },
-        head: [[{ content: workbook ? "ความสามารถในการตรวจสอบย้อนกลับ" : "Standard Used",
+        head: [[{ content: "Standard Used",
           colSpan: 6, styles: { halign: "left", fontSize: 12, lineWidth: 0 } }],
         workbook ? ["Item", "Instrument", "S/N", "Cer.No", "Cal Date", "Due Date"]
           : ["Manufacture", "Model", "S/N", "Cal date", "Cert No.", "Due date"]],
@@ -1261,7 +1261,7 @@
       let finalY = 289;
       const tables = (record.measurements || []).flatMap((sheet, sheetIndex) => {
         if (devices[record.method]?.[sheetIndex]?.optional && !sheet.rows.length) return [];
-        const digitalTitles = ["Systolic", "Dias", "Mean Arterial Pressure", "Pulse Rate", "SpO2"];
+        const digitalTitles = ["Systolic", "Diastolic", "Mean Arterial Pressure", "Pulse Rate", "SpO2"];
         const sheetTitle = ((workbookLayout ? digitalTitles[sheetIndex] : null) ||
           devices[record.method]?.[sheetIndex]?.title || typeNames[record.method] || "ผลทดสอบ")
           .replaceAll("SpO₂", "SpO2");
@@ -1307,7 +1307,7 @@
         const levels = ["High", "Medium", "Low"];
         const groupRows = levels.flatMap((level, index) => fixedTables.flatMap(table => {
           const point = fixedSetpoints[record.method][table.sheetIndex].at(-1 - index);
-          const label = { 0: "Systolic (mmHg)", 1: "Dias (mmHg)",
+          const label = { 0: "Systolic (mmHg)", 1: "Diastolic (mmHg)",
             3: "Pulse Rate, " + levels[levels.length - 1 - index] + " (bpm)" }[table.sheetIndex];
           return table.rows.filter(row => Number(row[0]) === point)
             .map(row => [level, label, ...row]);
@@ -1323,29 +1323,19 @@
       }
       for (const { head, rows, xray, grouped } of tables) {
         const resultTableWidth = 399;
-        const resultRule = y => doc.setDrawColor(60, 70, 75).setLineWidth(.55)
-          .line(left + 42, y, left + 42 + resultTableWidth, y);
         doc.autoTable({
           startY: finalY,
           margin: { left: left + 42, right: left + 42, top: 290, bottom: 55 },
           head,
           body: rows,
-          theme: workbookLayout ? "plain" : "grid",
+          theme: "grid",
           styles: { font: certificateFont, fontSize: 10.5, halign: "center",
-            cellPadding: { vertical: 1, horizontal: 3 }, lineColor: [90, 100, 105], lineWidth: workbookLayout ? 0 : .35 },
+            cellPadding: { vertical: 1, horizontal: 3 }, lineColor: [90, 100, 105], lineWidth: .35 },
           headStyles: { font: certificateFont, fontStyle: "normal", fillColor: [255, 255, 255], textColor: [35, 43, 50], lineColor: [60, 70, 75] },
           tableWidth: xray ? "auto" : resultTableWidth,
           columnStyles: xray || grouped ? {} : { 0: { cellWidth: 98 }, 1: { cellWidth: 98 }, 2: { cellWidth: 85 }, 3: { cellWidth: 118 } },
           rowPageBreak: "avoid",
-          didDrawCell: ({ section, row, column, cell }) => {
-            if (!workbookLayout || section !== "head" || column.index !== 0) return;
-            if (row.index === 0) resultRule(cell.y);
-            if (row.index === head.length - 1) resultRule(cell.y + cell.height);
-          },
-          didDrawPage: ({ cursor }) => {
-            if (workbookLayout) resultRule(cursor.y);
-            drawCertificatePage(record);
-          }
+          didDrawPage: () => drawCertificatePage(record)
         });
         finalY = doc.lastAutoTable.finalY + 4;
       }
