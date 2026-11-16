@@ -183,6 +183,17 @@
     if (entries.some(([value]) => String(value) === previous)) select.value = previous;
   }
 
+  function setRegistrationDepartments(names) {
+    departments = [...new Set(names)].sort((left, right) => left.localeCompare(right, "th"));
+    setOptions(get("calRegisterDepartment"), departments.map(name => [name, name]), "เลือกหน่วยงาน");
+  }
+
+  async function fetchCalibrationDepartments() {
+    const rows = await fetchAllPages(() => supabase.from("mems_calibration_departments")
+      .select("name").order("name"));
+    return rows.map(row => row.name);
+  }
+
   const signatureBlue = "#1554a3";
 
   function recolorSignature(dataUrl) {
@@ -1395,6 +1406,50 @@
     get("calRegister").inert = true;
     try { await registerTool(); } finally { get("calRegister").inert = false; }
   }, get("calRegisterSave")));
+  const departmentDialog = get("calDepartmentDialog");
+  const departmentForm = get("calDepartmentForm");
+  const departmentSave = get("calDepartmentSave");
+  const departmentStatus = get("calDepartmentStatus");
+
+  get("calDepartmentOpen").addEventListener("click", () => {
+    departmentForm.reset();
+    departmentStatus.textContent = "";
+    departmentDialog.showModal();
+  });
+  get("calDepartmentClose").addEventListener("click", () => departmentDialog.close());
+  departmentDialog.addEventListener("cancel", event => {
+    if (departmentSave.disabled) event.preventDefault();
+  });
+  departmentForm.addEventListener("submit", guarded(async () => {
+    const name = departmentForm.elements.namedItem("name").value.trim();
+    if (!name || departments.some(department => department.toLowerCase() === name.toLowerCase())) {
+      departmentStatus.textContent = name ? "มีหน่วยงานชื่อนี้แล้ว" : "กรุณากรอกชื่อหน่วยงาน";
+      return;
+    }
+
+    get("calDepartmentClose").disabled = true;
+    departmentStatus.textContent = "กำลังบันทึก…";
+    try {
+      const { error } = await supabase.from("mems_calibration_departments").insert({ name });
+      if (error?.code === "23505") {
+        setRegistrationDepartments([...departments, ...await fetchCalibrationDepartments()]);
+        departmentStatus.textContent = "มีหน่วยงานชื่อนี้แล้ว";
+        return;
+      }
+      if (error) throw error;
+
+      setRegistrationDepartments([...departments, name]);
+      get("calRegisterDepartment").value = name;
+      departmentDialog.close();
+      notify("เพิ่มหน่วยงาน " + name + " แล้ว");
+    } catch (error) {
+      console.warn("บันทึกหน่วยงานสอบเทียบไม่สำเร็จ", error);
+      departmentStatus.textContent = "บันทึกหน่วยงานไม่สำเร็จ กรุณาลองใหม่";
+    } finally {
+      get("calDepartmentClose").disabled = false;
+    }
+  }, departmentSave));
+
   get("calRegisterBack").addEventListener("click", openPicker);
   get("calAccessStandard").addEventListener("change", guarded(() => {
     const select = get("calAccessStandard");
@@ -1514,10 +1569,14 @@
       console.warn("โหลดรายชื่อผู้ปฏิบัติงานจาก PM ไม่สำเร็จ", error);
       get("calOperatorHint").textContent = "โหลดรายชื่อจาก PM ไม่สำเร็จ · กรุณาโหลดหน้าใหม่";
     });
-    const savedDepartments = await fetchPreparationWards().catch(() => []);
-    departments = [...new Set(["ศูนย์เครื่องมือแพทย์", ...MEMS_WARDS, ...savedDepartments])]
-      .sort((left, right) => left.localeCompare(right, "th"));
-    setOptions(get("calRegisterDepartment"), departments.map(name => [name, name]), "เลือกหน่วยงาน");
+    const [savedDepartments, calibrationDepartments] = await Promise.all([
+      fetchPreparationWards().catch(() => []),
+      fetchCalibrationDepartments().catch(error => {
+        console.warn("โหลดหน่วยงานสอบเทียบไม่สำเร็จ", error);
+        return [];
+      })
+    ]);
+    setRegistrationDepartments(["ศูนย์เครื่องมือแพทย์", ...MEMS_WARDS, ...savedDepartments, ...calibrationDepartments]);
     setOptions(get("calQueueType"), Object.entries(typeNames), "ทุกประเภท");
     populateCalibrationTypes();
     get("calWorkspace").hidden = false;
