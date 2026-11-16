@@ -238,12 +238,14 @@
       <label>ขยับโลโก้ขึ้น / ลง (มม.)<input name="logoY" type="number" min="-6" max="3" required></label>
       <label>ขนาดโลโก้ (%)<input name="logoScale" type="number" min="40" max="100" required></label>
       <label>โลโก้โรงพยาบาล (PNG / JPEG)<input id="calPdfLogo" type="file" accept="image/png,image/jpeg"></label>
+      <label>ฟอนต์ใบเซอร์ (.ttf)<input id="calPdfFont" type="file" accept=".ttf,font/ttf" aria-describedby="calPdfFontName"><small id="calPdfFontName"></small></label>
       <label>ข้อความหมายเหตุท้ายกระดาษ<input name="comment" maxlength="160"></label>
       <label>ที่อยู่ท้ายกระดาษ<input name="address" maxlength="160"></label>
     </div>
     <p>ค่าติดลบขยับไปทางซ้ายหรือขึ้น</p>
     <p><img id="calPdfLogoPreview" src="hospital-seal.png" width="56" height="56" style="object-fit:contain" alt="ตัวอย่างโลโก้โรงพยาบาล"></p>
     <div class="cal-buttons">
+      <button id="calPdfClearFont" type="button">ใช้ฟอนต์เดิม</button>
       <button id="calPdfReset" type="button">คืนค่าเริ่มต้น</button>
       <button id="calPdfPreviewLayout" type="button">ดูตัวอย่าง PDF</button>
       <button type="submit" class="primary">บันทึกการตั้งค่า</button>
@@ -300,7 +302,7 @@
 <script src="calibration-access-standards.js"></script>
 <script src="calibration-calculation.js"></script>
 <script src="calibration-form.js?v=digital-bp-workbook"></script>
-<script src="calibration.js?v=certificate-footer-no-issue-date"></script>
+<script src="calibration.js?v=certificate-font-upload"></script>
 <script src="site-footer.js?v=20261016-footer-1"></script>
 </body>
 </html>\n
