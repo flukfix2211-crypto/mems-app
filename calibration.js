@@ -1187,7 +1187,8 @@
       let finalY = 289;
       (record.measurements || []).forEach((sheet, sheetIndex) => {
         if (devices[record.method]?.[sheetIndex]?.optional && !sheet.rows.length) return;
-        const sheetTitle = devices[record.method]?.[sheetIndex]?.title || typeNames[record.method] || "ผลทดสอบ";
+        const sheetTitle = (devices[record.method]?.[sheetIndex]?.title || typeNames[record.method] || "ผลทดสอบ")
+          .replaceAll("SpO₂", "SpO2");
         const xray = record.method.startsWith("x-ray");
         const rowMeans = (sheet.rows || []).map(row => {
           const values = [row[3], row[5], row[7]];
@@ -1215,45 +1216,38 @@
         doc.autoTable({
           startY: finalY,
           margin: { left: left + 42, right: left + 42, top: 290, bottom: 55 },
-          head: [[{ content: sheetTitle + "  (" + sheet.unit + ")", colSpan: 4 }],
-            [record.method === "infusion" ? "UUC setting\n(" + sheet.unit + ")" : "STD setting\n(" + sheet.unit + ")",
-              record.method === "infusion" ? "STD Reading\n(" + sheet.unit + ")" : "Mean Reading\n(" + sheet.unit + ")",
-              "Error\n(" + (xray ? "%" : sheet.unit) + ")", uncertaintyReport ? "Ureport\n(" + sheet.unit + ")" : "Accept value\n(" + sheet.unit + ")"]
+          head: [[{ content: sheetTitle + "  (" + sheet.unit + ")", colSpan: xray ? 5 : 4 }],
+            [record.method === "infusion" ? "UUC setting" : "STD setting",
+              record.method === "infusion" ? "STD Reading" : "Mean Reading",
+              xray ? "Error (%)" : "Error", uncertaintyReport ? "Ureport" : "Accept value"]
               .concat(xray ? ["CV (%)"] : [])],
           body: rows,
           theme: "grid",
-          styles: { font: PDF_FONT, fontSize: 10.5, halign: "center", cellPadding: 4, lineColor: [90, 100, 105], lineWidth: .35 },
+          styles: { font: PDF_FONT, fontSize: 10.5, halign: "center",
+            cellPadding: { vertical: 1, horizontal: 3 }, lineColor: [90, 100, 105], lineWidth: .35 },
           headStyles: { font: PDF_FONT, fontStyle: "normal", fillColor: [255, 255, 255], textColor: [35, 43, 50], lineColor: [60, 70, 75] },
-          columnStyles: { 0: { cellWidth: 98 }, 1: { cellWidth: 98 }, 2: { cellWidth: 85 }, 3: { cellWidth: 118 } },
+          tableWidth: xray ? "auto" : 399,
+          columnStyles: xray ? {} : { 0: { cellWidth: 98 }, 1: { cellWidth: 98 }, 2: { cellWidth: 85 }, 3: { cellWidth: 118 } },
           rowPageBreak: "avoid",
           didDrawPage: () => drawCertificatePage(record)
         });
-        finalY = doc.lastAutoTable.finalY + 12;
+        finalY = doc.lastAutoTable.finalY + 4;
       });
-      if (finalY > Math.min(525, pageH - 235)) {
-        doc.addPage();
-        drawCertificatePage(record);
-        finalY = 289;
-      }
-      text("Standard Used", left + 43, finalY + 17, 12);
       const references = standardRows(record.standard_reference);
       doc.autoTable({
-        startY: finalY + 24,
-        margin: { left: left + 43, right: left + 43, top: 289, bottom: 175 },
-        head: [["Manufacture", "Model", "S/N", "Cal date", "Cert No.", "Due date"]],
+        startY: finalY + 3,
+        margin: { left: left + 43, right: left + 43, top: 289, bottom: 181 },
+        head: [[{ content: "Standard Used", colSpan: 6, styles: { halign: "left", fontSize: 12, lineWidth: 0 } }],
+          ["Manufacture", "Model", "S/N", "Cal date", "Cert No.", "Due date"]],
         body: references,
         theme: "grid",
-        styles: { font: PDF_FONT, fontSize: 10, halign: "center", cellPadding: 4, lineColor: [110, 120, 125], lineWidth: .35 },
+        styles: { font: PDF_FONT, fontSize: 10, halign: "center", cellPadding: 2, lineColor: [110, 120, 125], lineWidth: .35 },
         headStyles: { font: PDF_FONT, fontStyle: "normal", fillColor: [255, 255, 255], textColor: [35, 43, 50] },
+        pageBreak: "avoid",
         didDrawPage: () => drawCertificatePage(record)
       });
-      finalY = doc.lastAutoTable.finalY + 16;
-      if (finalY > pageH - 175) {
-        doc.addPage();
-        drawCertificatePage(record);
-        finalY = 289;
-      }
-      text("วิธีทดสอบ : โดยการนำเครื่องมือที่ต้องการสอบเทียบต่อเข้ากับเครื่องมาตรฐาน แล้วควบคุมค่าตามจุดทดสอบ อ่านค่าแล้วบันทึกค่า", left + 43, finalY + 2, 10);
+      text("วิธีทดสอบ : โดยการนำเครื่องมือที่ต้องการสอบเทียบต่อเข้ากับเครื่องมาตรฐาน แล้วควบคุมค่าตามจุดทดสอบ อ่านค่าแล้วบันทึกค่า",
+        left + 43, doc.lastAutoTable.finalY + 12, 10);
       const signY = pageH - 120;
       const drawSigner = (label, signer, fallbackName, x, width, placement) => {
         const centerX = x + width / 2;
