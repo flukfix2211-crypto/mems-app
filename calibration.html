@@ -85,7 +85,10 @@
     <p>กรอกรายละเอียดเพื่อเพิ่มเครื่องในทะเบียนสอบเทียบ</p>
     <div class="fields">
       <label>ชื่อเครื่องมือ<input name="name" id="calRegisterName" readonly required maxlength="160"></label>
-      <label>หน่วยงาน<select name="department" id="calRegisterDepartment" required></select></label>
+      <div>
+        <label>หน่วยงาน<select name="department" id="calRegisterDepartment" required></select></label>
+        <button id="calDepartmentOpen" type="button" aria-haspopup="dialog">+ เพิ่มหน่วยงาน</button>
+      </div>
       <label>ID เครื่องมือ<input id="calRegisterCode" name="tool_code" required maxlength="100" autocomplete="off" aria-describedby="calDuplicateNotice"></label>
       <label>เลขครุภัณฑ์<input name="inventory_no" maxlength="100" autocomplete="off"></label>
       <label>ยี่ห้อ<input name="manufacturer" maxlength="100"></label>
@@ -182,6 +185,14 @@
   </section>
   </div>
 </main>
+<dialog id="calDepartmentDialog" class="cal-signer-dialog" aria-labelledby="calDepartmentTitle">
+  <form id="calDepartmentForm">
+    <div class="section-head"><h2 id="calDepartmentTitle">เพิ่มหน่วยงาน</h2><button id="calDepartmentClose" type="button">ปิด</button></div>
+    <label>ชื่อหน่วยงาน<input name="name" maxlength="200" autocomplete="off" required autofocus></label>
+    <div class="cal-buttons"><button id="calDepartmentSave" class="primary" type="submit">บันทึกหน่วยงาน</button></div>
+    <p id="calDepartmentStatus" role="status"></p>
+  </form>
+</dialog>
 <dialog id="calTrashDialog" class="cal-signer-dialog" aria-labelledby="calTrashTitle">
   <div class="section-head"><h2 id="calTrashTitle">ถังขยะสอบเทียบ</h2><button id="calTrashClose" type="button">ปิด</button></div>
   <p>กู้คืนได้ภายใน 30 วัน ระบบจะลบถาวรอัตโนมัติเมื่อครบกำหนด</p>
@@ -287,7 +298,7 @@
 <script src="calibration-access-standards.js"></script>
 <script src="calibration-calculation.js"></script>
 <script src="calibration-form.js"></script>
-<script src="calibration.js?v=calibration-trash-1"></script>
+<script src="calibration.js?v=calibration-departments-1"></script>
 <script src="site-footer.js?v=20261016-footer-1"></script>
 </body>
 </html>\n
