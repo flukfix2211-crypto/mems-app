@@ -32,7 +32,7 @@
       </div>
       <div class="cal-picker-actions" aria-label="ทางลัด">
         <button id="calRegisteredOpen" type="button">รายการที่ลงทะเบียนแล้ว</button>
-        <button id="calStandardSettings" type="button">ตั้งค่า Standard Used</button>
+        <button id="calStandardSettings" type="button" hidden>ตั้งค่า Standard Used</button>
         <button id="calPickerQueueButton" type="button">เปิดคิวสอบเทียบ</button>
         <button id="calPickerHistoryButton" type="button">ค้นประวัติ / PDF</button>
       </div>
@@ -214,7 +214,7 @@
       <legend>ประเภทเครื่องที่ใช้มาตรฐานนี้</legend>
       <div id="calStandardMethods" style="max-height:14rem;overflow:auto"></div>
     </fieldset>
-    <div class="cal-buttons"><button id="calStandardSave" class="primary" type="submit">บันทึกเครื่องมาตรฐาน</button></div>
+    <div class="cal-buttons"><button id="calStandardDelete" type="button" disabled>ลบเครื่องมาตรฐาน</button><button id="calStandardSave" class="primary" type="submit">บันทึกเครื่องมาตรฐาน</button></div>
     <p id="calStandardStatus" role="status"></p>
   </form>
 </dialog>
@@ -297,7 +297,7 @@
 <script src="calibration-access-standards.js"></script>
 <script src="calibration-calculation.js"></script>
 <script src="calibration-form.js?v=optional-ucb"></script>
-<script src="calibration.js?v=compact-certificate"></script>
+<script src="calibration.js?v=standard-equipment-admin"></script>
 <script src="site-footer.js?v=20261016-footer-1"></script>
 </body>
 </html>\n
