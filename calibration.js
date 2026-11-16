@@ -1212,10 +1212,46 @@
       drawHeader(record);
       drawDetails(record);
     };
+    const certificatePages = [];
+    const drawStandardTable = (record, startY, onPage, workbook = false) => {
+      const references = standardRows(record.standard_reference);
+      doc.autoTable({
+        startY,
+        margin: { left: left + 43, right: left + 43, top: 289, bottom: workbook ? 115 : 181 },
+        head: [[{ content: workbook ? "ความสามารถในการตรวจสอบย้อนกลับ" : "Standard Used",
+          colSpan: 6, styles: { halign: "left", fontSize: 12, lineWidth: 0 } }],
+        workbook ? ["Item", "Instrument", "S/N", "Cer.No", "Cal Date", "Due Date"]
+          : ["Manufacture", "Model", "S/N", "Cal date", "Cert No.", "Due date"]],
+        body: workbook ? references.map(([manufacturer, model, serial, calDate, cert, dueDate], index) =>
+          [index + 1, [manufacturer, model].filter(value => value !== "—").join(" ") || "—",
+            serial, cert, calDate, dueDate]) : references,
+        theme: "grid",
+        styles: { font: PDF_FONT, fontSize: 10, halign: "center", cellPadding: 2, lineColor: [110, 120, 125], lineWidth: .35 },
+        headStyles: { font: PDF_FONT, fontStyle: "normal", fillColor: [255, 255, 255], textColor: [35, 43, 50] },
+        pageBreak: "avoid",
+        didDrawPage: onPage
+      });
+    };
     records.forEach((record, recordIndex) => {
       if (recordIndex) doc.addPage();
+      const firstPage = doc.internal.getCurrentPageInfo().pageNumber;
+      const workbookLayout = record.method === "digital-bp";
       drawCertificatePage(record);
       let finalY = 289;
+      const resultsTop = workbookLayout ? 155 : 290;
+      if (workbookLayout) {
+        drawStandardTable(record, finalY, () => drawCertificatePage(record), true);
+        const notesY = doc.lastAutoTable.finalY + 20;
+        text("วิธีการสอบเทียบ", left + 43, notesY, 12);
+        fittedText("อ่านค่าที่เครื่องแสดง 3 รอบต่อจุดทดสอบ แล้วเปรียบเทียบค่าเฉลี่ยกับค่า STD",
+          left + 43, notesY + 16, 11, right - left - 86);
+        text("ความไม่แน่นอนของการวัด", left + 43, notesY + 37, 12);
+        fittedText("ผลแสดงความไม่แน่นอนขยายที่ระดับความเชื่อมั่นประมาณ 95%",
+          left + 43, notesY + 53, 11, right - left - 86);
+        doc.addPage();
+        drawHeader(record);
+        finalY = resultsTop;
+      }
       const tables = (record.measurements || []).flatMap((sheet, sheetIndex) => {
         if (devices[record.method]?.[sheetIndex]?.optional && !sheet.rows.length) return [];
         const sheetTitle = (devices[record.method]?.[sheetIndex]?.title || typeNames[record.method] || "ผลทดสอบ")
@@ -1239,8 +1275,11 @@
             measuredReadings: [m1, m2, m3], budget: (sheet.budget || []).map((value, index) =>
               sheet.budget_missing?.includes(index) ? null : value), errorRule: calibrationErrorRule(record.method, sheetIndex) });
           const limit = calibrationAcceptanceLimit(record.method, sheetIndex, nominal);
-          const rowData = [certificateNumber(nominal), certificateNumber(result.mean), certificateNumber(result.error, 3),
-            uncertaintyReport ? "± " + certificateNumber(result.expanded, 3)
+          const workbookPoint = workbookLayout && nibpWorkbook;
+          const rowData = [workbookPoint && Number.isInteger(nominal) ? String(nominal) : certificateNumber(nominal),
+            certificateNumber(result.mean), certificateNumber(result.error, workbookPoint ? 2 : 3),
+            workbookPoint ? certificateNumber(result.expanded)
+              : uncertaintyReport ? "± " + certificateNumber(result.expanded, 3)
               : limit === null ? "—" : "± " + certificateNumber(limit, 3)];
           if (xray) rowData.push(rowIndex === 0 && cv !== null ? certificateNumber(cv, 3) : "—");
           return rowData;
@@ -1249,8 +1288,8 @@
           sheetIndex, rows, xray,
           head: [[{ content: sheetTitle + "  (" + sheet.unit + ")", colSpan: xray ? 5 : 4 }],
             [record.method === "infusion" ? "UUC setting" : "STD setting",
-              record.method === "infusion" ? "STD Reading" : "Mean Reading",
-              xray ? "Error (%)" : "Error", uncertaintyReport ? "Ureport" : "Accept value"]
+              record.method === "infusion" ? "STD Reading" : workbookLayout && nibpWorkbook ? "UUC Reading" : "Mean Reading",
+              xray ? "Error (%)" : "Error", workbookLayout && nibpWorkbook ? "Uncertainty" : uncertaintyReport ? "Ureport" : "Accept value"]
               .concat(xray ? ["CV (%)"] : [])],
         }];
       });
@@ -1268,15 +1307,15 @@
           groupRows.length === 9 && new Set(groupRows.map(row => row.slice(0, 2).join("|"))).size === 9) {
           tables.splice(0, tables.length, {
             grouped: true, rows: groupRows,
-            head: [[{ content: "Digital Blood Pressure", colSpan: 6 }],
-              ["ระดับ", "พารามิเตอร์", "STD setting", "Mean Reading", "Error", "Ureport"]]
+            head: [[{ content: "ตารางรายงานความดันโลหิต", colSpan: 6 }],
+              ["ระดับ", { content: "STD Setting", colSpan: 2 }, "UUC Reading", "Error", "Uncertainty"]]
           }, ...tables.filter(table => !usesNibpWorkbook(record.method, table.sheetIndex)));
         }
       }
       for (const { head, rows, xray, grouped } of tables) {
         doc.autoTable({
           startY: finalY,
-          margin: { left: left + 42, right: left + 42, top: 290, bottom: 55 },
+          margin: { left: left + 42, right: left + 42, top: resultsTop, bottom: workbookLayout ? 215 : 55 },
           head,
           body: rows,
           theme: "grid",
@@ -1286,25 +1325,15 @@
           tableWidth: xray ? "auto" : 399,
           columnStyles: xray || grouped ? {} : { 0: { cellWidth: 98 }, 1: { cellWidth: 98 }, 2: { cellWidth: 85 }, 3: { cellWidth: 118 } },
           rowPageBreak: "avoid",
-          didDrawPage: () => drawCertificatePage(record)
+          didDrawPage: () => workbookLayout ? drawHeader(record) : drawCertificatePage(record)
         });
         finalY = doc.lastAutoTable.finalY + 4;
       }
-      const references = standardRows(record.standard_reference);
-      doc.autoTable({
-        startY: finalY + 3,
-        margin: { left: left + 43, right: left + 43, top: 289, bottom: 181 },
-        head: [[{ content: "Standard Used", colSpan: 6, styles: { halign: "left", fontSize: 12, lineWidth: 0 } }],
-          ["Manufacture", "Model", "S/N", "Cal date", "Cert No.", "Due date"]],
-        body: references,
-        theme: "grid",
-        styles: { font: PDF_FONT, fontSize: 10, halign: "center", cellPadding: 2, lineColor: [110, 120, 125], lineWidth: .35 },
-        headStyles: { font: PDF_FONT, fontStyle: "normal", fillColor: [255, 255, 255], textColor: [35, 43, 50] },
-        pageBreak: "avoid",
-        didDrawPage: () => drawCertificatePage(record)
-      });
-      text("วิธีทดสอบ : โดยการนำเครื่องมือที่ต้องการสอบเทียบต่อเข้ากับเครื่องมาตรฐาน แล้วควบคุมค่าตามจุดทดสอบ อ่านค่าแล้วบันทึกค่า",
-        left + 43, doc.lastAutoTable.finalY + 12, 10);
+      if (!workbookLayout) {
+        drawStandardTable(record, finalY + 3, () => drawCertificatePage(record));
+        text("วิธีทดสอบ : โดยการนำเครื่องมือที่ต้องการสอบเทียบต่อเข้ากับเครื่องมาตรฐาน แล้วควบคุมค่าตามจุดทดสอบ อ่านค่าแล้วบันทึกค่า",
+          left + 43, doc.lastAutoTable.finalY + 12, 10);
+      }
       const signY = pageH - 120;
       const drawSigner = (label, signer, fallbackName, x, width, placement) => {
         const centerX = x + width / 2;
@@ -1319,13 +1348,20 @@
           doc.addImage(signer.signature_data_url, "PNG", centerX + offsetX - imageWidth / 2, signY - imageHeight - 7 + offsetY, imageWidth, imageHeight);
         }
         text(signer?.name || fallbackName || "", centerX, signY + 30, 11, { align: "center", maxWidth: width });
-        text(signer?.position || "นายช่างเทคนิค (เครื่องมือแพทย์)", centerX, signY + 52, 10, { align: "center", maxWidth: width });
+        text(signer?.position || (workbookLayout ? "" : "นายช่างเทคนิค (เครื่องมือแพทย์)"),
+          centerX, signY + 52, 10, { align: "center", maxWidth: width });
       };
-      const signerWidth = (right - left) / 2;
-      const leftSignX = left;
-      const rightSignX = left + signerWidth;
-      drawSigner("Tested by", signatories.tested, record.operator_name, leftSignX, signerWidth, signerSettings.preferences.tested);
-      drawSigner("Approved by", signatories.approved, "", rightSignX, signerWidth, signerSettings.preferences.approved);
+      const signerWidth = (right - left) / (workbookLayout ? 3 : 2);
+      drawSigner(workbookLayout ? "Calibration by" : "Tested by", signatories.tested, record.operator_name,
+        left, signerWidth, signerSettings.preferences.tested);
+      if (workbookLayout) {
+        drawSigner("Checked by", null, "", left + signerWidth, signerWidth);
+      }
+      drawSigner("Approved by", signatories.approved, "", right - signerWidth, signerWidth, signerSettings.preferences.approved);
+      if (workbookLayout) {
+        text("วันที่ออกรายงาน ........ / ........ / ........", right, pageH - 53, 10, { align: "right" });
+        text("End of Certificate", right, pageH - 41, 8.5, { align: "right" });
+      }
       fittedText(layout.comment, left, pageH - 48, 8.5, right - left);
       doc.setDrawColor(70, 80, 85).setLineWidth(.45).line(left, pageH - 37, right, pageH - 37);
       fittedText(layout.address, left, pageH - 22, 8.2, right - left - 43);
@@ -1333,11 +1369,15 @@
         doc.addImage(doc.__memsLogoDataUrl, "PNG", right - 40, pageH - 34, 16, 16);
         text("MEMs", right - 21, pageH - 22, 8.5, { align: "right" });
       }
+      if (workbookLayout) certificatePages.push({ firstPage, lastPage: doc.internal.getCurrentPageInfo().pageNumber });
     });
     const totalPages = doc.getNumberOfPages();
     for (let i = 1; i <= totalPages; i++) {
       doc.setPage(i);
-      text("Page " + i + " of " + totalPages, right, 37, 9, { align: "right" });
+      const certificate = certificatePages.find(({ firstPage, lastPage }) => i >= firstPage && i <= lastPage);
+      const page = certificate ? i - certificate.firstPage + 1 : i;
+      const count = certificate ? certificate.lastPage - certificate.firstPage + 1 : totalPages;
+      text("Page " + page + " of " + count, right, 37, 9, { align: "right" });
     }
     return doc;
   }
