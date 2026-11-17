@@ -159,7 +159,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   <link rel="stylesheet" href="mems-auth-theme.css?v=20261117-office-1">
   <link rel="stylesheet" href="operations-office.css?v=20260923-ops-2">
 <link rel="stylesheet" href="equipment-lifecycle.css?v=20261117-return-checks-2">
-<link rel="stylesheet" href="mems-office.css?v=20261117-office-1">
+<link rel="stylesheet" href="mems-office.css?v=20261117-responsive-controls-1">
 </head>
 <body class="mems-operation mems-prepare">
 
@@ -225,7 +225,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   </section>
 
   <!-- โหมดการเตรียม -->
-  <div class="card">
+  <div class="card prepare-mode-card">
     <div class="sec-label"><span class="req-dot"></span>รูปแบบการเตรียม</div>
     <div class="mode-toggle">
       <button class="mode-btn active" id="modePrepare" onclick="setMode('prepare')">
@@ -251,7 +251,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   </div>
 
   <!-- ประเภทเครื่อง -->
-  <div class="card">
+  <div class="card prepare-types-card">
     <div class="sec-label"><span class="req-dot"></span>ประเภทเครื่อง</div>
     <div class="equip-grid" id="equipGrid"></div>
   </div>
@@ -279,7 +279,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   </div>
 
   <!-- หมายเลข -->
-  <div class="card">
+  <div class="card prepare-number-card">
     <div class="sec-label"><span class="req-dot"></span><span id="numbersLabelText">หมายเลขเครื่อง</span></div>
     <div class="number-list" id="numberInputs">
       <div class="number-row">

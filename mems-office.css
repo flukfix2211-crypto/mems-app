@@ -127,3 +127,70 @@
     body.mems-assets .stats-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   }
 }
+
+/* Keep operational controls readable and reachable at every viewport size. */
+@media screen {
+  .mems-operation .content > *,
+  .mems-operation .card > * { min-width: 0; }
+
+  .mems-operation :is(.btn-back, .save-btn, .submit-btn, .reset-btn, .add-btn,
+      .add-row-btn, .add-equip-btn, .mode-btn, .equip-btn, .equip-chip,
+      .type-chip, .st-btn, .role-btn, .preset-btn, .reason-btn,
+      .prepared-refresh, .camera-open-btn, .del-btn) {
+    max-width: 100%;
+    min-height: 44px;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+  }
+
+  .mems-operation :is(.sec-label, .camera-qr-row, .ready-head) { flex-wrap: wrap; }
+  .mems-operation :is(.prep-info, .camera-qr-row > div) { min-width: 0; overflow-wrap: anywhere; }
+  .mems-operation .prep-item { align-items: flex-start; }
+  .mems-operation .del-btn { flex-shrink: 0; }
+  .mems-operation :is(.mode-toggle, .status-grid, .equip-grid) { align-items: stretch; }
+  .mems-operation :is(.mode-btn, .equip-btn, .equip-chip) { white-space: normal; }
+
+  /* Full-width choices avoid tall equipment cards leaving empty form columns. */
+  body.mems-prepare .content > :is(.prepare-mode-card, .prepare-types-card,
+      .prepare-number-card, .camera-qr-card, .ready-card) {
+    grid-column: 1 / -1;
+  }
+  body.mems-prepare .mode-toggle { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body.mems-prepare .mode-btn { padding: 12px 16px; }
+  body.mems-prepare #equipGrid { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+  body.mems-prepare #equipGrid .lifecycle-type-choice { padding: 12px 8px; height: 100%; }
+  body.mems-prepare #lifecycleManualNumber { align-items: stretch; }
+  body.mems-prepare #lifecycleManualNumber button { flex: 0 0 auto; padding: 10px 14px; }
+  body.mems-prepare #lifecycleSelection { overflow-wrap: anywhere; }
+  body.mems-prepare #saveBtn { margin: 0; }
+
+  .mems-operation .lifecycle-return-confirm-actions { flex-wrap: wrap; }
+  .mems-operation .lifecycle-return-confirm-actions > button { flex: 1 1 120px; }
+
+  @media (min-width: 1200px) {
+    body.mems-prepare #equipGrid { grid-template-columns: repeat(9, minmax(0, 1fr)); }
+  }
+
+  @media (max-width: 1000px) {
+    body.mems-prepare #equipGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+
+  @media (max-width: 760px) {
+    .mems-operation .header-top { align-items: flex-start; }
+    .mems-operation .header-top .hosp-badge { max-width: 100%; white-space: normal; }
+    .mems-operation .header-top > div { width: 100%; justify-content: flex-start; gap: 8px; }
+    .mems-operation .header-top #memsUserBadge { overflow-wrap: anywhere; }
+    .mems-operation .camera-open-btn { width: 100%; }
+    .mems-operation .content { padding-bottom: calc(104px + env(safe-area-inset-bottom)) !important; }
+  }
+
+  @media (max-width: 480px) {
+    body.mems-prepare #equipGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    body.mems-prepare .mode-btn { padding: 12px; }
+    body.mems-prepare .mode-desc { font-size: .8125rem !important; line-height: 1.5; }
+    body.mems-prepare #lifecycleManualNumber { flex-direction: column; flex-wrap: nowrap; }
+    body.mems-prepare #lifecycleManualNumber .field { flex-basis: auto; }
+    body.mems-prepare #lifecycleManualNumber button { width: 100%; }
+    .mems-operation .prepare-qr-actions { grid-template-columns: minmax(0, 1fr); }
+  }
+}

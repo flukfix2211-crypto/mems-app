@@ -4,6 +4,7 @@
   "scripts": {
     "test": "node --test tests/*.test.js",
     "test:returns:browser": "node tests/return-checks-browser.cjs",
+    "test:responsive:browser": "node tests/responsive-controls-browser.cjs",
     "test:browser": "node tests/lifecycle-browser.cjs",
     "test:mascot:browser": "node --test tests/mascot-browser.cjs",
     "test:pm:browser": "node tests/pm-native-browser.cjs"
