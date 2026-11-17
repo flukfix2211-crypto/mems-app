@@ -201,3 +201,23 @@
     display: none !important;
   }
 }
+
+/* Keep every page masthead on the same brand color as the shared footer. */
+@media screen {
+  :root { --mems-bars-bg: #142b40; }
+
+  .site-footer { background: var(--mems-bars-bg); }
+
+  body.mems-has-site-footer:not(.mems-bars-themed) :is(header, .header, .pm-header, .topbar) {
+    background: var(--mems-bars-bg) !important;
+    background-image: none !important;
+    border-top-color: var(--mems-bars-bg) !important;
+    border-bottom-color: var(--mems-bars-bg) !important;
+    color: #fff !important;
+  }
+
+  body.mems-has-site-footer:not(.mems-bars-themed) :is(header, .header, .pm-header, .topbar)::before,
+  body.mems-has-site-footer:not(.mems-bars-themed) :is(header, .header, .pm-header, .topbar)::after {
+    background: none !important;
+  }
+}
