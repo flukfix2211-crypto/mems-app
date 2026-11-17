@@ -1,0 +1,131 @@
+#calQueue {
+  --discover-ink: #14283c;
+  --discover-line: #d7e2eb;
+  --discover-accent: #174e77;
+  --discover-tint: #ecf4fb;
+}
+
+.cal-discover-toolbar,
+.cal-discover-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cal-discover-toolbar { margin-block: 14px; justify-content: space-between; }
+.cal-discover-toolbar p { margin: 0; flex: 1 1 220px; }
+.cal-discover-toolbar button,
+.cal-discover-item button,
+.cal-discover-preview button { min-height: 44px; }
+.cal-discover-toggle {
+  padding: 3px;
+  background: #f2f6fa;
+  border: 1px solid var(--discover-line);
+  border-radius: 12px;
+}
+
+#calQueue .cal-discover-toggle button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+#calQueue .cal-discover-toggle button[aria-pressed="true"] {
+  background: #fff;
+  border-color: var(--discover-line);
+  color: var(--discover-accent);
+}
+
+.cal-discover-toggle svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+}
+
+#calQueueList .cal-queue-group { background: transparent; border: 0; padding: 0; }
+#calQueueList .cal-queue-group + .cal-queue-group { margin-top: 24px; }
+.cal-discover-items { display: grid; gap: 12px; }
+[data-view="cards"] .cal-discover-items {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 245px), 1fr));
+}
+
+.cal-discover-item {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--discover-line);
+  border-radius: 14px;
+  background: #fff;
+  color: var(--discover-ink);
+  min-width: 0;
+  transition: transform 170ms ease, border-color 170ms ease, box-shadow 170ms ease;
+}
+
+[data-view="cards"] .cal-discover-item { grid-template-rows: auto 1fr auto; }
+[data-view="cards"] .cal-discover-item:focus-within {
+  border-color: #6391b6;
+  box-shadow: 0 8px 22px rgb(21 64 98 / 10%);
+}
+
+.cal-discover-cover {
+  display: grid;
+  place-items: center;
+  min-height: 80px;
+  padding: 12px;
+  border-radius: 9px;
+  background: radial-gradient(circle at 75% 10%, #fff, transparent 55%), var(--discover-tint);
+  color: #234f72;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.cal-discover-cover[data-method="infusion"] { --discover-tint: #e4f5ed; color: #205943; }
+.cal-discover-cover[data-method="refrig"] { --discover-tint: #eceafd; color: #463675; }
+.cal-discover-cover span {
+  max-width: 100%;
+  padding: 4px 12px;
+  border: 1px solid currentColor;
+  border-radius: 30px;
+  font-weight: 700;
+}
+
+.cal-discover-info, #calQueuePreview dd, #calQueuePreviewTitle { overflow-wrap: anywhere; }
+.cal-discover-info { padding-inline: 3px; }
+.cal-discover-info p { margin: 4px 0 0; }
+[data-view="list"] .cal-discover-item { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+[data-view="list"] .cal-discover-cover { display: none; }
+
+#calQueuePreview { max-height: calc(100dvh - 28px); overflow-y: auto; }
+#calQueuePreview .section-head { display: flex; justify-content: space-between; gap: 12px; }
+#calQueuePreviewTitle { margin-top: 8px; }
+#calQueuePreviewDetails {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: 0 12px;
+}
+#calQueuePreviewDetails > * { margin: 0; padding-block: 7px; border-bottom: 1px solid #d7e2eb; }
+#calQueuePreviewDetails dd { font-weight: 600; }
+
+@media (hover: hover) {
+  [data-view="cards"] .cal-discover-item:hover {
+    transform: translateY(-3px);
+    border-color: #6391b6;
+    box-shadow: 0 8px 22px rgb(21 64 98 / 10%);
+  }
+}
+
+@media (max-width: 480px) {
+  [data-view="list"] .cal-discover-item { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #calQueue .cal-discover-item { transition: none; }
+  #calQueue .cal-discover-item:hover { transform: none; }
+}
