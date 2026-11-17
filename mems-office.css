@@ -1,0 +1,129 @@
+@media screen {
+  .site-footer { border-top-color: var(--mems-primary); }
+  body.mems-operation, body.mems-dashboard {
+    --ops-navy: var(--mems-brand);
+    --ops-primary: var(--mems-primary);
+    --ops-primary-dark: var(--mems-primary-hover);
+    --ops-soft: var(--mems-soft);
+    --a: var(--mems-primary);
+    --a2: var(--mems-brand);
+    --al: var(--mems-soft);
+  }
+
+  body.mems-home > .header,
+  body.mems-operation > .header {
+    padding-block: 14px 12px !important;
+  }
+
+  body:is(.mems-home, .mems-operation) .header-top {
+    margin-bottom: 10px !important;
+  }
+
+  body.mems-home .home-brand-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 8px;
+  }
+
+  body.mems-home .header-body { grid-template-columns: 42px auto 1fr; }
+  body.mems-home .home-page-title { margin-bottom: 14px; }
+
+  body.mems-dashboard > .header {
+    padding-block: 12px !important;
+    background: var(--mems-brand) !important;
+    color: #fff !important;
+  }
+
+  body.mems-dashboard > .header h1 {
+    color: #fff !important;
+    -webkit-text-fill-color: #fff !important;
+  }
+
+  body.mems-dashboard > .header :is(.sub, #lastUpdated) { color: #cfdfeb !important; }
+  body.mems-dashboard > .header .header-right a { color: var(--mems-brand) !important; }
+
+  body.mems-operation .header .sub { color: #cfdfeb !important; }
+  body.mems-operation .header .page-title { margin-top: 6px !important; }
+  body.mems-operation :is(.save-btn, .submit-btn, .add-btn, .btn-print, .add-equip-btn),
+  body.mems-operation #submitBtn {
+    background: var(--mems-primary) !important;
+    border-color: var(--mems-primary) !important;
+    color: #fff !important;
+  }
+
+  body.mems-operation :is(.save-btn, .submit-btn, .add-btn, .btn-print, .add-equip-btn):hover,
+  body.mems-operation #submitBtn:hover {
+    background: var(--mems-primary-hover) !important;
+  }
+
+  :is(.header, .pm-header, .dash-sidebar) :focus-visible {
+    outline: 2px solid #a8c8e3 !important;
+    outline-offset: 3px;
+  }
+
+  .mems-control-icon {
+    width: 1em;
+    height: 1em;
+    flex: 0 0 auto;
+    vertical-align: -.125em;
+    margin-inline-end: .32em;
+    color: currentColor;
+  }
+
+  .mems-control-icon-only { margin-inline-end: 0; }
+
+  .registry-title { margin: 0 0 12px; font-size: clamp(1.35rem, 2.2vw, 1.7rem); }
+  body.mems-assets .registry-heading { margin-bottom: 12px; }
+  body.mems-assets .registry-heading .ctrl-row { margin-bottom: 0; }
+
+  body.mems-assets .type-chips {
+    padding: 0 !important;
+    margin-bottom: 10px !important;
+    border: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  body.mems-assets .type-chip { padding: 6px 12px !important; min-height: 36px; }
+  body.mems-assets .stats-row { gap: 6px; margin-bottom: 12px; }
+  body.mems-assets .stat-chip { padding: 6px 8px !important; min-width: 0; }
+  body.mems-assets .stat-num { font-size: 1.15rem !important; color: var(--mems-brand) !important; }
+  body.mems-assets .stat-lbl { font-size: .77rem !important; }
+  body.mems-assets .qr-toolbar { background: var(--mems-soft); }
+  body.mems-assets .qr-toolbar[hidden] { display: none; }
+  body.mems-assets .qr-tool-btn.primary { background: var(--mems-primary); }
+  body.mems-assets .registry-table { padding: 0 !important; overflow: hidden; }
+  body.mems-assets .act-wrap { align-items: flex-start; }
+  body.mems-assets .act-btn { white-space: nowrap; min-height: 34px; }
+  body.mems-assets .act-edit { background: var(--mems-soft) !important; color: var(--mems-primary) !important; }
+  .asset-row-actions summary {
+    padding: 7px;
+    white-space: nowrap;
+    color: var(--mems-muted);
+    cursor: pointer;
+    font-size: .8rem;
+  }
+  .asset-row-actions .act-del { display: block; margin: 4px 0 2px; }
+  body.mems-assets .badge:not(.sold):not(.broken):not(.repair) {
+    background: var(--mems-soft) !important;
+    color: var(--mems-brand) !important;
+  }
+  body.mems-assets .badge.ok { background: #eaf3ef !important; color: #286049 !important; }
+  body.mems-assets #assetBody tr:focus-within td { background: #edf3f9; }
+
+  .prepared-refresh {
+    min-height: 36px;
+    padding: 5px 10px;
+    border: 1px solid var(--mems-line);
+    border-radius: 8px;
+    background: var(--mems-soft);
+    color: var(--mems-primary);
+    font: inherit;
+    cursor: pointer;
+  }
+
+  @media (max-width: 760px) {
+    body.mems-home .header-body { grid-template-columns: 42px 1fr; }
+    body.mems-assets .stats-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+}

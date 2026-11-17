@@ -10,7 +10,7 @@
   const read = (key, storage) => { try { return storage.getItem(key); } catch { return null; } };
   const write = (key, value, storage) => { try { storage.setItem(key, value); } catch {} };
   const sheet = document.createElement('link');
-  sheet.rel = 'stylesheet'; sheet.href = asset('mascot.css?v=20261027-loop-1');
+  sheet.rel = 'stylesheet'; sheet.href = asset('mascot.css?v=20261117-office-1');
   document.head.append(sheet);
   const page = (location.pathname.split('/').pop() || 'index.html').replace('.html', '');
   const tips = {
@@ -28,12 +28,16 @@
   dock.id = 'mems-mascot'; dock.setAttribute('aria-label', 'ผู้ช่วย MEMs');
   dock.innerHTML = `<div class="mems-guide-rail" aria-hidden="true">
     <div class="mems-guide-shadow"></div><canvas width="300" height="320"></canvas>
-    <div class="mems-guide-home"><img alt="" src="${asset('logo.png')}"></div>
-    <span class="mems-guide-floor"></span>
   </div>
   <div class="mems-guide-controls"><button type="button" class="mems-guide-call" aria-expanded="false" aria-controls="mems-guide-tip">คำแนะนำ</button><button type="button" class="mems-guide-pause" aria-pressed="false">พักผู้ช่วย</button></div>
   <div class="mems-guide-tip-slot"><p id="mems-guide-tip" role="status" aria-live="polite"></p><button type="button" class="mems-guide-close" aria-label="ปิดคำแนะนำ" hidden>×</button></div>`;
   header.append(dock);
+  const help = header.querySelector('button[onclick*="helpModal"]');
+  if (help) {
+    help.textContent = 'คู่มือ';
+    help.removeAttribute('style');
+    dock.querySelector('.mems-guide-controls').append(help);
+  }
   const rail = dock.querySelector('.mems-guide-rail');
   const canvas = dock.querySelector('canvas');
   const shadow = dock.querySelector('.mems-guide-shadow');
@@ -65,7 +69,7 @@
     if (old) old.release().catch(() => {});
   }
   const poses = {};
-  const home = -30, end = 88;
+  const home = -30;
   const duration = { peek: 1050, emerge: 800, walk: 1800, greet: 3500, turn: 220, turnRight: 220, back: 2400, retreat: 420 };
   const load = (name, path) => new Promise(resolve => {
     const image = new Image();
@@ -134,6 +138,7 @@
     if (blocked() && state !== 'retreat') { retreat(); return; }
     if (state === 'rest') return;
     const t = Math.min(1, (now - started) / duration[state]);
+    const end = Math.max(28, rail.clientWidth - 31);
     const before = x;
     if (state === 'peek') x = home + Math.sin(t * Math.PI / 2) * 14;
     else if (state === 'emerge') x = -16 + t * 44;

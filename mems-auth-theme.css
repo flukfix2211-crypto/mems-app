@@ -1,26 +1,26 @@
-/* MEMs unified visual theme — matches the official sign-in screen. */
+/* MEMs institutional palette, shared with the credit footer. */
 @media screen {
   :root {
-    --mems-brand: #0b666c;
-    --mems-brand-deep: #08565c;
-    --mems-primary: #0d8790;
-    --mems-primary-hover: #096f77;
-    --mems-bg: #f2f7f8;
+    --mems-brand: #142b40;
+    --mems-brand-deep: #102437;
+    --mems-primary: #254963;
+    --mems-primary-hover: #19364d;
+    --mems-bg: #f2f5f9;
     --mems-surface: #ffffff;
-    --mems-soft: #e8f4f5;
+    --mems-soft: #eaf0f6;
     --mems-text: #142b40;
     --mems-muted: #617586;
-    --mems-line: #d2e0e5;
-    --mems-focus: rgba(11,126,137,.18);
+    --mems-line: #d3dee8;
+    --mems-focus: rgba(37,73,99,.24);
     --mems-shadow: 0 10px 30px rgba(20,43,64,.07);
-    --a: #0d8790;
-    --a2: #0b666c;
-    --al: #e8f4f5;
-    --bg: #f2f7f8;
+    --a: var(--mems-primary);
+    --a2: var(--mems-brand);
+    --al: var(--mems-soft);
+    --bg: var(--mems-bg);
     --card: #ffffff;
     --txt: #142b40;
     --muted: #617586;
-    --border: #d2e0e5;
+    --border: var(--mems-line);
   }
 
   html, body {
@@ -92,7 +92,7 @@
   input:focus, select:focus, textarea:focus, .form-input:focus, .fsel:focus {
     outline: 3px solid var(--mems-focus) !important;
     outline-offset: 0 !important;
-    border-color: #0b7e89 !important;
+    border-color: var(--mems-primary) !important;
     box-shadow: none !important;
   }
   input[type="checkbox"], input[type="radio"] { accent-color: var(--mems-primary); }
@@ -116,7 +116,7 @@
     border-color: var(--mems-primary-hover) !important;
   }
   button:focus-visible, a:focus-visible {
-    outline-color: rgba(13,135,144,.38) !important;
+    outline-color: var(--mems-primary) !important;
   }
 
   /* Choice controls and navigation cards */
