@@ -131,6 +131,7 @@ function memsConfirmUnreturnedEquipment(items) {
     return (
       a.no != null &&
       a.status === "ใช้งานได้" &&
+      !status.some(s => s.isReturnPending && key(s) === k) &&
       registry.filter((b) => memsMachineKey(b.type, b.no) === k).length === 1 &&
       (isPrepare || !status.some(
         (s) => s.isBorrowed && memsMachineKey(s.equipment, s.number) === k,
@@ -530,6 +531,9 @@ function memsConfirmUnreturnedEquipment(items) {
         }
         if (!items.length || !ward || !name) throw new Error("กรุณาเลือกเครื่อง หน่วยงาน และผู้เตรียมให้ครบ");
         const current = await fetchEquipmentStatus();
+        if (items.some(item => current.some(s => s.isReturnPending && key(s) === key(item)))) {
+          throw new Error("เครื่องรอตรวจและยืนยันการคืน กรุณาตรวจรับก่อนเตรียม");
+        }
         const unreturned = items.flatMap(item => {
           const holder = current.find(s => s.isBorrowed && key(s) === key(item));
           return holder ? [{ equipment: item.equipment, number: item.number, ward: holder.ward, lastUpdate: holder.lastUpdate }] : [];
@@ -678,7 +682,13 @@ function memsConfirmUnreturnedEquipment(items) {
     try {
       await refresh();
       renderTypes();
-      if (isPrepare) renderNumbers();
+      if (isPrepare) {
+        renderNumbers();
+        memsLoadReturnChecks();
+        document.addEventListener("mems-equipment-status-changed", async () => {
+          try { await refresh(); renderNumbers(); } catch (e) { error(e); }
+        });
+      }
       else renderWard();
     } catch (e) {
       error(e);

@@ -227,7 +227,7 @@ async function loadStatistics() {
         supabase
           .from("equipment_status")
           .select(
-            "equipment_name, equipment_number, ward, recorded_at, is_borrowed",
+            "equipment_name, equipment_number, ward, recorded_at, is_borrowed, is_return_pending",
           )
           .order("equipment_name")
           .order("equipment_number"),
@@ -284,6 +284,7 @@ async function loadStatistics() {
         ward: row.ward || "",
         recordedAt: new Date(row.recorded_at),
         isBorrowed: Boolean(row.is_borrowed),
+        isReturnPending: Boolean(row.is_return_pending),
       }))
       .filter((row) => EQUIPMENT_TYPES.includes(row.type) && row.no);
     const built = sessionize(statsState.raw);
@@ -423,6 +424,7 @@ function renderEquipmentStatus() {
       .filter((row) => row.isBorrowed)
       .map((row) => [machineKey(row.type, row.no), row]),
   );
+  const pending = new Set(statsState.current.filter(row => row.isReturnPending).map(row => machineKey(row.type, row.no)));
   const filters = reportFilters();
   byId("equipmentStatusGrid").innerHTML = EQUIPMENT_TYPES.filter(
     (type) => !filters.type || filters.type === type,
@@ -457,21 +459,24 @@ function renderEquipmentStatus() {
         (a) =>
           a.status === "ใช้งานได้" &&
           !borrowed.has(machineKey(type, a.no)) &&
+          !pending.has(machineKey(type, a.no)) &&
           statsState.prepares.some(
             (p) => p.status === "เตรียม" && p.type === type && p.no === a.no,
           ),
       ).length;
+      const waiting = items.filter(a => pending.has(machineKey(type, a.no))).length;
       const ready = items.filter(
         (a) =>
           a.status === "ใช้งานได้" &&
           !borrowed.has(machineKey(type, a.no)) &&
+          !pending.has(machineKey(type, a.no)) &&
           !statsState.prepares.some(
             (p) => p.status === "เตรียม" && p.type === type && p.no === a.no,
           ),
       ).length;
       return `<article class="equipment-card equipment-${type.replace(/\s/g, "-").toLowerCase()}">
       <div class="equipment-card-head"><span>${statsEsc(type)}</span><strong>${items.length}</strong></div>
-      <div class="equipment-card-grid"><div><b>${active}</b><span>ใช้งานอยู่</span></div><div><b>${ready}</b><span>พร้อมใช้</span></div><div><b>${prep}</b><span>เตรียมแล้ว</span></div><div><b>${repair}</b><span>ซ่อม/ชำรุด</span></div></div>
+      <div class="equipment-card-grid"><div><b>${active}</b><span>ใช้งานอยู่</span></div><div><b>${ready}</b><span>พร้อมใช้</span></div><div><b>${prep}</b><span>เตรียมแล้ว</span></div><div><b>${waiting}</b><span>รอตรวจรับคืน</span></div><div><b>${repair}</b><span>ซ่อม/ชำรุด</span></div></div>
     </article>`;
     })
     .join("");
@@ -699,6 +704,8 @@ function renderMachine() {
           ? a.status
           : state?.isBorrowed
             ? "กำลังยืม"
+            : state?.isReturnPending
+              ? "รอตรวจรับคืน"
             : prepared
               ? "เตรียมแล้ว"
               : "พร้อมใช้";
