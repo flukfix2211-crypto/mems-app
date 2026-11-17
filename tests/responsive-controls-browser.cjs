@@ -29,11 +29,12 @@ const fake = `window.supabase={createClient(){return {from(table){let single=fal
       const url = new URL(route.request().url());
       if (url.origin !== base) return route.abort();
       if (url.pathname === '/vendor/supabase.js') return route.fulfill({ contentType: 'text/javascript', body: fake });
-      if (url.pathname === '/auth.js') return route.fulfill({ contentType: 'text/javascript', body: `async function memsGuard(){document.getElementById('memsUserBadge').textContent='เจ้าหน้าที่ทดสอบ · ผู้ดูแลระบบ';return {role:'admin'}}` });
+      if (url.pathname === '/auth.js') return route.fulfill({ contentType: 'text/javascript', body: `const MEMS_USER={role:'admin',active:true};function memsHasPermission(){return true}function memsIsSuperAdmin(){return true}async function memsGuard(){document.getElementById('memsUserBadge').textContent='เจ้าหน้าที่ทดสอบ · ผู้ดูแลระบบ';return MEMS_USER}` });
       return route.continue();
     });
     await page.goto(base + '/prepare.html');
     await page.waitForFunction(() => document.querySelectorAll('#equipGrid button').length === 9);
+    await page.locator('.mems-control-sidebar').waitFor();
     for (const [width, height] of [[320,740],[390,844],[480,844],[600,900],[768,1024],[1024,768],[1440,1000],[1920,1080],[844,390]]) {
       await page.setViewportSize({ width, height });
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `page overflow at ${width}`);
@@ -54,7 +55,10 @@ const fake = `window.supabase={createClient(){return {from(table){let single=fal
       await page.locator('#lifecycleManualNumber button').click();
       await assert.match(await page.locator('#lifecycleSelection').textContent(), /C2 No\.1/);
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `selected state overflow at ${width}`);
-      if (width === 390 || width === 1440) await page.screenshot({ path: path.join(root, `work/prepare-${width}.png`), fullPage: true });
+      if (width === 390 || width === 1440) {
+        await page.evaluate(() => scrollTo(0, 0));
+        await page.screenshot({ path: path.join(root, `work/prepare-${width}.png`), fullPage: true });
+      }
     }
     assert.deepEqual(errors, []);
     for (const file of ['borrow.html', 'round.html', 'fixjob.html', 'assets.html']) {

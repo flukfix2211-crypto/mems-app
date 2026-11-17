@@ -264,6 +264,8 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 
   <link rel="stylesheet" href="mems-auth-theme.css?v=20261117-office-1">
 <link rel="stylesheet" href="mems-office.css?v=20261117-responsive-controls-1">
+<link rel="stylesheet" href="mems-motion.css?v=20261117-4">
+<script defer src="mems-motion.js?v=20261117-4"></script>
 </head>
 <body class="mems-home">
 
@@ -331,7 +333,14 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   <a href="memstag.html" data-perm="super_admin"><span class="nm-icon">📡</span> MEMSTAG ตามหาเครื่องมือ</a>
 </nav>
 <div class="content">
-  <h1 class="home-page-title">หน้าหลัก</h1>
+  <section class="mems-home-hero" aria-labelledby="memsHomeTitle">
+    <div class="mems-home-photos" aria-hidden="true">
+      <img src="img/equipment/high-flow.jpg" alt="">
+      <img src="img/equipment/c2.jpg" alt="">
+      <img src="img/equipment/brid-green.jpg" alt="">
+    </div>
+    <h1 class="home-page-title" id="memsHomeTitle">จัดการ<br>เครื่องมือแพทย์</h1>
+  </section>
   <div class="home-actions">
   <a class="menu-card primary-action" href="borrow.html?v=20261001-prepared-only-1" data-perm="borrow">
     <div class="menu-icon green"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18l-4-4M21 17H3l4 4"/></svg></div>
@@ -411,7 +420,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 </div>
 <script src="vendor/supabase.js"></script>
 <script src="supabase-client.js?v=20261117-return-checks-1"></script>
-<script src="auth.js?v=calibration-1"></script>
+<script src="auth.js?v=20261117-control-room-1"></script>
 <script src="mems-clock.js?v=20260924-clock-status-1"></script>
 <script>
 
@@ -422,11 +431,10 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     document.querySelectorAll('[data-perm]').forEach(el => {
       const key = el.dataset.perm;
       const allowed = (key === 'admin' || key === 'super_admin') ? memsIsSuperAdmin(profile) : memsHasPermission(profile, key);
-      el.style.display = allowed ? '' : 'none';
+      el.style.display = allowed && key !== 'pm_reports' ? '' : 'none';
     });
-    if (profile.role !== 'admin') {
-      const {data, error} = await supabase.from('mems_report_settings').select('enabled').eq('id',true).maybeSingle();
-      if (error || !data?.enabled) document.getElementById('pmReportsMenu').style.display='none';
+    if (await memsShowPmNavigation(profile)) {
+      document.getElementById('pmReportsMenu').style.display = '';
     }
   });
 

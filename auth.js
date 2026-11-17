@@ -152,7 +152,24 @@ async function memsGuard(requiredPermission) {
   MEMS_USER = profile;
   memsHideOverlays();
   memsRenderUserBadge(profile);
+  document.dispatchEvent(new Event('mems:profile-ready'));
   return profile;
+}
+
+let memsPmNavigationAvailability;
+function memsShowPmNavigation(profile) {
+  if (!memsHasPermission(profile, 'pm_reports')) return Promise.resolve(false);
+  if (profile.role === 'admin') return Promise.resolve(true);
+  memsPmNavigationAvailability ??= (async () => {
+    try {
+      const { data, error } = await supabase.from('mems_report_settings')
+        .select('enabled').eq('id', true).maybeSingle();
+      return !error && data?.enabled === true;
+    } catch {
+      return false;
+    }
+  })();
+  return memsPmNavigationAvailability;
 }
 
 /** แสดงชื่อผู้ใช้ปัจจุบัน + ปุ่มออกจากระบบ ถ้าหน้ามี element id="memsUserBadge" */

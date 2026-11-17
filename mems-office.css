@@ -157,6 +157,7 @@
   }
   body.mems-prepare .mode-toggle { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   body.mems-prepare .mode-btn { padding: 12px 16px; }
+  body.mems-prepare .prepare-types-card { container: prepare-types / inline-size; }
   body.mems-prepare #equipGrid { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
   body.mems-prepare #equipGrid .lifecycle-type-choice { padding: 12px 8px; height: 100%; }
   body.mems-prepare #lifecycleManualNumber { align-items: stretch; }
@@ -167,7 +168,7 @@
   .mems-operation .lifecycle-return-confirm-actions { flex-wrap: wrap; }
   .mems-operation .lifecycle-return-confirm-actions > button { flex: 1 1 120px; }
 
-  @media (min-width: 1200px) {
+  @container prepare-types (min-width: 1000px) {
     body.mems-prepare #equipGrid { grid-template-columns: repeat(9, minmax(0, 1fr)); }
   }
 
@@ -181,7 +182,7 @@
     .mems-operation .header-top > div { width: 100%; justify-content: flex-start; gap: 8px; }
     .mems-operation .header-top #memsUserBadge { overflow-wrap: anywhere; }
     .mems-operation .camera-open-btn { width: 100%; }
-    .mems-operation .content { padding-bottom: calc(104px + env(safe-area-inset-bottom)) !important; }
+    .mems-operation:has(> .submit-bar) .content { padding-bottom: calc(104px + env(safe-area-inset-bottom)) !important; }
   }
 
   @media (max-width: 480px) {
