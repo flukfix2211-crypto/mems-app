@@ -373,6 +373,8 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   <link rel="stylesheet" href="mems-auth-theme.css?v=20261117-office-1">
 <link rel="stylesheet" href="unkeyed-statistics.css?v=20261104-dropdown-1">
 <link rel="stylesheet" href="mems-office.css?v=20261117-office-1">
+<link rel="stylesheet" href="mems-motion.css?v=20261117-4">
+<script defer src="mems-motion.js?v=20261117-4"></script>
 </head>
 <body class="mems-dashboard">
 
@@ -397,13 +399,19 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 <div class="main">
 
   <!-- HOME VIEW: NAV CARDS -->
-  <div id="viewHome" class="view active"><div class="dash-page-heading"><div><div class="dash-eyebrow">MEDICAL EQUIPMENT MANAGEMENT</div><h2>ภาพรวมเครื่องมือแพทย์</h2><p>ติดตามสถานะเครื่องมือและการยืม–คืนระหว่างหน่วยงาน</p></div><button id="dashRefresh" class="dash-refresh" onclick="loadAll()" type="button">↻ อัปเดตข้อมูล</button></div><section class="dash-summary" aria-label="สรุปการใช้งาน"><article class="dash-stat"><div class="dash-stat-label">อยู่ระหว่างยืม</div><div class="dash-stat-value"><strong id="dash-borrowed">—</strong><span>เครื่อง</span></div><small>สถานะล่าสุดในระบบ</small></article><article class="dash-stat"><div class="dash-stat-label">หน่วยงานที่ยืม</div><div class="dash-stat-value"><strong id="dash-wards">—</strong><span>หน่วยงาน</span></div><small>มีเครื่องมืออยู่ระหว่างยืม</small></article><article class="dash-stat"><div class="dash-stat-label">รายการยืมวันนี้</div><div class="dash-stat-value"><strong id="dash-borrow">—</strong><span>รายการ</span></div><small>รายการที่บันทึกในวันนี้</small></article><article class="dash-stat"><div class="dash-stat-label">รายการคืนวันนี้</div><div class="dash-stat-value"><strong id="dash-return">—</strong><span>รายการ</span></div><small>รายการที่บันทึกในวันนี้</small></article></section><div id="dashLoadNote" class="dash-load-note" role="status">กำลังโหลดข้อมูล…</div>
+  <div id="viewHome" class="view active"><div class="dash-page-heading"><div><div class="dash-eyebrow">MEDICAL EQUIPMENT MANAGEMENT</div><h2>ภาพรวมเครื่องมือแพทย์</h2><p>ติดตามสถานะเครื่องมือและการยืม–คืนระหว่างหน่วยงาน</p></div><div class="dash-hero-actions"><button id="dashRefresh" class="dash-refresh" onclick="loadAll()" type="button">↻ อัปเดตข้อมูล</button><a class="dash-content-jump" href="#dashEquipmentOverview">ดูความพร้อมใช้ <span aria-hidden="true">↘</span></a></div>
+<div class="dash-motion-art">
+  <label class="dash-motion-toggle"><input type="checkbox"> หยุดการหมุน</label>
+  <button type="button" class="dash-motion-orbit" aria-label="หมุนกราฟิก" title="ลากหรือกดเพื่อหมุน"><span class="dash-wheel-angle"><img src="img/mems-motion-wheel.svg" width="240" height="240" alt=""></span></button>
+  <button type="button" class="dash-motion-reset">รีเซ็ต ↻</button>
+</div></div><section class="dash-summary" aria-label="สรุปการใช้งาน"><article class="dash-stat"><div class="dash-stat-label">อยู่ระหว่างยืม</div><div class="dash-stat-value"><strong id="dash-borrowed">—</strong><span>เครื่อง</span></div><small>สถานะล่าสุดในระบบ</small></article><article class="dash-stat"><div class="dash-stat-label">หน่วยงานที่ยืม</div><div class="dash-stat-value"><strong id="dash-wards">—</strong><span>หน่วยงาน</span></div><small>มีเครื่องมืออยู่ระหว่างยืม</small></article><article class="dash-stat"><div class="dash-stat-label">รายการยืมวันนี้</div><div class="dash-stat-value"><strong id="dash-borrow">—</strong><span>รายการ</span></div><small>รายการที่บันทึกในวันนี้</small></article><article class="dash-stat"><div class="dash-stat-label">รายการคืนวันนี้</div><div class="dash-stat-value"><strong id="dash-return">—</strong><span>รายการ</span></div><small>รายการที่บันทึกในวันนี้</small></article></section><div id="dashLoadNote" class="dash-load-note" role="status">กำลังโหลดข้อมูล…</div>
     <div id="homeAlertBanner" class="alert-banner" style="display:none">
       <div class="card-head"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0 1 12 0v6l2 3H4l2-3zM10 21h4"/></svg> แจ้งเตือน<div class="alert-filter" id="homeAlertFilter" role="tablist" aria-label="เลือกหัวข้อแจ้งเตือน"></div></div>
       <div class="card-body" id="homeAlertBody"></div>
     </div>
 
-    <div class="card dash-avail" style="margin-bottom:16px">
+    <div class="dash-home-panels">
+    <div class="card dash-avail" id="dashEquipmentOverview" style="margin-bottom:16px">
       <div class="card-head"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v13H4zM8 21h8m-4-4v4"/></svg> ความพร้อมใช้แยกประเภทเครื่อง</div>
       <div class="card-body">
         <div class="dash-asset-summary" id="homeAssetSummary"></div>
@@ -411,6 +419,12 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
         <div class="dash-avail-legend"><span><i class="seg-avail"></i>พร้อมใช้</span><span><i class="seg-borrowed"></i>ยืมอยู่</span><span><i class="seg-repair"></i>ชำรุด / ส่งซ่อม</span><span><i class="seg-pending"></i>รอเลขครุภัณฑ์</span></div>
         <details class="dash-repair-list" id="homeRepairList" hidden><summary></summary><div class="dash-repair-items"></div></details>
       </div>
+    </div>
+
+      <aside class="card dash-activity" aria-labelledby="dashActivityTitle">
+        <h3 class="card-head" id="dashActivityTitle">การยืม–คืนล่าสุด</h3>
+        <div class="card-body" id="dashActivity"><p>กำลังโหลด…</p></div>
+      </aside>
     </div>
 
     <div class="card dash-trend" style="margin-bottom:16px">
@@ -990,7 +1004,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 <script src="vendor/jspdf.umd.min.js"></script>
 <script src="vendor/jspdf.plugin.autotable.min.js"></script>
 <script src="supabase-client.js?v=20261117-return-checks-2"></script>
-<script src="auth.js"></script>
+<script src="auth.js?v=20261117-control-room-1"></script>
 <script src="unkeyed-statistics.js?v=20261104-print-1"></script>
 <script src="equipment-status.js?v=20261117-return-checks-2"></script>
 <script src="reports.js?v=20261104-print-1"></script>
@@ -1677,6 +1691,7 @@ async function loadAll() {
     applyFilters();
     renderAlertBanner();
     renderHomeAvailability();
+    renderHomeActivity();
     renderHomeTrend();
     renderDashboardSummary();
     if (currentView === 'prepare') {
@@ -1691,6 +1706,7 @@ async function loadAll() {
     console.error(err);
     note.textContent = 'โหลดข้อมูลไม่สำเร็จ กรุณากดอัปเดตข้อมูลเพื่อลองอีกครั้ง';
     note.dataset.error = 'true';
+    document.getElementById('dashActivity').textContent = 'โหลดรายการล่าสุดไม่สำเร็จ';
   } finally {
     refresh.disabled = false;
   }
@@ -2395,6 +2411,21 @@ function trendBarsHTML(data, borrowColor, returnColor, labelColor) {
       </div>
       <div class="trend-date" style="font-size:12px;color:${labelColor};margin-top:4px;white-space:nowrap">${(i % 7 === 0) ? d.label : '&nbsp;'}</div>
     </div>`).join('');
+}
+
+function renderHomeActivity() {
+  const panel = document.getElementById('dashActivity');
+  const recent = allRecords.filter(record => isBorrowOrReturnAction(record['ประเภท (ยืม/คืน)'])).slice(0, 5);
+  if (!recent.length) {
+    panel.textContent = 'ยังไม่มีรายการยืม–คืน';
+    return;
+  }
+  panel.innerHTML = `<ul class="dash-activity-list">${recent.map(record => {
+    const action = record['ประเภท (ยืม/คืน)'];
+    const when = formatThaiDateTime(record['Timestamp (ISO)']);
+    return `<li><strong>${escHtml(action)} · ${escHtml(record['ชื่อเครื่อง'])} ${escHtml(record['หมายเลขเครื่อง'])}</strong>
+      <span>${escHtml(record['ตึก/Ward'])} · ${escHtml(when)}</span></li>`;
+  }).join('')}</ul>`;
 }
 
 function renderHomeTrend() {
