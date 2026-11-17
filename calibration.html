@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="calibration.css?v=standard-equipment-super-admin">
 <link rel="stylesheet" href="site-footer.css?v=20261016-footer-1">
 <link rel="stylesheet" href="mems-office.css?v=20261117-office-1">
+<link rel="stylesheet" href="calibration-discover.css?v=1">
 </head>
 <body class="mems-pm mems-calibration">
 <header class="pm-header"><div class="pm-header-inner"><a class="pm-brand" href="index.html"><img src="logo.png" alt=""><span><strong>MEMs</strong><small>ศูนย์เครื่องมือแพทย์</small></span></a><div class="pm-header-actions"><div id="memsUserBadge"></div><nav><a href="index.html">← หน้าหลัก</a></nav></div></div></header>
@@ -110,17 +111,32 @@
   <section id="calQueue" class="card" hidden>
     <span class="pill">02 / ผู้ปฏิบัติการ</span>
     <h1 id="calQueueTitle" tabindex="-1">คิวสอบเทียบเครื่องมือ</h1>
-    <p>ค้นหาเครื่องจากทะเบียน แล้วเลือกบันทึกผลสอบเทียบ</p>
+    <p>ค้นหาเครื่องจากทะเบียน เปิดดูข้อมูล แล้วเริ่มบันทึกผลสอบเทียบ</p>
     <form id="calQueueFilters" class="fields">
-      <label>ค้นหา ID หรือเลขครุภัณฑ์<input id="calQueueSearch" type="search" maxlength="100" placeholder="พิมพ์ ID หรือเลขครุภัณฑ์"></label>
+      <label>ค้นหาเครื่องมือ<input id="calQueueSearch" type="search" maxlength="100" placeholder="ชื่อเครื่อง, ID หรือเลขครุภัณฑ์"></label>
       <label>หน่วยงาน<select id="calQueueDepartment"></select></label>
       <label>ประเภทเครื่องมือ<select id="calQueueType"></select></label>
       <label>จัดกลุ่มรายการ<select id="calQueueGroup"><option value="department">ตามหน่วยงาน</option><option value="method">ตามประเภทเครื่องมือ</option></select></label>
     </form>
-    <p id="calQueueCount" aria-live="polite"></p>
-    <div id="calQueueList"></div>
+    <div class="cal-discover-toolbar">
+      <p id="calQueueCount" aria-live="polite"></p>
+      <button id="calQueueClear" type="button" hidden>ล้างตัวกรอง</button>
+      <div class="cal-discover-toggle" role="group" aria-label="มุมมองคิวสอบเทียบ">
+        <button type="button" data-cal-queue-view="cards" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> การ์ด</button>
+        <button type="button" data-cal-queue-view="list" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h1M3 12h1M3 18h1"/></svg> รายการ</button>
+      </div>
+    </div>
+    <div id="calQueueList" data-view="cards"></div>
     <div class="cal-buttons"><button id="calQueuePrev" type="button">← ก่อนหน้า</button><button id="calQueueNext" type="button">ถัดไป →</button></div>
   </section>
+  <dialog id="calQueuePreview" class="cal-signer-dialog cal-discover-preview" aria-labelledby="calQueuePreviewTitle">
+    <div class="section-head">
+      <div><span class="pill">ข้อมูลจากทะเบียนสอบเทียบ</span><h2 id="calQueuePreviewTitle"></h2></div>
+      <form method="dialog"><button type="submit" autofocus>ปิด</button></form>
+    </div>
+    <dl id="calQueuePreviewDetails"></dl>
+    <div class="cal-buttons"><button class="primary" id="calQueuePreviewStart" type="button">เริ่มสอบเทียบ →</button></div>
+  </dialog>
   <form id="calForm" hidden>
   <button id="calBack" class="cal-back" type="button">← กลับไปคิวสอบเทียบ</button>
   <section class="hero">
@@ -303,7 +319,7 @@
 <script src="calibration-access-standards.js"></script>
 <script src="calibration-calculation.js"></script>
 <script src="calibration-form.js?v=digital-bp-workbook"></script>
-<script src="calibration.js?v=certificate-shared-logo"></script>
+<script src="calibration.js?v=20261117-discover-1"></script>
 <script src="site-footer.js?v=1.1"></script>
 <script src="mems-controls.js?v=20261117-office-1"></script>
 </body>
