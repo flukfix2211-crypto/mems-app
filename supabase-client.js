@@ -171,7 +171,7 @@ async function fetchReadyEquipmentRecommendations(type, limit = 5) {
     if (!number || seen.has(number) || preparedNos.has(number)) return [];
     seen.add(number);
     const status = statusByNo.get(number);
-    if (status && status.isBorrowed) return [];
+    if (status && (status.isBorrowed || status.isReturnPending)) return [];
     const returnedAt = status && status.lastUpdate ? status.lastUpdate : null;
     const returnedMs = returnedAt ? Date.parse(returnedAt) : NaN;
     return [{
@@ -226,7 +226,7 @@ async function fetchAllPages(buildQuery, pageSize = 1000) {
 async function fetchEquipmentStatus() {
   const rows = await fetchAllPages(() =>
     supabase.from('equipment_status')
-      .select('equipment_name, equipment_number, ward, staff_name, action, recorded_at, is_borrowed, borrow_started_at')
+      .select('equipment_name, equipment_number, ward, staff_name, action, recorded_at, is_borrowed, borrow_started_at, is_return_pending')
       .order('equipment_name').order('equipment_number'));
   return rows.map(mapEquipmentStatusRow);
 }
@@ -240,6 +240,7 @@ function mapEquipmentStatusRow(r) {
     borrowedBy: r.staff_name,
     lastUpdate: r.recorded_at,
     borrowStartedAt: r.borrow_started_at,
+    isReturnPending: !!r.is_return_pending,
     isBorrowed: !!r.is_borrowed
   };
 }
@@ -331,6 +332,7 @@ async function fetchC2Status() {
     map[k] = {
       number: k,
       isBorrowed: e.isBorrowed,
+      isReturnPending: e.isReturnPending,
       ward: e.isBorrowed ? e.ward : '',
       borrowedBy: e.isBorrowed ? e.borrowedBy : '',
       lastUpdate: e.lastUpdate
@@ -522,4 +524,28 @@ async function saveEquipmentBatch(mode, items, ward, name, options = {}) {
 
 function memsEscapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/** Pending physical receipts, oldest first. No Telegram notification is sent for inspection. */
+async function fetchPendingEquipmentReturns() {
+  return fetchAllPages(() => supabase.from('equipment_return_checks')
+    .select('return_id,record:borrow_records!return_id(equipment_name,equipment_number,ward,staff_name,recorded_at)')
+    .is('confirmed_at', null).order('return_id'));
+}
+async function confirmEquipmentReturn(returnId, name) {
+  const { error } = await supabase.rpc('mems_confirm_equipment_return', { p_return_id: returnId, p_name: name });
+  if (error) throw error;
+}
+
+async function fetchReturnReceiptEnabled() {
+ const { data,error }=await supabase.from('app_settings').select('bool_value').eq('id','return_receipt_enabled').limit(1);
+ if(error) throw error;
+ return !data?.length || data[0].bool_value !== false;
+}
+async function saveReturnReceiptEnabled(enabled) {
+ const {data:{session}}=await supabase.auth.getSession();
+ if(!session) throw new Error('กรุณาเข้าสู่ระบบใหม่');
+ const {data,error}=await supabase.from('app_settings').upsert({id:'return_receipt_enabled',bool_value:!!enabled,updated_at:new Date().toISOString(),updated_by:session.user.id},{onConflict:'id'}).select('bool_value').single();
+ if(error) throw error;
+ return data.bool_value !== false;
 }

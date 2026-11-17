@@ -4,14 +4,14 @@ const EQUIPMENT_STATUS_IMAGES = {
   'High Flow': 'img/equipment/high-flow.jpg',
   'Brid เขียว': 'img/equipment/brid-green.jpg'
 };
-const EQUIPMENT_STATUS_LABELS = { avail: 'พร้อมใช้', borrowed: 'ยืมอยู่', repair: 'ซ่อม', pending: 'รอเลขครุภัณฑ์', sold: 'จำหน่าย' };
+const EQUIPMENT_STATUS_LABELS = { avail: 'พร้อมใช้', borrowed: 'ยืมอยู่', repair: 'ซ่อม', pending: 'รอเลขครุภัณฑ์', sold: 'จำหน่าย', returnPending: 'รอตรวจรับคืน' };
 function equipmentStatusEscape(value) {
   return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 function equipmentStatusSummary(counts) {
   const total = Object.values(counts).reduce((sum, n) => sum + n, 0);
   return Object.entries(EQUIPMENT_STATUS_LABELS).map(([status, label]) =>
-    `<article class="eq-stat eq-${status}"><span class="eq-stat-label"><i class="eq-dot" aria-hidden="true"></i>${label}</span><strong>${counts[status]}</strong><small>เครื่อง · ${total ? Math.round(counts[status] / total * 100) : 0}% ของทั้งหมด</small></article>`
+    `<article class="eq-stat eq-${status}"><span class="eq-stat-label"><i class="eq-dot" aria-hidden="true"></i>${label}</span><strong>${counts[status] || 0}</strong><small>เครื่อง · ${total ? Math.round((counts[status] || 0) / total * 100) : 0}% ของทั้งหมด</small></article>`
   ).join('');
 }
 function renderEquipmentStatusGrid(grid, items, type, onBorrowedClick) {
@@ -20,6 +20,7 @@ function renderEquipmentStatusGrid(grid, items, type, onBorrowedClick) {
     const interactive = u.status === 'borrowed' && !!onBorrowedClick;
     const tag = 'article';
     const location = u.status === 'borrowed' ? u.ward || 'ไม่ระบุหน่วยงาน'
+      : u.status === 'returnPending' ? 'หน่วยงานแจ้งคืนแล้ว รอเจ้าหน้าที่ตรวจรับ'
       : u.status === 'repair' ? u.assetStatus
       : u.status === 'pending' ? ASSET_STATUS_WAITING_FOR_NUMBER
       : u.status === 'sold' ? 'จำหน่ายออกจากระบบ' : 'พร้อมสำหรับยืม';

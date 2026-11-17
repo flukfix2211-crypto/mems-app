@@ -158,7 +158,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   <link rel="stylesheet" href="site-footer.css?v=20261016-footer-1">
   <link rel="stylesheet" href="mems-auth-theme.css?v=20261117-office-1">
   <link rel="stylesheet" href="operations-office.css?v=20260923-ops-2">
-<link rel="stylesheet" href="equipment-lifecycle.css?v=20261104-return-dialog-1">
+<link rel="stylesheet" href="equipment-lifecycle.css?v=20261117-return-checks-2">
 <link rel="stylesheet" href="mems-office.css?v=20261117-office-1">
 </head>
 <body class="mems-operation mems-prepare">
@@ -216,6 +216,13 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       <span class="set-date-value" id="setChangeDate">กำลังคำนวณ...</span>
     </div>
   </div>
+
+  <section class="card return-check-card" aria-labelledby="returnChecksTitle">
+    <div class="return-check-heading"><div><h2 id="returnChecksTitle">ตรวจและยืนยันการคืนเครื่อง <span id="returnChecksCount"></span></h2>
+    <p>หน่วยงานแจ้งคืนแล้ว รอเจ้าหน้าที่ตรวจว่ารับเครื่องจริง ก่อนนำไปเตรียมพร้อมใช้</p></div>
+    <button type="button" class="btn-back" id="refreshReturnChecks">รีเฟรชรายการ</button></div>
+    <div id="returnChecksList" aria-live="polite">กำลังโหลดรายการรอตรวจรับ…</div>
+  </section>
 
   <!-- โหมดการเตรียม -->
   <div class="card">
@@ -368,7 +375,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 <div id="toast"></div>
 
 <script src="vendor/supabase.js"></script>
-<script src="supabase-client.js?v=20261104-shared-wards-1"></script>
+<script src="supabase-client.js?v=20261117-return-checks-2"></script>
 <script src="auth.js"></script>
 <script>
   const ASSET_LABEL_EQUIPS = new Set(['Defibrillator', 'เครื่องมืออื่นๆ']);
@@ -672,11 +679,12 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   });
 </script>
 <script src="https://cdn.jsdelivr.net/npm/qr-scanner@1.4.2/qr-scanner.umd.min.js"></script>
-<script src="prepare-qr.js?v=20261104-unreturned-1"></script>
+<script src="prepare-qr.js?v=20261117-return-checks-2"></script>
 <script src="site-footer.js?v=1.1"></script>
 <script src="mascot.js?v=20261117-office-1"></script>
 <script src="equipment-photos.js?v=20261023-1"></script>
-<script src="equipment-lifecycle.js?v=20261104-return-dialog-1"></script>
+<script src="equipment-lifecycle.js?v=20261117-return-checks-2"></script>
 <script src="mems-controls.js?v=20261117-office-1"></script>
+<script src="return-checks.js?v=20261117-2"></script>
 </body>
 </html>

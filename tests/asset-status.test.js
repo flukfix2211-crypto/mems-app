@@ -118,3 +118,15 @@ test('missing round entries cannot free borrowed C2 units; a recorded return can
   assert.equal(context.computeTypeAvailability()[0].available, 5);
   assert.equal(context.computeAlerts().shortage.length, 0);
 });
+
+test('returns waiting for physical receipt are excluded from ready totals and shown separately', () => {
+  context.assetRows = [{type:'C2',no:1,status:'ใช้งานได้'},{type:'C2',no:2,status:'ใช้งานได้'}];
+  context.equipStatus = [{equipment:'C2',number:'1',isBorrowed:false,isReturnPending:true}];
+  const availability = context.computeTypeAvailability()[0];
+  assert.equal(availability.available,1);
+  assert.equal(availability.returnPending,1);
+  assert.equal(availability.borrowed,0);
+  const summary = context.computeC2Summary([{number:'1',isBorrowed:false,isReturnPending:true},{number:'2',isBorrowed:false}],{'1':'ใช้งานได้','2':'ใช้งานได้'});
+  assert.equal(summary.counts.avail,1);
+  assert.equal(summary.counts.returnPending,1);
+});

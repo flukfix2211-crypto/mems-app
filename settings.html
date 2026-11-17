@@ -207,6 +207,7 @@ body{background:#0c6173!important;background-image:none!important}
 </header>
 
 <div class="content">
+<div class="card"><h2>ตรวจและยืนยันการคืนเครื่อง</h2><p>เปิด: เครื่องที่แจ้งคืนต้องรอเจ้าหน้าที่ลงชื่อรับคืนก่อนเตรียมใช้<br>ปิด: คืนแล้วเตรียมใช้ได้ตามเดิม การแจ้งเตือน Telegram ยังทำงาน<br>รายการรอตรวจเดิมจะเก็บไว้ และกลับมารอตรวจเมื่อเปิดอีกครั้ง</p><div id="returnReceiptFeatureStatus" class="feature-status">กำลังโหลดการตั้งค่า…</div><button id="returnReceiptFeatureSwitch" class="feature-switch" type="button" role="switch" aria-checked="false" aria-label="เปิดหรือปิดการตรวจรับคืนเครื่อง" onclick="toggleReturnReceiptFeature()" disabled></button></div>
   <div class="card">
     <div class="feature-row">
       <div class="feature-copy">
@@ -382,13 +383,52 @@ body{background:#0c6173!important;background-image:none!important}
 
 <div id="toast"></div>
 
+
 <script src="vendor/supabase.js"></script>
-<script src="supabase-client.js?v=20261104-pediatric-returns-1"></script>
+<script src="supabase-client.js?v=20261117-return-checks-1"></script>
 <script src="auth.js?v=calibration-1"></script>
 <script>
 let allUsers = [];
 let editingUserId = null; // null = create mode
 let modalRole = 'user';
+let returnReceiptFeatureEnabled = true;
+function renderReturnReceiptFeatureSetting(loading) {
+  const button = document.getElementById('returnReceiptFeatureSwitch');
+  const status = document.getElementById('returnReceiptFeatureStatus');
+  button.classList.toggle('on', returnReceiptFeatureEnabled);
+  button.setAttribute('aria-checked', returnReceiptFeatureEnabled ? 'true' : 'false');
+  button.disabled = !!loading;
+  status.className = 'feature-status ' + (returnReceiptFeatureEnabled ? 'on' : 'off');
+  status.textContent = loading ? 'กำลังบันทึก…' : (returnReceiptFeatureEnabled ? 'เปิดใช้งานอยู่' : 'ปิดใช้งานอยู่');
+}
+
+async function loadReturnReceiptFeatureSetting() {
+  const button = document.getElementById('returnReceiptFeatureSwitch');
+  button.disabled = true;
+  try {
+    returnReceiptFeatureEnabled = await fetchReturnReceiptEnabled();
+    renderReturnReceiptFeatureSetting(false);
+  } catch (err) {
+    console.error(err);
+    document.getElementById('returnReceiptFeatureStatus').textContent = 'โหลดการตั้งค่าไม่สำเร็จ';
+    toast('❌ โหลดการตั้งค่าตรวจรับคืน ไม่สำเร็จ');
+  }
+}
+
+async function toggleReturnReceiptFeature() {
+  const next = !returnReceiptFeatureEnabled;
+  renderReturnReceiptFeatureSetting(true);
+  try {
+    returnReceiptFeatureEnabled = await saveReturnReceiptEnabled(next);
+    renderReturnReceiptFeatureSetting(false);
+    toast(returnReceiptFeatureEnabled ? '✅ เปิดใช้งานตรวจและยืนยันการคืนเครื่อง แล้ว' : '⏸️ ปิดใช้งานตรวจและยืนยันการคืนเครื่อง แล้ว');
+  } catch (err) {
+    console.error(err);
+    renderReturnReceiptFeatureSetting(false);
+    toast('❌ บันทึกการตั้งค่าไม่สำเร็จ');
+  }
+}
+
 let qrFeatureEnabled = true;
 let readyEquipmentSettings = {
   enabled: true,
@@ -904,6 +944,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   const profile = await memsGuard('super_admin'); // เฉพาะแอดมินหลัก (is_super_admin) เท่านั้น — role='admin' ทั่วไปเข้าไม่ได้
   if (profile) {
     loadQrFeatureSetting();
+    loadReturnReceiptFeatureSetting();
     loadReadyEquipmentFeatureSettings();
     loadUsers();
   }

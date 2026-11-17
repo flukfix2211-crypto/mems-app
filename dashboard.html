@@ -369,7 +369,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   <link rel="stylesheet" href="mems-ui.css?v=20261104-centered-popups-1">
   <link rel="stylesheet" href="site-footer.css?v=20261016-footer-1">
   <link rel="stylesheet" href="dashboard-office.css?v=20261006-prepare-counts-1">
-  <link rel="stylesheet" href="equipment-status.css?v=20261108-machine-history-1">
+  <link rel="stylesheet" href="equipment-status.css?v=20261117-return-checks-2">
   <link rel="stylesheet" href="mems-auth-theme.css?v=20261117-office-1">
 <link rel="stylesheet" href="unkeyed-statistics.css?v=20261104-dropdown-1">
 <link rel="stylesheet" href="mems-office.css?v=20261117-office-1">
@@ -989,10 +989,10 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 <script src="vendor/supabase.js"></script>
 <script src="vendor/jspdf.umd.min.js"></script>
 <script src="vendor/jspdf.plugin.autotable.min.js"></script>
-<script src="supabase-client.js?v=20261104-pediatric-returns-1"></script>
+<script src="supabase-client.js?v=20261117-return-checks-2"></script>
 <script src="auth.js"></script>
 <script src="unkeyed-statistics.js?v=20261104-print-1"></script>
-<script src="equipment-status.js?v=20261108-machine-history-1"></script>
+<script src="equipment-status.js?v=20261117-return-checks-2"></script>
 <script src="reports.js?v=20261104-print-1"></script>
 <script>
 /* ============================================================ RECORD MAPPING (borrow_records -> shape เดิมจาก GAS getRecords()) ============================================================ */
@@ -1837,10 +1837,11 @@ function computeTypeAvailability() {
     const status = a.status || 'ใช้งานได้';
     if (isAssetHiddenFromDashboard(status)) return;
     const k = typeKey(a.type);
-    const t = byType[k] || (byType[k] = { equipment: a.type, total: 0, borrowed: 0, repair: 0, pending: 0, broken: 0, sendRepair: 0, sold: 0, available: 0, repairUnits: [] });
+    const t = byType[k] || (byType[k] = { equipment: a.type, total: 0, borrowed: 0, repair: 0, pending: 0, broken: 0, sendRepair: 0, sold: 0, returnPending: 0, available: 0, repairUnits: [] });
     if (status === 'จำหน่าย') { t.sold++; return; }
     t.total++;
     if (status === ASSET_STATUS_WAITING_FOR_NUMBER) { t.pending++; return; }
+    if (equipStatus.some(e => e.isReturnPending && typeKey(e.equipment) === k && normalizeMachineNo(e.number) === normalizeMachineNo(a.no))) { t.returnPending++; return; }
     if (!REPAIR_STATUSES.includes(status)) return;
     if (borrowedByType[k] && borrowedByType[k].has(normalizeMachineNo(a.no))) return;
     t.repair++;
@@ -1850,7 +1851,7 @@ function computeTypeAvailability() {
 
   return Object.entries(byType).map(([k, t]) => {
     t.borrowed = Math.min(borrowedByType[k] ? borrowedByType[k].size : 0, t.total - t.repair - t.pending);
-    t.available = Math.max(0, t.total - t.borrowed - t.repair - t.pending);
+    t.available = Math.max(0, t.total - t.borrowed - t.repair - t.pending - t.returnPending);
     return t;
   }).sort((a, b) => b.total - a.total || a.equipment.localeCompare(b.equipment, 'th'));
 }
@@ -1877,7 +1878,8 @@ function renderHomeAvailability() {
     chip('is-borrowed', 'ยืมอยู่', sum('borrowed')) +
     chip('is-broken', 'ชำรุด', sum('broken')) +
     chip('is-repair', 'ส่งซ่อม', sum('sendRepair')) +
-    chip('is-pending', 'รอเลขครุภัณฑ์', sum('pending'));
+    chip('is-pending', 'รอเลขครุภัณฑ์', sum('pending')) +
+    chip('is-pending', 'รอตรวจรับคืน', sum('returnPending'));
 
   const pct = (n, t) => t ? (n / t * 100).toFixed(2) + '%' : '0%';
   list.innerHTML = types.map(t => {
@@ -1889,7 +1891,7 @@ function renderHomeAvailability() {
         <span class="seg-avail" style="width:${pct(t.available, t.total)}"></span><span class="seg-borrowed" style="width:${pct(t.borrowed, t.total)}"></span><span class="seg-repair" style="width:${pct(t.repair, t.total)}"></span><span class="seg-pending" style="width:${pct(t.pending, t.total)}"></span>
       </div>
       <div class="dash-avail-count"><strong>${t.available}</strong>/${t.total} พร้อมใช้</div>
-      <div class="dash-avail-detail">ยืมอยู่ ${t.borrowed}${t.repair ? ' · ซ่อม ' + t.repair : ''}${t.pending ? ' · รอเลข ' + t.pending : ''}</div>
+      <div class="dash-avail-detail">ยืมอยู่ ${t.borrowed}${t.repair ? ' · ซ่อม ' + t.repair : ''}${t.pending ? ' · รอเลข ' + t.pending : ''}${t.returnPending ? ' · รอตรวจรับคืน ' + t.returnPending : ''}</div>
     </div>`;
   }).join('');
 
@@ -2919,19 +2921,20 @@ async function confirmDeleteRound(rowIndex, label) {
 }
 
 /* ============================================================ C2 STATUS (ใช้ร่วมกันระหว่าง #eqStatusC2 และ KPI Display) ============================================================ */
-function classifyC2Status(assetStatus, isBorrowed) {
+function classifyC2Status(assetStatus, isBorrowed, isReturnPending) {
   if (assetStatus === 'จำหน่าย') return 'sold';
   if (assetStatus === 'ส่งซ่อม' || assetStatus === 'ชำรุด') return 'repair';
   if (assetStatus === ASSET_STATUS_WAITING_FOR_NUMBER) return 'pending';
   if (isBorrowed) return 'borrowed';
+  if (isReturnPending) return 'returnPending';
   return 'avail';
 }
 
 function computeC2Summary(units, assetMap) {
-  const counts = { avail: 0, borrowed: 0, repair: 0, pending: 0, sold: 0 };
+  const counts = { avail: 0, borrowed: 0, repair: 0, pending: 0, sold: 0, returnPending: 0 };
   const items = units.filter(u => !isAssetHiddenFromDashboard(assetMap[String(u.number)])).map(u => {
     const assetStatus = assetMap[String(u.number)] || 'ใช้งานได้';
-    const status = classifyC2Status(assetStatus, u.isBorrowed);
+    const status = classifyC2Status(assetStatus, u.isBorrowed, u.isReturnPending);
     counts[status]++;
     return { ...u, assetStatus, status };
   });
@@ -2960,7 +2963,7 @@ async function renderC2Dashboard() {
     });
     document.getElementById('c2DashSummary').innerHTML = equipmentStatusSummary(counts);
     document.getElementById('navEqStatusDesc').textContent =
-      `C2 — พร้อมใช้ ${counts.avail} · ยืมอยู่ ${counts.borrowed} · ซ่อม ${counts.repair} · รอเลข ${counts.pending} · จำหน่าย ${counts.sold}`;
+      `C2 — พร้อมใช้ ${counts.avail} · ยืมอยู่ ${counts.borrowed} · ซ่อม ${counts.repair} · รอเลข ${counts.pending} · รอตรวจรับคืน ${counts.returnPending} · จำหน่าย ${counts.sold}`;
 
     renderC2CircuitDue(items);
   } catch (e) {
@@ -3065,7 +3068,7 @@ async function renderEquip2Dashboard() {
 
     const borrowedMap = {};
     equipStatus.forEach(e => {
-      if (e.equipment === type && e.isBorrowed) borrowedMap[normalizeMachineNo(e.number)] = e;
+      if (e.equipment === type && (e.isBorrowed || e.isReturnPending)) borrowedMap[normalizeMachineNo(e.number)] = e;
     });
 
     const units = rows
@@ -3075,7 +3078,8 @@ async function renderEquip2Dashboard() {
         return {
           number: normalizeMachineNo(a.no),
           assetStatus: a.status || 'ใช้งานได้',
-          isBorrowed: !!b,
+          isBorrowed: !!b?.isBorrowed,
+          isReturnPending: !!b?.isReturnPending,
           ward: b ? b.ward : '',
           borrowedBy: b ? b.borrowedBy : ''
         };
@@ -3083,9 +3087,9 @@ async function renderEquip2Dashboard() {
     const order = sortMachineNumbers(units.map(u => u.number));
     units.sort((a, b) => order.indexOf(a.number) - order.indexOf(b.number));
 
-    const finalCounts = { avail: 0, borrowed: 0, repair: 0, pending: 0, sold: 0 };
+    const finalCounts = { avail: 0, borrowed: 0, repair: 0, pending: 0, sold: 0, returnPending: 0 };
     const finalItems = units.map(u => {
-      const status = classifyC2Status(u.assetStatus, u.isBorrowed);
+      const status = classifyC2Status(u.assetStatus, u.isBorrowed, u.isReturnPending);
       finalCounts[status]++;
       return { ...u, status };
     });
@@ -3093,7 +3097,7 @@ async function renderEquip2Dashboard() {
     renderEquipmentStatusGrid(grid, finalItems, type);
     summary.innerHTML = equipmentStatusSummary(finalCounts);
     document.getElementById('navEqStatusDesc').textContent =
-      `${type} — พร้อมใช้ ${finalCounts.avail} · ยืมอยู่ ${finalCounts.borrowed} · ซ่อม ${finalCounts.repair} · รอเลข ${finalCounts.pending} · จำหน่าย ${finalCounts.sold}`;
+      `${type} — พร้อมใช้ ${finalCounts.avail} · ยืมอยู่ ${finalCounts.borrowed} · ซ่อม ${finalCounts.repair} · รอเลข ${finalCounts.pending} · รอตรวจรับคืน ${finalCounts.returnPending} · จำหน่าย ${finalCounts.sold}`;
   } catch (e) {
     msg.textContent = '⚠️ โหลดไม่ได้';
   }

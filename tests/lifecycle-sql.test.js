@@ -6,7 +6,7 @@ const path = require("node:path");
 const root = path.join(__dirname, "..");
 const user = "10000000-0000-4000-8000-000000000001";
 let seq = 0;
-async function setup() {
+async function setup(returnChecks = false) {
   let db;
   if (process.env.MEMS_TEST_PG) {
     const { Client } = require("pg");
@@ -71,6 +71,7 @@ async function setup() {
   await db.exec(fs.readFileSync(path.join(root, 'supabase/migrations/20261024050733_er_high_flow_cross_ward_return.sql'), 'utf8'));
   await db.exec(fs.readFileSync(path.join(root, 'supabase/migrations/20261104000000_prepare_unreturned_equipment.sql'), 'utf8'));
   await db.exec(fs.readFileSync(path.join(root, 'supabase/migrations/20261104033354_picu_lower_pediatrics_cross_ward_return.sql'), 'utf8'));
+  if (returnChecks) await db.exec(fs.readFileSync(path.join(root, 'supabase/migrations/20261117140000_return_receipt_confirmation.sql'), 'utf8'));
   await db.exec(
     `set role authenticated;select set_config('request.jwt.claim.sub','${user}',false);`,
   );
@@ -496,4 +497,77 @@ test('PICU and lower pediatrics share returns both directions for all types, kee
     await db.exec("insert into borrow_records(record_date,record_time,action,equipment_name,equipment_number,ward,staff_name,note) values(current_date,current_time,'ย้ายวอร์ด','C2','1','ICU','Test','ย้ายจาก PICU')");
     await assert.rejects(batch(db,'return',[item('C2')],'เด็กล่าง'),/ตึกอื่น/);
   } finally { await db.close(); }
+});
+
+test("physical returns wait for signed receipt, enforce permissions and cannot prepare via direct API", async () => {
+  const db = await setup(true);
+  try {
+    await db.exec("insert into assets(type,no)values('C2',1),('C2',2),('High Flow',1)");
+    await batch(db, 'deliver', [item('C2'), item('High Flow')]);
+    const returned = await batch(db, 'return', [item('C2')]);
+    const rid = returned.result[0].id;
+    assert.equal((await db.query("select is_return_pending,is_borrowed from equipment_status where equipment_name='C2'")).rows[0].is_return_pending,true);
+    await assert.rejects(batch(db,'prepare',[item('C2')]), /รอตรวจ/);
+    await assert.rejects(batch(db,'deliver',[item('C2')]), /รอตรวจ/);
+    await assert.rejects(db.exec("insert into prepare_records(record_date,record_time,equipment_type,equipment_number,ward,prepared_by)values(current_date,current_time,'C2','1','ER','Test')"), /รอตรวจ/);
+    await assert.rejects(db.query("select mems_confirm_equipment_return($1,'   ')",[rid]), /ลงชื่อ/);
+    await assert.rejects(db.query("update equipment_return_checks set confirmed_at=now() where return_id=$1",[rid]), /permission denied/);
+    // Ward users may return, but cannot sign their own physical receipt.
+    await db.exec("reset role; update user_profiles set role='user',permissions=array['borrow']::text[];set role authenticated");
+    await assert.rejects(db.query("select mems_confirm_equipment_return($1,'Ward')",[rid]), /ไม่มีสิทธิ์/);
+    assert.equal((await db.query("update equipment_return_checks set confirmed_by='Ward' where return_id=$1 returning *",[rid])).rows.length,0);
+    await db.exec("reset role;update user_profiles set permissions=array['prepare']::text[];set role authenticated");
+    await db.query("select mems_confirm_equipment_return($1,'  Receiver  ')",[rid]);
+    const signed=(await db.query("select * from equipment_return_checks where return_id=$1",[rid])).rows[0];
+    assert.equal(signed.confirmed_by,'Receiver');assert.equal(signed.confirmed_user_id,user);assert.ok(signed.confirmed_at);
+    await assert.rejects(db.query("select mems_confirm_equipment_return($1,'Other')",[rid]), /ยืนยันรับคืนแล้ว/);
+    await assert.rejects(db.query("update equipment_return_checks set confirmed_by='Other' where return_id=$1",[rid]), /ยืนยันรับคืนแล้ว/);
+    assert.equal((await db.query("select is_return_pending from equipment_status where equipment_name='C2'")).rows[0].is_return_pending,false);
+    await batch(db,'prepare',[item('C2')]);
+    // Other equipment type with same number retains its loan.
+    assert.equal((await db.query("select is_borrowed from equipment_status where equipment_name='High Flow'")).rows[0].is_borrowed,true);
+    await db.exec("reset role;update user_profiles set role='admin';set role authenticated");
+    await batch(db,'borrow',[item('C2')]);
+    await batch(db,'return',[item('C2')]);
+    assert.equal((await db.query("select count(*)::int n from equipment_return_checks where confirmed_at is null")).rows[0].n,1);
+    await assert.rejects(batch(db,'prepare',[item('C2'),item('C2',2)]), /รอตรวจ/);
+    assert.equal((await db.query("select count(*)::int n from prepare_records where equipment_number='2'")).rows[0].n,0);
+  } finally {await db.close();}
+});
+test("physical return confirmation preserves legacy returns and signs staff's missing-return preparation atomically", async()=>{
+  const db=await setup();
+  try {
+    await db.exec("insert into assets(type,no)values('C2',1)");
+    await batch(db,'deliver',[item('C2')]);await batch(db,'return',[item('C2')]);
+    await db.exec("reset role");
+    await db.exec(fs.readFileSync(path.join(root,'supabase/migrations/20261117140000_return_receipt_confirmation.sql'),'utf8'));
+    await db.exec("set role authenticated");
+    assert.equal((await db.query("select is_return_pending from equipment_status")).rows[0].is_return_pending,false);
+    await batch(db,'deliver',[item('C2')]);
+    const holder=(await db.query("select * from equipment_status")).rows[0];
+    const payload={mode:'prepare',items:[item('C2')],ward:'ICU',name:'Staff',unreturned:[{...item('C2'),ward:holder.ward,lastUpdate:holder.recorded_at}]};
+    const id='40000000-0000-4000-8000-000000000001';
+    await db.query("select mems_equipment_batch($1,$2::jsonb)",[id,JSON.stringify(payload)]);
+    await db.query("select mems_equipment_batch($1,$2::jsonb)",[id,JSON.stringify(payload)]);
+    const checks=(await db.query("select * from equipment_return_checks")).rows;
+    assert.equal(checks.length,1);assert.equal(checks[0].confirmed_by,'Staff');assert.ok(checks[0].confirmed_at);
+  } finally {await db.close();}
+});
+
+test('return receipt switch pauses pending checks and queues only returns made while enabled', async()=>{
+ const db=await setup(true);
+ try {
+  await db.exec("reset role;create table public.app_settings(id text primary key,bool_value boolean not null);grant select on app_settings to authenticated;");
+  await db.exec(fs.readFileSync(path.join(root,'supabase/migrations/20261117150000_return_receipt_setting.sql'),'utf8'));
+  await db.exec('set role authenticated');
+  await db.exec("insert into assets(type,no)values('C2',1)");
+  await batch(db,'deliver',[item('C2')]);await batch(db,'return',[item('C2')]);
+  await assert.rejects(batch(db,'prepare',[item('C2')]),/รอตรวจ/);
+  await db.exec("reset role;update app_settings set bool_value=false;set role authenticated");
+  assert.equal((await db.query('select is_return_pending from equipment_status')).rows[0].is_return_pending,false);
+  await batch(db,'deliver',[item('C2')]);await batch(db,'return',[item('C2')]);
+  assert.equal((await db.query('select count(*)::int n from equipment_return_checks')).rows[0].n,1);
+  await db.exec("reset role;update app_settings set bool_value=true;set role authenticated");
+  await assert.rejects(batch(db,'prepare',[item('C2')]),/รอตรวจ/);
+ }finally{await db.close();}
 });
