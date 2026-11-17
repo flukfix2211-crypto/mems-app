@@ -160,6 +160,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   <link rel="stylesheet" href="mems-auth-theme.css?v=20261117-office-1">
   <link rel="stylesheet" href="operations-office.css?v=20260923-ops-2">
 <link rel="stylesheet" href="mems-office.css?v=20261117-office-1">
+<link rel="stylesheet" href="asset-registry.css?v=20261117-sidebar-1">
 </head>
 <body class="mems-operation mems-assets">
 
@@ -202,104 +203,107 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   <div class="sub">Medical Equipment Management Systems</div>
 </header>
 
-<div class="content">
-  <section class="registry-heading" aria-labelledby="registryTitle">
-    <h2 class="registry-title" id="registryTitle">ทะเบียนเครื่องมือ</h2>
-    <!-- CONTROLS -->
-    <div class="ctrl-row">
-      <div class="search-wrap">
-        <input type="search" id="searchInput" aria-label="ค้นหาเครื่องมือ" placeholder="ค้นหา No., เลขครุภัณฑ์, S/N..." oninput="applyFilter()">
+<div class="content registry-workspace">
+  <aside class="registry-sidebar" aria-labelledby="registryTypesTitle">
+    <h2 id="registryTypesTitle">ประเภทเครื่อง</h2>
+    <div class="type-chips">
+      <button class="type-chip active" aria-pressed="true" data-type="" onclick="setTypeFilter(this.dataset.type)"><span>ทั้งหมด</span><span class="type-count"></span></button>
+      <button class="type-chip" aria-pressed="false" data-type="C2" onclick="setTypeFilter(this.dataset.type)"><span>C2</span><span class="type-count"></span></button>
+      <button class="type-chip" aria-pressed="false" data-type="High Flow" onclick="setTypeFilter(this.dataset.type)"><span>High Flow</span><span class="type-count"></span></button>
+      <button class="type-chip" aria-pressed="false" data-type="Brid เขียว" onclick="setTypeFilter(this.dataset.type)"><span>Brid เขียว</span><span class="type-count"></span></button>
+      <button class="type-chip" aria-pressed="false" data-type="Monnal t60" onclick="setTypeFilter(this.dataset.type)"><span>Monnal t60</span><span class="type-count"></span></button>
+      <button class="type-chip" aria-pressed="false" data-type="T1" onclick="setTypeFilter(this.dataset.type)"><span>T1</span><span class="type-count"></span></button>
+      <button class="type-chip" aria-pressed="false" data-type="Patient Monitor" onclick="setTypeFilter(this.dataset.type)"><span>Patient Monitor</span><span class="type-count"></span></button>
+      <button class="type-chip" aria-pressed="false" data-type="NIBP" onclick="setTypeFilter(this.dataset.type)"><span>NIBP</span><span class="type-count"></span></button>
+      <button class="type-chip" aria-pressed="false" data-type="Infusion Pump" onclick="setTypeFilter(this.dataset.type)"><span>Infusion Pump</span><span class="type-count"></span></button>
+      <button class="type-chip" aria-pressed="false" data-type="Syringe Pump" onclick="setTypeFilter(this.dataset.type)"><span>Syringe Pump</span><span class="type-count"></span></button>
+      <button class="type-chip" aria-pressed="false" data-type="Defibrillator" onclick="setTypeFilter(this.dataset.type)"><span>Defibrillator</span><span class="type-count"></span></button>
+      <button class="type-chip" aria-pressed="false" data-type="อื่นๆ" onclick="setTypeFilter(this.dataset.type)"><span>อื่นๆ</span><span class="type-count"></span></button>
+    </div>
+  </aside>
+  <div class="registry-board">
+    <section class="registry-heading" aria-labelledby="registryTitle">
+      <h2 class="registry-title" id="registryTitle">ทะเบียนเครื่องมือ</h2>
+      <!-- CONTROLS -->
+      <div class="ctrl-row">
+        <div class="search-wrap">
+          <input type="search" id="searchInput" aria-label="ค้นหาเครื่องมือ" placeholder="ค้นหา No., เลขครุภัณฑ์, S/N..." oninput="applyFilter()">
+        </div>
+        <select class="fsel" id="statusFilter" aria-label="กรองตามสถานะ" onchange="applyFilter()">
+          <option value="">ทุกสถานะ</option>
+          <option value="ใช้งานได้">ใช้งานได้</option>
+          <option value="ชำรุด">ชำรุด</option>
+          <option value="ส่งซ่อม">ส่งซ่อม</option>
+          <option value="จำหน่าย">จำหน่าย</option>
+          <option value="รอเลขครุภัณฑ์">รอเลขครุภัณฑ์</option>
+          <option value="เครื่องยังไม่พร้อมใช้งาน">เครื่องยังไม่พร้อมใช้งาน</option>
+        </select>
+        <button class="add-btn" onclick="openModal()">＋ เพิ่มเครื่องใหม่</button>
       </div>
-      <select class="fsel" id="statusFilter" aria-label="กรองตามสถานะ" onchange="applyFilter()">
-        <option value="">ทุกสถานะ</option>
-        <option value="ใช้งานได้">ใช้งานได้</option>
-        <option value="ชำรุด">ชำรุด</option>
-        <option value="ส่งซ่อม">ส่งซ่อม</option>
-        <option value="จำหน่าย">จำหน่าย</option>
-        <option value="รอเลขครุภัณฑ์">รอเลขครุภัณฑ์</option>
-        <option value="เครื่องยังไม่พร้อมใช้งาน">เครื่องยังไม่พร้อมใช้งาน</option>
-      </select>
-      <button class="add-btn" onclick="openModal()">＋ เพิ่มเครื่องใหม่</button>
+    </section>
+    <!-- STATS -->
+    <div class="stats-row">
+      <div class="stat-chip">
+        <div class="stat-num" id="statTotal">—</div>
+        <div class="stat-lbl" id="statScope">ทุกประเภท</div>
+      </div>
+      <div class="stat-chip">
+        <div class="stat-num green" id="statOk">—</div>
+        <div class="stat-lbl">ใช้งานได้</div>
+      </div>
+      <div class="stat-chip">
+        <div class="stat-num yellow" id="statBroken">—</div>
+        <div class="stat-lbl">ชำรุด/ซ่อม</div>
+      </div>
+      <div class="stat-chip">
+        <div class="stat-num red" id="statSold">—</div>
+        <div class="stat-lbl">จำหน่าย</div>
+      </div>
+      <div class="stat-chip">
+        <div class="stat-num orange" id="statWaiting">—</div>
+        <div class="stat-lbl">รอเลขครุภัณฑ์</div>
+      </div>
+      <div class="stat-chip">
+        <div class="stat-num purple" id="statNotReady">—</div>
+        <div class="stat-lbl">เครื่องยังไม่พร้อมใช้งาน</div>
+      </div>
     </div>
-  </section>
-  <!-- TYPE CHIPS -->
-  <div class="type-chips">
-    <button class="type-chip active" aria-pressed="true" onclick="setTypeFilter('')">ทั้งหมด</button>
-    <button class="type-chip" aria-pressed="false" onclick="setTypeFilter('C2')">C2</button>
-    <button class="type-chip" aria-pressed="false" onclick="setTypeFilter('High Flow')">High Flow</button>
-    <button class="type-chip" aria-pressed="false" onclick="setTypeFilter('Brid เขียว')">Brid เขียว</button>
-    <button class="type-chip" aria-pressed="false" onclick="setTypeFilter('Monnal t60')">Monnal t60</button>
-    <button class="type-chip" aria-pressed="false" onclick="setTypeFilter('T1')">T1</button>
-    <button class="type-chip" aria-pressed="false" onclick="setTypeFilter('Patient Monitor')">Patient Monitor</button>
-    <button class="type-chip" aria-pressed="false" onclick="setTypeFilter('NIBP')">NIBP</button>
-    <button class="type-chip" aria-pressed="false" onclick="setTypeFilter('Infusion Pump')">Infusion Pump</button>
-    <button class="type-chip" aria-pressed="false" onclick="setTypeFilter('Syringe Pump')">Syringe Pump</button>
-    <button class="type-chip" aria-pressed="false" onclick="setTypeFilter('Defibrillator')">Defibrillator</button>
-    <button class="type-chip" aria-pressed="false" onclick="setTypeFilter('อื่นๆ')">อื่นๆ</button>
-  </div>
 
-  <!-- STATS -->
-  <div class="stats-row">
-    <div class="stat-chip">
-      <div class="stat-num" id="statTotal">—</div>
-      <div class="stat-lbl" id="statScope">ทุกประเภท</div>
+    <div class="qr-toolbar" id="qrToolbar" aria-label="เครื่องมือพิมพ์ป้าย QR Code" hidden>
+      <div class="qr-toolbar-info">
+        <span id="qrSelectedCount">เลือกแล้ว 0 เครื่อง</span>
+        <span class="qr-toolbar-note">ป้าย 3×3 ซม. · A4 แผ่นละ 54 ป้าย · ใช้เครื่องสแกน 2D</span>
+      </div>
+      <button class="qr-tool-btn" type="button" onclick="selectAllVisibleQrAssets()">เลือกทั้งหมดที่แสดง</button>
+      <button class="qr-tool-btn" type="button" onclick="clearQrAssetSelection()">ล้าง</button>
+      <button class="qr-tool-btn primary" id="qrPdfBtn" type="button" onclick="createAssetQrPdf()" disabled>PDF / พิมพ์</button>
     </div>
-    <div class="stat-chip">
-      <div class="stat-num green" id="statOk">—</div>
-      <div class="stat-lbl">ใช้งานได้</div>
-    </div>
-    <div class="stat-chip">
-      <div class="stat-num yellow" id="statBroken">—</div>
-      <div class="stat-lbl">ชำรุด/ซ่อม</div>
-    </div>
-    <div class="stat-chip">
-      <div class="stat-num red" id="statSold">—</div>
-      <div class="stat-lbl">จำหน่าย</div>
-    </div>
-    <div class="stat-chip">
-      <div class="stat-num orange" id="statWaiting">—</div>
-      <div class="stat-lbl">รอเลขครุภัณฑ์</div>
-    </div>
-    <div class="stat-chip">
-      <div class="stat-num purple" id="statNotReady">—</div>
-      <div class="stat-lbl">เครื่องยังไม่พร้อมใช้งาน</div>
-    </div>
-  </div>
 
-  <div class="qr-toolbar" id="qrToolbar" aria-label="เครื่องมือพิมพ์ป้าย QR Code" hidden>
-    <div class="qr-toolbar-info">
-      <span id="qrSelectedCount">เลือกแล้ว 0 เครื่อง</span>
-      <span class="qr-toolbar-note">ป้าย 3×3 ซม. · A4 แผ่นละ 54 ป้าย · ใช้เครื่องสแกน 2D</span>
+    <!-- TABLE -->
+    <div class="card registry-table">
+      <div class="tbl-wrap" id="assetScroll" tabindex="0" role="region" aria-label="รายการเครื่องมือ">
+        <table id="assetTable">
+          <thead>
+            <tr>
+              <th style="text-align:center;width:38px"><input id="qrCheckAll" class="qr-check" type="checkbox" aria-label="เลือกทั้งหมดที่แสดงเพื่อพิมพ์ป้าย QR" title="เลือกเครื่องเพื่อพิมพ์ป้าย QR" onchange="toggleAllVisibleQrAssets(this.checked)"></th>
+              <th style="text-align:center;width:46px">No.</th>
+              <th>เลขครุภัณฑ์</th>
+              <th>S/N</th>
+              <th>ID</th>
+              <th>ประเภท</th>
+              <th>สถานะ</th>
+              <th>หมายเหตุ</th>
+              <th style="text-align:center">จัดการ</th>
+            </tr>
+          </thead>
+          <tbody id="assetBody">
+            <tr class="empty-row"><td colspan="9"><div class="spinner"></div><br>กำลังโหลดข้อมูล...</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
-    <button class="qr-tool-btn" type="button" onclick="selectAllVisibleQrAssets()">เลือกทั้งหมดที่แสดง</button>
-    <button class="qr-tool-btn" type="button" onclick="clearQrAssetSelection()">ล้าง</button>
-    <button class="qr-tool-btn primary" id="qrPdfBtn" type="button" onclick="createAssetQrPdf()" disabled>PDF / พิมพ์</button>
+    <div id="recordCount" style="font-size:12px;color:var(--muted);text-align:right;margin-top:4px"></div>
   </div>
-
-  <!-- TABLE -->
-  <div class="card registry-table">
-    <div class="tbl-wrap">
-      <table id="assetTable">
-        <thead>
-          <tr>
-            <th style="text-align:center;width:38px"><input id="qrCheckAll" class="qr-check" type="checkbox" aria-label="เลือกทั้งหมดที่แสดงเพื่อพิมพ์ป้าย QR" title="เลือกเครื่องเพื่อพิมพ์ป้าย QR" onchange="toggleAllVisibleQrAssets(this.checked)"></th>
-            <th style="text-align:center;width:46px">No.</th>
-            <th>เลขครุภัณฑ์</th>
-            <th>S/N</th>
-            <th>ID</th>
-            <th>ประเภท</th>
-            <th>สถานะ</th>
-            <th>หมายเหตุ</th>
-            <th style="text-align:center">จัดการ</th>
-          </tr>
-        </thead>
-        <tbody id="assetBody">
-          <tr class="empty-row"><td colspan="9"><div class="spinner"></div><br>กำลังโหลดข้อมูล...</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-  <div id="recordCount" style="font-size:12px;color:var(--muted);text-align:right;margin-top:4px"></div>
 </div>
 
 <!-- MODAL เพิ่ม/แก้ไข -->
@@ -421,6 +425,12 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       // โหลดเป็นชุด — ทะเบียนเกิน 1,000 แถวจะถูกตัดเงียบๆ ถ้าโหลดครั้งเดียว
       const data = await fetchAllPages(() => supabase.from('assets').select('*').order('no', { ascending: true }).order('id'));
       allAssets = data.map(toAssetView);
+      const counts = new Map();
+      allAssets.forEach(asset => counts.set(asset.ประเภท, (counts.get(asset.ประเภท) || 0) + 1));
+      document.querySelectorAll('.type-chip').forEach(chip => {
+        const type = chip.dataset.type;
+        chip.querySelector('.type-count').textContent = type ? counts.get(type) || 0 : allAssets.length;
+      });
       pruneQrSelection();
       const savedAsset = allAssets.find(asset => asset._rowIndex === savedId);
       if (savedAsset) {
@@ -450,7 +460,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   function setTypeFilter(type) {
     currentTypeFilter = type;
     document.querySelectorAll('.type-chip').forEach(c => {
-      const matches = (type === '' && c.textContent === 'ทั้งหมด') || c.textContent === type;
+      const matches = c.dataset.type === type;
       c.classList.toggle('active', matches);
       c.setAttribute('aria-pressed', String(matches));
     });
@@ -466,6 +476,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     updateStats(typeSubset);
     const filtered = typeSubset.filter(a => (!st || a.สถานะ === st) && matchesAssetSearch(a, q));
     renderTable(filtered);
+    document.getElementById('assetScroll').scrollTop = 0;
   }
 
   function matchesAssetSearch(asset, query) {
@@ -488,7 +499,10 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     const row = document.getElementById(`asset-row-${asset._rowIndex}`);
     if (row) {
       row.querySelector('.act-edit').focus({ preventScroll: true });
-      row.scrollIntoView({ block: 'center', inline: 'nearest' });
+      const viewport = document.getElementById('assetScroll');
+      const rowRect = row.getBoundingClientRect();
+      viewport.scrollTop += rowRect.top - viewport.getBoundingClientRect().top
+        - (viewport.clientHeight - rowRect.height) / 2;
     }
   }
 
@@ -648,6 +662,11 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 2800);
   }
+
+  const registryHeader = document.querySelector('.header');
+  new ResizeObserver(() => {
+    document.querySelector('.registry-workspace').style.setProperty('--registry-header-height', `${registryHeader.offsetHeight}px`);
+  }).observe(registryHeader);
 
   window.addEventListener('DOMContentLoaded', async () => {
     const profile = await memsGuard('assets');
