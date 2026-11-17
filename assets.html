@@ -424,14 +424,18 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     'เครื่องยังไม่พร้อมใช้งาน': '📋'
   };
 
-  async function loadAssets() {
+  async function loadAssets(savedId) {
     try {
       // โหลดเป็นชุด — ทะเบียนเกิน 1,000 แถวจะถูกตัดเงียบๆ ถ้าโหลดครั้งเดียว
       const data = await fetchAllPages(() => supabase.from('assets').select('*').order('no', { ascending: true }).order('id'));
       allAssets = data.map(toAssetView);
       pruneQrSelection();
-      updateStats();
-      renderTable(allAssets);
+      const savedAsset = allAssets.find(asset => asset._rowIndex === savedId);
+      if (savedAsset) {
+        revealSavedAsset(savedAsset);
+      } else {
+        applyFilter();
+      }
     } catch (err) {
       document.getElementById('assetBody').innerHTML =
         `<tr class="empty-row"><td colspan="9">⚠️ โหลดข้อมูลไม่ได้: ${err.message}</td></tr>`;
@@ -460,19 +464,38 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   }
 
   function applyFilter() {
-    const q  = document.getElementById('searchInput').value.toLowerCase();
+    const q  = document.getElementById('searchInput').value;
     const st = document.getElementById('statusFilter').value;
     const typeSubset = currentTypeFilter
       ? allAssets.filter(a => (a.ประเภท || '') === currentTypeFilter)
       : allAssets;
     updateStats(typeSubset);
-    const filtered = typeSubset.filter(a => {
-      const matchSt = !st || a.สถานะ === st;
-      const matchQ  = !q || [a['No.'], a.เลขครุภัณฑ์, a['S/N'], a.ID, a.ประเภท, a.หมายเหตุ]
-        .some(v => String(v || '').toLowerCase().includes(q));
-      return matchSt && matchQ;
-    });
+    const filtered = typeSubset.filter(a => (!st || a.สถานะ === st) && matchesAssetSearch(a, q));
     renderTable(filtered);
+  }
+
+  function matchesAssetSearch(asset, query) {
+    const q = query.toLowerCase();
+    return !q || [asset['No.'], asset.เลขครุภัณฑ์, asset['S/N'], asset.ID, asset.ประเภท, asset.หมายเหตุ]
+      .some(value => String(value || '').toLowerCase().includes(q));
+  }
+
+  function revealSavedAsset(asset) {
+    const search = document.getElementById('searchInput');
+    const status = document.getElementById('statusFilter');
+    if (!matchesAssetSearch(asset, search.value)) search.value = '';
+    if (status.value && status.value !== asset.สถานะ) status.value = '';
+    if (currentTypeFilter && currentTypeFilter !== asset.ประเภท) {
+      setTypeFilter(asset.ประเภท || '');
+    } else {
+      applyFilter();
+    }
+
+    const row = document.getElementById(`asset-row-${asset._rowIndex}`);
+    if (row) {
+      row.querySelector('.act-edit').focus({ preventScroll: true });
+      row.scrollIntoView({ block: 'center', inline: 'nearest' });
+    }
   }
 
   function renderTable(assets) {
@@ -493,7 +516,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       const cls  = STATUS_CLASS[a.สถานะ] || 'ok';
       const icon = STATUS_ICON[a.สถานะ]  || '✅';
       const ri   = a._rowIndex;
-      return `<tr>
+      return `<tr id="asset-row-${ri}">
         <td style="text-align:center"><input class="qr-check qr-row-check" type="checkbox" aria-label="เลือก No.${a['No.']} เพื่อพิมพ์ QR" ${selectedQrAssetIds.has(String(ri)) ? 'checked' : ''} onchange="toggleQrAsset('${ri}', this.checked)"></td>
         <td class="no-col">${a['No.']}</td>
         <td class="asset-col">${a.เลขครุภัณฑ์ || '—'}</td>
@@ -593,17 +616,14 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
         updated_at: new Date().toISOString()
       };
 
-      if (rowIndex) {
-        const { error } = await supabase.from('assets').update(row).eq('id', parseInt(rowIndex, 10));
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from('assets').insert(row);
-        if (error) throw error;
-      }
+      const assets = supabase.from('assets');
+      const mutation = rowIndex ? assets.update(row).eq('id', rowIndex) : assets.insert(row);
+      const { data: saved, error } = await mutation.select('id').single();
+      if (error) throw error;
 
       showToast(rowIndex ? '✅ แก้ไขสำเร็จ' : '✅ เพิ่มเครื่องสำเร็จ');
       closeModal();
-      setTimeout(loadAssets, 1200);
+      await loadAssets(saved.id);
     } catch (err) {
       showToast('❌ ' + assetErrorText(err));
     } finally {
