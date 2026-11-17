@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="site-footer.css?v=20261016-footer-1">
 <link rel="stylesheet" href="mems-office.css?v=20261117-office-1">
 <link rel="stylesheet" href="calibration-discover.css?v=1">
+<link rel="stylesheet" href="calibration-history.css?v=20261117-1">
 </head>
 <body class="mems-pm mems-calibration">
 <header class="pm-header"><div class="pm-header-inner"><a class="pm-brand" href="index.html"><img src="logo.png" alt=""><span><strong>MEMs</strong><small>ศูนย์เครื่องมือแพทย์</small></span></a><div class="pm-header-actions"><div id="memsUserBadge"></div><nav><a href="index.html">← หน้าหลัก</a></nav></div></div></header>
@@ -183,21 +184,28 @@
 
   <div class="cal-buttons"><button class="primary" id="calSave" type="submit">บันทึกผลสอบเทียบ</button></div>
   </form>
-  <section class="card" id="calHistory" hidden>
-    <span class="pill">03 / ผลการสอบเทียบ</span>
-    <h1>ประวัติการสอบเทียบ</h1>
-    <form id="calFilters" class="fields">
-      <label>ค้นหา ID, เลขครุภัณฑ์ หรือเลขใบรับรอง<input id="calHistorySearch" type="search" maxlength="100"></label>
-      <label>หน่วยงาน<select id="calFilterDepartment"></select></label>
-      <label>ประเภทเครื่องมือ<select id="calFilterType"></select></label>
-      <div class="cal-buttons"><button type="submit">ค้นหา</button></div>
-    </form>
-    <div class="cal-buttons"><button id="calPrintFiltered" type="button" disabled>PDF / พิมพ์รายการที่กรอง</button><button id="calSignerSettings" type="button">ตั้งค่าผู้ทดสอบ / ผู้อนุมัติ</button><button id="calPdfSettings" type="button">ตั้งค่าโครงร่าง PDF</button></div>
-    <p id="calCount" aria-live="polite"></p>
-    <div class="scroll">
-      <table class="cal-history"><thead><tr><th>วันที่</th><th>เลขที่ใบรับรอง</th><th>หน่วยงาน</th><th>ประเภทเครื่องมือ</th><th>เครื่องมือ</th><th>รายละเอียด / รายงาน</th></tr></thead><tbody id="calList"></tbody></table>
+  <section class="card" id="calHistory" aria-labelledby="calHistoryTitle" hidden>
+    <h1 id="calHistoryTitle">ประวัติการสอบเทียบ</h1>
+    <div class="cal-history-workspace">
+      <aside class="cal-history-sidebar" aria-labelledby="calHistoryTypesTitle">
+        <h2 id="calHistoryTypesTitle">ประเภทเครื่องมือ</h2>
+        <div id="calHistoryTypes" class="cal-history-types" role="group" aria-labelledby="calHistoryTypesTitle"></div>
+      </aside>
+      <div class="cal-history-board">
+        <form id="calFilters" class="fields">
+          <label class="cal-history-search">ค้นหา ID, เลขครุภัณฑ์ หรือเลขใบรับรอง<input id="calHistorySearch" type="search" maxlength="100"></label>
+          <label>หน่วยงาน<select id="calFilterDepartment"></select></label>
+          <select id="calFilterType" hidden aria-hidden="true"></select>
+          <div class="cal-buttons"><button class="primary" type="submit">ค้นหา</button></div>
+        </form>
+        <div class="cal-buttons"><button id="calPrintFiltered" type="button" disabled>PDF / พิมพ์รายการที่กรอง</button><button id="calSignerSettings" type="button">ตั้งค่าผู้ทดสอบ / ผู้อนุมัติ</button><button id="calPdfSettings" type="button">ตั้งค่าโครงร่าง PDF</button></div>
+        <p id="calCount" aria-live="polite"></p>
+        <div class="scroll cal-history-scroll" id="calHistoryScroll" tabindex="0" role="region" aria-label="รายการประวัติการสอบเทียบ">
+          <table class="cal-history"><thead><tr><th>วันที่</th><th>เลขที่ใบรับรอง</th><th>หน่วยงาน</th><th>ประเภทเครื่องมือ</th><th>เครื่องมือ</th><th>รายละเอียด / รายงาน</th></tr></thead><tbody id="calList"></tbody></table>
+        </div>
+        <div class="cal-buttons"><button id="calPrev" type="button" disabled>← ก่อนหน้า</button><button id="calNext" type="button" disabled>ถัดไป →</button></div>
+      </div>
     </div>
-    <div class="cal-buttons"><button id="calPrev" type="button" disabled>← ก่อนหน้า</button><button id="calNext" type="button" disabled>ถัดไป →</button></div>
   </section>
   </div>
 </main>
@@ -319,7 +327,7 @@
 <script src="calibration-access-standards.js"></script>
 <script src="calibration-calculation.js"></script>
 <script src="calibration-form.js?v=digital-bp-workbook"></script>
-<script src="calibration.js?v=20261117-discover-1"></script>
+<script src="calibration.js?v=20261117-history-sidebar-1"></script>
 <script src="site-footer.js?v=1.1"></script>
 <script src="mems-controls.js?v=20261117-office-1"></script>
 </body>

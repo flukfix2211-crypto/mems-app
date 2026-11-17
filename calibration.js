@@ -681,7 +681,15 @@
     const { data, error } = await supabase.rpc("mems_calibration_filter_options");
     if (error) throw error;
     setOptions(get("calFilterDepartment"), data.departments.map(name => [name, name]), "ทุกหน่วยงาน");
-    setOptions(get("calFilterType"), data.equipment_types.map(name => [name, name]), "ทุกประเภท");
+    const typeSelect = get("calFilterType");
+    setOptions(typeSelect, data.equipment_types.map(name => [name, name]), "ทุกประเภท");
+    get("calHistoryTypes").replaceChildren(...Array.from(typeSelect.options, option => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.type = option.value;
+      button.textContent = option.text;
+      return button;
+    }));
   }
 
   async function loadDashboardMetrics() {
@@ -735,6 +743,7 @@
       get("calCount").textContent = "โหลดรายการไม่สำเร็จ";
       throw error;
     }
+    get("calHistoryScroll").scrollTop = 0;
     count = total ?? 0;
     historyRows = data;
     get("calCount").textContent = count ? "หน้า " + (page + 1) + " · " + count + " รายการ" : "ไม่พบรายการสอบเทียบ";
@@ -1029,6 +1038,9 @@
       equipmentType: get("calFilterType").value,
       search: get("calHistorySearch").value.trim()
     };
+    get("calHistoryTypes").querySelectorAll("button").forEach(button => {
+      button.setAttribute("aria-pressed", String(button.dataset.type === filters.equipmentType));
+    });
     page = 0;
     await loadHistory();
   }
@@ -1784,6 +1796,12 @@
     if (button) openRegistration(button.dataset.calMethod);
   });
   get("calFilters").addEventListener("submit", guarded(applyFilters));
+  get("calHistoryTypes").addEventListener("click", guarded(event => {
+    const button = event.target.closest("button[data-type]");
+    if (!button) return;
+    get("calFilterType").value = button.dataset.type;
+    return applyFilters();
+  }));
   get("calPrev").addEventListener("click", guarded(() => { page--; return loadHistory(); }));
   get("calNext").addEventListener("click", guarded(() => { page++; return loadHistory(); }));
   get("calList").addEventListener("click", guarded(async event => {

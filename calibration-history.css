@@ -1,0 +1,82 @@
+@media screen {
+  .cal-history-workspace {
+    display: grid;
+    grid-template-columns: 200px minmax(0, 1fr);
+    gap: 16px;
+    margin-top: 14px;
+  }
+
+  .cal-history-sidebar {
+    align-self: start;
+    min-width: 0;
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: #f7fafd;
+  }
+
+  .cal-history-sidebar h2 { margin: 2px 8px 8px; font-size: 1rem; }
+
+  .cal-history-types {
+    display: grid;
+    gap: 3px;
+    max-height: clamp(220px, 48dvh, 520px);
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
+
+  .cal-history-types button {
+    min-height: 38px;
+    padding: 6px 9px;
+    text-align: left;
+    border-color: transparent;
+    background: transparent;
+    overflow-wrap: anywhere;
+  }
+
+  .cal-history-types button:hover { background: var(--mems-soft, #eaf0f6); }
+  .cal-history-types button[aria-pressed="true"] {
+    color: var(--mems-brand, #142b40);
+    border-color: #9cb1c4;
+    background: var(--mems-soft, #eaf0f6);
+    box-shadow: inset 3px 0 var(--brand);
+  }
+
+  .cal-history-board { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  #calHistory h1 { margin: 0; }
+
+  #calHistory #calFilters {
+    grid-template-columns: minmax(190px, 2fr) minmax(145px, 1fr) auto;
+    align-items: end;
+    margin: 0;
+  }
+
+  #calHistory .cal-buttons { margin: 0; }
+  #calHistory #calFilters label { min-width: 0; }
+  #calHistory #calFilters :is(input, select, button) { min-height: 42px; }
+  #calHistory #calCount { margin: 0; color: var(--muted); font-size: .875rem; }
+
+  #calHistory .cal-history-scroll {
+    max-height: clamp(190px, 46dvh, 510px);
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+
+  #calHistory .cal-history-scroll:focus-visible { outline-offset: -3px; }
+  #calHistory .cal-history { min-width: 840px; border-collapse: separate; border-spacing: 0; }
+  #calHistory .cal-history th { position: sticky; top: 0; z-index: 1; background: #e8eff5; }
+  #calHistory .cal-history th:last-child { min-width: 235px; }
+  #calHistory .cal-history-actions button { min-height: 34px; padding: 5px 8px; }
+
+  @media (max-width: 900px) {
+    .cal-history-workspace { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+    .cal-history-types { display: flex; max-height: none; }
+    .cal-history-types button { flex: 0 0 auto; white-space: nowrap; }
+  }
+
+  @media (max-width: 600px) {
+    #calHistory #calFilters { grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+    #calHistory .cal-history-search { grid-column: 1 / -1; }
+    #calHistory .cal-history-scroll { max-height: 38dvh; }
+  }
+}
