@@ -160,7 +160,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   <link rel="stylesheet" href="mems-auth-theme.css?v=20261117-office-1">
   <link rel="stylesheet" href="operations-office.css?v=20260923-ops-2">
 <link rel="stylesheet" href="mems-office.css?v=20261117-office-1">
-<link rel="stylesheet" href="asset-registry.css?v=20261117-sidebar-1">
+<link rel="stylesheet" href="asset-registry.css?v=20261117-mobile-1">
 </head>
 <body class="mems-operation mems-assets">
 
@@ -242,7 +242,8 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       </div>
     </section>
     <!-- STATS -->
-    <div class="stats-row">
+    <button class="asset-stats-toggle" id="assetStatsToggle" type="button" aria-expanded="false" aria-controls="assetStats">ดูสรุปสถานะเครื่อง</button>
+    <div class="stats-row" id="assetStats">
       <div class="stat-chip">
         <div class="stat-num" id="statTotal">—</div>
         <div class="stat-lbl" id="statScope">ทุกประเภท</div>
@@ -282,10 +283,10 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     <!-- TABLE -->
     <div class="card registry-table">
       <div class="tbl-wrap" id="assetScroll" tabindex="0" role="region" aria-label="รายการเครื่องมือ">
-        <table id="assetTable">
-          <thead>
-            <tr>
-              <th style="text-align:center;width:38px"><input id="qrCheckAll" class="qr-check" type="checkbox" aria-label="เลือกทั้งหมดที่แสดงเพื่อพิมพ์ป้าย QR" title="เลือกเครื่องเพื่อพิมพ์ป้าย QR" onchange="toggleAllVisibleQrAssets(this.checked)"></th>
+        <table id="assetTable" role="table">
+          <thead role="rowgroup">
+            <tr role="row">
+              <th class="asset-select-all" role="columnheader" style="text-align:center;width:38px"><label class="asset-check-target"><input id="qrCheckAll" class="qr-check" type="checkbox" aria-label="เลือกทั้งหมดที่แสดงเพื่อพิมพ์ป้าย QR" title="เลือกเครื่องเพื่อพิมพ์ป้าย QR" onchange="toggleAllVisibleQrAssets(this.checked)"><span class="asset-mobile-label">เลือกทั้งหมดเพื่อพิมพ์ QR</span></label></th>
               <th style="text-align:center;width:46px">No.</th>
               <th>เลขครุภัณฑ์</th>
               <th>S/N</th>
@@ -296,8 +297,8 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
               <th style="text-align:center">จัดการ</th>
             </tr>
           </thead>
-          <tbody id="assetBody">
-            <tr class="empty-row"><td colspan="9"><div class="spinner"></div><br>กำลังโหลดข้อมูล...</td></tr>
+          <tbody id="assetBody" role="rowgroup">
+            <tr class="empty-row" role="row"><td colspan="9" role="cell"><div class="spinner"></div><br>กำลังโหลดข้อมูล...</td></tr>
           </tbody>
         </table>
       </div>
@@ -440,7 +441,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       }
     } catch (err) {
       document.getElementById('assetBody').innerHTML =
-        `<tr class="empty-row"><td colspan="9">⚠️ โหลดข้อมูลไม่ได้: ${err.message}</td></tr>`;
+        `<tr class="empty-row" role="row"><td colspan="9" role="cell">⚠️ โหลดข้อมูลไม่ได้: ${err.message}</td></tr>`;
     }
   }
 
@@ -515,7 +516,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
         : `ทั้งหมด ${assets.length} รายการ`;
 
     if (!assets.length) {
-      body.innerHTML = '<tr class="empty-row"><td colspan="9">ไม่พบข้อมูล</td></tr>';
+      body.innerHTML = '<tr class="empty-row" role="row"><td colspan="9" role="cell">ไม่พบข้อมูล</td></tr>';
       updateQrSelectionBar();
       return;
     }
@@ -523,16 +524,16 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     body.innerHTML = assets.map(a => {
       const cls  = STATUS_CLASS[a.สถานะ] || 'ok';
       const ri   = a._rowIndex;
-      return `<tr id="asset-row-${ri}">
-        <td style="text-align:center"><input class="qr-check qr-row-check" type="checkbox" aria-label="เลือก No.${a['No.']} เพื่อพิมพ์ QR" ${selectedQrAssetIds.has(String(ri)) ? 'checked' : ''} onchange="toggleQrAsset('${ri}', this.checked)"></td>
-        <td class="no-col">${a['No.']}</td>
-        <td class="asset-col">${a.เลขครุภัณฑ์ || '—'}</td>
-        <td class="sn-col">${a['S/N'] || '—'}</td>
-        <td class="sn-col">${a.ID || '—'}</td>
-        <td style="font-size:13px">${a.ประเภท || '—'}</td>
-        <td><span class="badge ${cls}">${a.สถานะ || '—'}</span></td>
-        <td style="font-size:13px;color:var(--muted)">${a.หมายเหตุ || ''}</td>
-        <td>
+      return `<tr id="asset-row-${ri}" role="row">
+        <td class="asset-select-cell" role="cell" style="text-align:center"><label class="asset-check-target"><input class="qr-check qr-row-check" type="checkbox" aria-label="เลือก No.${a['No.']} เพื่อพิมพ์ QR" ${selectedQrAssetIds.has(String(ri)) ? 'checked' : ''} onchange="toggleQrAsset('${ri}', this.checked)"></label></td>
+        <td class="no-col" role="cell"><span class="asset-mobile-label">No. </span>${a['No.']}</td>
+        <td class="asset-col" role="cell"><span class="asset-mobile-label">เลขครุภัณฑ์ </span>${a.เลขครุภัณฑ์ || '—'}</td>
+        <td class="sn-col asset-serial-cell" role="cell"><span class="asset-mobile-label">S/N </span>${a['S/N'] || '—'}</td>
+        <td class="sn-col" role="cell"><span class="asset-mobile-label">ID </span>${a.ID || '—'}</td>
+        <td class="asset-type-cell" role="cell" style="font-size:13px">${a.ประเภท || '—'}</td>
+        <td class="asset-status-cell" role="cell"><span class="badge ${cls}">${a.สถานะ || '—'}</span></td>
+        <td class="asset-note-cell" role="cell" style="font-size:13px;color:var(--muted)">${a.หมายเหตุ || ''}</td>
+        <td class="asset-actions-cell" role="cell">
           <div class="act-wrap">
             <button class="act-btn act-edit" onclick="openModal(${ri})">✏️ แก้ไข</button>
             <details class="asset-row-actions">
@@ -667,6 +668,13 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   new ResizeObserver(() => {
     document.querySelector('.registry-workspace').style.setProperty('--registry-header-height', `${registryHeader.offsetHeight}px`);
   }).observe(registryHeader);
+
+  document.getElementById('assetStatsToggle').addEventListener('click', event => {
+    const button = event.currentTarget;
+    const expanded = button.getAttribute('aria-expanded') === 'true';
+    button.setAttribute('aria-expanded', String(!expanded));
+    button.textContent = expanded ? 'ดูสรุปสถานะเครื่อง' : 'ซ่อนสรุปสถานะเครื่อง';
+  });
 
   window.addEventListener('DOMContentLoaded', async () => {
     const profile = await memsGuard('assets');
