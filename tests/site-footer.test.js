@@ -13,8 +13,8 @@ test('every application page loads the shared institutional footer', () => {
 
   for (const file of htmlFiles) {
     const html = fs.readFileSync(path.join(projectRoot, file), 'utf8');
-    const stylesheetMatches = html.match(/\bhref="site-footer\.css(?:\?[^"]+)?"/g) || [];
-    const scriptMatches = html.match(/\bsrc="site-footer\.js(?:\?[^"]+)?"/g) || [];
+    const stylesheetMatches = html.match(/site-footer\.css\?v=20261016-footer-1/g) || [];
+    const scriptMatches = html.match(/site-footer\.js\?v=1\.1"/g) || [];
 
     assert.equal(stylesheetMatches.length, 1, `${file} should load the footer stylesheet once`);
     assert.equal(scriptMatches.length, 1, `${file} should load the footer script once`);
