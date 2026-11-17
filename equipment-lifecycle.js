@@ -9,9 +9,21 @@ function memsConfirmUnreturnedEquipment(items) {
     title.id = "unreturnedConfirmTitle";
     title.textContent = "เครื่องยังมีสถานะยืมอยู่";
     const message = document.createElement("p");
-    message.textContent = items.map(i => i.equipment + " No." + i.number + " ถูกยืมอยู่ที่ " + i.ward).join("\n") +
+    const formatBorrowedAt = value => {
+      if (!value) return "ไม่ทราบเวลา";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return "ไม่ทราบเวลา";
+      return new Intl.DateTimeFormat("th-TH", {
+        timeZone: "Asia/Bangkok", day: "numeric", month: "short", year: "numeric",
+        hour: "2-digit", minute: "2-digit", hourCycle: "h23"
+      }).format(date) + " น.";
+    };
+    message.textContent = items.map(i =>
+      i.equipment + " No." + i.number + " ถูกยืมอยู่ที่ " + (i.ward || "ไม่ระบุหน่วยงาน") +
+      " (ล่าสุด " + formatBorrowedAt(i.lastUpdate) + ")"
+    ).join("\n") +
       "\nเครื่องกลับมาที่ศูนย์แล้วโดยไม่ได้คีย์คืน ต้องการคืนเครื่องและเตรียมต่อเลยไหม?\nจะบันทึกเหตุผล: " +
-      items.map(i => "หน่วยงาน " + i.ward + " ไม่คีย์คืนเครื่อง").join("\n");
+      items.map(i => "หน่วยงาน " + (i.ward || "ไม่ระบุหน่วยงาน") + " ไม่คีย์คืนเครื่อง").join("\n");
     const actions = document.createElement("div");
     actions.className = "lifecycle-return-confirm-actions";
     const cancel = document.createElement("button");
