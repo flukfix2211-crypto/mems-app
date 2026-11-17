@@ -64,3 +64,10 @@ MEMS_TEST_PG=postgresql://postgres@127.0.0.1:55432/postgres npm run test:browser
 ```
 
 `npm test` ใช้ PostgreSQL WASM เมื่อไม่ระบุ `MEMS_TEST_PG` และข้ามเฉพาะการทดสอบสอง connection จริง ส่วน browser tests ใช้ Chromium (`CHROMIUM_PATH` ปรับ path ได้) กับ API adapter และฐานข้อมูลทดสอบที่สร้าง/ลบทิ้งเอง ไม่เรียกเขียน Supabase จริง
+
+### แจ้งเตือนเครื่องใกล้หมดรายชั่วโมง
+- งาน mems-hourly-shortage ตรวจทุกต้นชั่วโมง และส่ง Telegram เฉพาะเมื่อ C2 พร้อมใช้ไม่เกิน 4, High Flow ไม่เกิน 2 หรือ Brid เขียว (Bird) ไม่เกิน 2 เครื่อง
+- เตือนซ้ำทุกชั่วโมงขณะที่ยังใกล้หมด และหยุดเมื่อพ้นเกณฑ์
+- คำนวณจากทะเบียน assets หักรายการยืมค้างจาก equipment_status รวมเครื่องซ่อมและรอเลข
+- ใช้ supabase/jobs/hourly-shortage.sql เพื่อติดตั้งหรืออัปเดตงาน Cron หลัง deploy Edge Function
+

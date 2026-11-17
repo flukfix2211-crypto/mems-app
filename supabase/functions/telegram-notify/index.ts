@@ -3,6 +3,7 @@
 // old Google Apps Script backend (gas/Code.gs). Request shapes:
 //   POST { type: "borrow_return", record: {...} }  -> instant borrow/return notify
 //   POST { type: "digest", manual?: boolean }       -> compute + send daily alert digest (cron 08:00)
+//   POST { type: "hourly_shortage", dryRun?: boolean } -> C2 / High Flow / Brid เขียว hourly when low
 //   POST { type: "shift_summary" }                  -> ยืม-คืน + แก้ไขหน้างาน ของเวร ช/บ/ด ล่าสุด (cron 08:30, วันละครั้ง)
 //
 // Secrets required (set via Supabase Dashboard > Edge Functions > telegram-notify > Secrets,
@@ -117,11 +118,75 @@ async function fetchEquipmentStatus(supabase: ReturnType<typeof createClient>): 
   return all;
 }
 
+type AssetRow = { no: string | number; type: string; status: string | null };
+
+const shortageTypeKey = (name: string) => String(name || "").trim().toLowerCase();
+const machineKey = (no: string | number) => {
+  const text = String(no ?? "").trim();
+  return text && Number.isInteger(Number(text)) ? String(Number(text)) : text;
+};
+
+// Keep the same inventory calculation as dashboard.computeTypeAvailability.
+// Round presence never changes an outstanding loan into a ready machine.
+function computeAvailability(assets: AssetRow[], status: StatusRow[]) {
+  const hidden = new Set(assets.filter(a => a.status === "เครื่องยังไม่พร้อมใช้งาน")
+    .map(a => shortageTypeKey(a.type) + "|" + machineKey(a.no)));
+  const borrowedByType = new Map<string, Set<string>>();
+  for (const row of status) {
+    const key = shortageTypeKey(row.equipment_name);
+    if (!row.is_borrowed || hidden.has(key + "|" + machineKey(row.equipment_number))) continue;
+    const numbers = borrowedByType.get(key) || new Set<string>();
+    numbers.add(machineKey(row.equipment_number));
+    borrowedByType.set(key, numbers);
+  }
+  const byType = new Map<string, { equipment: string; total: number; borrowed: number; repair: number; pending: number; available: number }>();
+  for (const asset of assets) {
+    if (!asset.type || asset.status === "เครื่องยังไม่พร้อมใช้งาน" || asset.status === "จำหน่าย") continue;
+    const key = shortageTypeKey(asset.type);
+    const summary = byType.get(key) || { equipment: asset.type, total: 0, borrowed: 0, repair: 0, pending: 0, available: 0 };
+    summary.total++;
+    if (asset.status === "รอเลขครุภัณฑ์") summary.pending++;
+    else if (["ชำรุด", "ส่งซ่อม"].includes(asset.status || "") && !borrowedByType.get(key)?.has(machineKey(asset.no))) summary.repair++;
+    byType.set(key, summary);
+  }
+  return Array.from(byType, ([key, summary]) => {
+    summary.borrowed = Math.min(borrowedByType.get(key)?.size || 0, summary.total - summary.repair - summary.pending);
+    summary.available = Math.max(0, summary.total - summary.borrowed - summary.repair - summary.pending);
+    return summary;
+  });
+}
+
+function shortageLimit(equipment: string): number {
+  return shortageTypeKey(equipment) === "c2" ? 4 : DIGEST_SHORTAGE_MAX;
+}
+
+async function fetchAssets(supabase: ReturnType<typeof createClient>): Promise<AssetRow[]> {
+  const all: AssetRow[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await supabase.from("assets").select("no, type, status").order("id").range(from, from + 999);
+    if (error) throw error;
+    all.push(...((data ?? []) as AssetRow[]));
+    if (!data || data.length < 1000) return all;
+  }
+}
+
+async function computeShortages(supabase: ReturnType<typeof createClient>, status?: StatusRow[]) {
+  const [assets, rows] = await Promise.all([fetchAssets(supabase), status || fetchEquipmentStatus(supabase)]);
+  return computeAvailability(assets, rows)
+    .filter(s => s.total > 0 && s.available <= shortageLimit(s.equipment))
+    .sort((a, b) => a.available - b.available);
+}
+
+function buildHourlyShortageMessage(shortage: ReturnType<typeof computeAvailability>, now: Date): string {
+  return `⚠️ <b>เครื่องมือใกล้หมด — แจ้งเตือนรายชั่วโมง</b>\n📅 ${fmtDate(now)} ${fmtTime(now)}\n\n`
+    + shortage.map(s => `• <b>${escHtml(s.equipment)}</b> — พร้อมใช้ <b>${s.available}</b> เครื่อง\n  ยืมอยู่ ${s.borrowed} · ซ่อม ${s.repair} · รอเลข ${s.pending} · ทั้งหมด ${s.total}\n  เกณฑ์แจ้งเตือน: เหลือไม่เกิน ${shortageLimit(s.equipment)} เครื่อง`).join("\n\n")
+    + "\n\nคำนวณจากทะเบียนและรายการยืม–คืนจริง เครื่องไม่พบในราวด์ยังนับว่ายืมอยู่จนบันทึกคืน\nจะเตือนซ้ำทุก 1 ชั่วโมงขณะที่ยังใกล้หมด";
+}
+
 async function computeDailyAlerts(supabase: ReturnType<typeof createClient>) {
   const status = await fetchEquipmentStatus(supabase);
   const now = Date.now();
   const overdue: { number: string; ward: string; days: number }[] = [];
-  const availByType = new Map<string, number>();
 
   for (const row of status) {
     if (row.equipment_name.includes("C2") && row.is_borrowed) {
@@ -130,15 +195,10 @@ async function computeDailyAlerts(supabase: ReturnType<typeof createClient>) {
         overdue.push({ number: row.equipment_number, ward: row.ward || "", days });
       }
     }
-    if (!availByType.has(row.equipment_name)) availByType.set(row.equipment_name, 0);
-    if (!row.is_borrowed) availByType.set(row.equipment_name, availByType.get(row.equipment_name)! + 1);
   }
 
   overdue.sort((a, b) => b.days - a.days);
-  const shortage = Array.from(availByType.entries())
-    .filter(([, avail]) => avail <= DIGEST_SHORTAGE_MAX)
-    .map(([equipment, available]) => ({ equipment, available }))
-    .sort((a, b) => a.available - b.available);
+  const shortage = await computeShortages(supabase, status);
 
   return { overdue, shortage };
 }
@@ -157,9 +217,9 @@ function buildDigestMessage(
   }
 
   if (shortage.length) {
-    msg += `\n⚠️ <b>ใกล้หมด (เหลือ ≤${DIGEST_SHORTAGE_MAX} เครื่อง)</b>\n`;
+    msg += `\n⚠️ <b>เครื่องมือใกล้หมด</b>\n`;
     for (const s of shortage) {
-      msg += `• ${escHtml(s.equipment)} — เหลือว่าง ${s.available} เครื่อง\n`;
+      msg += `• ${escHtml(s.equipment)} — พร้อมใช้ ${s.available} เครื่อง (เกณฑ์ ≤${shortageLimit(s.equipment)})\n`;
     }
   }
 
@@ -352,6 +412,16 @@ Deno.serve(async (req: Request) => {
       if (!msg) return json({ ok: true, sent: false, reason: "not borrow/return" });
       const result = await sendTelegramMessage(msg);
       return json({ ok: true, sent: result.ok, statusCode: result.statusCode, errorDetail: result.body });
+    }
+
+    if (type === "hourly_shortage") {
+      const tracked = new Set(["c2", "high flow", "brid เขียว"]);
+      const shortage = (await computeShortages(supabase)).filter(s => tracked.has(shortageTypeKey(s.equipment)));
+      if (!shortage.length) return json({ ok: true, sent: false, skipped: true, shortageCount: 0 });
+      const message = buildHourlyShortageMessage(shortage, new Date());
+      if (payload.dryRun) return json({ ok: true, sent: false, dryRun: true, shortage, message });
+      const result = await sendTelegramMessage(message);
+      return json({ ok: result.ok, sent: result.ok, shortageCount: shortage.length, statusCode: result.statusCode, errorDetail: result.body }, result.ok ? 200 : 502);
     }
 
     if (type === "digest") {
