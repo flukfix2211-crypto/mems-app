@@ -156,9 +156,10 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 </style>
   <link rel="stylesheet" href="mems-ui.css?v=20261104-centered-popups-1">
   <link rel="stylesheet" href="site-footer.css?v=20261016-footer-1">
-  <link rel="stylesheet" href="mems-auth-theme.css?v=20260923-app-2">
+  <link rel="stylesheet" href="mems-auth-theme.css?v=20261117-office-1">
   <link rel="stylesheet" href="operations-office.css?v=20260923-ops-2">
 <link rel="stylesheet" href="equipment-lifecycle.css?v=20261104-return-dialog-1">
+<link rel="stylesheet" href="mems-office.css?v=20261117-office-1">
 </head>
 <body class="mems-operation mems-prepare">
 
@@ -322,8 +323,8 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   <!-- รายการที่เตรียมไว้ -->
   <div class="card" style="margin-top:16px">
     <div class="sec-label" style="justify-content:space-between">
-      <span>📋 รายการที่เตรียมไว้</span>
-      <span style="cursor:pointer;color:var(--a)" onclick="loadList()">🔄 รีเฟรช</span>
+      <span>รายการที่เตรียมไว้</span>
+      <button class="prepared-refresh" type="button" onclick="loadList()">🔄 รีเฟรช</button>
     </div>
     <div id="listBody"><div class="empty">กำลังโหลด...</div></div>
   </div>
@@ -622,7 +623,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       items.forEach(it => { (byWard[it.ward] = byWard[it.ward] || []).push(it); });
       let html = '';
       Object.keys(byWard).sort().forEach(w => {
-        html += `<div class="group-ward">📍 ${memsEscapeHtml(w)}</div>`;
+        html += `<div class="group-ward">${memsEscapeHtml(w)}</div>`;
         byWard[w].forEach(it => {
           const when = (it.date || '') + (it.time ? ' ' + it.time : '');
           html += `<div class="prep-item">
@@ -672,9 +673,10 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 </script>
 <script src="https://cdn.jsdelivr.net/npm/qr-scanner@1.4.2/qr-scanner.umd.min.js"></script>
 <script src="prepare-qr.js?v=20261104-unreturned-1"></script>
-<script src="site-footer.js?v=20261016-footer-1"></script>
-<script src="mascot.js?v=20261027-loop-1"></script>
+<script src="site-footer.js?v=1.1"></script>
+<script src="mascot.js?v=20261117-office-1"></script>
 <script src="equipment-photos.js?v=20261023-1"></script>
 <script src="equipment-lifecycle.js?v=20261104-return-dialog-1"></script>
+<script src="mems-controls.js?v=20261117-office-1"></script>
 </body>
 </html>

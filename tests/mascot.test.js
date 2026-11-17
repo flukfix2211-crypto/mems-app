@@ -8,7 +8,7 @@ async function harness({ reduced = false, paused = false } = {}) {
   let now = 0, next = 1;
   const timers = new Map(), frames = new Map(), elements = new Map();
   class Element {
-    constructor() { this.style = {}; this.dataset = {}; this.attributes = {}; this.listeners = {}; this.textContent = ''; this.hidden = false; this.disabled = false; }
+    constructor() { this.style = {}; this.dataset = {}; this.attributes = {}; this.listeners = {}; this.textContent = ''; this.hidden = false; this.disabled = false; this.clientWidth = 76; }
     setAttribute(k, v) { this.attributes[k] = v; }
     addEventListener(k, fn) { this.listeners[k] = fn; }
     append(el) { if (el.id) elements.set(el.id, el); }
@@ -19,6 +19,7 @@ async function harness({ reduced = false, paused = false } = {}) {
     remove() {}
   }
   const header = new Element(), modal = new Element(); modal.style.display = 'none';
+  header.querySelector = () => null;
   const doc = new Element(); doc.head = new Element(); doc.body = new Element(); doc.hidden = false;
   doc.currentScript = { src: 'https://example.test/mascot.js' }; doc.activeElement = { tagName: 'BODY' };
   doc.querySelector = s => s.startsWith('header') ? header : null;

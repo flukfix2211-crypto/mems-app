@@ -48,19 +48,24 @@ function selectAllVisibleQrAssets() {
 }
 
 function clearQrAssetSelection() {
+  const toolbar = document.getElementById('qrToolbar');
+  const returnFocus = toolbar?.contains(document.activeElement);
   selectedQrAssetIds.clear();
   document.querySelectorAll('.qr-row-check, #qrCheckAll').forEach(input => {
     input.checked = false;
     input.indeterminate = false;
   });
   updateQrSelectionBar();
+  if (returnFocus) document.getElementById('qrCheckAll')?.focus();
 }
 
 function updateQrSelectionBar() {
   const count = getSelectedQrAssets().length;
+  const toolbar = document.getElementById('qrToolbar');
   const countEl = document.getElementById('qrSelectedCount');
   const pdfBtn = document.getElementById('qrPdfBtn');
   const headerCheck = document.getElementById('qrCheckAll');
+  if (toolbar) toolbar.hidden = count === 0;
   if (countEl) countEl.textContent = 'เลือกแล้ว ' + count + ' เครื่อง';
   if (pdfBtn) {
     pdfBtn.disabled = count === 0;

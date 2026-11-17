@@ -32,7 +32,7 @@
       <div class="site-footer__meta">
         <span>© 2026 งานศูนย์เครื่องมือแพทย์</span>
         <div class="site-footer__credits">
-          <span class="site-footer__version">Version 1.0</span>
+          <span class="site-footer__version">Version 1.1</span>
           <span>พัฒนาและดูแลระบบโดย <strong>Pawarit Somchipeng</strong></span>
         </div>
       </div>

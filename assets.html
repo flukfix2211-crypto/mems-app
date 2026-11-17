@@ -157,8 +157,9 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 </style>
   <link rel="stylesheet" href="mems-ui.css?v=20261104-centered-popups-1">
   <link rel="stylesheet" href="site-footer.css?v=20261016-footer-1">
-  <link rel="stylesheet" href="mems-auth-theme.css?v=20260923-app-2">
+  <link rel="stylesheet" href="mems-auth-theme.css?v=20261117-office-1">
   <link rel="stylesheet" href="operations-office.css?v=20260923-ops-2">
+<link rel="stylesheet" href="mems-office.css?v=20261117-office-1">
 </head>
 <body class="mems-operation mems-assets">
 
@@ -194,36 +195,54 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     <span class="hosp-badge">โรงพยาบาลพหลพลพยุหเสนา จ.กาญจนบุรี</span>
     <div style="display:flex;align-items:center;gap:8px">
       <span id="memsUserBadge" style="font-size:11px;color:#fff"></span>
-      <a href="index.html" style="font-size:11px;font-weight:700;background:rgba(255,255,255,.18);color:#fff;padding:4px 10px;border-radius:20px;text-decoration:none;border:1px solid rgba(255,255,255,.3)">🏠 หน้าหลัก</a>
+      <a href="index.html">หน้าหลัก</a>
     </div>
   </div>
   <a href="index.html" style="text-decoration:none"><h1>MEMs</h1></a>
   <div class="sub">Medical Equipment Management Systems</div>
-  <div class="page-title"><span style="font-size:20px">📋</span> ทะเบียนครุภัณฑ์ศูนย์เครื่องมือแพทย์</div>
 </header>
 
 <div class="content">
+  <section class="registry-heading" aria-labelledby="registryTitle">
+    <h2 class="registry-title" id="registryTitle">ทะเบียนเครื่องมือ</h2>
+    <!-- CONTROLS -->
+    <div class="ctrl-row">
+      <div class="search-wrap">
+        <input type="search" id="searchInput" aria-label="ค้นหาเครื่องมือ" placeholder="ค้นหา No., เลขครุภัณฑ์, S/N..." oninput="applyFilter()">
+      </div>
+      <select class="fsel" id="statusFilter" aria-label="กรองตามสถานะ" onchange="applyFilter()">
+        <option value="">ทุกสถานะ</option>
+        <option value="ใช้งานได้">ใช้งานได้</option>
+        <option value="ชำรุด">ชำรุด</option>
+        <option value="ส่งซ่อม">ส่งซ่อม</option>
+        <option value="จำหน่าย">จำหน่าย</option>
+        <option value="รอเลขครุภัณฑ์">รอเลขครุภัณฑ์</option>
+        <option value="เครื่องยังไม่พร้อมใช้งาน">เครื่องยังไม่พร้อมใช้งาน</option>
+      </select>
+      <button class="add-btn" onclick="openModal()">＋ เพิ่มเครื่องใหม่</button>
+    </div>
+  </section>
   <!-- TYPE CHIPS -->
   <div class="type-chips">
-    <button class="type-chip active" onclick="setTypeFilter('')">ทั้งหมด</button>
-    <button class="type-chip" onclick="setTypeFilter('C2')">C2</button>
-    <button class="type-chip" onclick="setTypeFilter('High Flow')">High Flow</button>
-    <button class="type-chip" onclick="setTypeFilter('Brid เขียว')">Brid เขียว</button>
-    <button class="type-chip" onclick="setTypeFilter('Monnal t60')">Monnal t60</button>
-    <button class="type-chip" onclick="setTypeFilter('T1')">T1</button>
-    <button class="type-chip" onclick="setTypeFilter('Patient Monitor')">Patient Monitor</button>
-    <button class="type-chip" onclick="setTypeFilter('NIBP')">NIBP</button>
-    <button class="type-chip" onclick="setTypeFilter('Infusion Pump')">Infusion Pump</button>
-    <button class="type-chip" onclick="setTypeFilter('Syringe Pump')">Syringe Pump</button>
-    <button class="type-chip" onclick="setTypeFilter('Defibrillator')">Defibrillator</button>
-    <button class="type-chip" onclick="setTypeFilter('อื่นๆ')">อื่นๆ</button>
+    <button class="type-chip active" aria-pressed="true" onclick="setTypeFilter('')">ทั้งหมด</button>
+    <button class="type-chip" aria-pressed="false" onclick="setTypeFilter('C2')">C2</button>
+    <button class="type-chip" aria-pressed="false" onclick="setTypeFilter('High Flow')">High Flow</button>
+    <button class="type-chip" aria-pressed="false" onclick="setTypeFilter('Brid เขียว')">Brid เขียว</button>
+    <button class="type-chip" aria-pressed="false" onclick="setTypeFilter('Monnal t60')">Monnal t60</button>
+    <button class="type-chip" aria-pressed="false" onclick="setTypeFilter('T1')">T1</button>
+    <button class="type-chip" aria-pressed="false" onclick="setTypeFilter('Patient Monitor')">Patient Monitor</button>
+    <button class="type-chip" aria-pressed="false" onclick="setTypeFilter('NIBP')">NIBP</button>
+    <button class="type-chip" aria-pressed="false" onclick="setTypeFilter('Infusion Pump')">Infusion Pump</button>
+    <button class="type-chip" aria-pressed="false" onclick="setTypeFilter('Syringe Pump')">Syringe Pump</button>
+    <button class="type-chip" aria-pressed="false" onclick="setTypeFilter('Defibrillator')">Defibrillator</button>
+    <button class="type-chip" aria-pressed="false" onclick="setTypeFilter('อื่นๆ')">อื่นๆ</button>
   </div>
 
   <!-- STATS -->
   <div class="stats-row">
     <div class="stat-chip">
       <div class="stat-num" id="statTotal">—</div>
-      <div class="stat-lbl">ทั้งหมด</div>
+      <div class="stat-lbl" id="statScope">ทุกประเภท</div>
     </div>
     <div class="stat-chip">
       <div class="stat-num green" id="statOk">—</div>
@@ -247,25 +266,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     </div>
   </div>
 
-  <!-- CONTROLS -->
-  <div class="ctrl-row">
-    <div class="search-wrap">
-      <input type="text" id="searchInput" placeholder="ค้นหา No., เลขครุภัณฑ์, S/N..." oninput="applyFilter()">
-      <span class="si">🔍</span>
-    </div>
-    <select class="fsel" id="statusFilter" onchange="applyFilter()">
-      <option value="">ทุกสถานะ</option>
-      <option value="ใช้งานได้">ใช้งานได้</option>
-      <option value="ชำรุด">ชำรุด</option>
-      <option value="ส่งซ่อม">ส่งซ่อม</option>
-      <option value="จำหน่าย">จำหน่าย</option>
-      <option value="รอเลขครุภัณฑ์">รอเลขครุภัณฑ์</option>
-      <option value="เครื่องยังไม่พร้อมใช้งาน">เครื่องยังไม่พร้อมใช้งาน</option>
-    </select>
-    <button class="add-btn" onclick="openModal()">＋ เพิ่มเครื่องใหม่</button>
-  </div>
-
-  <div class="qr-toolbar" aria-label="เครื่องมือพิมพ์ป้าย QR Code">
+  <div class="qr-toolbar" id="qrToolbar" aria-label="เครื่องมือพิมพ์ป้าย QR Code" hidden>
     <div class="qr-toolbar-info">
       <span id="qrSelectedCount">เลือกแล้ว 0 เครื่อง</span>
       <span class="qr-toolbar-note">ป้าย 3×3 ซม. · A4 แผ่นละ 54 ป้าย · ใช้เครื่องสแกน 2D</span>
@@ -276,12 +277,12 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   </div>
 
   <!-- TABLE -->
-  <div class="card" style="padding:0;overflow:hidden">
+  <div class="card registry-table">
     <div class="tbl-wrap">
       <table id="assetTable">
         <thead>
           <tr>
-            <th style="text-align:center;width:38px"><input id="qrCheckAll" class="qr-check" type="checkbox" aria-label="เลือกทั้งหมดที่แสดง" onchange="toggleAllVisibleQrAssets(this.checked)"></th>
+            <th style="text-align:center;width:38px"><input id="qrCheckAll" class="qr-check" type="checkbox" aria-label="เลือกทั้งหมดที่แสดงเพื่อพิมพ์ป้าย QR" title="เลือกเครื่องเพื่อพิมพ์ป้าย QR" onchange="toggleAllVisibleQrAssets(this.checked)"></th>
             <th style="text-align:center;width:46px">No.</th>
             <th>เลขครุภัณฑ์</th>
             <th>S/N</th>
@@ -306,7 +307,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   <div class="modal-box">
     <div class="modal-head">
       <div class="modal-head-title" id="modalTitle">เพิ่มเครื่องใหม่</div>
-      <button class="modal-close" onclick="closeModal()">×</button>
+      <button class="modal-close" aria-label="ปิด" onclick="closeModal()">×</button>
     </div>
     <div class="modal-body">
       <input type="hidden" id="editRowIndex">
@@ -374,7 +375,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 <script src="vendor/qrcode.js"></script>
 <script src="vendor/jspdf.umd.min.js"></script>
 <script src="reports.js?v=20261104-print-1"></script>
-<script src="asset-qr.js?v=20261104-print-1"></script>
+<script src="asset-qr.js?v=20261117-office-1"></script>
 <script>
   let allAssets = [];
 
@@ -415,15 +416,6 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     'รอเลขครุภัณฑ์': 'waiting',
     'เครื่องยังไม่พร้อมใช้งาน': 'not-ready'
   };
-  const STATUS_ICON = {
-    'ใช้งานได้': '✅',
-    'ชำรุด':    '⚠️',
-    'ส่งซ่อม':  '🔧',
-    'จำหน่าย':  '❌',
-    'รอเลขครุภัณฑ์': '🕓',
-    'เครื่องยังไม่พร้อมใช้งาน': '📋'
-  };
-
   async function loadAssets(savedId) {
     try {
       // โหลดเป็นชุด — ทะเบียนเกิน 1,000 แถวจะถูกตัดเงียบๆ ถ้าโหลดครั้งเดียว
@@ -444,6 +436,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 
   function updateStats(subset) {
     const src = subset || allAssets;
+    document.getElementById('statScope').textContent = currentTypeFilter ? `รวม ${currentTypeFilter}` : 'ทุกประเภท';
     document.getElementById('statTotal').textContent  = src.length;
     document.getElementById('statOk').textContent     = src.filter(a => a.สถานะ === 'ใช้งานได้').length;
     document.getElementById('statBroken').textContent = src.filter(a => a.สถานะ === 'ชำรุด' || a.สถานะ === 'ส่งซ่อม').length;
@@ -459,6 +452,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     document.querySelectorAll('.type-chip').forEach(c => {
       const matches = (type === '' && c.textContent === 'ทั้งหมด') || c.textContent === type;
       c.classList.toggle('active', matches);
+      c.setAttribute('aria-pressed', String(matches));
     });
     applyFilter();
   }
@@ -514,7 +508,6 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 
     body.innerHTML = assets.map(a => {
       const cls  = STATUS_CLASS[a.สถานะ] || 'ok';
-      const icon = STATUS_ICON[a.สถานะ]  || '✅';
       const ri   = a._rowIndex;
       return `<tr id="asset-row-${ri}">
         <td style="text-align:center"><input class="qr-check qr-row-check" type="checkbox" aria-label="เลือก No.${a['No.']} เพื่อพิมพ์ QR" ${selectedQrAssetIds.has(String(ri)) ? 'checked' : ''} onchange="toggleQrAsset('${ri}', this.checked)"></td>
@@ -523,12 +516,15 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
         <td class="sn-col">${a['S/N'] || '—'}</td>
         <td class="sn-col">${a.ID || '—'}</td>
         <td style="font-size:13px">${a.ประเภท || '—'}</td>
-        <td><span class="badge ${cls}">${icon} ${a.สถานะ || '—'}</span></td>
+        <td><span class="badge ${cls}">${a.สถานะ || '—'}</span></td>
         <td style="font-size:13px;color:var(--muted)">${a.หมายเหตุ || ''}</td>
         <td>
           <div class="act-wrap">
             <button class="act-btn act-edit" onclick="openModal(${ri})">✏️ แก้ไข</button>
-            <button class="act-btn act-del"  onclick="confirmDelete(${ri}, 'No.${a['No.']} ${a.เลขครุภัณฑ์||''}')">🗑️</button>
+            <details class="asset-row-actions">
+              <summary aria-label="ตัวเลือกเพิ่มเติมสำหรับ No.${a['No.']}">เพิ่มเติม</summary>
+              <button class="act-btn act-del" onclick="confirmDelete(${ri})">ลบเครื่อง</button>
+            </details>
           </div>
         </td>
       </tr>`;
@@ -631,7 +627,10 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     }
   }
 
-  async function confirmDelete(rowIndex, label) {
+  async function confirmDelete(rowIndex) {
+    const asset = allAssets.find(item => item._rowIndex === rowIndex);
+    if (!asset) return;
+    const label = `No.${asset['No.']} ${asset.เลขครุภัณฑ์ || ''}`;
     if (!confirm(`ลบรายการ: ${label}\n\nยืนยันการลบ?`)) return;
     try {
       const { error } = await supabase.from('assets').delete().eq('id', rowIndex);
@@ -655,7 +654,8 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     if (profile) loadAssets();
   });
 </script>
-<script src="site-footer.js?v=20261016-footer-1"></script>
-<script src="mascot.js?v=20261027-loop-1"></script>
+<script src="site-footer.js?v=1.1"></script>
+<script src="mascot.js?v=20261117-office-1"></script>
+<script src="mems-controls.js?v=20261117-office-1"></script>
 </body>
 </html>
