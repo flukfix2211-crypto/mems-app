@@ -559,6 +559,7 @@ test('return receipt switch pauses pending checks and queues only returns made w
  try {
   await db.exec("reset role;create table public.app_settings(id text primary key,bool_value boolean not null);grant select on app_settings to authenticated;");
   await db.exec(fs.readFileSync(path.join(root,'supabase/migrations/20261117150000_return_receipt_setting.sql'),'utf8'));
+  await db.exec(fs.readFileSync(path.join(root,'supabase/migrations/20261117160000_return_receipt_disabled_preparation.sql'),'utf8'));
   await db.exec('set role authenticated');
   await db.exec("insert into assets(type,no)values('C2',1)");
   await batch(db,'deliver',[item('C2')]);await batch(db,'return',[item('C2')]);
@@ -567,6 +568,11 @@ test('return receipt switch pauses pending checks and queues only returns made w
   assert.equal((await db.query('select is_return_pending from equipment_status')).rows[0].is_return_pending,false);
   await batch(db,'deliver',[item('C2')]);await batch(db,'return',[item('C2')]);
   assert.equal((await db.query('select count(*)::int n from equipment_return_checks')).rows[0].n,1);
+  await batch(db,'deliver',[item('C2')]);
+  const holder=(await db.query('select * from equipment_status')).rows[0];
+  await db.query('select mems_equipment_batch($1,$2::jsonb)',[crypto.randomUUID(),JSON.stringify({mode:'prepare',items:[item('C2')],ward:'ICU',name:'Staff',unreturned:[{...item('C2'),ward:holder.ward,lastUpdate:holder.recorded_at}]})]);
+  await db.exec("update prepare_records set status='ยกเลิก: test' where status='เตรียม'");
+
   await db.exec("reset role;update app_settings set bool_value=true;set role authenticated");
   await assert.rejects(batch(db,'prepare',[item('C2')]),/รอตรวจ/);
  }finally{await db.close();}
