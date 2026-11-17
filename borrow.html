@@ -960,7 +960,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   <!-- ผู้ยืม/ผู้คืน -->
   <div class="card">
     <div class="sec-label"><span class="req-dot"></span>ผู้ยืม / ผู้คืน</div>
-    <input type="text" class="field" id="staffName" lang="th" inputmode="text" enterkeyhint="done" autocomplete="name" autocapitalize="none" autocorrect="on" spellcheck="false" placeholder="กรุณาใส่ชื่อจริง">
+    <input type="text" class="field" id="staffName" lang="th" inputmode="text" enterkeyhint="done" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="กรุณาใส่ชื่อจริง">
   </div>
 
   <!-- บันทึกย้อนหลัง: ระบุวัน-เวลาที่ยืม/คืนจริง เพื่อให้นับวันยืมและวันครบเปลี่ยน Circuit ถูกต้อง (เฉพาะแอดมิน — แสดงหลังตรวจสิทธิ์) -->
@@ -1887,7 +1887,7 @@ function resetForm() {
       </div>
       <div>
         <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px">ชื่อผู้ย้าย</div>
-        <input type="text" class="field" id="tfStaffName" placeholder="กรุณาใส่ชื่อจริง">
+        <input type="text" class="field" id="tfStaffName" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="กรุณาใส่ชื่อจริง">
       </div>
       <button id="tfSubmitBtn" onclick="submitTransfer()" style="margin-top:2px;padding:13px;border:none;border-radius:12px;background:#0A6478;color:#fff;font-weight:800;font-size:15px;cursor:pointer">ยืนยันย้ายวอร์ด</button>
     </div>
