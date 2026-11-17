@@ -1,0 +1,87 @@
+@media screen {
+  body.mems-assets .registry-workspace {
+    width: min(1400px, calc(100% - 48px)) !important;
+    max-width: none !important;
+    margin: 18px auto 24px !important;
+    padding: 0 !important;
+    display: grid;
+    grid-template-columns: 200px minmax(0, 1fr);
+    gap: 16px;
+    height: max(560px, calc(100dvh - var(--registry-header-height, 220px) - 42px));
+  }
+
+  .registry-sidebar {
+    align-self: start;
+    border: 1px solid var(--mems-line);
+    border-radius: 12px;
+    background: var(--mems-surface);
+    padding: 10px;
+  }
+
+  .registry-sidebar h2 { margin: 2px 8px 8px; font-size: 1rem; }
+
+  body.mems-assets .registry-sidebar .type-chips {
+    display: grid;
+    gap: 3px;
+    margin: 0 !important;
+  }
+
+  body.mems-assets .registry-sidebar .type-chip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    text-align: left;
+    min-height: 38px;
+    border-radius: 8px !important;
+    border-color: transparent !important;
+  }
+
+  .registry-sidebar .type-count {
+    color: inherit;
+    opacity: .82;
+    font-size: .8em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .registry-board { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+  .registry-board > :not(.registry-table) { flex-shrink: 0; }
+  body.mems-assets .registry-board .registry-table {
+    min-height: 0;
+    flex: 1;
+    display: flex;
+    margin-bottom: 0 !important;
+  }
+
+  .registry-table .tbl-wrap {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+
+  .registry-table thead th { position: sticky; top: 0; z-index: 2; }
+  .registry-table .tbl-wrap:focus-visible { outline-offset: -3px; }
+
+  @media (max-width: 760px) {
+    body.mems-assets .registry-workspace {
+      width: calc(100% - 24px) !important;
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto minmax(0, 1fr);
+      gap: 8px;
+      height: max(510px, calc(100dvh - var(--registry-header-height, 190px) - 42px));
+    }
+
+    body.mems-assets .registry-sidebar .type-chips {
+      display: flex;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+    }
+
+    body.mems-assets .registry-sidebar .type-chip {
+      flex: 0 0 auto;
+      white-space: nowrap;
+    }
+  }
+}
