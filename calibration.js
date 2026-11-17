@@ -459,6 +459,27 @@
       asset.serial_number && "S/N " + asset.serial_number].filter(Boolean).join(" · ");
   }
 
+  let queuePreviewTool = null;
+
+  function openQueuePreview(tool) {
+    queuePreviewTool = tool;
+    get("calQueuePreviewTitle").textContent = tool.name;
+    const details = get("calQueuePreviewDetails");
+    details.replaceChildren();
+    for (const [label, value] of [
+      ["ID เครื่องมือ", tool.tool_code], ["เลขครุภัณฑ์", tool.inventory_no],
+      ["หน่วยงาน", tool.department], ["ประเภทเครื่องมือ", typeNames[tool.method]],
+      ["ยี่ห้อ", tool.manufacturer], ["รุ่น", tool.model], ["S/N", tool.serial_number],
+    ]) {
+      const term = document.createElement("dt");
+      const description = document.createElement("dd");
+      term.textContent = label;
+      description.textContent = value || "—";
+      details.append(term, description);
+    }
+    get("calQueuePreview").showModal();
+  }
+
   function renderQueue() {
     const query = get("calQueueSearch").value.trim().toLowerCase();
     const department = get("calQueueDepartment").value;
@@ -467,7 +488,8 @@
     const groupOf = tool => groupKey === "department" ? tool.department : typeNames[tool.method];
     const matches = tools.filter(tool => (!department || tool.department === department)
       && (!method || tool.method === method)
-      && [tool.tool_code, tool.inventory_no].some(value => value.toLowerCase().includes(query)));
+      && [tool.tool_code, tool.inventory_no, tool.name, tool.manufacturer, tool.model]
+        .some(value => String(value ?? "").toLowerCase().includes(query)));
     matches.sort((left, right) => groupOf(left).localeCompare(groupOf(right), "th")
       || left.name.localeCompare(right.name, "th") || left.tool_code.localeCompare(right.tool_code, "th"));
 
@@ -484,11 +506,21 @@
       section.className = "cal-queue-group";
       const title = document.createElement("h2");
       title.textContent = name;
-      section.append(title);
+      const grid = document.createElement("div");
+      grid.className = "cal-discover-items";
+      section.append(title, grid);
       for (const tool of entries) {
         const row = document.createElement("div");
-        row.className = "cal-queue-row";
+        row.className = "cal-discover-item";
+        const cover = document.createElement("div");
+        cover.className = "cal-discover-cover";
+        cover.setAttribute("aria-hidden", "true");
+        cover.dataset.method = tool.method;
+        const code = document.createElement("span");
+        code.textContent = tool.tool_code;
+        cover.append(code);
         const text = document.createElement("div");
+        text.className = "cal-discover-info";
         const name = document.createElement("strong");
         name.textContent = tool.name;
         const details = document.createElement("p");
@@ -499,14 +531,17 @@
         const button = document.createElement("button");
         button.type = "button";
         button.dataset.toolId = tool.id;
-        button.textContent = "เริ่มสอบเทียบ →";
-        row.append(text, button);
-        section.append(row);
+        button.textContent = "ดูรายละเอียด →";
+        button.setAttribute("aria-label", "ดูรายละเอียด " + tool.name + " " + tool.tool_code);
+        row.append(cover, text, button);
+        grid.append(row);
       }
       list.append(section);
     }
+    get("calQueueClear").hidden = !(get("calQueueSearch").value || department || method);
     get("calQueueCount").textContent = matches.length
-      ? "พบ " + matches.length + " เครื่อง · หน้า " + (queuePage + 1) : "ไม่พบเครื่องมือในทะเบียนตามที่ค้นหา";
+      ? "พบ " + matches.length + " เครื่อง · หน้า " + (queuePage + 1) + " / " + Math.ceil(matches.length / pageSize)
+      : "ไม่พบเครื่องมือในทะเบียนตามที่ค้นหา";
     get("calQueuePrev").disabled = queuePage === 0;
     get("calQueueNext").disabled = (queuePage + 1) * pageSize >= matches.length;
   }
@@ -1688,12 +1723,33 @@
   get("calQueueTab").addEventListener("click", guarded(openQueue));
   get("calQueueFilters").addEventListener("submit", event => event.preventDefault());
   get("calQueueFilters").addEventListener("input", () => { queuePage = 0; renderQueue(); });
+  get("calQueueClear").addEventListener("click", () => {
+    for (const id of ["calQueueSearch", "calQueueDepartment", "calQueueType"]) get(id).value = "";
+    queuePage = 0;
+    get("calQueueSearch").focus();
+    renderQueue();
+  });
+  document.querySelectorAll("[data-cal-queue-view]").forEach(button => {
+    button.addEventListener("click", () => {
+      get("calQueueList").dataset.view = button.dataset.calQueueView;
+      for (const option of button.parentElement.querySelectorAll("button")) {
+        option.setAttribute("aria-pressed", String(option === button));
+      }
+    });
+  });
   get("calQueuePrev").addEventListener("click", () => { queuePage--; renderQueue(); });
   get("calQueueNext").addEventListener("click", () => { queuePage++; renderQueue(); });
-  get("calQueueList").addEventListener("click", guarded(async event => {
+  get("calQueueList").addEventListener("click", event => {
     const button = event.target.closest("[data-tool-id]");
     const tool = button && tools.find(item => item.id === button.dataset.toolId);
-    if (tool) await openForm(tool);
+    if (tool) openQueuePreview(tool);
+  });
+  get("calQueuePreviewStart").addEventListener("click", guarded(async () => {
+    const tool = queuePreviewTool;
+    if (!tool) return;
+    get("calQueuePreview").close();
+    queuePreviewTool = null;
+    await openForm(tool);
   }));
   get("calDate").addEventListener("change", guarded(async () => {
     if (!editingRecordId) await ensureCertificateForDate();
