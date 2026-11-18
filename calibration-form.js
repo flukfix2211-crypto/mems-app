@@ -69,7 +69,7 @@ function render() {
     const fixed = Boolean(fixedSetpoints[device.value]?.[i]);
     const body = rows.map((row, index) => {
       const cells = entryColumns.map(({ label, index: col }) =>
-        '<td><input type="number" step="any" placeholder="—" aria-label="' +
+        '<td><input type="number" inputmode="decimal" step="any" placeholder="—" aria-label="' +
         label + ' จุดที่ ' + (index + 1) + '" data-col="' + col + '" value="' +
         escapeValue(row[col]) + '"' + (col === 0 || (fixed && col === 1) ? ' readonly tabindex="-1"' : "") + '></td>').join("");
       return '<tr data-row="' + index + '">' + cells +
@@ -172,7 +172,25 @@ sheets.addEventListener("input", event => {
 });
 
 sheets.addEventListener("keydown", event => {
-  if (event.key !== "Enter" || !event.target.matches("[data-col]:not([readonly])")) return;
+  const editable = "[data-col]:not([readonly]):not([disabled])";
+  const input = event.target;
+  if (!input.matches(editable) || event.isComposing || event.altKey ||
+    event.ctrlKey || event.metaKey || event.shiftKey) return;
+
+  const { key } = event;
+  const horizontal = key === "ArrowLeft" || key === "ArrowRight";
+  const vertical = key === "ArrowUp" || key === "ArrowDown";
+  if (horizontal || vertical) {
+    event.preventDefault();
+    const forward = key === "ArrowRight" || key === "ArrowDown";
+    const sibling = forward ? "nextElementSibling" : "previousElementSibling";
+    const adjacent = horizontal ? input.closest("td")[sibling] : input.closest("tr")[sibling];
+    const destination = horizontal ? editable : editable + '[data-col="' + input.dataset.col + '"]';
+    adjacent?.querySelector(destination)?.focus();
+    return;
+  }
+
+  if (key !== "Enter") return;
   event.preventDefault();
   const sheet = event.target.closest("[data-sheet]");
   const inputs = Array.from(sheet.querySelectorAll("[data-col]:not([readonly])"));
