@@ -187,7 +187,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 
 <script src="vendor/supabase.js"></script>
 <script src="supabase-client.js?v=20261117-return-checks-1"></script>
-<script src="auth.js"></script>
+<script src="auth.js?v=20261118-staff-defaults"></script>
 <script>
   const WARDS = ['ER','อายุรกรรมหญิง (M.ญ)','EENT','ศัลยกรรมหญิง','ศัลยกรรมกระดูก','ศัลยกรรมชาย',
     'อายุรกรรมชาย (M.ช)','Semi ICU','ICU 100 ปี','กจ.3','กจ.2','TM','เด็กล่าง','PICU','เด็กบน',
@@ -295,7 +295,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     document.getElementById('otherTopic').value = '';
     document.getElementById('otherTopicWrap').style.display = 'none';
     document.getElementById('detailText').value = '';
-    document.getElementById('staffSel').value = '';
+    memsSelectStaffName(document.getElementById('staffSel'));
     document.getElementById('staffOther').value = '';
     document.getElementById('staffOtherWrap').style.display = 'none';
     selectedPhotos = [];
@@ -351,7 +351,11 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 
   window.addEventListener('DOMContentLoaded', async () => {
     const profile = await memsGuard('fixjob');
-    if (profile) loadTopics();
+    if (profile) {
+      memsSelectStaffName(document.getElementById('staffSel'));
+      onStaffChange();
+      loadTopics();
+    }
   });
 </script>
 <script src="site-footer.js?v=1.1"></script>

@@ -950,7 +950,7 @@
       } : metadataDrafts.get(tool.id);
       const fields = draft?.fields ?? ["", today(), operatorName, "", "23", "50", ""];
       const operatorSelect = get("calOperator");
-      if (draft && fields[2] && !Array.from(operatorSelect.options).some(option => option.value === fields[2])) operatorSelect.add(new Option(fields[2] + " (ข้อมูลเดิม)", fields[2]));
+      memsSelectStaffName(operatorSelect, fields[2]);
       draftFields.forEach((id, index) => { get(id).value = fields[index]; });
       device.value = tool.method;
       rowsByDevice.set(tool.method, draft?.measurements ? structuredClone(draft.measurements) : stateFor());
@@ -1850,7 +1850,7 @@
     get("calStandardSettings").hidden = !memsIsAdmin();
     canRemoveStandard = memsIsSuperAdmin(profile);
     standardDelete.hidden = !canRemoveStandard;
-    operatorName = profile.display_name || "";
+    operatorName = memsStaffName(profile);
     await loadCalibrationOperators().catch(error => {
       console.warn("โหลดรายชื่อผู้ปฏิบัติงานจาก PM ไม่สำเร็จ", error);
       get("calOperatorHint").textContent = "โหลดรายชื่อจาก PM ไม่สำเร็จ · กรุณาโหลดหน้าใหม่";

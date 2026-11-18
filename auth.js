@@ -52,6 +52,31 @@ async function memsLoadProfile() {
   return data;
 }
 
+function memsStaffName(profile = MEMS_USER) {
+  return String(profile?.display_name || '').trim() || String(profile?.username || '').trim();
+}
+
+function memsSelectStaffName(select, name = memsStaffName()) {
+  if (name && !Array.from(select.options).some(option => option.value === name)) {
+    select.add(new Option(name, name), select.options[1] || null);
+  }
+  select.value = name;
+}
+
+function memsDefaultStaffInput(input) {
+  const name = memsStaffName();
+  let list = document.getElementById('memsStaffNameOptions');
+  if (!list) {
+    list = document.createElement('datalist');
+    list.id = 'memsStaffNameOptions';
+    const names = [name, 'นัฐวัติ', 'ปวริศ', 'ปนัดดา', 'นวพงษ์', 'เนตรดาว', 'สิริอาภา', 'สุกัญญา', 'วรรณพร'];
+    for (const staff of new Set(names.filter(Boolean))) list.append(new Option(staff));
+    document.body.append(list);
+  }
+  input.setAttribute('list', list.id);
+  input.value = name;
+}
+
 function memsHasPermission(profile, pageKey) {
   if (!profile || !profile.active) return false;
   if (profile.role === 'admin') return true;

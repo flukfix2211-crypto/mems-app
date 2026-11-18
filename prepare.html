@@ -376,7 +376,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 
 <script src="vendor/supabase.js"></script>
 <script src="supabase-client.js?v=20261117-return-checks-2"></script>
-<script src="auth.js"></script>
+<script src="auth.js?v=20261118-staff-defaults"></script>
 <script>
   const ASSET_LABEL_EQUIPS = new Set(['Defibrillator', 'เครื่องมืออื่นๆ']);
   const WARDS = [...MEMS_WARDS, 'อื่นๆ โปรดระบุชื่อตึก'];
@@ -683,6 +683,8 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     renderSetChangeDate();
     const profile = await memsGuard('prepare');
     if (profile) {
+      memsSelectStaffName(document.getElementById('preparedBySel'));
+      onByChange();
       if (typeof memsInitPrepareQrCamera === 'function') await memsInitPrepareQrCamera();
       loadList();
     }
@@ -695,6 +697,6 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 <script src="equipment-photos.js?v=20261023-1"></script>
 <script src="equipment-lifecycle.js?v=20261117-return-checks-2"></script>
 <script src="mems-controls.js?v=20261117-office-1"></script>
-<script src="return-checks-batch.js?v=20261118-1"></script>
+<script src="return-checks-batch.js?v=20261118-staff-defaults"></script>
 </body>
 </html>

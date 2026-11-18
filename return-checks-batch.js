@@ -193,12 +193,13 @@ async function memsOpenReturnCheckBatch(rows, opener) {
   try {
     const names = await fetchAllPages(() => supabase.rpc('list_return_receipt_staff'));
     if (!dialog.open) return;
-    if (!names.length) {
+    if (!names.length && !memsStaffName()) {
       namePlaceholder.text = 'ไม่มีรายชื่อเจ้าหน้าที่ผู้ตรวจรับ';
       return;
     }
     namePlaceholder.text = '— เลือกเจ้าหน้าที่ผู้ตรวจรับ —';
     for (const { staff_name } of names) name.append(new Option(staff_name, staff_name));
+    memsSelectStaffName(name);
     name.disabled = false;
     submit.disabled = false;
   } catch (loadError) {
