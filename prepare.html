@@ -367,7 +367,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     <button class="reason-btn" onclick="doCancel('หน่วยงานยกเลิกไม่เอาเครื่องแล้ว')">1. หน่วยงานยกเลิกไม่เอาเครื่องแล้ว</button>
     <button class="reason-btn" onclick="doCancel('หน่วยงานไม่มารับเครื่อง')">2. หน่วยงานไม่มารับเครื่อง</button>
     <button class="reason-btn" onclick="doCancel('ผู้เตรียมบันทึกผิดพลาด')">3. ผู้เตรียมบันทึกผิดพลาด</button>
-    <button class="reason-btn" onclick="doCancel('หน่วยงานนำเครื่องไปไม่คีย์ยืมเครื่อง')">4. หน่วยงานนำเครื่องไปไม่คีย์ยืมเครื่อง</button>
+    <button class="reason-btn" onclick="doCancel('หน่วยงานนำเครื่องไปไม่คีย์ยืมเครื่อง')">4. หน่วยงานนำเครื่องไปไม่คีย์ยืมเครื่อง (บันทึกยืมอัตโนมัติ)</button>
     <button class="reason-btn" style="border:none;background:none;color:var(--muted);font-weight:600;margin-top:4px" onclick="closeCancelModal()">ปิด</button>
   </div>
 </div>
@@ -658,15 +658,25 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     const rowIndex = cancelRowIndex;
     closeCancelModal();
     if (!rowIndex) return;
+    const autoBorrow = reason === 'หน่วยงานนำเครื่องไปไม่คีย์ยืมเครื่อง';
     try {
-      const { error } = await supabase.from('prepare_records')
-        .update({ status: 'ยกเลิก: ' + reason })
-        .eq('id', rowIndex).eq('status', 'เตรียม').select('id').single();
-      if (error) throw error;
-      toast('🗑️ ยกเลิกแล้ว (' + reason + ')');
+      if (autoBorrow) {
+        const { data, error } = await supabase.rpc('mems_borrow_unrecorded_preparation', { preparation_id: rowIndex });
+        if (error) throw error;
+        notifyTelegram({ type: 'borrow_return', record: data });
+        toast('✅ บันทึกยืมอัตโนมัติแล้ว');
+      } else {
+        const { error } = await supabase.from('prepare_records')
+          .update({ status: 'ยกเลิก: ' + reason })
+          .eq('id', rowIndex).eq('status', 'เตรียม').select('id').single();
+        if (error) throw error;
+        toast('🗑️ ยกเลิกแล้ว (' + reason + ')');
+      }
       setTimeout(loadList, 800);
       if (selectedEquip) loadReadyEquipmentRecommendations(selectedEquip);
-    } catch (e) { toast('❌ ยกเลิกไม่สำเร็จ'); }
+    } catch (e) {
+      toast(autoBorrow ? '❌ บันทึกยืมอัตโนมัติไม่สำเร็จ: ' + (e.message || e) : '❌ ยกเลิกไม่สำเร็จ');
+    }
   }
 
   window.addEventListener('DOMContentLoaded', async () => {
