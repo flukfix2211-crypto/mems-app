@@ -104,7 +104,7 @@ async function memsLoadReturnChecks() {
   }
 }
 
-function memsOpenReturnCheckBatch(rows, opener) {
+async function memsOpenReturnCheckBatch(rows, opener) {
   if (!rows.length || memsReturnChecksSaving) return;
   const dialog = document.createElement('dialog');
   dialog.className = 'lifecycle-return-confirm return-check-dialog';
@@ -125,15 +125,13 @@ function memsOpenReturnCheckBatch(rows, opener) {
   const nameLabel = document.createElement('label');
   nameLabel.htmlFor = 'returnCheckName';
   nameLabel.textContent = 'ลงชื่อเจ้าหน้าที่ผู้ตรวจรับ';
-  const name = document.createElement('input');
+  const name = document.createElement('select');
   name.id = 'returnCheckName';
   name.className = 'field';
   name.required = true;
-  name.maxLength = 200;
-  name.autocomplete = 'name';
-  name.placeholder = 'ชื่อ–นามสกุลเจ้าหน้าที่';
-  const existing = document.getElementById('preparedBySel');
-  name.value = existing?.value === 'อื่นๆ' ? document.getElementById('preparedByOther')?.value.trim() || '' : existing?.value || '';
+  name.disabled = true;
+  const namePlaceholder = new Option('กำลังโหลดรายชื่อเจ้าหน้าที่…', '');
+  name.append(namePlaceholder);
   const attestLabel = document.createElement('label');
   attestLabel.className = 'return-check-attestation';
   const attest = document.createElement('input');
@@ -154,6 +152,7 @@ function memsOpenReturnCheckBatch(rows, opener) {
   submit.type = 'submit';
   submit.className = 'lifecycle-return-confirm-accept';
   submit.textContent = `ยืนยันรับคืน ${rows.length} เครื่อง`;
+  submit.disabled = true;
   actions.append(cancel, submit);
   form.append(title, intro, deviceList, nameLabel, name, attestLabel, error, actions);
   dialog.append(form);
@@ -163,16 +162,17 @@ function memsOpenReturnCheckBatch(rows, opener) {
   form.addEventListener('submit', async event => {
     event.preventDefault();
     if (memsReturnChecksSaving) return;
-    if (!name.value.trim()) { error.textContent = 'กรุณาลงชื่อเจ้าหน้าที่ผู้ตรวจรับ'; name.focus(); return; }
+    const selectedName = name.value;
+    if (!selectedName || name.disabled || !attest.checked) return;
     memsReturnChecksSaving = true;
-    form.querySelectorAll('button,input').forEach(element => { element.disabled = true; });
+    form.querySelectorAll('button,input,select').forEach(element => { element.disabled = true; });
     error.textContent = 'กำลังบันทึกการตรวจรับ…';
     let succeeded = 0;
     const failed = [];
     for (const [index, row] of rows.entries()) {
       error.textContent = `กำลังบันทึกการตรวจรับ ${index + 1}/${rows.length} เครื่อง…`;
       try {
-        await confirmEquipmentReturn(row.return_id, name.value.trim());
+        await confirmEquipmentReturn(row.return_id, selectedName);
         memsSelectedReturnChecks.delete(String(row.return_id));
         succeeded++;
       } catch (saveError) {
@@ -190,7 +190,23 @@ function memsOpenReturnCheckBatch(rows, opener) {
   });
   document.body.append(dialog);
   dialog.showModal();
-  name.focus();
+  try {
+    const names = await fetchAllPages(() => supabase.rpc('list_return_receipt_staff'));
+    if (!dialog.open) return;
+    if (!names.length) {
+      namePlaceholder.text = 'ไม่มีรายชื่อเจ้าหน้าที่ผู้ตรวจรับ';
+      return;
+    }
+    namePlaceholder.text = '— เลือกเจ้าหน้าที่ผู้ตรวจรับ —';
+    for (const { staff_name } of names) name.append(new Option(staff_name, staff_name));
+    name.disabled = false;
+    submit.disabled = false;
+  } catch (loadError) {
+    if (!dialog.open) return;
+    console.error('โหลดรายชื่อเจ้าหน้าที่ผู้ตรวจรับไม่สำเร็จ', loadError);
+    namePlaceholder.text = 'โหลดรายชื่อไม่สำเร็จ';
+    error.textContent = 'กรุณาปิดหน้าต่างแล้วเปิดใหม่เพื่อลองอีกครั้ง';
+  }
 }
 
 document.getElementById('refreshReturnChecks').addEventListener('click', async () => {
