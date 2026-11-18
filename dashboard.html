@@ -642,6 +642,24 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
       <div class="view-title"><svg class="mems-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14v18H5zM8 7h8M8 11h8M8 15h5"/></svg> รายการทั้งหมด</div>
     </div>
 
+  <details class="unkeyed-dashboard unkeyed-dropdown" id="returnReceiptHistory" ontoggle="if(this.open) loadReturnReceiptHistory()">
+    <summary>ประวัติการตรวจรับคืนเครื่อง <span class="unkeyed-chevron" aria-hidden="true">▸</span></summary>
+    <div class="unkeyed-dropdown-body">
+      <div class="unkeyed-controls"><button type="button" id="receiptHistoryRefresh" onclick="loadReturnReceiptHistory()">รีเฟรชประวัติ</button></div>
+      <p id="receiptHistoryStatus" role="status"></p>
+      <div class="unkeyed-scroll" id="receiptHistoryTable" hidden>
+        <table aria-label="ประวัติการตรวจรับคืนเครื่อง">
+          <thead><tr><th scope="col">เวลาตรวจรับ</th><th scope="col">เครื่อง</th><th scope="col">หน่วยงาน</th><th scope="col">ผู้ตรวจรับ</th><th scope="col">เวลาแจ้งคืน</th><th scope="col">ผู้แจ้งคืน</th></tr></thead>
+          <tbody id="receiptHistoryRows"></tbody>
+        </table>
+      </div>
+      <div class="unkeyed-controls">
+        <button type="button" id="receiptHistoryPrevious" onclick="loadReturnReceiptHistory(receiptHistoryPage - 1)" disabled>ก่อนหน้า</button>
+        <button type="button" id="receiptHistoryNext" onclick="loadReturnReceiptHistory(receiptHistoryPage + 1)" disabled>ถัดไป</button>
+      </div>
+    </div>
+  </details>
+
   <details class="unkeyed-dashboard unkeyed-dropdown" id="unkeyedStatisticsCard" ontoggle="if(this.open) memsLoadUnkeyedStatistics()">
     <summary id="unkeyedTitle">สถิติหน่วยงานไม่คีย์ยืม–คืนเครื่อง <span class="unkeyed-chevron" aria-hidden="true">▸</span></summary>
     <div class="unkeyed-dropdown-body">
@@ -2408,6 +2426,55 @@ function applyFilters() {
   currentPage = 0;
   populateYearSelect();
   if (currentView !== 'home') showView(currentView);
+}
+
+let receiptHistoryPage = 0;
+const receiptHistoryPageSize = 25;
+const receiptHistoryDate = new Intl.DateTimeFormat('th-TH', {
+  timeZone: 'Asia/Bangkok', dateStyle: 'medium', timeStyle: 'short'
+});
+
+async function loadReturnReceiptHistory(page = 0) {
+  const refresh = document.getElementById('receiptHistoryRefresh');
+  if (!MEMS_USER || refresh.disabled || page < 0) return;
+  const status = document.getElementById('receiptHistoryStatus');
+  const table = document.getElementById('receiptHistoryTable');
+  const body = document.getElementById('receiptHistoryRows');
+  const previous = document.getElementById('receiptHistoryPrevious');
+  const next = document.getElementById('receiptHistoryNext');
+  refresh.disabled = previous.disabled = next.disabled = true;
+  table.hidden = true;
+  status.textContent = 'กำลังโหลดประวัติการตรวจรับ…';
+  try {
+    const offset = page * receiptHistoryPageSize;
+    const { data, error } = await supabase.from('equipment_return_checks')
+      .select('confirmed_at,confirmed_by,record:borrow_records!return_id(equipment_name,equipment_number,ward,staff_name,recorded_at)')
+      .not('confirmed_at', 'is', null)
+      .order('confirmed_at', { ascending: false })
+      .order('return_id', { ascending: false })
+      .range(offset, offset + receiptHistoryPageSize);
+    if (error) throw error;
+    receiptHistoryPage = page;
+    body.replaceChildren();
+    for (const { confirmed_at, confirmed_by, record } of data.slice(0, receiptHistoryPageSize)) {
+      const row = body.insertRow();
+      const machine = [record?.equipment_name, record?.equipment_number && 'No.' + record.equipment_number].filter(Boolean).join(' ');
+      const values = [
+        receiptHistoryDate.format(new Date(confirmed_at)), machine, record?.ward, confirmed_by,
+        record?.recorded_at && receiptHistoryDate.format(new Date(record.recorded_at)), record?.staff_name
+      ];
+      for (const value of values) row.insertCell().textContent = value || '—';
+    }
+    table.hidden = !body.rows.length;
+    status.textContent = body.rows.length ? 'หน้า ' + (page + 1) : 'ไม่พบรายการตรวจรับในหน้านี้';
+    previous.disabled = page === 0;
+    next.disabled = data.length <= receiptHistoryPageSize;
+  } catch (error) {
+    console.error('โหลดประวัติการตรวจรับไม่สำเร็จ', error);
+    status.textContent = 'โหลดประวัติการตรวจรับไม่สำเร็จ กรุณากดรีเฟรชประวัติ';
+  } finally {
+    refresh.disabled = false;
+  }
 }
 
 function onSearch() { currentPage = 0; renderTable(); }
