@@ -179,7 +179,16 @@
       notice((error.message||'เครือข่ายขัดข้อง')+(pending?' · ข้อมูลถูกล็อกไว้ กดลองบันทึกชุดเดิมเพื่อยืนยันผลโดยไม่สร้างรายการซ้ำ':' · ยังไม่บันทึกทั้งชุด กรุณาแก้ข้อมูลแล้วตรวจทานอีกครั้ง'),true);
     }finally{busy=false;}
   }
-  function startNew(){pending=null;reviewed=null;savedRows=[];rows=[newMachine()];lock(false);$('savedPanel').hidden=true;invalidate();renderMachines();$('newTab').disabled=false;$('historyTab').disabled=false;if(!$('pmWorkspace').hidden)notice('พร้อมสร้างชุดงานใหม่ · เพิ่มเครื่องและกรอกผลตรวจรายเครื่อง');}
+  function defaultOperator() {
+    const name = memsStaffName(profile);
+    const matches = operators.filter(person => person.name === name);
+    const saved = matches.length === 1 ? matches[0] : null;
+    $('savedOperator').value = saved?.id || '';
+    $('operator').value = name;
+    $('operatorPosition').value = saved?.position || '';
+  }
+
+  function startNew(){defaultOperator();pending=null;reviewed=null;savedRows=[];rows=[newMachine()];lock(false);$('savedPanel').hidden=true;invalidate();renderMachines();$('newTab').disabled=false;$('historyTab').disabled=false;if(!$('pmWorkspace').hidden)notice('พร้อมสร้างชุดงานใหม่ · เพิ่มเครื่องและกรอกผลตรวจรายเครื่อง');}
   async function pdf(reports,button){
     if(!reports.length)throw new Error('เลือกรายงานก่อน');
     if(button)button.disabled=true;
@@ -200,7 +209,7 @@
   function tabs(isHistory){$('newPanel').hidden=isHistory;$('historyPanel').hidden=!isHistory;$('newTab').setAttribute('aria-pressed',String(!isHistory));$('historyTab').setAttribute('aria-pressed',String(isHistory));}
   window.addEventListener('DOMContentLoaded',guard(async()=>{
     profile=await memsGuard('pm_reports');if(!profile)return;
-    $('reportDate').value=today();$('operator').value=profile.display_name||profile.username||'';
+    $('reportDate').value=today();
     const enabled=await loadSettings();await loadAssets();if(enabled){await loadOperators();await loadToolTypes();await loadBrandModels();}await loadWards();startNew();if(enabled)notice('พร้อมใช้งาน · บันทึกชุดงานและสร้าง PDF ใน MEMs ได้ทันที');
     $('saveSettings').onclick=guard(async()=>{const {error}=await supabase.from('mems_report_settings').update({enabled:$('pmEnabled').checked,updated_by:profile.id,updated_at:new Date().toISOString()}).eq('id',true);if(error)throw error;if(await loadSettings()){await loadOperators();await loadToolTypes();await loadBrandModels();renderMachines();}});
     $('savedOperator').onchange=()=>{const selected=operators.find(p=>p.id===$('savedOperator').value);if(selected){$('operator').value=selected.name;$('operatorPosition').value=selected.position;}else{$('operator').value='';$('operatorPosition').value='';}invalidate();};

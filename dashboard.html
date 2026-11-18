@@ -990,7 +990,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 <script src="vendor/jspdf.umd.min.js"></script>
 <script src="vendor/jspdf.plugin.autotable.min.js"></script>
 <script src="supabase-client.js?v=20261117-return-checks-2"></script>
-<script src="auth.js"></script>
+<script src="auth.js?v=20261118-staff-defaults"></script>
 <script src="unkeyed-statistics.js?v=20261104-print-1"></script>
 <script src="equipment-status.js?v=20261117-return-checks-2"></script>
 <script src="reports.js?v=20261104-print-1"></script>
@@ -2201,7 +2201,7 @@ function openCircuitModal(number, ward, days, equip = 'C2') {
   _circuitCtx = { number, ward, days: borrowedDays, equip };
   document.getElementById('circuitInfo').innerHTML =
     `<strong>${equip} No.${number}</strong><br><span style="font-weight:500;color:var(--muted);font-size:12px">📍 ${ward || '—'} · ยืมมาแล้ว ${borrowedDays} วัน</span>${lastCircuit}`;
-  document.getElementById('circuitStaffName').value = '';
+  memsDefaultStaffInput(document.getElementById('circuitStaffName'));
   const dateInput = document.getElementById('circuitDate');
   dateInput.max = bkkDateStr(new Date()); // เลือกวันที่ในอนาคตไม่ได้
   // ห้ามเลือกวันที่ก่อนวันยืม/เปลี่ยน Circuit ครั้งล่าสุด — ระบบถือรายการที่มีเวลาล่าสุดเป็นสถานะปัจจุบันเสมอ
@@ -2297,7 +2297,7 @@ function openToolTransferModal(equip, number, fromWard) {
   const sel = document.getElementById('toolTransferWardSel');
   sel.innerHTML = '<option value="">— เลือกวอร์ดปลายทาง —</option>' +
     WARDS_ALL.filter(w => w !== fromWard).map(w => `<option>${w}</option>`).join('');
-  document.getElementById('toolTransferStaffName').value = '';
+  memsDefaultStaffInput(document.getElementById('toolTransferStaffName'));
   document.getElementById('toolTransferModal').style.display = 'flex';
 }
 
@@ -2346,7 +2346,7 @@ function openToolReturnModal(equip, number, ward) {
   _toolReturnCtx = { equip, number, ward };
   document.getElementById('toolReturnInfo').innerHTML =
     `<strong>${equip} No.${number}</strong><br><span style="font-weight:500;color:var(--muted);font-size:12px">📍 ${ward || '—'}</span>`;
-  document.getElementById('toolReturnStaffName').value = '';
+  memsDefaultStaffInput(document.getElementById('toolReturnStaffName'));
   document.getElementById('toolReturnModal').style.display = 'flex';
 }
 
