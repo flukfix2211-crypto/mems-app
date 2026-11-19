@@ -6,7 +6,9 @@ const path = require('node:path');
 const http = require('node:http');
 const root = path.resolve(__dirname, '..');
 const types = ['Brid เขียว', 'C2', 'High Flow', 'Infusion Pump', 'Monnal t60', 'NIBP', 'Patient Monitor', 'Syringe Pump', 'T1'];
-const assets = types.flatMap((type, index) => [1, 2].map(no => ({ id: index * 2 + no, type, no, status: 'ใช้งานได้' })));
+const assets = types.flatMap((type, index) => [1, 2].map(no => ({
+  id: index * 2 + no, type, no, status: 'ใช้งานได้', asset_code: `6515-025-1001-${index * 2 + no}/66`
+})));
 const fake = `window.supabase={createClient(){return {from(table){let single=false;const q={select(){return q},eq(){return q},in(){return q},is(){return q},order(){return q},range(){return q},limit(){return q},single(){single=true;return q},maybeSingle(){single=true;return q},then(resolve,reject){return Promise.resolve({data:table==='assets'?${JSON.stringify(assets)}:single?null:[],error:null}).then(resolve,reject)}};return q}}}};`;
 
 (async () => {
@@ -72,6 +74,28 @@ const fake = `window.supabase={createClient(){return {from(table){let single=fal
         assert.deepEqual(clipped, [], `${file} clipped control labels at ${width}`);
       }
     }
+    await page.goto(base + '/assets.html');
+    await page.locator('#assetBody .asset-col').first().waitFor();
+    await page.locator('.type-chip[data-type="Infusion Pump"]').click();
+    for (const width of [1200, 1440, 1920]) {
+      await page.setViewportSize({ width, height: 900 });
+      const tableFits = await page.locator('#assetScroll').evaluate(el => el.scrollWidth <= el.clientWidth + 1);
+      assert.ok(tableFits, `registry table scrolls horizontally at ${width}`);
+      const cells = await page.locator('#assetBody :is(.asset-col, .asset-type-cell)').evaluateAll(nodes => nodes.map(cell => {
+        const range = document.createRange();
+        range.selectNode(cell.lastChild);
+        const textFits = [...range.getClientRects()].every(rect => rect.right <= cell.getBoundingClientRect().right);
+        return { text: range.toString(), lines: range.getClientRects().length, textFits };
+      }));
+      assert.equal(cells.length, 4);
+      for (const cell of cells) {
+        assert.equal(cell.lines, 1, `${cell.text} wraps at ${width}`);
+        assert.ok(cell.textFits, `${cell.text} overflows its cell at ${width}`);
+      }
+    }
+    await page.setViewportSize({ width: 390, height: 900 });
+    assert.equal(await page.locator('#assetBody tr').first().evaluate(row => getComputedStyle(row).display), 'grid');
+    console.log('PASS: desktop registry codes and types fit on one line, and mobile still uses the card layout.');
     console.log('PASS: 9 viewport sizes, readable controls, 44px targets, compact preparation layout, equipment selection and adding a number.');
     console.log('PASS: borrow, round, fixjob and asset controls fit at 5 viewport widths.');
   } finally {
