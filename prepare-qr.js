@@ -81,6 +81,7 @@ async function openPrepareQrCamera() {
   }
   const modal = document.getElementById('prepareQrCameraModal');
   const video = document.getElementById('prepareQrVideo');
+  if (modal.classList.contains('show')) return;
   memsPrepareQrDraftItems = memsPrepareQrBatchItems.slice();
   memsPrepareQrLastValue = '';
   memsPrepareQrLastReadAt = 0;
@@ -97,22 +98,43 @@ async function openPrepareQrCamera() {
     return;
   }
 
+  let scanner;
   try {
-    if (!(await QrScanner.hasCamera())) throw new Error('ไม่พบกล้องในอุปกรณ์นี้');
-    if (memsPrepareQrScanner) memsPrepareQrScanner.destroy();
-    memsPrepareQrScanner = new QrScanner(video, result => {
-      const value = result && typeof result === 'object' ? result.data : result;
-      memsHandlePrepareQrResult(value);
+    let decoderFailed = false;
+    scanner = new QrScanner(video, result => {
+      if (memsPrepareQrScanner !== scanner) return;
+      decoderFailed = false;
+      memsHandlePrepareQrResult(result.data, scanner);
     }, {
       preferredCamera: 'environment',
-      maxScansPerSecond: 10,
+      maxScansPerSecond: 8,
+      calculateScanRegion: ({ videoWidth, videoHeight }) => {
+        const size = Math.round(Math.min(videoWidth, videoHeight) * 2 / 3);
+        const decodeSize = Math.min(size, 800);
+        return {
+          x: Math.round((videoWidth - size) / 2),
+          y: Math.round((videoHeight - size) / 2),
+          width: size,
+          height: size,
+          downScaledWidth: decodeSize,
+          downScaledHeight: decodeSize
+        };
+      },
+      onDecodeError: error => {
+        if (memsPrepareQrScanner !== scanner || decoderFailed || error === QrScanner.NO_QR_CODE_FOUND) return;
+        decoderFailed = true;
+        console.error('อ่าน QR จากกล้องไม่สำเร็จ', error);
+        memsSetPrepareQrStatus('ตัวอ่าน QR มีปัญหา กรุณาปิดแล้วเปิดกล้องใหม่ หรือเลือกเครื่องจากรายการ', true);
+      },
       highlightScanRegion: true,
       highlightCodeOutline: true,
       returnDetailedScanResult: true
     });
-    await memsPrepareQrScanner.start();
-    memsSetPrepareQrStatus('เล็งกรอบไปที่ QR บนตัวเครื่อง', false);
+    memsPrepareQrScanner = scanner;
+    memsSetPrepareQrStatus('ให้ QR อยู่กลางกรอบและถือกล้องนิ่งจนภาพชัด', false);
+    await scanner.start();
   } catch (err) {
+    if (scanner && memsPrepareQrScanner !== scanner) return;
     console.error(err);
     memsSetPrepareQrStatus('เปิดกล้องไม่สำเร็จ: ' + (err.message || err), true);
   }
@@ -142,7 +164,7 @@ function memsConfirmPrepareQrBatch() {
   toast('✅ เลือกจากกล้องแล้ว ' + memsPrepareQrBatchItems.length + ' เครื่อง');
 }
 
-async function memsHandlePrepareQrResult(raw) {
+async function memsHandlePrepareQrResult(raw, scanner) {
   if (memsPrepareQrHandling) return;
   const now = Date.now();
   if (raw === memsPrepareQrLastValue && now - memsPrepareQrLastReadAt < 1500) return;
@@ -166,6 +188,7 @@ async function memsHandlePrepareQrResult(raw) {
     const no = normalizeMachineNo(asset.no);
     if (asset.status !== 'ใช้งานได้') throw new Error('เครื่องไม่พร้อมใช้');
     const [prepared,statuses] = await Promise.all([fetchPreparedList(),fetchEquipmentStatus()]);
+    if (memsPrepareQrScanner !== scanner) return;
     const machineKey = memsMachineKey(requestedEquip,no);
     if(statuses.some(s=>s.isReturnPending && memsMachineKey(s.equipment,s.number)===machineKey)) throw new Error('เครื่องรอตรวจและยืนยันการคืน กรุณาตรวจรับก่อนเตรียม');
     if(prepared.some(p=>memsMachineKey(p.equipment,p.number)===machineKey)) throw new Error('เครื่องถูกเตรียมหรือถูกยืมอยู่');
@@ -182,10 +205,11 @@ async function memsHandlePrepareQrResult(raw) {
     memsPrepareQrHandling = false;
     memsRenderPrepareQrDraft();
   } catch (err) {
+    if (memsPrepareQrScanner !== scanner) return;
     console.error(err);
     memsSetPrepareQrStatus('สแกนไม่สำเร็จ: ' + (err.message || err), true);
     memsPrepareQrHandling = false;
   }
 }
 
-window.addEventListener('pagehide', closePrepareQrCamera);
+window.addEventListener('pagehide', () => closePrepareQrCamera());
