@@ -56,7 +56,7 @@ test('only borrowed ER High Flow can be returned across wards', () => {
 test('QR return keeps selected destination for ER High Flow and selects holder for other loans', async () => {
   const qr = fs.readFileSync(new URL('../borrow-qr.js', `file://${__filename}`), 'utf8');
   const start = qr.indexOf('async function memsApplyQrBatchItems(');
-  const end = qr.indexOf('async function memsApplyQrBorrowBatchItems(', start);
+  const end = qr.indexOf('function memsQrPreparedWard(', start);
   const ward = { value: 'ศัลยกรรมชาย' };
   const noop = () => {};
   const ctx = {
@@ -65,7 +65,7 @@ test('QR return keeps selected destination for ER High Flow and selects holder f
       querySelectorAll: () => [{ dataset: { e: 'High Flow' } }, { dataset: { e: 'C2' } }],
       getElementById: id => id === 'wardSel' ? ward : { focus: noop },
     },
-    memsSelectBorrowedWard: value => { ward.value = value; },
+    memsSelectQrWard: value => { ward.value = value; },
     memsSyncQrScanCard: noop, memsSetQrDevice: noop, pickEquip: noop,
     memsSetQrBatchDevice: noop, memsRenderConfirmedQrItems: noop,
     memsSetQrBanner: noop, memsQrScannedItemLabel: item => item.equipment,

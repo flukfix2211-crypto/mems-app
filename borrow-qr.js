@@ -73,9 +73,10 @@ function memsSetQrDevice(asset, equipmentName) {
 }
 
 function memsQrScannedItemLabel(item, spacedNumber) {
-  const ward = item && item.borrowedStatus && item.borrowedStatus.ward;
+  const ward = item.borrowedStatus?.ward;
+  const wardLabel = item.preparedWard ? ' · เตรียมให้ ' + item.preparedWard : '';
   return item.equipment + ' · No.' + (spacedNumber ? ' ' : '') + item.number +
-    (ward ? ' · ยืมจาก ' + ward : '');
+    (ward ? ' · ยืมจาก ' + ward : wardLabel);
 }
 
 function memsSetQrBatchDevice(items) {
@@ -367,7 +368,14 @@ async function memsAddPromptScan(assetId) {
       throw new Error('เลือกได้สูงสุด ' + scanLimit + ' เครื่องต่อรายการ');
     }
 
+    let preparedWard = null;
     let borrowedStatus = null;
+    if (targetAction === 'borrow') {
+      preparedWard = memsQrPreparedWard(await fetchPreparedList(), { equipment, number });
+      if (first && first.preparedWard !== preparedWard) {
+        throw new Error('เครื่องนี้เตรียมไว้ให้ ' + preparedWard + ' กรุณาแยกจากรายการของ ' + first.preparedWard);
+      }
+    }
     if (targetAction === 'return') {
       borrowedStatus = await memsLoadBorrowedStatus(equipment, number);
       const firstWard = first && first.borrowedStatus && first.borrowedStatus.ward;
@@ -378,12 +386,12 @@ async function memsAddPromptScan(assetId) {
       }
     }
 
-    memsPromptScannedItems.push({ asset, equipment, number, borrowedStatus });
+    const item = { asset, equipment, number, borrowedStatus, preparedWard };
+    memsPromptScannedItems.push(item);
     memsRenderPromptScans();
     const hint = document.getElementById('qrScanPromptHint');
     if (hint) {
-      hint.textContent = 'รับ ' + equipment + ' No. ' + number +
-        (borrowedStatus ? ' · ยืมจาก ' + borrowedStatus.ward : '') +
+      hint.textContent = 'รับ ' + memsQrScannedItemLabel(item, true) +
         ' แล้ว — ยิงเครื่องถัดไป หรือกดยืนยันเมื่อครบ';
       hint.classList.remove('error');
     }
@@ -540,9 +548,9 @@ function memsInstallGlobalScanner() {
   memsGlobalScannerInstalled = true;
 }
 
-function memsSelectBorrowedWard(ward) {
+function memsSelectQrWard(ward) {
   const wardSelect = document.getElementById('wardSel');
-  if (!wardSelect || !ward) throw new Error('ไม่พบหน่วยงานที่ยืมเครื่องนี้');
+  if (!wardSelect || !ward) throw new Error('ไม่พบหน่วยงานของเครื่องนี้');
   let option = Array.from(wardSelect.options).find(item => item.value === ward);
   if (!option) {
     option = new Option(ward, ward);
@@ -570,6 +578,7 @@ async function memsLoadBorrowedStatus(equipment, number) {
 async function memsApplyQrBatchItems(items, targetAction) {
   if (!items || !items.length) return false;
   if (S.action !== targetAction) setAction(targetAction);
+  if (targetAction === 'borrow') return memsApplyQrBorrowBatchItems(items);
   const first = items[0];
   const equipment = first.equipment;
   const equipmentButton = Array.from(document.querySelectorAll('.equip-btn'))
@@ -582,23 +591,10 @@ async function memsApplyQrBatchItems(items, targetAction) {
   if (targetAction === 'return') {
     const ward = first.borrowedStatus && first.borrowedStatus.ward;
     const selectedWard = document.getElementById('wardSel').value;
-    if (!items.every(item => memsCanReturnEquipment({ ...item.borrowedStatus, equipment: item.equipment }, selectedWard))) memsSelectBorrowedWard(ward);
+    if (!items.every(item => memsCanReturnEquipment({ ...item.borrowedStatus, equipment: item.equipment }, selectedWard))) memsSelectQrWard(ward);
   }
   memsSetQrDevice(first.asset, equipment);
   pickEquip(equipmentButton, equipment);
-
-  if (targetAction === 'borrow') {
-    const ward = document.getElementById('wardSel').value;
-    if (!ward) {
-      memsSetQrBanner(
-        'สแกนแล้ว ' + items.length + ' เครื่อง: ' + equipment + ' ' +
-        items.map(item => 'No.' + item.number).join(', ') + ' — กรุณาเลือกหน่วยงานที่ต้องการยืม',
-        'ready'
-      );
-      return true;
-    }
-    return memsApplyQrBorrowBatchItems(items);
-  }
 
   memsSetQrBatchDevice(items);
   memsRenderConfirmedQrItems();
@@ -612,37 +608,38 @@ async function memsApplyQrBatchItems(items, targetAction) {
   return true;
 }
 
+function memsQrPreparedWard(prepared, item) {
+  const key = memsMachineKey(item.equipment, item.number);
+  const wards = new Set(prepared
+    .filter(row => memsMachineKey(row.equipment, row.number) === key)
+    .map(row => row.ward)
+    .filter(Boolean));
+  if (wards.size !== 1) {
+    const label = item.equipment + ' No. ' + item.number;
+    throw new Error(wards.size ? label + ' มีรายการเตรียมหลายหน่วยงาน' : label + ' ยังไม่มีรายการเตรียมให้ยืม');
+  }
+  return wards.values().next().value;
+}
+
 async function memsApplyQrBorrowBatchItems(items) {
   if (!items || !items.length || S.action !== 'borrow') return false;
-  const ward = document.getElementById('wardSel').value;
-  const equipment = items[0].equipment;
-  if (!ward) return false;
-
-  try {
-    preparedList = await fetchPreparedList();
-    renderPreparedBanner();
-    filterEquipButtons();
-  } catch (err) {
-    console.error(err);
-    memsSetQrBanner('⚠️ ตรวจสอบรายการเครื่องที่เตรียมไว้ไม่สำเร็จ กรุณาลองใหม่', 'error');
-    return false;
+  const latestPrepared = await fetchPreparedList();
+  const confirmedItems = items.map(item => {
+    const preparedWard = memsQrPreparedWard(latestPrepared, item);
+    if (item.preparedWard && item.preparedWard !== preparedWard) {
+      throw new Error('หน่วยงานที่เตรียมเครื่องเปลี่ยนเป็น ' + preparedWard + ' กรุณาสแกนเครื่องใหม่');
+    }
+    return { ...item, preparedWard };
+  });
+  const { equipment, preparedWard: ward } = confirmedItems[0];
+  if (confirmedItems.some(item => item.preparedWard !== ward)) {
+    throw new Error('เครื่องที่สแกนเตรียมไว้คนละหน่วยงาน กรุณาแยกยืนยันทีละหน่วยงาน');
   }
 
-  const missing = items.filter(item => !preparedList.some(prepared =>
-    prepared.ward === ward &&
-    memsTypeKey(prepared.equipment) === memsTypeKey(item.equipment) &&
-    (normalizeMachineNo(prepared.number) || String(prepared.number)) === item.number
-  ));
-  if (missing.length) {
-    clearPreparedSelection();
-    memsSetQrBanner(
-      '⚠️ เครื่องที่ยังไม่ได้เตรียมไว้สำหรับหน่วยงานนี้: ' +
-      missing.map(item => item.equipment + ' No.' + item.number).join(', '),
-      'error'
-    );
-    return false;
-  }
-
+  memsSelectQrWard(ward);
+  preparedList = latestPrepared;
+  memsQrBatchItems = confirmedItems;
+  memsQrReturnAsset = confirmedItems[0].asset;
   selectedPrepared.clear();
   items.forEach(item => {
     selectedPrepared.set(
@@ -657,10 +654,10 @@ async function memsApplyQrBorrowBatchItems(items) {
   S.equip = equipment;
   updatePreparedSelectionUI();
   renderPreparedBanner();
-  memsSetQrBatchDevice(items);
+  memsSetQrBatchDevice(confirmedItems);
   memsRenderConfirmedQrItems();
   memsSetQrBanner(
-    '✓ เลือกยืมแล้ว ' + items.length + ' เครื่อง: ' +
+    '✓ เลือกยืมสำหรับ ' + ward + ' แล้ว ' + items.length + ' เครื่อง: ' +
     items.map(item => item.equipment + ' No.' + item.number).join(', ') +
     ' — กรอกชื่อผู้ยืมแล้วกดบันทึกครั้งเดียว',
     'success'
@@ -685,22 +682,20 @@ async function memsUseQrAssetId(assetId, options) {
     memsSyncQrScanCard(targetAction);
     if (!equipButton) throw new Error('ไม่พบประเภทเครื่อง “' + requestedEquip + '” ในหน้าทำรายการ');
     const equip = equipButton.dataset.e;
+    if (targetAction === 'borrow') {
+      return await memsApplyQrBorrowBatchItems([{ asset, equipment: equip, number: normalizeMachineNo(asset.no) }]);
+    }
     if (targetAction === 'return') {
       memsSetQrBanner('กำลังค้นหาหน่วยงานที่ยืมเครื่องนี้…', 'loading');
       const borrowedStatus = await memsLoadBorrowedStatus(equip, asset.no);
       const selectedWard = document.getElementById('wardSel').value;
-      if (!memsCanReturnEquipment({ ...borrowedStatus, equipment: equip }, selectedWard)) memsSelectBorrowedWard(borrowedStatus.ward);
+      if (!memsCanReturnEquipment({ ...borrowedStatus, equipment: equip }, selectedWard)) memsSelectQrWard(borrowedStatus.ward);
     }
     memsHideQrScanPrompt(true);
     memsSetQrDevice(asset, equip);
     pickEquip(equipButton, equip);
     memsPrimeQrNumber(equip, asset.no);
 
-    const ward = document.getElementById('wardSel').value;
-    if (!ward) {
-      memsSetQrBanner('สแกนแล้ว: ' + equip + ' No.' + asset.no + ' — กรุณาเลือกหน่วยงานที่ต้องการยืม', 'ready');
-      return true;
-    }
     await memsApplyQrSelection();
     return true;
   } catch (err) {
