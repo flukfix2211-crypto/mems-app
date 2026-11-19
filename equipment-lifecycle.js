@@ -690,7 +690,7 @@ function memsConfirmUnreturnedEquipment(items) {
       }
     };
   }
-  document.addEventListener("DOMContentLoaded", async () => {
+  window.memsInitEquipmentLifecycle = async function () {
     try {
       await refresh();
       renderTypes();
@@ -705,5 +705,5 @@ function memsConfirmUnreturnedEquipment(items) {
     } catch (e) {
       error(e);
     }
-  });
+  };
 })();

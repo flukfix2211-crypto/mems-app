@@ -999,9 +999,9 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 </div>
 
 <script src="vendor/supabase.js"></script>
-<script src="supabase-client.js?v=20261117-return-checks-1"></script>
+<script src="supabase-client.js?v=20261119-qr-number"></script>
 <script src="auth.js"></script>
-<script src="borrow-qr.js?v=20261024-er-high-flow"></script>
+<script src="borrow-qr.js?v=20261119-qr-number"></script>
 <script src="mems-clock.js?v=20260924-clock-status-1"></script>
 <script>
 /* ====== STATE ====== */
@@ -1153,6 +1153,7 @@ function setShift(s) {
 window.addEventListener('DOMContentLoaded', async () => {
   const profile = await memsGuard('borrow');
   if (!profile) return;
+  await memsInitEquipmentLifecycle();
   if (typeof memsLoadQrScannerSetting === 'function') await memsLoadQrScannerSetting();
   if (memsIsAdmin()) document.getElementById('backdateCard').style.display = '';
   setShift(detectShift());
@@ -1959,7 +1960,7 @@ function resetForm() {
 <script src="site-footer.js?v=1.1"></script>
 <script src="receipt-mascot.js?v=20261117-office-1"></script>
 <script src="mascot.js?v=20261117-office-1"></script>
-<script src="equipment-lifecycle.js?v=20261024-er-high-flow"></script>
+<script src="equipment-lifecycle.js?v=20261119-auth-first"></script>
 <script src="mems-controls.js?v=20261117-office-1"></script>
 </body>
 </html>

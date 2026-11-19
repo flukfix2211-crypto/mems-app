@@ -509,6 +509,39 @@ function memsCanReturnEquipment(item, ward) {
       (item.ward === 'ER' && memsTypeKey(item.equipment) === 'high flow')));
 }
 function memsMachineKey(type, number) { return JSON.stringify([memsTypeKey(type), normalizeMachineNo(number)]); }
+function memsAssetQrReference(params) {
+  const type = (params.get('type') || '').trim();
+  const no = params.get('no') || '';
+  if (params.has('type') || params.has('no')) {
+    return type && /^-?[0-9]{1,10}$/.test(no) && Number(no) >= -2147483648 && Number(no) <= 2147483647 ? { type, no: Number(no) } : '';
+  }
+  const id = params.get('asset') || params.get('a') || '';
+  return /^[0-9]+$/.test(id) ? id : '';
+}
+function memsReadAssetQr(raw, allowBareId = true) {
+  const value = String(raw || '').trim();
+  const prefixed = value.match(/^MEMS(?:-QR)?:\s*(\d+)$/i);
+  if (prefixed) return prefixed[1];
+  if (allowBareId && /^\d+$/.test(value)) return value;
+  try {
+    return memsAssetQrReference(new URL(value, window.location.href).searchParams);
+  } catch {
+    return '';
+  }
+}
+async function memsResolveAssetQr(reference) {
+  const byId = typeof reference === 'string';
+  const { data, error } = await supabase.rpc('mems_resolve_asset_qr', {
+    p_legacy_id: byId ? reference : null,
+    p_type: byId ? null : reference.type,
+    p_no: byId ? null : reference.no
+  });
+  if (error) throw error;
+  if (!data?.length) throw new Error('ไม่พบเครื่องนี้ในทะเบียนครุภัณฑ์');
+  const asset = data[0];
+  if (!normalizeMachineNo(asset.no)) throw new Error('กรุณาเพิ่มหมายเลขในทะเบียนก่อน');
+  return asset;
+}
 async function fetchRegistryEquipment() {
   return fetchAllPages(() => supabase.from('assets').select('id,type,no,status,updated_at').order('id'));
 }

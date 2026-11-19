@@ -314,7 +314,7 @@ async function memsProcessPromptScan() {
   const input = document.getElementById('qrScanPromptInput');
   const raw = input && input.value.trim();
   if (!raw) return;
-  const assetId = memsAssetIdFromScan(raw);
+  const assetId = memsReadAssetQr(memsNormalizeScannerText(raw));
   if (!assetId) {
     input.value = '';
     memsSetQrScanPromptError('QR Code นี้ไม่ใช่ป้ายเครื่องจากระบบ MEMs — กรุณาลองอีกครั้ง');
@@ -333,7 +333,7 @@ async function memsProcessPromptScan() {
 async function memsAddPromptScan(assetId) {
   const targetAction = memsScanIntendedAction || S.action || 'return';
   try {
-    const asset = await memsLoadQrAsset(assetId);
+    const asset = await memsResolveAssetQr(assetId);
     const equipment = memsQrEquipmentName(asset.type);
     const equipmentButton = Array.from(document.querySelectorAll('.equip-btn'))
       .find(button => memsTypeKey(button.dataset.e) === memsTypeKey(equipment));
@@ -425,25 +425,6 @@ function memsClearQrReturnContext() {
   if (banner) banner.style.display = 'none';
 }
 
-function memsAssetIdFromScan(raw) {
-  const value = memsNormalizeScannerText(raw);
-  if (!value) return '';
-  const prefixed = value.match(/^MEMS(?:-QR)?:\s*(\d+)$/i);
-  if (prefixed) return prefixed[1];
-  try {
-    const parsed = new URL(value, window.location.href);
-    const id = parsed.searchParams.get('asset') || parsed.searchParams.get('a');
-    if (id) return id;
-  } catch (err) { /* ตรวจรูปแบบตัวเลขด้านล่าง */ }
-  return /^\d+$/.test(value) ? value : '';
-}
-
-function memsLooksLikeQrPayload(raw) {
-  const value = String(raw || '').trim();
-  return /^MEMS(?:-QR)?:\s*\d+$/i.test(value) ||
-    /[?&](?:asset|a)=\d+(?:[&#]|$)/i.test(value);
-}
-
 function memsScannerInputSnapshot(target) {
   if (!target || !/^(INPUT|TEXTAREA)$/.test(target.tagName)) return null;
   return {
@@ -478,8 +459,7 @@ function memsResetScannerBuffer() {
 
 function memsFinishGlobalScan() {
   const payload = memsNormalizeScannerText(memsScannerState.buffer.trim());
-  if (!memsLooksLikeQrPayload(payload)) return false;
-  const assetId = memsAssetIdFromScan(payload);
+  const assetId = memsReadAssetQr(payload, false);
   if (!assetId) return false;
 
   const now = performance.now();
@@ -545,19 +525,6 @@ function memsInstallGlobalScanner() {
   if (!memsQrScannerEnabled || memsGlobalScannerInstalled) return;
   document.addEventListener('keydown', memsHandleGlobalScannerKey, true);
   memsGlobalScannerInstalled = true;
-}
-
-async function memsLoadQrAsset(assetId) {
-  if (!assetId) throw new Error('ไม่พบรหัสเครื่องใน QR Code');
-  const { data, error } = await supabase
-    .from('assets')
-    .select('id,no,asset_code,type,status')
-    .eq('id', assetId)
-    .limit(1);
-  if (error) throw error;
-  if (!data || !data.length) throw new Error('ไม่พบเครื่องนี้ในทะเบียนครุภัณฑ์');
-  if (!normalizeMachineNo(data[0].no)) throw new Error('กรุณาเพิ่มหมายเลขในทะเบียนก่อน');
-  return data[0];
 }
 
 function memsSelectBorrowedWard(ward) {
@@ -696,7 +663,7 @@ async function memsUseQrAssetId(assetId, options) {
   memsSetQrDevice(null);
   memsSetQrBanner('กำลังตรวจสอบข้อมูลเครื่องจากทะเบียน…', 'loading');
   try {
-    const asset = await memsLoadQrAsset(assetId);
+    const asset = await memsResolveAssetQr(assetId);
     memsQrReturnAsset = asset;
     const requestedEquip = memsQrEquipmentName(asset.type);
     const equipButton = Array.from(document.querySelectorAll('.equip-btn'))
@@ -760,7 +727,7 @@ function memsPrimeQrNumbers(equip, numbers) {
 async function memsProcessQrScan() {
   if (!memsQrScannerEnabled) return;
   const input = document.getElementById('qrScanInput');
-  const assetId = memsAssetIdFromScan(input && input.value);
+  const assetId = memsReadAssetQr(memsNormalizeScannerText(input && input.value));
   if (!assetId) {
     memsSetQrBanner('⚠️ QR Code นี้ไม่ใช่ป้ายเครื่องจากระบบ MEMs', 'error');
     return;
@@ -834,12 +801,8 @@ async function memsApplyQrBorrowSelection() {
 async function memsHandleQrDeepLink() {
   const params = new URLSearchParams(window.location.search);
   const mode = params.get('mode') || (params.get('m') === 'r' ? 'return' : '');
-  const assetId = params.get('asset') || params.get('a');
-  if (!memsQrScannerEnabled) {
-    if (mode === 'return') setAction('return');
-    memsSyncQrScanCard(S.action);
-    return;
-  }
+  const assetId = memsAssetQrReference(params);
+  // Printed links work independently of the in-app scanner setting.
   memsInstallGlobalScanner();
   memsSyncQrScanCard(mode === 'return' ? 'return' : S.action);
   if (mode !== 'return' || !assetId) return;

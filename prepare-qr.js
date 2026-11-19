@@ -7,19 +7,6 @@ let memsPrepareQrBatchItems = [];
 let memsPrepareQrLastValue = '';
 let memsPrepareQrLastReadAt = 0;
 
-function memsPrepareAssetIdFromScan(raw) {
-  const value = String(raw || '').trim();
-  if (!value) return '';
-  const prefixed = value.match(/^MEMS(?:-QR)?:\s*(\d+)$/i);
-  if (prefixed) return prefixed[1];
-  try {
-    const parsed = new URL(value, window.location.href);
-    const id = parsed.searchParams.get('asset') || parsed.searchParams.get('a');
-    if (id && /^\d+$/.test(id)) return id;
-  } catch (err) { /* ตรวจรูปแบบตัวเลขด้านล่าง */ }
-  return /^\d+$/.test(value) ? value : '';
-}
-
 function memsSetPrepareQrStatus(message, isError) {
   const status = document.getElementById('prepareQrCameraStatus');
   if (!status) return;
@@ -161,7 +148,7 @@ async function memsHandlePrepareQrResult(raw) {
   if (raw === memsPrepareQrLastValue && now - memsPrepareQrLastReadAt < 1500) return;
   memsPrepareQrLastValue = raw;
   memsPrepareQrLastReadAt = now;
-  const assetId = memsPrepareAssetIdFromScan(raw);
+  const assetId = memsReadAssetQr(raw);
   if (!assetId) {
     memsSetPrepareQrStatus('QR นี้ไม่ใช่ป้ายเครื่องจากระบบ MEMs กรุณาลองใหม่', true);
     return;
@@ -170,22 +157,13 @@ async function memsHandlePrepareQrResult(raw) {
   memsPrepareQrHandling = true;
   memsSetPrepareQrStatus('กำลังตรวจสอบข้อมูลเครื่อง…', false);
   try {
-    const { data, error } = await supabase
-      .from('assets')
-      .select('id,no,type,status')
-      .eq('id', assetId)
-      .limit(1);
-    if (error) throw error;
-    if (!data || !data.length) throw new Error('ไม่พบเครื่องนี้ในทะเบียนครุภัณฑ์');
-
-    const asset = data[0];
+    const asset = await memsResolveAssetQr(assetId);
     const requestedEquip = String(asset.type || '').trim();
     const equipButton = Array.from(document.querySelectorAll('.equip-chip'))
       .find(button => memsTypeKey(button.textContent) === memsTypeKey(requestedEquip));
     if (!equipButton) throw new Error('ไม่พบประเภทเครื่อง “' + requestedEquip + '” ในหน้าเตรียมเครื่อง');
 
     const no = normalizeMachineNo(asset.no);
-    if (!no) throw new Error('กรุณาเพิ่มหมายเลขในทะเบียนก่อน');
     if (asset.status !== 'ใช้งานได้') throw new Error('เครื่องไม่พร้อมใช้');
     const [prepared,statuses] = await Promise.all([fetchPreparedList(),fetchEquipmentStatus()]);
     const machineKey = memsMachineKey(requestedEquip,no);
