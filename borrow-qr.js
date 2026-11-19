@@ -5,6 +5,7 @@ let memsQrReturnAsset = null;
 let memsGlobalScannerInstalled = false;
 let memsScanIntendedAction = null;
 let memsQrScannerEnabled = true;
+let memsQrActionRequest = 0;
 let memsPromptScanTimer = null;
 let memsPromptScanProcessing = false;
 let memsPromptScannedItems = [];
@@ -172,10 +173,22 @@ async function memsLoadQrScannerSetting() {
   return memsQrScannerEnabled;
 }
 
-function memsSelectAction(action) {
-  if (!memsQrScannerEnabled) {
-    setAction(action);
-    return;
+async function memsSelectAction(action) {
+  const request = ++memsQrActionRequest;
+  // Settings can change while this page is open or restored from browser history.
+  let enabled = memsQrScannerEnabled;
+  try {
+    enabled = await fetchQrScannerEnabled();
+  } catch (err) {
+    console.error('โหลดการตั้งค่า QR ไม่สำเร็จ', err);
+  }
+  if (request !== memsQrActionRequest) return;
+
+  memsQrScannerEnabled = enabled;
+  memsInstallGlobalScanner();
+  if (!enabled) {
+    memsHideQrScanPrompt(true);
+    memsClearQrReturnContext();
   }
   memsChooseActionAndScan(action);
 }
