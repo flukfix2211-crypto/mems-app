@@ -70,6 +70,8 @@ const fakeClient = `window.supabase={createClient(){return {auth:{getSession:asy
         "utf8",
       ),
     );
+    await db.query(fs.readFileSync(path.join(root,
+      "supabase/migrations/20261119044628_asset_qr_by_equipment_number.sql"), "utf8"));
     for (const type of types)
       await db.query("insert into assets(type,no)values($1,1)", [type]);
     await db.query(
@@ -96,7 +98,12 @@ const fakeClient = `window.supabase={createClient(){return {auth:{getSession:asy
         const q = JSON.parse(body);
         try {
           let data;
-          if (q.rpc) {
+          if (q.rpc === "mems_resolve_asset_qr") {
+            data = (await db.query(
+              "select * from public.mems_resolve_asset_qr($1,$2,$3)",
+              [q.args.p_legacy_id, q.args.p_type, q.args.p_no],
+            )).rows;
+          } else if (q.rpc) {
             data = (
               await db.query(
                 "select public.mems_equipment_batch($1,$2::jsonb) result",

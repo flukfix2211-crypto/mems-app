@@ -375,7 +375,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 <div id="toast"></div>
 
 <script src="vendor/supabase.js"></script>
-<script src="supabase-client.js?v=20261117-return-checks-2"></script>
+<script src="supabase-client.js?v=20261119-qr-number"></script>
 <script src="auth.js?v=20261118-staff-defaults"></script>
 <script>
   const ASSET_LABEL_EQUIPS = new Set(['Defibrillator', 'เครื่องมืออื่นๆ']);
@@ -685,17 +685,18 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     if (profile) {
       memsSelectStaffName(document.getElementById('preparedBySel'));
       onByChange();
+      await memsInitEquipmentLifecycle();
       if (typeof memsInitPrepareQrCamera === 'function') await memsInitPrepareQrCamera();
       loadList();
     }
   });
 </script>
 <script src="https://cdn.jsdelivr.net/npm/qr-scanner@1.4.2/qr-scanner.umd.min.js"></script>
-<script src="prepare-qr.js?v=20261117-return-checks-2"></script>
+<script src="prepare-qr.js?v=20261119-qr-number"></script>
 <script src="site-footer.js?v=1.1"></script>
 <script src="mascot.js?v=20261117-office-1"></script>
 <script src="equipment-photos.js?v=20261023-1"></script>
-<script src="equipment-lifecycle.js?v=20261117-return-checks-2"></script>
+<script src="equipment-lifecycle.js?v=20261119-auth-first"></script>
 <script src="mems-controls.js?v=20261117-office-1"></script>
 <script src="return-checks-batch.js?v=20261118-staff-defaults"></script>
 </body>

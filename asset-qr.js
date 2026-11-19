@@ -84,7 +84,8 @@ function buildAssetReturnUrl(asset) {
   url.search = '';
   url.hash = '';
   url.searchParams.set('mode', 'return');
-  url.searchParams.set('asset', String(asset._rowIndex));
+  url.searchParams.set('type', memsTypeKey(asset['ประเภท']));
+  url.searchParams.set('no', normalizeMachineNo(asset['No.']));
   return url.toString();
 }
 
@@ -172,6 +173,10 @@ async function createAssetQrPdf() {
   const assets = getSelectedQrAssets();
   if (!assets.length) {
     showToast('กรุณาเลือกเครื่องอย่างน้อย 1 รายการ');
+    return;
+  }
+  if (assets.some(asset => !memsTypeKey(asset['ประเภท']) || !normalizeMachineNo(asset['No.']))) {
+    showToast('กรุณาระบุประเภทและ No. เครื่องก่อนพิมพ์ QR');
     return;
   }
   if (typeof qrcode !== 'function' || !window.jspdf || typeof newThaiPdf !== 'function') {
