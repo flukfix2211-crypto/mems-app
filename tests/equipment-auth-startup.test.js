@@ -102,3 +102,30 @@ for (const search of ['?mode=return&asset=337', '?m=r&a=337', '?mode=return&type
     });
   }
 }
+
+test('borrow and return refresh the scanner switch before opening the wait prompt', async () => {
+  let enabled = false;
+  const actions = [];
+  const shown = [];
+  const context = vm.createContext({
+    console,
+    document: { addEventListener() {} },
+    fetchQrScannerEnabled: async () => enabled,
+    setAction: action => actions.push(action)
+  });
+  vm.runInContext(read('borrow-qr.js'), context);
+  context.memsClearQrReturnContext = () => {};
+  context.memsHideQrScanPrompt = () => {};
+  context.memsShowQrScanPrompt = action => shown.push(action);
+
+  await context.memsSelectAction('borrow');
+  assert.deepEqual(shown, []);
+  enabled = true;
+  await context.memsSelectAction('borrow');
+  await context.memsSelectAction('return');
+  assert.deepEqual(shown, ['borrow', 'return']);
+  enabled = false;
+  await context.memsSelectAction('return');
+  assert.deepEqual(actions, ['borrow', 'borrow', 'return', 'return']);
+  assert.deepEqual(shown, ['borrow', 'return']);
+});
