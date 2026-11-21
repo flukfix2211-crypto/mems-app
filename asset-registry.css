@@ -65,6 +65,14 @@
   .registry-table .tbl-wrap:focus-visible { outline-offset: -3px; }
   .asset-mobile-label, .asset-stats-toggle { display: none; }
 
+  @media (min-width: 1200px) {
+    body.mems-assets .registry-workspace {
+      width: min(1680px, calc(100% - 48px)) !important;
+    }
+
+    #assetTable :is(.asset-col, .asset-type-cell) { white-space: nowrap; }
+  }
+
   @media (max-width: 760px) {
     body.mems-assets .registry-workspace {
       width: calc(100% - 24px) !important;
