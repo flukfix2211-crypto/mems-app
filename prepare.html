@@ -327,6 +327,15 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 
   <button class="save-btn" id="saveBtn" onclick="savePrepare()">💾 บันทึกการเตรียม</button>
 
+  <details class="card" id="siriPrepareSettings" hidden>
+    <summary>เชื่อม Siri สำหรับเตรียมเครื่อง</summary>
+    <p>สร้างรหัสสำหรับ iPhone เครื่องนี้ รหัสใช้เตรียมเครื่องได้ 90 วัน และการสร้างรหัสใหม่จะยกเลิกรหัสเดิม</p>
+    <button type="button" id="siriPrepareCreate">สร้างรหัสและคัดลอกการตั้งค่า</button>
+    <button type="button" id="siriPrepareRevoke">ยกเลิกรหัส Siri</button>
+    <p id="siriPrepareStatus" role="status" aria-live="polite"></p>
+    <textarea class="field" id="siriPrepareConfig" aria-label="การตั้งค่าคำสั่งลัด Siri" readonly hidden></textarea>
+  </details>
+
   <!-- รายการที่เตรียมไว้ -->
   <div class="card" style="margin-top:16px">
     <div class="sec-label" style="justify-content:space-between">
@@ -685,6 +694,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
     if (profile) {
       memsSelectStaffName(document.getElementById('preparedBySel'));
       onByChange();
+      if (typeof memsInitSiriPrepare === "function") memsInitSiriPrepare();
       await memsInitEquipmentLifecycle();
       if (typeof memsInitPrepareQrCamera === 'function') await memsInitPrepareQrCamera();
       loadList();
@@ -692,6 +702,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   });
 </script>
 <script src="https://cdn.jsdelivr.net/npm/qr-scanner@1.4.2/qr-scanner.legacy.min.js"></script>
+<script src="prepare-siri.js?v=20261123"></script>
 <script src="prepare-qr.js?v=20261119-prepare-qr-camera"></script>
 <script src="site-footer.js?v=1.1"></script>
 <script src="mascot.js?v=20261117-office-1"></script>
