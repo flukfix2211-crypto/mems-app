@@ -577,3 +577,58 @@ test('return receipt switch pauses pending checks and queues only returns made w
   await assert.rejects(batch(db,'prepare',[item('C2')]),/รอตรวจ/);
  }finally{await db.close();}
 });
+
+test("Siri preparation requires a linked account, readback and confirmation before saving", async () => {
+  const db = await setup(true);
+  try {
+    await db.exec("reset role; alter table public.user_profiles add column username text, add column display_name text");
+    await db.exec(`update public.user_profiles set display_name='Siri Tester' where id='${user}'`);
+    await db.exec("insert into public.assets(type,no) values ('High Flow',12),('High Flow',13),('High Flow',14)");
+    await db.exec(fs.readFileSync(path.join(root, "supabase/migrations/20261123034102_siri_voice_prepare.sql"), "utf8"));
+    const link = async action => (await db.query("select public.mems_siri_prepare_link($1) value", [action])).rows[0].value;
+    const request = async (code, action, phrase = null, id = null) => (await db.query(
+      "select public.mems_siri_prepare($1,$2,$3,$4) value", [code, action, phrase, id],
+    )).rows[0].value;
+    const records = async () => (await db.query("select * from public.prepare_records order by id")).rows;
+    await db.exec(`set role authenticated; select set_config('request.jwt.claim.sub','${user}',false)`);
+    const { code } = await link("create");
+    await db.exec("set role anon; select set_config('request.jwt.claim.sub','',false)");
+    await assert.rejects(() => link("create"), /permission denied/);
+    await assert.rejects(() => db.query("select code_hash from private.mems_siri_prepare_links"), /permission denied/);
+    assert.equal((await request("a".repeat(64), "preview", "High Flow เบอร์ 12 ให้ ER")).status, "error");
+    const preview = await request(code, "preview", "เตรียมเครื่องมือ High Flow ให้กับหน่วยงาน ER เบอร์ 12");
+    assert.equal(preview.status, "preview");
+    assert.match(preview.message, /High Flow เบอร์ 12 ให้ ER/);
+    assert.equal((await records()).length, 0);
+    assert.equal((await request(code, "confirm", "ไม่ยืนยัน", preview.draft_id)).status, "error");
+    assert.equal((await request(code, "confirm", "ยกเลิก", preview.draft_id)).status, "cancelled");
+    assert.equal((await request(code, "confirm", "ยืนยัน", preview.draft_id)).status, "error");
+    assert.equal((await request(code, "preview", "High Flow เบอร์ 1 2 ให้ ER")).status, "error");
+    const again = await request(code, "preview", "เตรียมเครื่องมือให้หน่วยงาน ER เครื่อง High Flow เบอร์ ๑๒");
+    assert.equal(again.status, "preview");
+    const saved = await request(code, "confirm", "ยืนยัน.", again.draft_id);
+    assert.equal(saved.status, "saved");
+    assert.match(saved.message, /High Flow เบอร์ 12 ให้ ER แล้ว/);
+    assert.deepEqual(await request(code, "confirm", "ยืนยัน", again.draft_id), saved);
+    assert.equal((await records()).length, 1);
+    assert.equal((await records())[0].actor_user_id, user);
+    assert.equal((await records())[0].prepared_by, "Siri Tester เจ้าหน้าที่ศูนย์เครื่องมือแพทย์");
+    assert.equal((await db.query("select auth.uid() actor")).rows[0].actor, null);
+    assert.equal((await request(code, "preview", "ไฮโฟลว์ เบอร์สิบสอง ให้ห้องฉุกเฉิน")).status, "error");
+
+    const race = await request(code, "preview", "ไฮโฟลว์ เบอร์สิบสาม ให้ห้องฉุกเฉิน");
+    assert.equal(race.status, "preview");
+    await db.exec("reset role; update public.assets set status='ส่งซ่อม' where type='High Flow' and no=13; set role anon");
+    assert.equal((await request(code, "confirm", "ยืนยัน", race.draft_id)).status, "error");
+    assert.equal((await records()).length, 1);
+    await db.exec(`reset role; update public.user_profiles set role='staff',permissions=array['borrow'] where id='${user}'; set role anon`);
+    assert.equal((await request(code, "preview", "High Flow เบอร์ 14 ให้ ER")).status, "error");
+    await db.exec(`set role authenticated; select set_config('request.jwt.claim.sub','${user}',false)`);
+    await assert.rejects(() => link("create"), /ไม่มีสิทธิ์/);
+    assert.equal((await link("revoke")).status, "revoked");
+    await db.exec("set role anon; select set_config('request.jwt.claim.sub','',false)");
+    assert.equal((await request(code, "preview", "High Flow เบอร์ 14 ให้ ER")).status, "error");
+  } finally {
+    await db.close();
+  }
+});
