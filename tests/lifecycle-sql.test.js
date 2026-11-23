@@ -584,7 +584,7 @@ test("Siri preparation requires a linked account, readback and confirmation befo
     await db.exec("reset role; alter table public.user_profiles add column username text, add column display_name text");
     await db.exec(`update public.user_profiles set display_name='Siri Tester' where id='${user}'`);
     await db.exec("insert into public.assets(type,no) values ('High Flow',12),('High Flow',13),('High Flow',14)");
-    await db.exec(fs.readFileSync(path.join(root, "supabase/migrations/20261123033327_siri_voice_prepare.sql"), "utf8"));
+    await db.exec(fs.readFileSync(path.join(root, "supabase/migrations/20261123034102_siri_voice_prepare.sql"), "utf8"));
     const link = async action => (await db.query("select public.mems_siri_prepare_link($1) value", [action])).rows[0].value;
     const request = async (code, action, phrase = null, id = null) => (await db.query(
       "select public.mems_siri_prepare($1,$2,$3,$4) value", [code, action, phrase, id],
