@@ -65,9 +65,8 @@ revoke all on function private.mems_siri_machine_number(text) from public, anon,
 
 -- Strict credential and action checks precede the fixed, single-machine prepare call.
 -- Scope the actor settings to this call so the existing batch and audit code see the linked account.
-create function public.mems_siri_prepare(p_code text, p_action text, p_text text default null, p_draft uuid default null)
-returns jsonb language plpgsql security definer set search_path = ''
-set request.jwt.claim.sub = '' set request.jwt.claims = '{}' as $$
+create function private.mems_siri_prepare_request(p_code text, p_action text, p_text text, p_draft uuid)
+returns jsonb language plpgsql security invoker set search_path = '' as $$
 declare
   link private.mems_siri_prepare_links;
   phrase text;
@@ -208,6 +207,22 @@ begin
   end;
   update private.mems_siri_prepare_links set saved_record_id = record_id where account_id = link.account_id;
   return jsonb_build_object('status', 'saved', 'record_id', record_id, 'message', summary);
+end $$;
+revoke all on function private.mems_siri_prepare_request(text, text, text, uuid) from public, anon, authenticated;
+
+create function public.mems_siri_prepare(p_code text, p_action text, p_text text default null, p_draft uuid default null)
+returns jsonb language plpgsql security definer set search_path = '' as $$
+declare
+  previous_sub text := current_setting('request.jwt.claim.sub', true);
+  previous_claims text := current_setting('request.jwt.claims', true);
+  response jsonb;
+begin
+  response := private.mems_siri_prepare_request(p_code, p_action, p_text, p_draft);
+  -- Restore the caller's claims even when the inner function returns a handled error.
+  -- An unhandled error rolls the entire statement back.
+  perform set_config('request.jwt.claim.sub', coalesce(previous_sub, ''), true);
+  perform set_config('request.jwt.claims', coalesce(previous_claims, ''), true);
+  return response;
 end $$;
 revoke all on function public.mems_siri_prepare(text, text, text, uuid) from public, anon, authenticated;
 grant execute on function public.mems_siri_prepare(text, text, text, uuid) to anon, authenticated;
