@@ -8,8 +8,8 @@
 2. เปิดแอป **คำสั่งลัด** แล้วสร้างคำสั่งชื่อ **เตรียมเครื่องเมม**
 3. เพิ่ม **Text** แล้ววางการตั้งค่าที่คัดลอกมา เพิ่ม **Get Dictionary from Input** เพื่อแปลง JSON จาก Text จากนั้นใช้ **Get Dictionary Value** อ่าน `url`, `apiKey` และ `code` จาก Dictionary เดียวกัน ตั้งชื่อตัวแปรผลลัพธ์เป็น `MEMS URL`, `API Key` และ `Link Code` ตามลำดับ
 4. เพิ่ม **Dictate Text** สำหรับรับคำสั่ง ตั้งภาษาไทย และตั้งให้หยุดฟังหลังเว้นจังหวะ เก็บผลเป็น `คำสั่ง`
-5. เพิ่ม **Get Contents of URL** ตามค่าของขั้น **ขอทวนรายการ** ด้านล่าง ใช้ **Get Dictionary Value** อ่าน `message`, `status` และ `draft_id` จากผล API จากนั้นใช้ **Speak Text** อ่าน `message`
-6. เพิ่ม **If** ตรวจว่า `status` เท่ากับ `preview` ภายในเงื่อนไขใส่ **Dictate Text** ภาษาไทยรอบที่สอง เก็บผลเป็น `คำตอบ` แล้วเพิ่ม **Get Contents of URL** ตามค่าของขั้น **บันทึกหรือยกเลิก** เมื่อได้ผล ให้ใช้ **Get Dictionary Value** อ่าน `message` และ **Speak Text** อ่านข้อความนั้น
+5. เพิ่ม **Get Contents of URL** ตามค่าของขั้น **ขอทวนรายการ** ด้านล่าง ใช้ **Get Dictionary Value** อ่าน `message` และ `status` จากผล API จากนั้นใช้ **Speak Text** อ่าน `message` ให้จบก่อนเปิดไมค์รับคำตอบ
+6. เพิ่ม **If** ตรวจว่า `status` เท่ากับ `preview` ภายในเงื่อนไขใช้ **Get Dictionary Value** อ่าน `draft_id` จากผล API รอบแรก แล้วใส่ **Dictate Text** ภาษาไทยรอบที่สอง เก็บผลเป็น `คำตอบ` แล้วเพิ่ม **Get Contents of URL** ตามค่าของขั้น **บันทึกหรือยกเลิก** เมื่อได้ผล ให้ใช้ **Get Dictionary Value** อ่าน `message` และ **Speak Text** อ่านข้อความนั้น
 
 ตั้ง **Get Contents of URL** ทั้งสองขั้นให้เปิด `MEMS URL` ใช้เมธอด **POST** กำหนด Header ชื่อ `apikey` เป็นตัวแปร `API Key` และตั้ง **Request Body** เป็น **JSON**
 
