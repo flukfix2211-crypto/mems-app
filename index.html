@@ -194,23 +194,23 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 <style id="mems-login-reference">
 #loginOverlay.mems-auth-screen {
   position:fixed; inset:0; z-index:9999; display:none; align-items:center; justify-content:center;
-  padding:32px; box-sizing:border-box; overflow:auto; background:#f2f7f8!important;
+  padding:32px; box-sizing:border-box; overflow:auto; background:var(--mems-bg)!important;
   font-family:'Sarabun',sans-serif;
 }
 #loginOverlay .mems-auth-shell {
   width:min(1150px,100%)!important; max-width:1150px!important; min-height:656px; display:grid; grid-template-columns:47.5% 52.5%;
   column-gap:0!important; row-gap:0!important; padding:0!important; overflow:hidden;
-  border:1px solid #d2e0e5; border-radius:30px; background:#fff;
+  border:1px solid var(--mems-line); border-radius:30px; background:var(--mems-surface);
   box-shadow:0 26px 70px rgba(20,43,64,.14); text-align:left;
 }
 #loginOverlay .mems-auth-shell::before { display:none!important; content:none!important; }
 #loginOverlay > .mems-auth-shell > .mems-auth-brand {
   display:flex!important; grid-column:1!important; flex-direction:column; justify-content:center; align-items:flex-start;
-  padding:64px 60px; box-sizing:border-box; background:#0b666c; color:#fff;
+  padding:64px 60px; box-sizing:border-box; background:var(--mems-brand); color:#fff;
 }
 #loginOverlay .mems-auth-brand img {
   width:96px; height:96px; object-fit:contain; padding:9px; box-sizing:border-box;
-  border-radius:22px; background:#fff; margin-bottom:34px;
+  border-radius:22px; background:var(--mems-surface); margin-bottom:34px;
 }
 #loginOverlay .mems-auth-brand h1 { margin:0; color:#fff; font-size:54px; line-height:1.15; letter-spacing:.03em; }
 #loginOverlay .mems-auth-brand>p { margin:10px 0 0; color:#fff; font-size:21px; font-weight:600; }
@@ -222,16 +222,16 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
   display:flex!important; grid-column:2!important; flex-direction:column; justify-content:center;
   padding:58px 50px; box-sizing:border-box;
 }
-#loginOverlay .mems-auth-heading h2 { margin:0; color:#142b40; font-size:34px; line-height:1.3; }
-#loginOverlay .mems-auth-heading p { margin:8px 0 28px; color:#617586; font-size:17px; }
-#loginOverlay .mems-auth-form label { margin:0 0 8px; color:#142b40; font-size:17px!important; font-weight:700; }
+#loginOverlay .mems-auth-heading h2 { margin:0; color:var(--mems-text); font-size:34px; line-height:1.3; }
+#loginOverlay .mems-auth-heading p { margin:8px 0 28px; color:var(--mems-muted); font-size:17px; }
+#loginOverlay .mems-auth-form label { margin:0 0 8px; color:var(--mems-text); font-size:17px!important; font-weight:700; }
 #loginOverlay #authUser,#loginOverlay #authPass {
   width:100%!important; min-height:62px; margin:0 0 27px!important; padding:13px 16px!important;
-  box-sizing:border-box; border:1px solid #a9c8d4!important; border-radius:12px!important;
-  background:#fff!important; color:#142b40; font:400 17px 'Sarabun',sans-serif!important;
+  box-sizing:border-box; border:1px solid var(--mems-input-line)!important; border-radius:12px!important;
+  background:var(--mems-surface)!important; color:var(--mems-text); font:400 17px 'Sarabun',sans-serif!important;
 }
 #loginOverlay #authUser:focus,#loginOverlay #authPass:focus {
-  outline:3px solid rgba(11,126,137,.18)!important; border-color:#0b7e89!important;
+  outline:3px solid var(--mems-focus)!important; border-color:var(--mems-primary)!important;
 }
 #loginOverlay #authErr {
   display:none; margin:-10px 0 18px!important; padding:13px 15px; border-radius:12px;
@@ -239,12 +239,12 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 }
 #loginOverlay #authBtn {
   width:100%!important; min-height:62px; margin:0!important; padding:14px!important;
-  border:0!important; border-radius:12px!important; background:#0d8790!important; color:#fff!important;
+  border:0!important; border-radius:12px!important; background:var(--mems-primary)!important; color:#fff!important;
   box-shadow:none!important; font:700 18px 'Sarabun',sans-serif!important; cursor:pointer;
 }
-#loginOverlay #authBtn:hover { background:#096f77!important; }
+#loginOverlay #authBtn:hover { background:var(--mems-primary-hover)!important; }
 #loginOverlay #authBtn:disabled { opacity:.62; cursor:wait; }
-#loginOverlay .mems-auth-help { margin:21px 0 0; text-align:center; color:#617586; font-size:15px; }
+#loginOverlay .mems-auth-help { margin:21px 0 0; text-align:center; color:var(--mems-muted); font-size:15px; }
 @media(max-width:720px) {
   #loginOverlay.mems-auth-screen { padding:16px; align-items:flex-start; }
   #loginOverlay .mems-auth-shell { min-height:0; grid-template-columns:1fr; border-radius:22px; margin:auto; }
@@ -262,7 +262,7 @@ body>.section-label,.main>.section-label,.content>.section-label,#viewHome>.sect
 }
 </style>
 
-  <link rel="stylesheet" href="mems-auth-theme.css?v=20261117-office-1">
+  <link rel="stylesheet" href="mems-auth-theme.css?v=20261126-login-colors-1">
 <link rel="stylesheet" href="mems-office.css?v=20261117-responsive-controls-1">
 </head>
 <body class="mems-home">
