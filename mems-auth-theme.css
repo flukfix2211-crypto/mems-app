@@ -11,6 +11,7 @@
     --mems-text: #142b40;
     --mems-muted: #617586;
     --mems-line: #d3dee8;
+    --mems-input-line: #a9c8d4;
     --mems-focus: rgba(37,73,99,.24);
     --mems-shadow: 0 10px 30px rgba(20,43,64,.07);
     --a: var(--mems-primary);
@@ -85,7 +86,7 @@
   select, textarea, .form-input, .fsel {
     background: #fff !important;
     color: var(--mems-text) !important;
-    border-color: #a9c8d4 !important;
+    border-color: var(--mems-input-line) !important;
     border-radius: 12px !important;
     box-shadow: none !important;
   }
@@ -241,7 +242,7 @@
 }
 
 
-/* All secondary sign-in overlays use the same identity colors as the main sign-in screen. */
+/* Sign-in screens share the application palette, including legacy overlays. */
 @media screen {
   #loginOverlay {
     background: var(--mems-bg) !important;
@@ -249,7 +250,7 @@
   #loginOverlay > div {
     border-color: var(--mems-line) !important;
     border-top-color: var(--mems-primary) !important;
-    background: #fff !important;
+    background: var(--mems-surface) !important;
     box-shadow: 0 24px 70px rgba(20,43,64,.13) !important;
   }
   #loginOverlay > div::before {
