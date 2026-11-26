@@ -228,13 +228,16 @@ function memsConfirmUnreturnedEquipment(items) {
     $("readyEquipmentContext").textContent = (selectedEquip || "") +
       (showAll ? " · เครื่องพร้อมใช้ทั้งหมด" : " · 15 อันดับแรก") + " เรียงจากวันคืนเก่าสุดก่อน";
     let items = registry.filter((a) =>
-      memsTypeKey(a.type) === memsTypeKey(selectedEquip) && usable(a) &&
-      (!showAll || !status.some(s => s.isBorrowed && key(s) === memsMachineKey(a.type, a.no)))
-    ).map((a) => {
+      memsTypeKey(a.type) === memsTypeKey(selectedEquip) && usable(a)
+    ).flatMap((a) => {
       const item = { equipment: a.type, number: normalizeMachineNo(a.no) };
       const record = status.find((s) => key(s) === key(item));
-      const time = record && !record.isBorrowed ? Date.parse(record.lastUpdate) : NaN;
-      return { ...item, time: Number.isFinite(time) ? time : Infinity };
+      if (record?.isBorrowed) return [];
+      const time = record ? Date.parse(record.lastUpdate) : NaN;
+      // A registry entry alone does not establish that the machine is back at the center.
+      if (showAll && (!String(record?.lastAction || "").includes("คืน") || !Number.isFinite(time)))
+        return [];
+      return [{ ...item, time: Number.isFinite(time) ? time : Infinity }];
     }).sort((a, b) => {
       if (a.time !== b.time) return a.time < b.time ? -1 : 1;
       return a.number.localeCompare(b.number, "th", { numeric: true });
