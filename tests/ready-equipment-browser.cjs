@@ -35,7 +35,7 @@ const base = "http://mems.test";
 
     for (const type of ["C2", "High Flow", "Brid เขียว", "Infusion Pump"]) {
       const showAll = type !== "Infusion Pump";
-      for (const count of showAll ? [25, 5, 0] : [25]) {
+      for (const count of showAll ? [25, 5, 1, 0] : [25]) {
         const expectedCount = showAll ? count : 15;
         await page.goto(base + "/prepare.html");
         await page.evaluate(async ({ type, count }) => {
@@ -43,7 +43,7 @@ const base = "http://mems.test";
           const alias = { "High Flow": "HighFlow", "Brid เขียว": "Bird" }[type] || type;
           const add = (no, assetStatus = "ใช้งานได้", extra = {}) => {
             registry.push({ type, no, status: assetStatus });
-            status.push({ equipment: alias, number: String(no), isBorrowed: false,
+            status.push({ equipment: alias, number: String(no), isBorrowed: false, lastAction: "คืน",
               lastUpdate: new Date(Date.UTC(2026, 10, 1, 0, no)).toISOString(), ...extra });
           };
           // Reverse registry order to prove that return dates determine the queue.
@@ -56,6 +56,12 @@ const base = "http://mems.test";
           add(count + 5);
           registry.push({ type, no: count + 5, status: "ใช้งานได้" });
           registry.push({ type, no: null, status: "ใช้งานได้" });
+          // Reproduce the screenshot: registry-only machines must not fill out the queue.
+          for (let no = count + 6; no < count + 18; no++)
+            registry.push({ type, no, status: "ใช้งานได้" });
+          add(count + 18, "ใช้งานได้", { lastUpdate: null });
+          add(count + 19, "ใช้งานได้", { lastUpdate: "invalid" });
+          add(count + 20, "ใช้งานได้", { lastAction: "Round ward" });
           fetchRegistryEquipment = async () => registry;
           fetchEquipmentStatus = async () => status;
           fetchPreparedList = async () => prepared;
@@ -70,6 +76,8 @@ const base = "http://mems.test";
         assert.equal(await page.locator("#readyEquipmentCount").innerText(), `${expectedCount} ลำดับ`);
         assert.match(await page.locator("#readyEquipmentContext").innerText(),
           showAll ? /เครื่องพร้อมใช้ทั้งหมด/ : /15 อันดับแรก/);
+        if (showAll)
+          assert.doesNotMatch(await page.locator("#readyEquipmentList").innerText(), /ยังไม่มีประวัติคืน/);
         if (count) {
           assert.match(await rows.first().innerText(), /No\. 1\n/);
           assert.match(await rows.last().innerText(), new RegExp(`No\\. ${expectedCount}\\n`));
@@ -77,6 +85,23 @@ const base = "http://mems.test";
           assert.equal(await page.inputValue("#lifecycleManualNumber input"), String(expectedCount));
           // Changing selection must not truncate the queue on re-render.
           assert.equal(await rows.count(), expectedCount);
+          if (showAll) {
+            await page.evaluate(() => {
+              const original = fetchEquipmentStatus;
+              window.restoreReadyStatus = () => { fetchEquipmentStatus = original; };
+              fetchEquipmentStatus = async () => (await original()).map(item =>
+                item.number === "1" ? { ...item, isBorrowed: true, lastAction: "ยืม" } : item);
+              document.dispatchEvent(new Event("mems-equipment-status-changed"));
+            });
+            await page.waitForFunction(expected =>
+              document.querySelectorAll("#readyEquipmentList button").length === expected, count - 1);
+            await page.evaluate(() => {
+              restoreReadyStatus();
+              document.dispatchEvent(new Event("mems-equipment-status-changed"));
+            });
+            await page.waitForFunction(expected =>
+              document.querySelectorAll("#readyEquipmentList button").length === expected, count);
+          }
         } else {
           assert.match(await page.locator("#readyEquipmentList").innerText(), /ยังไม่มีเครื่องพร้อมใช้/);
         }

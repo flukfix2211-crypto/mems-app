@@ -80,6 +80,10 @@ const fakeClient = `window.supabase={createClient(){return {auth:{getSession:asy
     // Dedicated recommendation fixtures: enough machines to verify the 15-item cap.
     await db.query("insert into assets(type,no) select 'Priority test',generate_series(1,20)");
     await db.query("set session_replication_role=replica");
+    // These recommendation types require evidence that the machine was returned.
+    await db.query(`insert into borrow_records(record_date,record_time,equipment_name,equipment_number,ward,staff_name,action,recorded_at)
+      select current_date,localtime,type,'1','ER','test','คืน',now()-interval '1 day'
+      from (values ('C2'),('High Flow'),('Brid เขียว')) t(type)`);
     await db.query(`insert into borrow_records(record_date,record_time,equipment_name,equipment_number,ward,staff_name,action,recorded_at)
       select current_date,localtime, 'Priority test',n::text,'ER','test','คืน',now()-n*interval '1 day'
       from generate_series(1,18) n`);
