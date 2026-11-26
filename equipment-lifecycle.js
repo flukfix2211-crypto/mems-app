@@ -224,10 +224,12 @@ function memsConfirmUnreturnedEquipment(items) {
     card.style.display = selectedEquip ? "block" : "none";
     card.classList.toggle("show", !!selectedEquip);
     card.setAttribute("aria-hidden", String(!selectedEquip));
-    $("readyEquipmentContext").textContent =
-      (selectedEquip || "") + " · 15 อันดับแรก เรียงจากวันคืนเก่าสุดก่อน";
-    const items = registry.filter((a) =>
-      memsTypeKey(a.type) === memsTypeKey(selectedEquip) && usable(a)
+    const showAll = ["c2", "high flow", "brid เขียว"].includes(memsTypeKey(selectedEquip));
+    $("readyEquipmentContext").textContent = (selectedEquip || "") +
+      (showAll ? " · เครื่องพร้อมใช้ทั้งหมด" : " · 15 อันดับแรก") + " เรียงจากวันคืนเก่าสุดก่อน";
+    let items = registry.filter((a) =>
+      memsTypeKey(a.type) === memsTypeKey(selectedEquip) && usable(a) &&
+      (!showAll || !status.some(s => s.isBorrowed && key(s) === memsMachineKey(a.type, a.no)))
     ).map((a) => {
       const item = { equipment: a.type, number: normalizeMachineNo(a.no) };
       const record = status.find((s) => key(s) === key(item));
@@ -236,7 +238,8 @@ function memsConfirmUnreturnedEquipment(items) {
     }).sort((a, b) => {
       if (a.time !== b.time) return a.time < b.time ? -1 : 1;
       return a.number.localeCompare(b.number, "th", { numeric: true });
-    }).slice(0, 15);
+    });
+    if (!showAll) items = items.slice(0, 15);
     $("readyEquipmentCount").textContent = items.length + " ลำดับ";
     const list = $("readyEquipmentList");
     list.replaceChildren();
