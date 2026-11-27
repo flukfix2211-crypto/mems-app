@@ -585,6 +585,7 @@ test("Siri preparation requires a linked account, readback and confirmation befo
     await db.exec(`update public.user_profiles set display_name='Siri Tester' where id='${user}'`);
     await db.exec("insert into public.assets(type,no) values ('High Flow',12),('High Flow',13),('High Flow',14)");
     await db.exec(fs.readFileSync(path.join(root, "supabase/migrations/20261123034102_siri_voice_prepare.sql"), "utf8"));
+    await db.exec(fs.readFileSync(path.join(root, "supabase/migrations/20261123120000_siri_spoken_variants.sql"), "utf8"));
     const link = async action => (await db.query("select public.mems_siri_prepare_link($1) value", [action])).rows[0].value;
     const request = async (code, action, phrase = null, id = null) => (await db.query(
       "select public.mems_siri_prepare($1,$2,$3,$4) value", [code, action, phrase, id],
@@ -596,6 +597,11 @@ test("Siri preparation requires a linked account, readback and confirmation befo
     await assert.rejects(() => link("create"), /permission denied/);
     await assert.rejects(() => db.query("select code_hash from private.mems_siri_prepare_links"), /permission denied/);
     assert.equal((await request("a".repeat(64), "preview", "High Flow เบอร์ 12 ให้ ER")).status, "error");
+    const semi = await request(code, " preview ", "ช่วยเตรียมเครื่อง ไฮโฟลว์ ๑๒ ให้เซมิ ไอซี ยู ครับ");
+    assert.equal(semi.status, "preview");
+    assert.match(semi.message, /High Flow เบอร์ 12 ให้ Semi ICU/);
+    assert.equal((await request(code, "confirm", "ไม่ยืนยันครับ", semi.draft_id)).status, "error");
+    assert.equal((await request(code, "confirm", "ยกเลิก ค่ะ", semi.draft_id)).status, "cancelled");
     const preview = await request(code, "preview", "เตรียมเครื่องมือ High Flow ให้กับหน่วยงาน ER เบอร์ 12");
     assert.equal(preview.status, "preview");
     assert.match(preview.message, /High Flow เบอร์ 12 ให้ ER/);
@@ -606,7 +612,7 @@ test("Siri preparation requires a linked account, readback and confirmation befo
     assert.equal((await request(code, "preview", "High Flow เบอร์ 1 2 ให้ ER")).status, "error");
     const again = await request(code, "preview", "เตรียมเครื่องมือให้หน่วยงาน ER เครื่อง High Flow เบอร์ ๑๒");
     assert.equal(again.status, "preview");
-    const saved = await request(code, "confirm", "ยืนยัน.", again.draft_id);
+    const saved = await request(code, "confirm", "ยืนยันครับ.", again.draft_id);
     assert.equal(saved.status, "saved");
     assert.match(saved.message, /High Flow เบอร์ 12 ให้ ER แล้ว/);
     assert.deepEqual(await request(code, "confirm", "ยืนยัน", again.draft_id), saved);
